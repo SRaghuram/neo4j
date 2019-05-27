@@ -35,14 +35,6 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(defaultRoles)
   }
 
-  test("should fail when showing roles when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("SHOW ROLES")
-      // THEN
-    } should have message "Trying to run `SHOW ALL ROLES` against non-system database."
-  }
-
   test("should show populated default roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -136,47 +128,12 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  test("should grant and revoke multiple roles to multiple users") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("CREATE USER Baz SET PASSWORD 'NEO'")
-    execute("CREATE ROLE foo")
-    execute("CREATE ROLE fum")
-    val admin = Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")
-    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "is_built_in" -> false)
-
-    // WHEN using single user and role version of GRANT
-    execute("GRANT ROLE foo TO Bar")
-    execute("GRANT ROLE foo TO Baz")
-
-    // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz")))
-
-    // WHEN using single user and role version of REVOKE
-    execute("REVOKE ROLE foo FROM Bar")
-    execute("REVOKE ROLE foo FROM Baz")
-
-    // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
-
-    // WHEN granting with multiple users and roles version
-    execute("GRANT ROLE foo, fum TO Bar, Baz")
-
-    // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
-
-    // WHEN revoking only one of many
-    execute("REVOKE ROLE foo FROM Bar")
-
-    // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
-
-    // WHEN revoking with multiple users and roles version
-    execute("REVOKE ROLE foo, fum FROM Bar, Baz")
-
-    // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+  test("should fail when showing roles when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("SHOW ROLES")
+      // THEN
+    } should have message "Trying to run `SHOW ALL ROLES` against non-system database."
   }
 
   // Tests for creating roles
@@ -218,14 +175,6 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     exception.getMessage should include("The provided role name is empty.")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
-  }
-
-  test("should fail when creating role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("CREATE ROLE foo")
-      // THEN
-    } should have message "Trying to run `CREATE ROLE` against non-system database."
   }
 
   test("should create role from existing role") {
@@ -330,6 +279,14 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Role 'foo' does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
+  }
+
+  test("should fail when creating role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE foo")
+      // THEN
+    } should have message "Trying to run `CREATE ROLE` against non-system database."
   }
 
   // Tests for dropping roles

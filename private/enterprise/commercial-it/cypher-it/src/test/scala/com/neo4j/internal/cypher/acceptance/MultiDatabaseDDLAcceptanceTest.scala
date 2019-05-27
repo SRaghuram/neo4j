@@ -262,14 +262,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when starting a non-existing database") {
     setup( defaultConfig )
 
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE ``")
       // THEN
@@ -284,7 +284,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -365,14 +365,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when stopping a non-existing database") {
     setup( defaultConfig )
 
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE ``")
       // THEN
@@ -387,7 +387,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
@@ -396,14 +396,6 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List.empty)
-  }
-
-  test("should fail when stopping a database when not on system database") {
-    the [DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("STOP DATABASE foo")
-      // THEN
-    } should have message "Trying to run `CATALOG STOP DATABASE` against non-system database."
   }
 
   test("should be able to stop a stopped database") {
@@ -421,6 +413,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result2 = execute("SHOW DATABASE foo")
     result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+  }
+
+  test("should fail when stopping a database when not on system database") {
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE foo")
+      // THEN
+    } should have message "Trying to run `CATALOG STOP DATABASE` against non-system database."
   }
 
   protected def setup(config: Config): Unit = {

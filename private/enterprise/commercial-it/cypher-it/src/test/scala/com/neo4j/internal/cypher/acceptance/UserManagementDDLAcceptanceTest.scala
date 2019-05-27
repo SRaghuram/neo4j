@@ -32,14 +32,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(neo4jUser))
   }
 
-  test("should fail when showing users when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("SHOW USERS")
-      // THEN
-    } should have message "Trying to run `SHOW USERS` against non-system database."
-  }
-
   test("should show all users") {
     // GIVEN
     // User  : Roles
@@ -57,6 +49,14 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
+  }
+
+  test("should fail when showing users when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("SHOW USERS")
+      // THEN
+    } should have message "Trying to run `SHOW USERS` against non-system database."
   }
 
   // Tests for creating users
@@ -160,14 +160,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
-  test("should fail when creating user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("CREATE USER foo SET PASSWORD 'bar'")
-      // THEN
-    } should have message "Trying to run `CREATE USER` against non-system database."
-  }
-
   test("should create user with password change not required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -262,6 +254,14 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
+  }
+
+  test("should fail when creating user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("CREATE USER foo SET PASSWORD 'bar'")
+      // THEN
+    } should have message "Trying to run `CREATE USER` against non-system database."
   }
 
   // Tests for dropping users
@@ -440,14 +440,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("ALTER USER foo SET PASSWORD $password")
       // THEN
     } should have message "Expected parameter(s): password"
-  }
-
-  test("should fail when altering user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("ALTER USER foo SET PASSWORD 'bar'")
-      // THEN
-    } should have message "Trying to run `ALTER USER` against non-system database."
   }
 
   test("should alter user password mode") {
@@ -867,6 +859,14 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN / THEN
     executeOnSystem("alice", "abc", "SHOW DATABASE neo4j", (row, _) => row.get("name").equals("neo4j"))
+  }
+
+  test("should fail when altering user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'bar'")
+      // THEN
+    } should have message "Trying to run `ALTER USER` against non-system database."
   }
 
   // helper methods

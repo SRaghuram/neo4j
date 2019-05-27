@@ -15,6 +15,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
+import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
 
@@ -164,14 +165,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
   }
 
-  test("should fail when granting traversal privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-      // THEN
-    } should have message "Trying to run `GRANT TRAVERSE` against non-system database."
-  }
-
   test("should grant traversal privilege to custom role for all databases but only a specific label (that does not need to exist)") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -264,8 +257,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  // Tests for actual behaviour of authorization rules for restricted users based on privileges
-
   test("should fail when granting traversal privilege with missing database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -275,302 +266,12 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database 'foo' does not exist."
   }
 
-  test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE custom")
-    execute("GRANT ROLE custom TO joe")
-
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
-    }
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", (row, _) => {
-      row.get("labels(n)").asInstanceOf[Collection[String]] should contain("A")
-    }) should be(1)
-  }
-
-  test("should read properties when granted read privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE custom")
-    execute("GRANT ROLE custom TO joe")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
-      row.get("n.name") should be(null)
-    }) should be(1)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
-      row.get("n.name") should be("a")
-    }) should be(1)
-  }
-
-  test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE custom")
-    execute("GRANT ROLE custom TO joe")
-
-    // WHEN
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
-
-    // THEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
-    }
-
-    // WHEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
-      row.get("n.name") should be("a")
-    }) should be(1)
-
-    // WHEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
-      row.get("n.name") should be(null)
-    }) should be(1)
-  }
-
-  test("read privilege should not imply traverse privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE custom")
-    execute("GRANT ROLE custom TO joe")
-
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
-  }
-
-  test("should fail when revoking traversal privilege to custom role when not on system database") {
+  test("should fail when granting traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
       // THEN
-    } should have message "Trying to run `REVOKE TRAVERSE` against non-system database."
-  }
-
-  test("should see properties and nodes depending on granted traverse and read privileges for role") {
-    // GIVEN
-    setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
-
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role2")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role2")
-
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
-
-    // WHEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
-    }
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT ROLE role1 TO joe")
-
-    val expected1 = List(
-      (":A", 1, 2),
-      (":B", 3, 4),
-      (":A:B", 5, 6),
-      ("", 7, 8)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE ROLE role1 FROM joe")
-    execute("GRANT ROLE role2 TO joe")
-
-    val expected2 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6),
-      (":B", null, 4),
-      ("", null, null)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE ROLE role2 FROM joe")
-    execute("GRANT ROLE role3 TO joe")
-
-    val expected3 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
-  }
-
-  test("should see properties and nodes depending on granted MATCH privileges for role") {
-    // GIVEN
-    setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO role1")
-
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
-    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO role2")
-    execute("GRANT MATCH (bar) ON GRAPH * NODES B (*) TO role2")
-
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
-
-    // WHEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
-    }
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT ROLE role1 TO joe")
-
-    val expected1 = List(
-      (":A", 1, 2),
-      (":B", 3, 4),
-      (":A:B", 5, 6),
-      ("", 7, 8)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE ROLE role1 FROM joe")
-    execute("GRANT ROLE role2 TO joe")
-
-    val expected2 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6),
-      (":B", null, 4),
-      ("", null, null)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE ROLE role2 FROM joe")
-    execute("GRANT ROLE role3 TO joe")
-
-    val expected3 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
-  }
-
-  test("should see properties and nodes when revoking privileges for role") {
-    // GIVEN
-    setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role1")
-    execute("GRANT ROLE role1 TO joe")
-
-    // WHEN
-    an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
-    }
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role1")
-
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role1")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role1")
-
-    val expected1 = List(
-      (":A", 1, 2),
-      (":B", 3, 4),
-      (":A:B", 5, 6),
-      ("", 7, 8)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role1")
-
-    val expected2 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6),
-      (":B", null, 4),
-      ("", null, null)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
-
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role1")
-
-    val expected3 = List(
-      (":A", 1, null),
-      (":A:B", 5, 6)
-    )
-
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
+    } should have message "Trying to run `GRANT TRAVERSE` against non-system database."
   }
 
   // Tests for granting read privileges
@@ -785,6 +486,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
     execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
     execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+  }
+
+  test("should fail when granting read privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+      // THEN
+    } should have message "Trying to run `GRANT READ` against non-system database."
   }
 
   // Tests for GRANT MATCH privileges
@@ -1017,6 +726,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
     execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
     execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+  }
+
+  test("should fail when granting MATCH privilege when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+      // THEN
+    } should have message "Trying to run `GRANT MATCH` against non-system database."
   }
 
   // Tests for REVOKE READ, TRAVERSE and MATCH
@@ -1264,6 +981,342 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     e.getMessage should include("The role 'role' does not have the specified privilege")
   }
 
+  test("should fail when revoking traversal privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+    } should have message "The privilege 'find  ON GRAPH foo NODES *' does not exist."
+  }
+
+  test("should fail when revoking read privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
+    } should have message "The privilege 'read * ON GRAPH foo NODES *' does not exist."
+  }
+
+  test("should fail when revoking traversal privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+      // THEN
+    } should have message "Trying to run `REVOKE TRAVERSE` against non-system database."
+  }
+
+  test("should fail when revoking read privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
+      // THEN
+    } should have message "Trying to run `REVOKE READ` against non-system database."
+  }
+
+  test("should fail when revoking MATCH privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+      // THEN
+    } should have message "Trying to run `REVOKE MATCH` against non-system database."
+  }
+
+  // Tests for actual behaviour of authorization rules for restricted users based on privileges
+
+  test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", (row, _) => {
+      row.get("labels(n)").asInstanceOf[Collection[String]] should contain("A")
+    }) should be(1)
+  }
+
+  test("should read properties when granted read privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be(null)
+    }) should be(1)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+  }
+
+  test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+
+    // THEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+    }
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+      row.get("n.name") should be(null)
+    }) should be(1)
+  }
+
+  test("read privilege should not imply traverse privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+  }
+
+  test("should see properties and nodes depending on granted traverse and read privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role2")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT ROLE role1 TO joe")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role1 FROM joe")
+    execute("GRANT ROLE role2 TO joe")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role2 FROM joe")
+    execute("GRANT ROLE role3 TO joe")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
+  test("should see properties and nodes depending on granted MATCH privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE ROLE role3")
+
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO role1")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
+    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT MATCH (bar) ON GRAPH * NODES B (*) TO role2")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT ROLE role1 TO joe")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role1 FROM joe")
+    execute("GRANT ROLE role2 TO joe")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE role2 FROM joe")
+    execute("GRANT ROLE role3 TO joe")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
+  test("should see properties and nodes when revoking privileges for role") {
+    // GIVEN
+    setupMultilabelData
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role1")
+    execute("GRANT ROLE role1 TO joe")
+
+    // WHEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+    }
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role1")
+
+    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role1")
+    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role1")
+
+    val expected1 = List(
+      (":A", 1, 2),
+      (":B", 3, 4),
+      (":A:B", 5, 6),
+      ("", 7, 8)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role1")
+
+    val expected2 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6),
+      (":B", null, 4),
+      ("", null, null)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+    }) should be(4)
+
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role1")
+
+    val expected3 = List(
+      (":A", 1, null),
+      (":A:B", 5, 6)
+    )
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
   // Tests for granting roles to users
 
   test("should grant role to user") {
@@ -1277,6 +1330,35 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "user"))
+  }
+
+  test("should grant roles and list users with roles") {
+    // GIVEN
+    // User  : Roles
+    // neo4j : admin
+    // Bar   : dragon, fairy
+    // Baz   :
+    // Zet   : fairy
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE USER Zet SET PASSWORD 'NeX'")
+    execute("CREATE ROLE dragon")
+    execute("CREATE ROLE fairy")
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+    execute("GRANT ROLE fairy TO Bar")
+    execute("GRANT ROLE fairy TO Zet")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet shouldBe Set(
+      neo4jUser,
+      user("Bar", Seq("fairy", "dragon")),
+      user("Baz"),
+      user("Zet", Seq("fairy"))
+    )
   }
 
   test("should grant role to several users") {
@@ -1328,35 +1410,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       + Map("role" -> "custom2", "is_built_in" -> false, "member" -> "userB"))
   }
 
-  test("should grant roles and list users with roles") {
-    // GIVEN
-    // User  : Roles
-    // neo4j : admin
-    // Bar   : dragon, fairy
-    // Baz   :
-    // Zet   : fairy
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("CREATE USER Baz SET PASSWORD 'NEO'")
-    execute("CREATE USER Zet SET PASSWORD 'NeX'")
-    execute("CREATE ROLE dragon")
-    execute("CREATE ROLE fairy")
-
-    // WHEN
-    execute("GRANT ROLE dragon TO Bar")
-    execute("GRANT ROLE fairy TO Bar")
-    execute("GRANT ROLE fairy TO Zet")
-
-    // THEN
-    val result = execute("SHOW USERS")
-    result.toSet shouldBe Set(
-      neo4jUser,
-      user("Bar", Seq("fairy", "dragon")),
-      user("Baz"),
-      user("Zet", Seq("fairy"))
-    )
-  }
-
   test("should be able to grant already granted role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1370,21 +1423,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
-  }
-
-  test("should fail grant non existent role to user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER user SET PASSWORD 'neo'")
-
-    the [InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT ROLE custom TO user")
-      // THEN
-    } should have message "Cannot grant non-existent role 'custom' to user 'user'"
-
-    // AND
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
   }
 
   test("should fail when granting non-existing role to user") {
@@ -1509,6 +1547,63 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
   }
 
+  test("should revoke role from several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO userA")
+    execute("GRANT ROLE custom TO userB")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM userA, userB")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+  }
+
+  test("should revoke multiple roles from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom1 TO userA")
+    execute("GRANT ROLE custom2 TO userA")
+
+    // WHEN
+    execute("REVOKE ROLE custom1, custom2 FROM userA")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
+      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
+  }
+
+  test("should revoke multiple roles from several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+    execute("CREATE USER userC SET PASSWORD 'neo'")
+    execute("CREATE USER userD SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom1 TO userA")
+    execute("GRANT ROLE custom1 TO userB")
+    execute("GRANT ROLE custom1 TO userC")
+    execute("GRANT ROLE custom2 TO userA")
+    execute("GRANT ROLE custom2 TO userB")
+    execute("GRANT ROLE custom2 TO userD")
+
+    // WHEN
+    execute("REVOKE ROLE custom1, custom2 FROM userA, userB, userC, userD")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
+      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
+  }
+
   test("should be able to revoke already revoked role from user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1522,6 +1617,49 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+  }
+
+  test("should grant and revoke multiple roles to multiple users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE ROLE foo")
+    execute("CREATE ROLE fum")
+    val admin = Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")
+    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "is_built_in" -> false)
+
+    // WHEN using single user and role version of GRANT
+    execute("GRANT ROLE foo TO Bar")
+    execute("GRANT ROLE foo TO Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz")))
+
+    // WHEN using single user and role version of REVOKE
+    execute("REVOKE ROLE foo FROM Bar")
+    execute("REVOKE ROLE foo FROM Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+
+    // WHEN granting with multiple users and roles version
+    execute("GRANT ROLE foo, fum TO Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking only one of many
+    execute("REVOKE ROLE foo FROM Bar")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking with multiple users and roles version
+    execute("REVOKE ROLE foo, fum FROM Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
   }
 
   test("should fail revoking non-existent role from (existing) user") {
@@ -1566,63 +1704,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // AND
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
-  }
-
-  test("should revoke role from multiple users") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER userA SET PASSWORD 'neo'")
-    execute("CREATE USER userB SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO userA")
-    execute("GRANT ROLE custom TO userB")
-
-    // WHEN
-    execute("REVOKE ROLE custom FROM userA, userB")
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
-  }
-
-  test("should revoke several roles from user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom1")
-    execute("CREATE ROLE custom2")
-    execute("CREATE USER userA SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom1 TO userA")
-    execute("GRANT ROLE custom2 TO userA")
-
-    // WHEN
-    execute("REVOKE ROLE custom1, custom2 FROM userA")
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
-  }
-
-  test("should revoke several roles from multiple users") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom1")
-    execute("CREATE ROLE custom2")
-    execute("CREATE USER userA SET PASSWORD 'neo'")
-    execute("CREATE USER userB SET PASSWORD 'neo'")
-    execute("CREATE USER userC SET PASSWORD 'neo'")
-    execute("CREATE USER userD SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom1 TO userA")
-    execute("GRANT ROLE custom1 TO userB")
-    execute("GRANT ROLE custom1 TO userC")
-    execute("GRANT ROLE custom2 TO userA")
-    execute("GRANT ROLE custom2 TO userB")
-    execute("GRANT ROLE custom2 TO userD")
-
-    // WHEN
-    execute("REVOKE ROLE custom1, custom2 FROM userA, userB, userC, userD")
-
-    // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
   }
 
   test("should fail when revoking role from user when not on system database") {
