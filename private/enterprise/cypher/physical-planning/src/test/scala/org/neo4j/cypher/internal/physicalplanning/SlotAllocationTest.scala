@@ -64,7 +64,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     allocations(plan.id) should equal(
       SlotConfiguration.empty
         .newLong("x", nullable = false, CTNode)
-        .newCachedProperty(cachedNodeProperty("x", "prop"))
+        .newCachedProperty(cachedNodeProp("x", "prop"))
     )
   }
 
@@ -561,8 +561,8 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
       joinAllocations(join.id) should be(
         SlotConfiguration.empty
           .newLong("x", false, CTNode)
-          .newCachedProperty(cachedNodeProperty("x", "lhsProp"))
-          .newCachedProperty(cachedNodeProperty("x", "rhsProp"))
+          .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+          .newCachedProperty(cachedNodeProp("x", "rhsProp"))
       )
     }
   }
@@ -591,9 +591,9 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
       allocations(plan.id) should be(
         SlotConfiguration.empty
           .newLong("x", false, CTNode)
-          .newCachedProperty(cachedNodeProperty("x", "argProp"))
-          .newCachedProperty(cachedNodeProperty("x", "lhsProp"))
-          .newCachedProperty(cachedNodeProperty("x", "rhsProp"))
+          .newCachedProperty(cachedNodeProp("x", "argProp"))
+          .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+          .newCachedProperty(cachedNodeProp("x", "rhsProp"))
       )
     }
   }

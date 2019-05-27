@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.cypher.internal.logical.plans.CachedProperty
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
+import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue

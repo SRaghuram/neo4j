@@ -7,13 +7,12 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.v4_0.expressions.{CACHED_NODE, CachedProperty, PropertyKeyName}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.logical.plans.{CACHED_NODE, CachedProperty}
-import org.neo4j.values.storable.BooleanValue
-import org.neo4j.values.storable.Values.stringValue
-import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{InputPosition, InternalException}
+import org.neo4j.values.storable.BooleanValue
+import org.neo4j.values.storable.Values.stringValue
 
 class SlottedExecutionContextTest extends CypherFunSuite {
 

@@ -13,7 +13,7 @@ import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, noValue, or, ternary, variable}
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
-import org.neo4j.cypher.internal.logical.plans.{ASTCachedProperty, CACHED_NODE, CACHED_RELATIONSHIP, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
+import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
@@ -1249,7 +1249,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case CachedProperty(offset, token, cachedPropertyOffset, cachedType) =>
+    case SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, cachedType) =>
       val variableName = namer.nextVariableName()
       val (cachedPropertyMethodInvocation, cursor) = cachedType match {
         case CACHED_NODE =>
@@ -1281,7 +1281,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case CachedPropertyLate(offset, propKey, cachedPropertyOffset, cachedType) =>
+    case SlottedCachedPropertyLate(_, _, offset, propKey, cachedPropertyOffset, cachedType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val (cachedPropertyMethodInvocation, cursor) = cachedType match {
@@ -2617,7 +2617,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
-    case CachedProperty(offset, prop, _, cachedType) =>
+    case SlottedCachedProperty(_, _, offset, prop, _, cachedType) =>
       val methodName = cachedType match {
         case CACHED_NODE => "cachedNodePropertyExists"
         case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"
@@ -2637,7 +2637,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq.empty, Set(nullChecks), requireNullCheck = false))
 
-    case CachedPropertyLate(offset, prop, _, cachedType) =>
+    case SlottedCachedPropertyLate(_, _, offset, prop, _, cachedType) =>
       val methodName = cachedType match {
         case CACHED_NODE => "cachedNodePropertyExists"
         case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"

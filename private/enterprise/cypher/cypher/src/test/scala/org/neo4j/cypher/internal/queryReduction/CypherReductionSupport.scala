@@ -9,7 +9,7 @@ import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
-import org.neo4j.cypher.internal.compiler.phases.{LogicalPlanState, PlannerContextCreator}
+import org.neo4j.cypher.internal.compiler.phases.{CompilationPhases, LogicalPlanState, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
 import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
 import org.neo4j.cypher.internal.compiler.{CypherPlanner, CypherPlannerConfiguration, StatsDivergenceCalculator, defaultUpdateStrategy}
@@ -134,7 +134,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   private def queryToParsingBaseState(query: String, enterprise: Boolean): BaseState = {
     val startState = LogicalPlanState(query, None, PlannerNameFor(IDPPlannerName.name), PlanningAttributes(new Solveds, new Cardinalities, new ProvidedOrders))
     val parsingContext = createContext(query, CypherReductionSupport.metricsFactory, CypherReductionSupport.config, null, null, enterprise)
-    CompilationPhases.parsing(CypherReductionSupport.stepSequencer).transform(startState, parsingContext)
+    CompilationPhases.parsing(CypherReductionSupport.stepSequencer, parsingContext.innerVariableNamer).transform(startState, parsingContext)
   }
 
   private def produceResult(query: String,

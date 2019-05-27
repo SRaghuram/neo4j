@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
@@ -138,15 +137,15 @@ class SlottedRewriter(tokenContext: TokenContext) {
             prop.copy(map = ReferenceFromSlot(offset, key))(prop.position)
         }
 
-      case prop@plans.CachedProperty(variableName, pkn@PropertyKeyName(propKey), cachedType) =>
+      case prop@CachedProperty(variableName, pkn@PropertyKeyName(propKey), cachedType) =>
         slotConfiguration(variableName) match {
           case LongSlot(offset, _, cypherType) if
           (cypherType == CTNode && cachedType == CACHED_NODE) || (cypherType == CTRelationship && cachedType == CACHED_RELATIONSHIP) =>
             tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.CachedProperty(variableName, pkn, offset, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
-              case None => ast.CachedPropertyLate(variableName, pkn,  offset, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
+              case Some(propId) => ast.SlottedCachedProperty(variableName, pkn, offset, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
+              case None => ast.SlottedCachedPropertyLate(variableName, pkn,  offset, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
             }
-          case slot@LongSlot(offset, _, cypherType) =>
+          case slot@LongSlot(_, _, _) =>
             throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
           case slot: Slot =>
             throw new InternalException(s"We only support cached properties on long slots, got slot '$slot' for cached property $prop")
