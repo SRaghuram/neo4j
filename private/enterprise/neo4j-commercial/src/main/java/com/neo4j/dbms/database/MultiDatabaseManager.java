@@ -126,8 +126,9 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     }
 
     @Override
-    public final void init()
+    public final void init() throws Exception
     {
+        super.init();
     }
 
     @Override
