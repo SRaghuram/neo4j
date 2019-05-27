@@ -100,8 +100,8 @@ class MultiDatabaseManagerIT
         String logTestDb = "logTestDb";
         databaseManager.createDatabase( logTestDb );
         databaseManager.shutdownDatabase( logTestDb );
-        logProvider.formattedMessageMatcher().assertLogStringContains( "Creating 'logTestDb' database." );
-        logProvider.formattedMessageMatcher().assertLogStringContains( "Shutting down 'logTestDb' database." );
+        logProvider.formattedMessageMatcher().assertContains( "Creating 'logTestDb' database." );
+        logProvider.formattedMessageMatcher().assertContains( "Shutting down 'logTestDb' database." );
     }
 
     private DatabaseManager getDatabaseManager()

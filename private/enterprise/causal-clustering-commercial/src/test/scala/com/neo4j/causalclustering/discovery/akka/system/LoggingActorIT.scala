@@ -28,9 +28,9 @@ class LoggingActorIT extends NeoSuite {
       "pass warning messages on to Neo logProvider" in new Fixture(Level.WARNING) {
 
         withLogging {
-          logProvider.rawMessageMatcher().assertNoLogCallContaining("debug test")
-          logProvider.rawMessageMatcher().assertNoLogCallContaining("info test")
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertNotContains("debug test")
+          logProvider.rawMessageMatcher().assertNotContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
         }
       }
     }
@@ -40,9 +40,9 @@ class LoggingActorIT extends NeoSuite {
       "pass info and warning messages on to Neo logProvider" in new Fixture(Level.INFO) {
 
         withLogging {
-          logProvider.rawMessageMatcher().assertNoLogCallContaining("debug test")
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("info test")
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertNotContains("debug test")
+          logProvider.rawMessageMatcher().assertContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
         }
       }
     }
@@ -52,9 +52,9 @@ class LoggingActorIT extends NeoSuite {
       "pass all messages on to Neo logProvider" in new Fixture(Level.ALL) {
 
         withLogging {
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("info test")
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("warning test")
-          logProvider.rawMessageMatcher().assertContainsLogCallContaining("debug test")
+          logProvider.rawMessageMatcher().assertContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
+          logProvider.rawMessageMatcher().assertContains("debug test")
         }
       }
     }

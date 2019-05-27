@@ -58,8 +58,8 @@ public class ConnectionInfoIT
         {
             //expected.
         }
-        logProvider.rawMessageMatcher().assertContainsMessageContaining( "server-name: address is already bound: " );
-        userLogProvider.rawMessageMatcher().assertContainsMessageContaining( "server-name: address is already bound: " );
+        logProvider.rawMessageMatcher().assertContains( "server-name: address is already bound: " );
+        userLogProvider.rawMessageMatcher().assertContains( "server-name: address is already bound: " );
     }
 
     @SuppressWarnings( "SameParameterValue" )
