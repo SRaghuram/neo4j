@@ -6,10 +6,10 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.javacompat.ExecutionResult
-import org.neo4j.cypher.result.QueryResult
+import org.neo4j.kernel.impl.query.QuerySubscriberAdapter
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual._
 
 class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
@@ -128,11 +128,18 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
         val q = prefix + " " + query
         val context = graph.transactionalContext(query = q -> Map.empty)
         try {
-          val result = eengine.execute(q, VirtualValues.EMPTY_MAP, context, prePopulate = prePopulateResults).asInstanceOf[ExecutionResult]
-          result.queryResult().accept((row: QueryResult.Record) => {
-            f(row.fields()(0))
-            true
-          })
+          val subscriber = new QuerySubscriberAdapter {
+            override def onField(offset: Int, value: AnyValue): Unit = f(value)
+          }
+          val result = eengine.execute(q,
+                                       EMPTY_MAP,
+                                       context,
+                                       profile= false,
+                                       prePopulate = prePopulateResults,
+                                       subscriber = subscriber)
+
+          result.request(Long.MaxValue)
+          result.await()
         } finally {
           context.close(true)
         }

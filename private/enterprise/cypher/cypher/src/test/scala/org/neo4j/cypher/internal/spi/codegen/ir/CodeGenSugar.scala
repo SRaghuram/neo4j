@@ -26,8 +26,7 @@ import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
+import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.security.AnonymousContext
@@ -61,9 +60,8 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
                                                         prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
-      result.accept(new QueryResultVisitor[Exception] {
-        override def visit(row: QueryResult.Record): Boolean = true
-      })
+      result.request(Long.MaxValue)
+      result.await()
       tx.success()
       result
     } finally {

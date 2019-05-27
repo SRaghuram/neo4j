@@ -12,8 +12,7 @@ import org.neo4j.csv.reader.MissingEndQuoteException
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, RunWithConfigTestSupport}
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.cypher.{ExecutionEngineFunSuite, RunWithConfigTestSupport}
 
 class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CreateTempFileTestSupport {
   def csvUrls(f: PrintWriter => Unit) = Seq(
@@ -114,10 +113,7 @@ class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWi
   }
 
   def executeWithCustomDb(db: GraphDatabaseCypherService, query: String): RewindableExecutionResult = {
-    val engine = ExecutionEngineHelper.createEngine(db)
-    RewindableExecutionResult(engine.execute(query,
-                                             VirtualValues.EMPTY_MAP,
-                                             engine.queryService.transactionalContext(query = query -> Map())))
+    RewindableExecutionResult(db.execute(query))
   }
 
 }

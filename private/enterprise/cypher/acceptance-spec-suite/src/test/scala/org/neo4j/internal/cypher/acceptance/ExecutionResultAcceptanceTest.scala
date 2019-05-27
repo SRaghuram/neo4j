@@ -11,7 +11,8 @@ import org.neo4j.graphdb.Result
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
@@ -21,9 +22,14 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     Configs.All.scenarios.map(s =>
     s"CYPHER ${s.preparserOptions} $query").foreach(q => {
       val tx = graph.beginTransaction(Type.`explicit`, AUTH_DISABLED)
-      val result = eengine.execute(q, VirtualValues.EMPTY_MAP, graph.transactionalContext(query = q -> Map.empty))
+      val result = eengine.execute(q,
+                                   EMPTY_MAP,
+                                   graph.transactionalContext(query = q -> Map.empty),
+                                   profile = false,
+                                   prePopulate = false,
+                                   DO_NOTHING_SUBSCRIBER)
       tx.success()
-      result.close()
+      result.cancel()
       tx.close()
     })
   }

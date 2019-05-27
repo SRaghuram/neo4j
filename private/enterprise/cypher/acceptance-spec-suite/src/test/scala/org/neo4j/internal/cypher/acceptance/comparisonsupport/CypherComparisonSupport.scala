@@ -19,7 +19,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.monitoring.Monitors
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
-import org.neo4j.values.virtual.MapValue
 
 import scala.util.{Failure, Success, Try}
 
@@ -37,9 +36,9 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   self: ExecutionEngineFunSuite =>
 
   override def eengineExecute(query: String,
-                              params: MapValue,
-                              context: TransactionalContext,
-                              profile: Boolean): Result = eengine.execute(query, params, context, profile)
+                              params: Map[String, Any]): Result = {
+    executeOfficial(query, params.toSeq:_*)
+  }
 
   override def makeRewinadable(in: Result): RewindableExecutionResult = RewindableExecutionResult(in)
 
@@ -62,7 +61,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport {
 
   // abstract, can be defined through CypherComparisonSupport
-  def eengineExecute(query: String, params: MapValue, context: TransactionalContext, profile: Boolean = false): Result
+  def eengineExecute(query: String, params: Map[String, Any]): Result
 
   def makeRewinadable(in:Result): RewindableExecutionResult
 
@@ -154,9 +153,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     */
   protected def dumpToString(query: String,
                              params: Map[String, Any] = Map.empty): String = {
-    val paramValue = ExecutionEngineHelper.asMapValue(params)
-    val txContext = transactionalContext(query -> params)
-    val result = Try(eengineExecute(query, paramValue, txContext).resultAsString())
+    val result = Try(eengineExecute(query, params).resultAsString())
 
     if (!result.isSuccess) fail(s"Failed to execute ´$query´")
 
@@ -350,7 +347,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   }
 
   private def innerExecute(queryText: String, params: Map[String, Any]): RewindableExecutionResult = {
-    val innerResult: Result = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), transactionalContext(queryText -> params))
+    val innerResult: Result = eengineExecute(queryText, params)
     makeRewinadable(innerResult)
   }
 }

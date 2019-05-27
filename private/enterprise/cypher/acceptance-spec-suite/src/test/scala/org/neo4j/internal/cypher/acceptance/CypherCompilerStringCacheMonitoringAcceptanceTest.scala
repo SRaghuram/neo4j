@@ -13,8 +13,9 @@ import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.{ExecutionEngine, StringCacheMonitor}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.helpers.collection.Pair
+import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.logging.AssertableLogProvider
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.collection.Map
 
@@ -112,11 +113,25 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
 
     createLabeledNode("Dog")
     (0 until 50).foreach { _ => createLabeledNode("Person") }
-    engine.execute(query, VirtualValues.EMPTY_MAP, graph.transactionalContext(query = query -> Map.empty)).resultAsString()
+    val result1 = engine.execute(query,
+                   EMPTY_MAP,
+                   graph.transactionalContext(query = query -> Map.empty),
+                   profile = false,
+                   prePopulate = false,
+                   DO_NOTHING_SUBSCRIBER)
+    result1.request(Long.MaxValue)
+    result1.await()
 
     // when
     (0 until 1000).foreach { _ => createLabeledNode("Dog") }
-    engine.execute(query, VirtualValues.EMPTY_MAP, graph.transactionalContext(query = query -> Map.empty)).resultAsString()
+    val result2 = engine.execute(query,
+                   EMPTY_MAP,
+                   graph.transactionalContext(query = query -> Map.empty),
+                   profile = false,
+                   prePopulate = false,
+                   DO_NOTHING_SUBSCRIBER)
+    result2.request(Long.MaxValue)
+    result2.await()
 
     logProvider.assertAtLeastOnce(
 
