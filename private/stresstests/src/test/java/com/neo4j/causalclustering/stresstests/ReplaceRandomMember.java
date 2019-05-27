@@ -20,9 +20,10 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.function.Predicates.awaitForever;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class ReplaceRandomMember extends RepeatOnRandomMember
 {
@@ -84,15 +85,16 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         successfulReplacements++;
     }
 
-    private void awaitRaftMembership( CoreClusterMember core )
+    private void awaitRaftMembership( CoreClusterMember core ) throws InterruptedException
     {
         var databaseNames = core.managementService().listDatabases();
 
         for ( String databaseName : databaseNames )
         {
-            log.info( String.format( "Waiting for membership of '%s'", databaseName ) );
+            log.info( format( "Waiting for membership of '%s'", databaseName ) );
             RaftMachine raft = core.resolveDependency( databaseName, RaftMachine.class );
-            awaitForever( () -> raft.votingMembers().contains( core.id() ), 100, MILLISECONDS );
+            assertEventually( members -> format( "Voting members %s do not contain %s", members, core.id() ),
+                    raft::votingMembers, hasItem( core.id() ), 10, MINUTES );
         }
     }
 
