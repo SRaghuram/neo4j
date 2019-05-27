@@ -198,7 +198,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 .filter( this::verifyChecksum )
                 .findFirst();
 
-        if ( !savedProfile.isPresent() )
+        if ( savedProfile.isEmpty() )
         {
             return 0;
         }

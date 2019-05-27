@@ -21,11 +21,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
 {
@@ -93,10 +95,13 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
         monitors.addMonitorListener( new PageCacheWarmerMonitorAdapter()
         {
             @Override
-            public void warmupCompleted( long pagesLoaded )
+            public void warmupCompleted( DatabaseId databaseId, long pagesLoaded )
             {
-                pagesLoadedInWarmup.set( pagesLoaded );
-                warmupLatch.release();
+                if ( DEFAULT_DATABASE_NAME.equals( databaseId.name() ) )
+                {
+                    pagesLoadedInWarmup.set( pagesLoaded );
+                    warmupLatch.release();
+                }
             }
         } );
         return warmupLatch;

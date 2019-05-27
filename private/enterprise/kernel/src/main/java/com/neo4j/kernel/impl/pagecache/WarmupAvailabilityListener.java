@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.availability.AvailabilityListener;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
@@ -24,6 +25,7 @@ class WarmupAvailabilityListener implements AvailabilityListener
     private final Config config;
     private final Log log;
     private final PageCacheWarmerMonitor monitor;
+    private final DatabaseId databaseId;
 
     // We use the monitor lock to guard the job handle. However, it could happen that a job has already started, ends
     // up waiting for the lock while it's being held by another thread calling `unavailable()`. In that case, we need
@@ -34,13 +36,14 @@ class WarmupAvailabilityListener implements AvailabilityListener
     private JobHandle jobHandle; // Guarded by `this`.
 
     WarmupAvailabilityListener( JobScheduler scheduler, PageCacheWarmer pageCacheWarmer,
-                                Config config, Log log, PageCacheWarmerMonitor monitor )
+                                Config config, Log log, PageCacheWarmerMonitor monitor, DatabaseId databaseId )
     {
         this.scheduler = scheduler;
         this.pageCacheWarmer = pageCacheWarmer;
         this.config = config;
         this.log = log;
         this.monitor = monitor;
+        this.databaseId = databaseId;
     }
 
     @Override
@@ -58,8 +61,8 @@ class WarmupAvailabilityListener implements AvailabilityListener
         }
         try
         {
-            monitor.warmupStarted();
-            pageCacheWarmer.reheat().ifPresent( monitor::warmupCompleted );
+            monitor.warmupStarted( databaseId );
+            pageCacheWarmer.reheat().ifPresent( loadedPages -> monitor.warmupCompleted( databaseId, loadedPages ) );
         }
         catch ( Exception e )
         {
@@ -84,7 +87,7 @@ class WarmupAvailabilityListener implements AvailabilityListener
     {
         try
         {
-            pageCacheWarmer.profile().ifPresent( monitor::profileCompleted );
+            pageCacheWarmer.profile().ifPresent( pages -> monitor.profileCompleted( databaseId, pages ) );
         }
         catch ( Exception e )
         {

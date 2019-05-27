@@ -5,11 +5,13 @@
  */
 package com.neo4j.kernel.impl.pagecache.monitor;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 public interface PageCacheWarmerMonitor
 {
-    void warmupStarted();
+    void warmupStarted( DatabaseId databaseId );
 
-    void warmupCompleted( long pagesLoaded );
+    void warmupCompleted( DatabaseId databaseId, long pagesLoaded );
 
-    void profileCompleted( long pagesInMemory );
+    void profileCompleted( DatabaseId databaseId, long pagesInMemory );
 }
