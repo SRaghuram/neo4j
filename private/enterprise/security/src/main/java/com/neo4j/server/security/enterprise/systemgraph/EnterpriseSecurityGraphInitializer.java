@@ -24,8 +24,10 @@ import java.util.stream.Collectors;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
@@ -36,6 +38,7 @@ import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphInitializer;
 
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER;
 
 public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer
 {
@@ -102,8 +105,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private void setupConstraints() throws InvalidArgumentsException
     {
         // Ensure that multiple roles cannot have the same name and are indexed
-        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), row -> true );
-        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), row -> true );
+        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), DO_NOTHING_SUBSCRIBER );
+        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), DO_NOTHING_SUBSCRIBER );
     }
 
     private void ensureDefaultUserAndRoles() throws Exception

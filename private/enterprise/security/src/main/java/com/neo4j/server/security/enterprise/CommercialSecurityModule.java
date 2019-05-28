@@ -45,8 +45,8 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
-import org.neo4j.cypher.result.QueryResult;
+
+import org.neo4j.cypher.internal.javacompat.QueryExecutionProvider;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -62,6 +62,8 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.query.QueryExecution;
+import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -182,14 +184,21 @@ public class CommercialSecurityModule extends SecurityModule
             QueryExecutor queryExecutor = new QueryExecutor()
             {
                 @Override
-                public void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
+                public void executeQuery( String query, Map<String,Object> params, QuerySubscriber subscriber )
                 {
                     try ( Transaction tx = database.beginTx() )
                     {
                         Result result = database.execute( query, params );
-                        QueryResult queryResult = ((QueryResultProvider) result).queryResult();
-                        queryResult.accept( resultVisitor );
+                        //TODO: This cast here should go away, we should get our hands on a `QueryExecutionEngine`
+                        //      and use that instead
+                        QueryExecution queryExecution = ((QueryExecutionProvider) result).queryExecution();
+                        queryExecution.request( Long.MAX_VALUE );
+                        queryExecution.await();
                         tx.success();
+                    }
+                    catch ( Exception e )
+                    {
+                        throw new IllegalStateException( "Failed to request data", e );
                     }
                 }
 

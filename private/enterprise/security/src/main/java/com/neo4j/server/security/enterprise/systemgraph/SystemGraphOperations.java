@@ -20,15 +20,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.impl.query.QuerySubscriber;
+import org.neo4j.kernel.impl.query.QuerySubscriberAdapter;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
-import org.neo4j.values.storable.Value;
 import org.neo4j.values.virtual.NodeValue;
 
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
@@ -57,22 +57,32 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         Map<String,Object> params = map( "username", username );
 
-        final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
+        final QuerySubscriber subscriber = new QuerySubscriberAdapter()
         {
-            AnyValue[] fields = row.fields();
-            existingUser.setTrue();
-            passwordChangeRequired.setValue( ((BooleanValue) fields[0]).booleanValue() );
-            suspended.setValue( ((BooleanValue) fields[1]).booleanValue() );
-
-            Value role = (Value) fields[2];
-            if ( role != NO_VALUE )
+            @Override
+            public void onField( int offset, AnyValue value )
             {
-                roleNames.add( ((TextValue) role).stringValue() );
+                switch ( offset )
+                {
+                case 0://u.passwordChangeRequired
+                    existingUser.setTrue();
+                    passwordChangeRequired.setValue( ((BooleanValue) value).booleanValue() );
+                    break;
+                case 1://u.suspended
+                    suspended.setValue( ((BooleanValue) value).booleanValue() );
+                    break;
+                case 2://r.name
+                    if ( value != NO_VALUE )
+                    {
+                        roleNames.add( ((TextValue) value).stringValue() );
+                    }
+                    break;
+                default://nothing to do
+                }
             }
-            return true;
         };
 
-        queryExecutor.executeQuery( query, params, resultVisitor );
+        queryExecutor.executeQuery( query, params, subscriber );
 
         if ( existingUser.isFalse() )
         {
@@ -290,44 +300,60 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
-        final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
+        QuerySubscriber subscriber = new QuerySubscriberAdapter()
         {
-            AnyValue dbNameValue = row.fields()[0];
-            NodeValue database = (NodeValue) row.fields()[1];
-            assert database.labels().length() == 1;
-            DatabasePrivilege dbpriv;
-            if ( database.labels().stringValue( 0 ).equals( "Database" ) )
+            private AnyValue[] fields;
+            @Override
+            public void onResult( int numberOfFields )
             {
-                String dbName = ((TextValue) dbNameValue).stringValue();
-                dbpriv = results.computeIfAbsent( dbName, DatabasePrivilege::new );
-            }
-            else if ( database.labels().stringValue( 0 ).equals( "DatabaseAll" ) )
-            {
-                dbpriv = results.computeIfAbsent( "", db -> new DatabasePrivilege() );
-            }
-            else
-            {
-                throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+                this.fields = new AnyValue[numberOfFields];
             }
 
-            String actionValue = ((TextValue) row.fields()[2]).stringValue();
-            NodeValue resource = (NodeValue) row.fields()[3];
-            NodeValue qualifier = (NodeValue) row.fields()[4];
-            try
+            @Override
+            public void onField( int offset, AnyValue value )
             {
-                dbpriv.addPrivilege( PrivilegeBuilder.grant( actionValue )
-                        .withinScope( qualifier )
-                        .onResource( resource )
-                        .build() );
+              fields[offset] = value;
             }
-            catch ( InvalidArgumentsException ie )
+
+            @Override
+            public void onRecordCompleted()
             {
-                throw new IllegalStateException( "Failed to authorize", ie );
+                AnyValue dbNameValue = fields[0];
+                NodeValue database = (NodeValue) fields[1];
+                assert database.labels().length() == 1;
+                DatabasePrivilege dbpriv;
+                if ( database.labels().stringValue( 0 ).equals( "Database" ) )
+                {
+                    String dbName = ((TextValue) dbNameValue).stringValue();
+                    dbpriv = results.computeIfAbsent( dbName, DatabasePrivilege::new );
+                }
+                else if ( database.labels().stringValue( 0 ).equals( "DatabaseAll" ) )
+                {
+                    dbpriv = results.computeIfAbsent( "", db -> new DatabasePrivilege() );
+                }
+                else
+                {
+                    throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+                }
+
+                String actionValue = ((TextValue) fields[2]).stringValue();
+                NodeValue resource = (NodeValue) fields[3];
+                NodeValue qualifier = (NodeValue) fields[4];
+                try
+                {
+                    dbpriv.addPrivilege( PrivilegeBuilder.grant( actionValue )
+                            .withinScope( qualifier )
+                            .onResource( resource )
+                            .build() );
+                }
+                catch ( InvalidArgumentsException ie )
+                {
+                    throw new IllegalStateException( "Failed to authorize", ie );
+                }
             }
-            return true;
         };
 
-        queryExecutor.executeQuery( query, Collections.singletonMap( "roles", roles ), resultVisitor );
+        queryExecutor.executeQuery( query, Collections.singletonMap( "roles", roles ), subscriber );
 
         return new HashSet<>( results.values() );
     }
