@@ -32,7 +32,7 @@ public final class CompiledHelpers
 
     public static Value assertBooleanOrNoValue( AnyValue value )
     {
-        if ( value != NO_VALUE && !(value instanceof BooleanValue ) )
+        if ( value != NO_VALUE && !(value instanceof BooleanValue) )
         {
             throw new CypherTypeException( String.format( "Don't know how to treat a predicate: %s", value.toString() ),
                     null );
@@ -70,7 +70,6 @@ public final class CompiledHelpers
             return propertyOrNull;
         }
     }
-
 
     public static Value cachedRelationshipProperty(
             ExecutionContext ctx,
