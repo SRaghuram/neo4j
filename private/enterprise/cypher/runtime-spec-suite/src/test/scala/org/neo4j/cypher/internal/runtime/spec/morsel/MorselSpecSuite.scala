@@ -5,14 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import java.util.concurrent.{Callable, Executors, TimeUnit}
-
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.runtime.spec.{RowsMatcher, _}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
-import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeReference, RelationshipReference}
@@ -120,6 +117,10 @@ class MorselSingleThreadedNoFusingTest extends MorselTestSuite(ENTERPRISE.SINGLE
 class MorselParallelTest extends MorselTestSuite(ENTERPRISE.PARALLEL)
 class MorselParallelNoFusingTest extends MorselTestSuite(ENTERPRISE.PARALLEL_NO_FUSING)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
+
+// WORKLOAD
+class MorselParallelWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselParallelNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 
 abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, MorselRuntime) {
 
@@ -323,39 +324,6 @@ abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
     // then
     runtimeResult should beColumns("x", "y", "z").withRows(groupedBy("x", "y").asc("z"))
-  }
-
-  test("should deal with concurrent queries") {
-    // given
-    val nodes = nodeGraph(10)
-    val executor = Executors.newFixedThreadPool(8)
-    val QUERIES_PER_THREAD = 50
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x")
-      .allNodeScan("x")
-      .build()
-
-    val futureResultSets = (0 until 8).map(_ =>
-      executor.submit(new Callable[Seq[RuntimeResult]] {
-        override def call(): Seq[RuntimeResult] = {
-          for (_ <- 0 until QUERIES_PER_THREAD) yield execute(logicalQuery, runtime)
-        }
-      })
-    )
-
-    // then
-    for (futureResultSet <- futureResultSets) {
-
-      val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
-      resultSet.size should be(QUERIES_PER_THREAD)
-      for (result <- resultSet) {
-        inTx(
-          result should beColumns("x").withRows(singleColumn(nodes))
-        )
-      }
-    }
   }
 
   test("should complete query with error") {

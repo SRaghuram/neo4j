@@ -1,0 +1,57 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.runtime.spec.morsel
+
+import java.util.concurrent.{Callable, Executors, TimeUnit}
+
+import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
+import org.neo4j.values.AnyValue
+
+import scala.collection.mutable.ArrayBuffer
+
+abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
+                                                           runtime: CypherRuntime[CONTEXT],
+                                                           sizeHint: Int
+                                                          ) extends RuntimeTestSuite[CONTEXT](edition, runtime, true) {
+
+  test("should deal with concurrent queries") {
+    // given
+    val nodes = nodeGraph(10)
+    val executor = Executors.newFixedThreadPool(8)
+    val QUERIES_PER_THREAD = 50
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .allNodeScan("x")
+      .build()
+
+    val futureResultSets =
+      (0 until 8).map(_ =>
+        executor.submit(new Callable[Seq[ArrayBuffer[Array[AnyValue]]]] {
+          override def call(): Seq[ArrayBuffer[Array[AnyValue]]] = {
+            for (_ <- 0 until QUERIES_PER_THREAD)
+              yield consume(execute(logicalQuery, runtime))
+          }
+        })
+    )
+
+    // then
+    val expected = singleColumn(nodes)
+
+    for (futureResultSet <- futureResultSets) {
+      val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
+      resultSet.size should be(QUERIES_PER_THREAD)
+      for (result <- resultSet) {
+        inTx(
+          expected.matches(Array("x"), result) shouldBe true
+        )
+      }
+    }
+  }
+
+}
