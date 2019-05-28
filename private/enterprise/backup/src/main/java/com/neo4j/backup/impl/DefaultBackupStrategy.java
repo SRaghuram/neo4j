@@ -106,6 +106,10 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     {
         try
         {
+            if ( storeFiles.isEmpty( databaseLayout ) )
+            {
+                return null;
+            }
             return storeFiles.readStoreId( databaseLayout );
         }
         catch ( IOException e )

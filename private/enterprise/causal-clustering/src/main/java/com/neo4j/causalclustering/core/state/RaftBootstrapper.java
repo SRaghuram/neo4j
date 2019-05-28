@@ -202,7 +202,7 @@ public class RaftBootstrapper
         DatabaseLayout layout = bootstrapContext.databaseLayout();
         try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
-            TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( layout, databasePageCache );
+            TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache );
             LogFiles logFiles = LogFilesBuilder
                     .activeFilesBuilder( layout, fs, databasePageCache )
                     .withConfig( config )
