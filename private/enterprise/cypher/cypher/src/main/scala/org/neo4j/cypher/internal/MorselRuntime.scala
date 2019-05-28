@@ -9,20 +9,17 @@ import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
-import org.neo4j.cypher.internal.runtime.morsel.operators.CompiledQueryResultRecord
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
-import org.neo4j.graphdb
+import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
@@ -181,30 +178,4 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     }
   }
 
-}
-
-class VisitSubscriber(visitor: QueryResultVisitor[_], numberOfFields: Int) extends QuerySubscriber {
-  private val array: Array[AnyValue] = new Array[AnyValue](numberOfFields)
-  private val results: QueryResult.Record = new CompiledQueryResultRecord(array)
-
-  override def onResult(numberOfFields: Int): Unit = {
-  }
-
-  override def onRecord(): Unit = {}
-
-  override def onField(offset: Int, value: AnyValue): Unit = {
-    array(offset) = value
-  }
-
-  override def onRecordCompleted(): Unit = {
-    visitor.visit(results)
-  }
-
-  override def onError(throwable: Throwable): Unit = {
-    //errors are propagated via the QueryCompletionTracker
-  }
-
-  override def onResultCompleted(statistics: graphdb.QueryStatistics): Unit = {
-
-  }
 }
