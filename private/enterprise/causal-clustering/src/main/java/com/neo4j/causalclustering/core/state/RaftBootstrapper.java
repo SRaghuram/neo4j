@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
@@ -187,8 +187,7 @@ public class RaftBootstrapper
 
         var idAllocation = deriveIdAllocationState( bootstrapContext.databaseLayout() );
         coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocation );
-        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
-
+        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN );
         return coreSnapshot;
     }
 

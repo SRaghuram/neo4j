@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequestMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -94,10 +94,10 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         }
 
         @Override
-        public void handle( ReplicatedLockTokenRequest replicatedLockTokenRequest )
+        public void handle( ReplicatedBarrierTokenRequest replicatedLockTokenRequest )
         {
             output.add( ChunkedReplicatedContent.single( ContentCodes.LOCK_TOKEN_REQUEST,
-                    channel -> ReplicatedLockTokenMarshalV2.marshal( replicatedLockTokenRequest, channel ) ) );
+                    channel -> ReplicatedBarrierTokenMarshalV2.marshal( replicatedLockTokenRequest, channel ) ) );
         }
 
         @Override

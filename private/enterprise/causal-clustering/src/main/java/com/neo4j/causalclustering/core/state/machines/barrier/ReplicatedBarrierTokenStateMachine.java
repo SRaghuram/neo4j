@@ -3,43 +3,43 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.locks;
+package com.neo4j.causalclustering.core.state.machines.barrier;
+
+import java.io.IOException;
+import java.util.function.Consumer;
 
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
-import java.io.IOException;
-import java.util.function.Consumer;
-
 /**
- * Listens for {@link ReplicatedLockTokenRequest}. Keeps track of the current holder of the replicated token,
+ * Listens for {@link ReplicatedBarrierTokenRequest}. Keeps track of the current holder of the replicated token,
  * which is identified by a monotonically increasing id, and an owning member.
  */
-public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedLockTokenRequest>
+public class ReplicatedBarrierTokenStateMachine implements StateMachine<ReplicatedBarrierTokenRequest>
 {
-    private final StateStorage<ReplicatedLockTokenState> storage;
+    private final StateStorage<ReplicatedBarrierTokenState> storage;
 
-    private ReplicatedLockTokenState state;
+    private ReplicatedBarrierTokenState state;
 
-    public ReplicatedLockTokenStateMachine( StateStorage<ReplicatedLockTokenState> storage )
+    public ReplicatedBarrierTokenStateMachine( StateStorage<ReplicatedBarrierTokenState> storage )
     {
         this.storage = storage;
     }
 
     @Override
-    public synchronized void applyCommand( ReplicatedLockTokenRequest tokenRequest, long commandIndex,
-            Consumer<Result> callback )
+    public synchronized void applyCommand( ReplicatedBarrierTokenRequest tokenRequest, long commandIndex,
+                                           Consumer<Result> callback )
     {
         if ( commandIndex <= state().ordinal() )
         {
             return;
         }
 
-        boolean requestAccepted = tokenRequest.id() == LockToken.nextCandidateId( state.candidateId() );
+        boolean requestAccepted = tokenRequest.id() == BarrierToken.nextCandidateId( state.candidateId() );
         if ( requestAccepted )
         {
-            state = new ReplicatedLockTokenState( commandIndex, tokenRequest );
+            state = new ReplicatedBarrierTokenState( commandIndex, tokenRequest );
         }
 
         callback.accept( Result.of( requestAccepted ) );
@@ -57,7 +57,7 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
         return state().ordinal();
     }
 
-    private ReplicatedLockTokenState state()
+    private ReplicatedBarrierTokenState state()
     {
         if ( state == null )
         {
@@ -66,12 +66,12 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
         return state;
     }
 
-    public synchronized ReplicatedLockTokenState snapshot()
+    public synchronized ReplicatedBarrierTokenState snapshot()
     {
         return state().newInstance();
     }
 
-    public synchronized void installSnapshot( ReplicatedLockTokenState snapshot )
+    public synchronized void installSnapshot( ReplicatedBarrierTokenState snapshot )
     {
         state = snapshot;
     }

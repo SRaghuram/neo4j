@@ -3,7 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.locks;
+package com.neo4j.causalclustering.core.state.machines.barrier;
+
+import java.util.stream.Stream;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
@@ -12,8 +14,6 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.identity.MemberId;
-
-import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.locking.ActiveLock;
@@ -43,7 +43,7 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
  * at the time of acquiring it, but by the time a transaction commits it might no longer be valid, which in such case
  * would lead to the transaction being rejected and failed.
  * <p/>
- * The {@link ReplicatedLockTokenStateMachine} handles the token requests and considers only one to be valid at a time.
+ * The {@link ReplicatedBarrierTokenStateMachine} handles the token requests and considers only one to be valid at a time.
  * Meanwhile, {@link ReplicatedTransactionStateMachine} rejects any transactions that get committed under an
  * invalid token.
  */
@@ -58,17 +58,17 @@ public class LeaderOnlyLockManager implements Locks
     private final Replicator replicator;
     private final LeaderLocator leaderLocator;
     private final Locks localLocks;
-    private final ReplicatedLockTokenStateMachine lockTokenStateMachine;
+    private final ReplicatedBarrierTokenStateMachine barrierTokenStateMachine;
     private final DatabaseId databaseId;
 
     public LeaderOnlyLockManager( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, Locks localLocks,
-            ReplicatedLockTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
+                                  ReplicatedBarrierTokenStateMachine barrierTokenStateMachine, DatabaseId databaseId )
     {
         this.myself = myself;
         this.replicator = replicator;
         this.leaderLocator = leaderLocator;
         this.localLocks = localLocks;
-        this.lockTokenStateMachine = lockTokenStateMachine;
+        this.barrierTokenStateMachine = barrierTokenStateMachine;
         this.databaseId = databaseId;
     }
 
@@ -83,7 +83,7 @@ public class LeaderOnlyLockManager implements Locks
      */
     private synchronized int acquireTokenOrThrow()
     {
-        LockToken currentToken = currentToken();
+        BarrierToken currentToken = currentToken();
         if ( myself.equals( currentToken.owner() ) )
         {
             return currentToken.id();
@@ -93,8 +93,8 @@ public class LeaderOnlyLockManager implements Locks
            since only the leader should take locks. */
         ensureLeader();
 
-        ReplicatedLockTokenRequest lockTokenRequest =
-                new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ), databaseId );
+        ReplicatedBarrierTokenRequest lockTokenRequest =
+                new ReplicatedBarrierTokenRequest( myself, BarrierToken.nextCandidateId( currentToken.id() ), databaseId );
 
         Result result;
         try
@@ -125,10 +125,10 @@ public class LeaderOnlyLockManager implements Locks
         }
     }
 
-    private LockToken currentToken()
+    private BarrierToken currentToken()
     {
-        ReplicatedLockTokenState state = lockTokenStateMachine.snapshot();
-        return new ReplicatedLockTokenRequest( state, databaseId );
+        ReplicatedBarrierTokenState state = barrierTokenStateMachine.snapshot();
+        return new ReplicatedBarrierTokenRequest( state, databaseId );
     }
 
     private void ensureLeader()
@@ -171,7 +171,7 @@ public class LeaderOnlyLockManager implements Locks
     private class LeaderOnlyLockClient implements Locks.Client
     {
         private final Client localClient;
-        private int lockTokenId = LockToken.INVALID_LOCK_TOKEN_ID;
+        private int lockTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
 
         LeaderOnlyLockClient( Client localClient )
         {
@@ -185,7 +185,7 @@ public class LeaderOnlyLockManager implements Locks
          */
         private void ensureHoldingToken()
         {
-            if ( lockTokenId == LockToken.INVALID_LOCK_TOKEN_ID )
+            if ( lockTokenId == BarrierToken.INVALID_BARRIER_TOKEN_ID )
             {
                 lockTokenId = acquireTokenOrThrow();
             }

@@ -3,36 +3,36 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.locks;
+package com.neo4j.causalclustering.core.state.machines.barrier;
+
+import java.io.IOException;
+import java.util.Objects;
 
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
-import java.io.IOException;
-import java.util.Objects;
-
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 
-import static com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest.INVALID_REPLICATED_LOCK_TOKEN_REQUEST;
+import static com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest.INVALID_REPLICATED_BARRIER_TOKEN_REQUEST;
 
-public class ReplicatedLockTokenState
+public class ReplicatedBarrierTokenState
 {
-    public static final ReplicatedLockTokenState INITIAL_LOCK_TOKEN =
-            new ReplicatedLockTokenState( -1, INVALID_REPLICATED_LOCK_TOKEN_REQUEST );
+    public static final ReplicatedBarrierTokenState INITIAL_BARRIER_TOKEN =
+            new ReplicatedBarrierTokenState( -1, INVALID_REPLICATED_BARRIER_TOKEN_REQUEST );
 
     private final long ordinal;
     private final MemberId owner;
     private final int candidateId;
 
-    public ReplicatedLockTokenState( long ordinal, ReplicatedLockTokenRequest currentToken )
+    public ReplicatedBarrierTokenState( long ordinal, ReplicatedBarrierTokenRequest currentToken )
     {
         this( ordinal, currentToken.id(), currentToken.owner() );
     }
 
-    private ReplicatedLockTokenState( long ordinal, int candidateId, MemberId owner )
+    private ReplicatedBarrierTokenState( long ordinal, int candidateId, MemberId owner )
     {
        this.ordinal = ordinal;
        this.candidateId = candidateId;
@@ -57,7 +57,7 @@ public class ReplicatedLockTokenState
     @Override
     public String toString()
     {
-        return String.format( "ReplicatedLockTokenState{candidateId=%s, owner=%s, ordinal=%d}", candidateId, owner, ordinal );
+        return String.format( "ReplicatedBarrierTokenState{candidateId=%s, owner=%s, ordinal=%d}", candidateId, owner, ordinal );
     }
 
     @Override
@@ -67,11 +67,11 @@ public class ReplicatedLockTokenState
         {
             return true;
         }
-        if ( !(o instanceof ReplicatedLockTokenState) )
+        if ( !(o instanceof ReplicatedBarrierTokenState) )
         {
             return false;
         }
-        ReplicatedLockTokenState that = (ReplicatedLockTokenState) o;
+        ReplicatedBarrierTokenState that = (ReplicatedBarrierTokenState) o;
         return ordinal == that.ordinal && candidateId == that.candidateId && Objects.equals( owner, that.owner );
     }
 
@@ -81,12 +81,12 @@ public class ReplicatedLockTokenState
         return Objects.hash( ordinal, owner, candidateId );
     }
 
-    ReplicatedLockTokenState newInstance()
+    ReplicatedBarrierTokenState newInstance()
     {
-        return new ReplicatedLockTokenState( ordinal, candidateId, owner );
+        return new ReplicatedBarrierTokenState( ordinal, candidateId, owner );
     }
 
-    public static class Marshal extends SafeStateMarshal<ReplicatedLockTokenState>
+    public static class Marshal extends SafeStateMarshal<ReplicatedBarrierTokenState>
     {
         private final ChannelMarshal<MemberId> memberMarshal;
 
@@ -96,7 +96,7 @@ public class ReplicatedLockTokenState
         }
 
         @Override
-        public void marshal( ReplicatedLockTokenState state,
+        public void marshal( ReplicatedBarrierTokenState state,
                              WritableChannel channel ) throws IOException
         {
             channel.putLong( state.ordinal );
@@ -105,22 +105,22 @@ public class ReplicatedLockTokenState
         }
 
         @Override
-        public ReplicatedLockTokenState unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
+        public ReplicatedBarrierTokenState unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
         {
             long logIndex = channel.getLong();
             int candidateId = channel.getInt();
             MemberId member = memberMarshal.unmarshal( channel );
-            return new ReplicatedLockTokenState( logIndex, candidateId, member );
+            return new ReplicatedBarrierTokenState( logIndex, candidateId, member );
         }
 
         @Override
-        public ReplicatedLockTokenState startState()
+        public ReplicatedBarrierTokenState startState()
         {
-            return INITIAL_LOCK_TOKEN;
+            return INITIAL_BARRIER_TOKEN;
         }
 
         @Override
-        public long ordinal( ReplicatedLockTokenState state )
+        public long ordinal( ReplicatedBarrierTokenState state )
         {
             return state.ordinal();
         }

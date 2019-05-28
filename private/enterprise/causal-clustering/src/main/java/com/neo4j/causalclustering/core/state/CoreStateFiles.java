@@ -5,23 +5,23 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
@@ -60,8 +60,9 @@ public class CoreStateFiles<STATE>
 
     // per-database state
 
-    public static final CoreStateFiles<ReplicatedLockTokenState> LOCK_TOKEN =
-            new CoreStateFiles<>( "lock-token", DATABASE, new ReplicatedLockTokenState.Marshal(), replicated_lock_token_state_size, CoreStateType.LOCK_TOKEN );
+    public static final CoreStateFiles<ReplicatedBarrierTokenState> LOCK_TOKEN =
+            new CoreStateFiles<>( "lock-token", DATABASE, new ReplicatedBarrierTokenState.Marshal(), replicated_lock_token_state_size,
+                    CoreStateType.LOCK_TOKEN );
     public static final CoreStateFiles<GlobalSessionTrackerState> SESSION_TRACKER =
             new CoreStateFiles<>( "session-tracker", DATABASE, new GlobalSessionTrackerState.Marshal(), global_session_tracker_state_size,
                     CoreStateType.SESSION_TRACKER );

@@ -34,6 +34,9 @@ import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
+import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockManager;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
@@ -42,9 +45,6 @@ import com.neo4j.causalclustering.core.state.machines.id.IdReusabilityCondition;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdGeneratorFactory;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdRangeAcquirer;
-import com.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManager;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedRelationshipTypeTokenHolder;
@@ -281,7 +281,7 @@ class CoreDatabaseFactory
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( databaseId, labelTokenRegistry, replicator,
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
-        ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine = createLockTokenStateMachine( databaseId, life, debugLog );
+        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog );
 
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry, debugLog, databaseManager );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, debugLog, databaseManager );
@@ -290,16 +290,16 @@ class CoreDatabaseFactory
                 relationshipTypeTokenRegistry, debugLog, databaseManager );
 
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( raftContext.commandIndexTracker(),
-                replicatedLockTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, versionContextSupplier,
+                replicatedBarrierTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, versionContextSupplier,
                 txEventService.getCommitNotifier( databaseId ) );
 
         Locks lockManager = createLockManager(
-                config, clock, logService, replicator, myIdentity, raftGroup.raftMachine(), replicatedLockTokenStateMachine, databaseId );
+                config, clock, logService, replicator, myIdentity, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
         CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relationshipTypeTokenStateMachine,
-                propertyKeyTokenStateMachine, replicatedLockTokenStateMachine, idAllocationStateMachine, new DummyMachine(), consensusLogIndexRecovery );
+                propertyKeyTokenStateMachine, replicatedBarrierTokenStateMachine, idAllocationStateMachine, new DummyMachine(), consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
@@ -462,10 +462,10 @@ class CoreDatabaseFactory
         return new ReplicatedIdAllocationStateMachine( idAllocationStorage );
     }
 
-    private ReplicatedLockTokenStateMachine createLockTokenStateMachine( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
+    private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseId, life, databaseLogProvider );
-        return new ReplicatedLockTokenStateMachine( lockTokenStorage );
+        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createLockTokenStorage( databaseId, life, databaseLogProvider );
+        return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage );
     }
 
     private Map<IdType,Integer> getIdTypeAllocationSizeFromConfig( Config config )
@@ -496,7 +496,7 @@ class CoreDatabaseFactory
     }
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging, final Replicator replicator, MemberId myself,
-            LeaderLocator leaderLocator, ReplicatedLockTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
+            LeaderLocator leaderLocator, ReplicatedBarrierTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
     {
         LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );

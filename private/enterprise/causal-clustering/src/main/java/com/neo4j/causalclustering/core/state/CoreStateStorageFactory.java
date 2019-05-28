@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
@@ -63,7 +63,7 @@ public class CoreStateStorageFactory
         return createDurableStorage( layout.idAllocationStateDirectory( databaseId ), CoreStateFiles.ID_ALLOCATION, life, logProvider );
     }
 
-    public StateStorage<ReplicatedLockTokenState> createLockTokenStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<ReplicatedBarrierTokenState> createLockTokenStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
     {
         return createDurableStorage( layout.lockTokenStateDirectory( databaseId ), CoreStateFiles.LOCK_TOKEN, life, logProvider );
     }

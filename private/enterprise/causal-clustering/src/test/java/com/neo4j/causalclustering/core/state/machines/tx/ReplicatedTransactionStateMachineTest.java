@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -209,11 +209,11 @@ class ReplicatedTransactionStateMachineTest
         return physicalTx;
     }
 
-    private static ReplicatedLockTokenStateMachine lockState( int lockSessionId )
+    private static ReplicatedBarrierTokenStateMachine lockState( int lockSessionId )
     {
-        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, DATABASE_ID );
-        ReplicatedLockTokenStateMachine lockState = mock( ReplicatedLockTokenStateMachine.class );
-        when( lockState.snapshot() ).thenReturn( new ReplicatedLockTokenState( -1, lockTokenRequest ) );
+        ReplicatedBarrierTokenRequest lockTokenRequest = new ReplicatedBarrierTokenRequest( null, lockSessionId, DATABASE_ID );
+        ReplicatedBarrierTokenStateMachine lockState = mock( ReplicatedBarrierTokenStateMachine.class );
+        when( lockState.snapshot() ).thenReturn( new ReplicatedBarrierTokenState( -1, lockTokenRequest ) );
         return lockState;
     }
 }

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.locks;
+package com.neo4j.causalclustering.core.state.machines.barrier;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
@@ -34,8 +34,8 @@ public class LeaderOnlyLockManagerTest
         // given
         MemberId me = member( 0 );
 
-        ReplicatedLockTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
+        ReplicatedBarrierTokenStateMachine replicatedLockStateMachine =
+                new ReplicatedBarrierTokenStateMachine( new InMemoryStateStorage( ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN ) );
 
         DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
 
@@ -61,8 +61,8 @@ public class LeaderOnlyLockManagerTest
         MemberId me = member( 0 );
         MemberId leader = member( 1 );
 
-        ReplicatedLockTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
+        ReplicatedBarrierTokenStateMachine replicatedLockStateMachine =
+                new ReplicatedBarrierTokenStateMachine( new InMemoryStateStorage( ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN ) );
         DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );

@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 
 import java.util.function.Consumer;
@@ -33,7 +33,7 @@ import static org.neo4j.kernel.api.exceptions.Status.Transaction.LockSessionExpi
 public class ReplicatedTransactionStateMachine implements StateMachine<ReplicatedTransaction>
 {
     private final CommandIndexTracker commandIndexTracker;
-    private final ReplicatedLockTokenStateMachine lockTokenStateMachine;
+    private final ReplicatedBarrierTokenStateMachine lockTokenStateMachine;
     private final int maxBatchSize;
     private final Log log;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
@@ -43,7 +43,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     private TransactionQueue queue;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTransactionStateMachine( CommandIndexTracker commandIndexTracker, ReplicatedLockTokenStateMachine lockStateMachine, int maxBatchSize,
+    public ReplicatedTransactionStateMachine( CommandIndexTracker commandIndexTracker, ReplicatedBarrierTokenStateMachine lockStateMachine, int maxBatchSize,
             LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, VersionContextSupplier versionContextSupplier,
             TransactionCommitNotifier txCommitNotifier )
     {

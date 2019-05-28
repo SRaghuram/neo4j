@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
@@ -137,7 +137,7 @@ public class CoreStateMachinesTest
     private final ReplicatedTokenStateMachine labelTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine relationshipTypeTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine propertyKeyTokenSM = mock( ReplicatedTokenStateMachine.class );
-    private final ReplicatedLockTokenStateMachine lockTokenSM = mock( ReplicatedLockTokenStateMachine.class );
+    private final ReplicatedBarrierTokenStateMachine lockTokenSM = mock( ReplicatedBarrierTokenStateMachine.class );
     private final ReplicatedIdAllocationStateMachine idAllocationSM = mock( ReplicatedIdAllocationStateMachine.class );
     private final DummyMachine dummySM = mock( DummyMachine.class );
     private final RecoverConsensusLogIndex recoverConsensusLogIndex = mock( RecoverConsensusLogIndex.class );
@@ -154,7 +154,7 @@ public class CoreStateMachinesTest
     }
 
     @SuppressWarnings( "unchecked" )
-    private final ReplicatedLockTokenRequest lockTokenRequest = mock( ReplicatedLockTokenRequest.class );
+    private final ReplicatedBarrierTokenRequest lockTokenRequest = mock( ReplicatedBarrierTokenRequest.class );
 
     @SuppressWarnings( "unchecked" )
     private final Consumer<Result> callback = mock( Consumer.class );

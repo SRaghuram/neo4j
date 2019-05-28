@@ -5,24 +5,24 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
+import java.io.IOException;
+import java.util.function.Consumer;
+
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-
-import java.io.IOException;
-import java.util.function.Consumer;
 
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 
@@ -35,7 +35,7 @@ public class CoreStateMachines
     private final ReplicatedTokenStateMachine labelTokenStateMachine;
     private final ReplicatedTokenStateMachine relationshipTypeTokenStateMachine;
     private final ReplicatedTokenStateMachine propertyKeyTokenStateMachine;
-    private final ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine;
+    private final ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine;
     private final ReplicatedIdAllocationStateMachine idAllocationStateMachine;
     private final DummyMachine benchmarkMachine;
 
@@ -48,7 +48,7 @@ public class CoreStateMachines
             ReplicatedTokenStateMachine labelTokenStateMachine,
             ReplicatedTokenStateMachine relationshipTypeTokenStateMachine,
             ReplicatedTokenStateMachine propertyKeyTokenStateMachine,
-            ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine,
+            ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine,
             ReplicatedIdAllocationStateMachine idAllocationStateMachine,
             DummyMachine benchmarkMachine,
             RecoverConsensusLogIndex consensusLogIndexRecovery )
@@ -57,7 +57,7 @@ public class CoreStateMachines
         this.labelTokenStateMachine = labelTokenStateMachine;
         this.relationshipTypeTokenStateMachine = relationshipTypeTokenStateMachine;
         this.propertyKeyTokenStateMachine = propertyKeyTokenStateMachine;
-        this.replicatedLockTokenStateMachine = replicatedLockTokenStateMachine;
+        this.replicatedBarrierTokenStateMachine = replicatedBarrierTokenStateMachine;
         this.idAllocationStateMachine = idAllocationStateMachine;
         this.benchmarkMachine = benchmarkMachine;
         this.consensusLogIndexRecovery = consensusLogIndexRecovery;
@@ -71,7 +71,7 @@ public class CoreStateMachines
 
     public long getLastAppliedIndex()
     {
-        long lastAppliedLockTokenIndex = replicatedLockTokenStateMachine.lastAppliedIndex();
+        long lastAppliedLockTokenIndex = replicatedBarrierTokenStateMachine.lastAppliedIndex();
         long lastAppliedIdAllocationIndex = idAllocationStateMachine.lastAppliedIndex();
         return max( lastAppliedLockTokenIndex, lastAppliedIdAllocationIndex );
     }
@@ -84,21 +84,21 @@ public class CoreStateMachines
         relationshipTypeTokenStateMachine.flush();
         propertyKeyTokenStateMachine.flush();
 
-        replicatedLockTokenStateMachine.flush();
+        replicatedBarrierTokenStateMachine.flush();
         idAllocationStateMachine.flush();
     }
 
     public void augmentSnapshot( CoreSnapshot coreSnapshot )
     {
         coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
-        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, replicatedLockTokenStateMachine.snapshot() );
+        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, replicatedBarrierTokenStateMachine.snapshot() );
         // transactions and tokens live in the store
     }
 
     public void installSnapshot( CoreSnapshot coreSnapshot )
     {
         idAllocationStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.ID_ALLOCATION ) );
-        replicatedLockTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.LOCK_TOKEN ) );
+        replicatedBarrierTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.LOCK_TOKEN ) );
         // transactions and tokens live in the store
     }
 
@@ -149,10 +149,10 @@ public class CoreStateMachines
         }
 
         @Override
-        public void dispatch( ReplicatedLockTokenRequest lockRequest, long commandIndex, Consumer<Result> callback )
+        public void dispatch( ReplicatedBarrierTokenRequest lockRequest, long commandIndex, Consumer<Result> callback )
         {
             replicatedTxStateMachine.ensuredApplied();
-            replicatedLockTokenStateMachine.applyCommand( lockRequest, commandIndex, callback );
+            replicatedBarrierTokenStateMachine.applyCommand( lockRequest, commandIndex, callback );
         }
 
         @Override

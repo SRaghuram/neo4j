@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CommercialTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
@@ -48,7 +48,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
+import static com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN;
 import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -320,10 +320,10 @@ class RaftBootstrapperIT
 
     private void verifyDatabaseSpecificState( Function<CoreStateFiles<?>,?> databaseSpecific, int nodeCount )
     {
-        ReplicatedLockTokenState lockTokenState = (ReplicatedLockTokenState) databaseSpecific.apply( CoreStateFiles.LOCK_TOKEN );
+        ReplicatedBarrierTokenState lockTokenState = (ReplicatedBarrierTokenState) databaseSpecific.apply( CoreStateFiles.LOCK_TOKEN );
         IdAllocationState idAllocationState =  (IdAllocationState) databaseSpecific.apply( CoreStateFiles.ID_ALLOCATION );
 
-        assertEquals( INITIAL_LOCK_TOKEN, lockTokenState );
+        assertEquals( INITIAL_BARRIER_TOKEN, lockTokenState );
 
         assertThat( idAllocationState.firstUnallocated( IdType.NODE ),
                 allOf( greaterThanOrEqualTo( (long) nodeCount ), lessThanOrEqualTo( (long) nodeCount ) ) );

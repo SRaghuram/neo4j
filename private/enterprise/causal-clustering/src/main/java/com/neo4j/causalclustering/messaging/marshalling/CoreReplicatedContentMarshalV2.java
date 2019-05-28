@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequestMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
+import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -100,10 +100,10 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
         }
 
         @Override
-        public void handle( ReplicatedLockTokenRequest replicatedLockTokenRequest ) throws IOException
+        public void handle( ReplicatedBarrierTokenRequest replicatedLockTokenRequest ) throws IOException
         {
             writableChannel.put( ContentCodes.LOCK_TOKEN_REQUEST );
-            ReplicatedLockTokenMarshalV2.marshal( replicatedLockTokenRequest, writableChannel );
+            ReplicatedBarrierTokenMarshalV2.marshal( replicatedLockTokenRequest, writableChannel );
         }
 
         @Override
@@ -136,7 +136,7 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
         case ContentCodes.NEW_LEADER_BARRIER_TYPE:
             return ContentBuilder.finished( new NewLeaderBarrier() );
         case ContentCodes.LOCK_TOKEN_REQUEST:
-            return ContentBuilder.finished( ReplicatedLockTokenMarshalV2.unmarshal( channel ) );
+            return ContentBuilder.finished( ReplicatedBarrierTokenMarshalV2.unmarshal( channel ) );
         case ContentCodes.DISTRIBUTED_OPERATION:
             return DistributedOperation.deserialize( channel );
         case ContentCodes.DUMMY_REQUEST:

@@ -3,7 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.locks;
+package com.neo4j.causalclustering.core.state.machines.barrier;
+
+import java.io.IOException;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.Result;
@@ -11,29 +15,25 @@ import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
-import java.io.IOException;
-import java.util.Objects;
-import java.util.function.Consumer;
-
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.lang.String.format;
 
-public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockToken
+public class ReplicatedBarrierTokenRequest implements CoreReplicatedContent, BarrierToken
 {
     private final MemberId owner;
     private final int candidateId;
     private final DatabaseId databaseId;
 
-    static final ReplicatedLockTokenRequest INVALID_REPLICATED_LOCK_TOKEN_REQUEST =
-            new ReplicatedLockTokenRequest( null, INVALID_LOCK_TOKEN_ID, null );
+    static final ReplicatedBarrierTokenRequest INVALID_REPLICATED_BARRIER_TOKEN_REQUEST =
+            new ReplicatedBarrierTokenRequest( null, INVALID_BARRIER_TOKEN_ID, null );
 
-    public ReplicatedLockTokenRequest( ReplicatedLockTokenState state, DatabaseId databaseId )
+    public ReplicatedBarrierTokenRequest( ReplicatedBarrierTokenState state, DatabaseId databaseId )
     {
         this( state.owner(), state.candidateId(), databaseId );
     }
 
-    public ReplicatedLockTokenRequest( MemberId owner, int candidateId, DatabaseId databaseId )
+    public ReplicatedBarrierTokenRequest( MemberId owner, int candidateId, DatabaseId databaseId )
     {
         this.owner = owner;
         this.candidateId = candidateId;
@@ -63,7 +63,7 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
         {
             return false;
         }
-        ReplicatedLockTokenRequest that = (ReplicatedLockTokenRequest) o;
+        ReplicatedBarrierTokenRequest that = (ReplicatedBarrierTokenRequest) o;
         return candidateId == that.candidateId && Objects.equals( owner, that.owner );
     }
 
@@ -76,7 +76,7 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
     @Override
     public String toString()
     {
-        return format( "ReplicatedLockTokenRequest{owner=%s, candidateId=%d}", owner, candidateId );
+        return format( "ReplicatedBarrierTokenRequest{owner=%s, candidateId=%d}", owner, candidateId );
     }
 
     @Override
