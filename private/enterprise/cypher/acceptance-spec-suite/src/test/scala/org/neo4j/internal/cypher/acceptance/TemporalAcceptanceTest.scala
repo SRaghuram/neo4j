@@ -135,7 +135,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
+                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
                              params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1))))
@@ -158,7 +158,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
+                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
                              params = Map("param" ->
         List(LocalDate.of(2018, 4, 1))))
@@ -182,7 +182,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
+                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
                              params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
@@ -207,7 +207,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
+                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
                              params = Map("param" ->
         List(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
@@ -1057,5 +1057,5 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   //noinspection ScalaUnnecessaryParentheses
-  private def cached(key: String, value: String) = (s"\\{$key : (cached\\[)?$value\\]?\\}").r
+  private def cached(key: String, value: String) = (s"\\{$key : (cache\\[)?$value\\]?\\}").r
 }

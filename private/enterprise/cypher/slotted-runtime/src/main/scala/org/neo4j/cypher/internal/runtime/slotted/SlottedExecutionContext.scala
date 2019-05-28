@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfig
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
@@ -116,21 +116,31 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = refs(offset) = value
 
-  override def invalidateCachedProperties(node: Long): Unit = {
+  override def invalidateCachedNodeProperties(node: Long): Unit = {
     slots.foreachCachedSlot {
       case (cnp, refSlot) =>
-        if (getLongAt(slots.getLongOffsetFor(cnp.variableName)) == node) {
+        val slot = slots.getLongSlotFor(cnp.variableName)
+        if (slot.typ == CTNode && getLongAt(slot.offset) == node) {
+          setCachedPropertyAt(refSlot.offset, null)
+        }
+    }
+  }
+  override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
+    slots.foreachCachedSlot {
+      case (cnp, refSlot) =>
+        val slot = slots.getLongSlotFor(cnp.variableName)
+        if (slot.typ == CTRelationship && getLongAt(slot.offset) == rel) {
           setCachedPropertyAt(refSlot.offset, null)
         }
     }
   }
 
-  override def setCachedProperty(key: CachedProperty, value: Value): Unit =
+  override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit =
     setCachedPropertyAt(slots.getCachedPropertyOffsetFor(key), value)
 
   override def getCachedPropertyAt(offset: Int): Value = refs(offset).asInstanceOf[Value]
 
-  override def getCachedProperty(key: CachedProperty): Value = fail()
+  override def getCachedProperty(key: ASTCachedProperty): Value = fail()
 
   private def fail(): Nothing = throw new InternalException("Tried using a slotted context as a map")
 

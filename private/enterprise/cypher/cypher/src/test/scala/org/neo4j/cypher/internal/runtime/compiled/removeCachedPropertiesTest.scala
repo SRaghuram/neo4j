@@ -9,11 +9,11 @@ import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.compiler.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{LabelToken, Property, Variable}
+import org.neo4j.cypher.internal.v4_0.expressions.{CACHED_NODE, CachedProperty, LabelToken, Property, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.LabelId
+import org.neo4j.cypher.internal.v4_0.util.{InputPosition, LabelId}
 
-class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTestSupport2 with PlanMatchHelp {
+class removeCachedPropertiesTest extends CypherFunSuite with LogicalPlanningTestSupport2 with PlanMatchHelp {
 
   type IndexOperator = GetValueFromIndexBehavior => IndexLeafPlan
 
@@ -40,7 +40,7 @@ class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTest
     val operatorName = getValues.getClass.getSimpleName
 
     test(s"should introduce projection for $operatorName with index properties") {
-      val updater = projectIndexProperties
+      val updater = removeCachedProperties
       val emptyTable = SemanticTable()
 
       val (newPlan, newTable) = updater(getValues, emptyTable)
@@ -51,13 +51,25 @@ class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTest
     }
 
     test(s"should not introduce projection for $operatorName without index properties") {
-      val updater = projectIndexProperties
+      val updater = removeCachedProperties
       val emptyTable = SemanticTable()
 
-      val (newPlan, _) = updater(doNotGetValues, emptyTable)
+      val (newPlan, newTable) = updater(doNotGetValues, emptyTable)
       newPlan should equal(doNotGetValues)
+      newTable should equal(emptyTable)
     }
 
+  }
+
+  test("should remove CachedProperties") {
+    val pos0 = InputPosition(0, 0, 0)
+    val updater = removeCachedProperties
+    val emptyTable = SemanticTable()
+    val plan = Projection(Argument(Set("n")), Map("np" -> CachedProperty("n", Variable("n")(pos), PropertyKeyName("p")(pos0.bumped()), CACHED_NODE)(pos0.bumped().bumped())))
+
+    val (newPlan, newTable) = updater(plan, emptyTable)
+    newPlan should equal(Projection(Argument(Set("n")), Map("np" -> Property(Variable("n")(pos), PropertyKeyName("p")(pos0.bumped()))(pos0.bumped().bumped()))))
+    newTable should equal(emptyTable)
   }
 
 }

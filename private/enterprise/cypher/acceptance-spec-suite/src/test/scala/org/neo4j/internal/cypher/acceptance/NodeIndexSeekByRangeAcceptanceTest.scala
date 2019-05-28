@@ -1259,7 +1259,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.prop2 > 1 AND n.prop1 > 1 RETURN n.prop1",
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
                   //THEN
-                  plan should includeSomewhere.aPlan(IndexSeekByRange.name).containingVariables("n", "cached[n.prop1]")
+                  plan should includeSomewhere.aPlan(IndexSeekByRange.name).containingVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)
                 }))
   }
 

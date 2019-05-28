@@ -430,7 +430,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
-    plan should includeSomewhere.aPlan("Filter").containingArgument("person.name = $`  AUTOSTRING0`")
+    plan should includeSomewhere.aPlan("Filter").containingArgument("cache[person.name] = $`  AUTOSTRING0`")
     plan should includeSomewhere.aPlan("Filter").containingArgument("dog:Dog", "dog.lastname = $`  AUTOSTRING0`", "dog.name = $`  AUTOSTRING0`")
   }
 

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.expressions.{Property, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.v4_0.expressions.{CachedProperty, Property, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
 import org.neo4j.cypher.internal.v4_0.util.{InputPosition, Rewriter, topDown}
@@ -16,13 +16,18 @@ import org.neo4j.cypher.internal.v4_0.util.{InputPosition, Rewriter, topDown}
   * Replace index plans that have indexed properties with `GetValue` by plans
   * that have `DoNotGetValue` instead, with a projection to get the values on
   * top of the index plan.
+  *
+  * Replace CachedProperties with Properties, since compiled does not support
+  * CachedProperties.
   */
-case object projectIndexProperties {
+case object removeCachedProperties {
 
   def apply(plan: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, SemanticTable) = {
     var currentTypes = semanticTable.types
 
     val rewriter = topDown(Rewriter.lift {
+      case cp@CachedProperty(_, varUsed, propertyKeyName, _) => Property(varUsed, propertyKeyName)(cp.position)
+
       case indexLeafPlan: IndexLeafPlan if indexLeafPlan.cachedProperties.nonEmpty =>
         val projections: Map[String, Property] = indexLeafPlan.cachedProperties.map { cachedProperty =>
           cachedProperty.cacheKey -> Property(

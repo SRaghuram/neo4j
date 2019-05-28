@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenerator}
-import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, projectIndexProperties}
+import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, removeCachedProperties}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -21,7 +21,7 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   @throws[CantCompileQueryException]
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
-    val (newPlan, newSemanticTable) = projectIndexProperties(query.logicalPlan, query.semanticTable)
+    val (newPlan, newSemanticTable) = removeCachedProperties(query.logicalPlan, query.semanticTable)
 
     val codeGen = new CodeGenerator(context.codeStructure, context.clock, CodeGenConfiguration(context.debugOptions))
     val compiled: CompiledPlan = codeGen.generate(newPlan,

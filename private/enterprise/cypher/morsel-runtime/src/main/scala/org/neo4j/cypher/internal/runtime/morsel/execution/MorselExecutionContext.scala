@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfigura
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
-import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
@@ -241,15 +241,17 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def isNull(key: String): Boolean = fail()
 
-  override def setCachedProperty(key: CachedProperty, value: Value): Unit = fail()
+  override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = fail()
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = setRefAt(offset, value)
 
-  override def getCachedProperty(key: CachedProperty): Value = fail()
+  override def getCachedProperty(key: ASTCachedProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 
-  override def invalidateCachedProperties(node: Long): Unit = fail()
+  override def invalidateCachedNodeProperties(node: Long): Unit = fail()
+
+  override def invalidateCachedRelationshipProperties(rel: Long): Unit = fail()
 
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
 

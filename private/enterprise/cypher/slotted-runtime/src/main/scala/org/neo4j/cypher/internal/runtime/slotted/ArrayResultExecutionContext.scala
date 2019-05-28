@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber, ValuePopulation}
-import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
+import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb.NotFoundException
@@ -142,15 +142,17 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def isNull(key: String): Boolean = fail()
 
-  override def setCachedProperty(key: CachedProperty, value: Value): Unit = fail()
+  override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = fail()
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = fail()
 
-  override def getCachedProperty(key: CachedProperty): Value = fail()
+  override def getCachedProperty(key: ASTCachedProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = fail()
 
-  override def invalidateCachedProperties(node: Long): Unit = fail()
+  override def invalidateCachedNodeProperties(node: Long): Unit = fail()
+
+  override def invalidateCachedRelationshipProperties(rel: Long): Unit = fail()
 
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
 

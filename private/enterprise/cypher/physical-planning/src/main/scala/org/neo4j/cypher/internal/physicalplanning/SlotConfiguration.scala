@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
 import org.neo4j.values.AnyValue
 
 import scala.collection.{immutable, mutable}
@@ -43,7 +43,7 @@ object SlotConfiguration {
   * @param numberOfReferences the number of ref slots.
   */
 class SlotConfiguration(private val slots: mutable.Map[String, Slot],
-                        private val cachedProperties: mutable.Map[CachedProperty, RefSlot],
+                        private val cachedProperties: mutable.Map[ASTCachedProperty, RefSlot],
                         private val applyPlans: mutable.Map[Id, Int],
                         var numberOfLongs: Int,
                         var numberOfReferences: Int) {
@@ -187,7 +187,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     this
   }
 
-  def newCachedProperty(key: CachedProperty): SlotConfiguration = {
+  def newCachedProperty(key: ASTCachedProperty): SlotConfiguration = {
     cachedProperties.get(key) match {
       case Some(_) =>
         // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
@@ -211,12 +211,18 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
   }
 
+  def getLongSlotFor(name: String): Slot = slots.get(name) match {
+    case Some(s: LongSlot) => s
+    case Some(s) => throw new InternalException(s"Uh oh... There was no long slot for `$name`. It was a $s")
+    case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
+  }
+
   def getArgumentLongOffsetFor(applyPlanId: Id): Int = {
     applyPlans.getOrElse(applyPlanId,
                          throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
   }
 
-  def getCachedPropertyOffsetFor(key: CachedProperty): Int = cachedProperties(key).offset
+  def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = cachedProperties(key).offset
 
   def updateAccessorFunctions(key: String, getter: ExecutionContext => AnyValue, setter: (ExecutionContext, AnyValue) => Unit,
                               primitiveNodeSetter: Option[(ExecutionContext, Long, EntityById) => Unit],
@@ -253,7 +259,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   // NOTE: This will give duplicate slots when we have aliases
   def foreachSlot[U](onVariable: ((String, Slot)) => U,
-                     onCachedProperty: ((CachedProperty, RefSlot)) => Unit
+                     onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit
                     ): Unit = {
     slots.foreach(onVariable)
     cachedProperties.foreach(onCachedProperty)
@@ -261,7 +267,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   // NOTE: This will give duplicate slots when we have aliases
   def foreachSlotOrdered(onVariable: (String, Slot) => Unit,
-                         onCachedProperty: CachedProperty => Unit
+                         onCachedProperty: ASTCachedProperty => Unit
                         ): Unit = {
     val (longs, refs) = slots.toSeq.partition(_._2.isLongSlot)
     for ((variable, slot) <- longs.sortBy(_._2.offset)) onVariable(variable, slot)
@@ -282,7 +288,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     }
   }
 
-  def foreachCachedSlot[U](onCachedProperty: ((CachedProperty, RefSlot)) => Unit): Unit = {
+  def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit): Unit = {
     cachedProperties.foreach(onCachedProperty)
   }
 
@@ -338,7 +344,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
       case (cachedNodeProperty, slot) => RefSlotWithAliases(slot, Set(cachedNodeProperty.asCanonicalStringVal))
     }.sorted(SlotWithAliasesOrdering)
 
-  def hasCachedPropertySlot(key: CachedProperty): Boolean = cachedProperties.contains(key)
+  def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = cachedProperties.contains(key)
 
   object SlotWithAliasesOrdering extends Ordering[SlotWithAliases] {
     def compare(x: SlotWithAliases, y: SlotWithAliases): Int = (x, y) match {

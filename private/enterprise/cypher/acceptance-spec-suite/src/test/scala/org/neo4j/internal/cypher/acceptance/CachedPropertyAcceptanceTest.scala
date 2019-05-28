@@ -14,8 +14,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeSingle("MATCH (n) WHERE n.foo > 10 RETURN n.foo")
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{n.foo : cached[n.foo]}").onTopOf(
-      aPlan("Filter").containingArgumentRegex("cached\\[n.foo\\] > .*".r)
+      aPlan("Projection").containingArgument("{n.foo : cache[n.foo]}").onTopOf(
+      aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
     )
     res.toList should equal(List(Map("n.foo" -> 111), Map("n.foo" -> 112), Map("n.foo" -> 113), Map("n.foo" -> 114)))
   }
@@ -27,8 +27,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeSingle("MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo")
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{r.foo : cached[r.foo]}").onTopOf(
-      aPlan("Filter").containingArgumentRegex("cached\\[r.foo\\] > .*".r)
+      aPlan("Projection").containingArgument("{r.foo : cache[r.foo]}").onTopOf(
+      aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
     )
     res.toList should equal(List(Map("r.foo" -> 20), Map("r.foo" -> 30)))
   }
@@ -40,7 +40,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeSingle(q, Map("n" -> n, "m" -> m))
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{m.prop : cached[n.prop], x.prop : cached[m.prop]}")
+      aPlan("Projection").containingArgument("{m.prop : cache[n.prop], x.prop : cache[m.prop]}")
 
     res.toList should equal(List(
       Map("m.prop" -> 1, "x.prop" -> 1),

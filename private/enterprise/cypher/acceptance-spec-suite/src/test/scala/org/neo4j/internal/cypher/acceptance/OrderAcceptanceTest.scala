@@ -144,12 +144,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name, a.age : a.age}")
+      .containingArgument("{a.name : a.name, a.age : cache[a.age]}")
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{a.age : a.age}")
+          .containingArgument("{a.age : cache[a.age]}")
         ))
 
     result.toList should equal(List(
@@ -291,10 +291,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{age : a.age}")
+      .containingArgument("{age : cache[a.age]}")
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : cache\\[a\\.age\\] \\+ \\$`  AUTOINT\\d+`\\}".r)
           .onTopOf(aPlan("Projection")
             .containingArgument("{b : a}")
           )
@@ -723,7 +723,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Sort")) and
         includeSomewhere.aPlan("NodeIndexSeekByRange")
-          .containingVariables("cached[z.foo]"))
+          .containingArgumentRegex(".*cache\\[z.foo\\]".r))
     result.toList should be(List(
       Map("zfoo" -> 6),
       Map("zfoo" -> 5),
