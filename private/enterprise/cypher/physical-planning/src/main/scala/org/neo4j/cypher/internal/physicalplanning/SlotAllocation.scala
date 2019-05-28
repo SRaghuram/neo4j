@@ -202,16 +202,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     val TRAVERSE_INTO_CHILDREN = Some((s: Accumulator) => s)
     val DO_NOT_TRAVERSE_INTO_CHILDREN = None
 
-    // TODO we do not need this any longer
-    p.treeFind[Expression] {
-      case _: PatternExpression =>
-        true
-      case _: PatternComprehension =>
-        true
-    }.foreach { _ =>
-      throw new SlotAllocationFailed(s"Don't know how to handle $p")
-    }
-
     p.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
       //-----------------------------------------------------
       // Logical plans
