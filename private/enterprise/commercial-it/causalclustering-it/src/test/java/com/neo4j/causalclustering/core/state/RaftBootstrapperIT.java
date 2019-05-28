@@ -337,7 +337,7 @@ class RaftBootstrapperIT
                 databaseLayout, config, monitors );
 
         LastCommittedIndexFinder lastCommittedIndexFinder = new LastCommittedIndexFinder(
-                new ReadOnlyTransactionIdStore( pageCache, databaseLayout ),
+                new ReadOnlyTransactionIdStore( fileSystem, pageCache, databaseLayout ),
                 transactionStore, logProvider );
 
         long lastCommittedIndex = lastCommittedIndexFinder.getLastCommittedIndex();
