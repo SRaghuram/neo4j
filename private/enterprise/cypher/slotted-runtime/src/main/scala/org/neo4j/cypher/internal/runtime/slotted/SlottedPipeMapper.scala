@@ -229,9 +229,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val longSlotGroupingValues = keys.collect {
           case key if slots(key).isLongSlot => groupingExpressions(key) match {
             case NodeFromSlot(offset, _) => offset
-            case NullCheckVariable(offset, _:NodeFromSlot) => offset
             case RelationshipFromSlot(offset, _) => offset
-            case NullCheckVariable(offset, _:RelationshipFromSlot) => offset
+            case NullCheckVariable(_, NodeFromSlot(offset, _)) => offset
+            case NullCheckVariable(_, RelationshipFromSlot(offset, _)) => offset
+            case x => throw new InternalException(s"Cannot build slotted aggregation pipe. Unexpected grouping expression: $x")
           }
         }
 
@@ -619,18 +620,14 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsArgLongSlots = rhsLongSlots.filter { case (_, slot) => slot.offset < argumentSize.nLongs } sortBy(_._1)
     val rhsArgRefSlots = rhsRefSlots.filter { case (_, slot) => slot.offset < argumentSize.nReferences } sortBy(_._1)
 
-    val sizesAreTheSame =
-      lhsArgLongSlots.size == rhsArgLongSlots.size && lhsArgLongSlots.size == argumentSize.nLongs &&
-        lhsArgRefSlots.size == rhsArgRefSlots.size && lhsArgRefSlots.size == argumentSize.nReferences
-
     def sameSlotsInOrder(a: Seq[(String, Slot)], b: Seq[(String, Slot)]): Boolean =
       a.zip(b) forall {
         case ((k1, slot1), (k2, slot2)) =>
           k1 == k2 && slot1.offset == slot2.offset && slot1.isTypeCompatibleWith(slot2)
       }
 
-    val longSlotsOk = sizesAreTheSame && sameSlotsInOrder(lhsArgLongSlots, rhsArgLongSlots)
-    val refSlotsOk = sizesAreTheSame && sameSlotsInOrder(lhsArgRefSlots, rhsArgRefSlots)
+    val longSlotsOk = lhsArgLongSlots.size == rhsArgLongSlots.size && sameSlotsInOrder(lhsArgLongSlots, rhsArgLongSlots)
+    val refSlotsOk = lhsArgRefSlots.size == rhsArgRefSlots.size && sameSlotsInOrder(lhsArgRefSlots, rhsArgRefSlots)
 
     if (!longSlotsOk || !refSlotsOk) {
       val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} lhs: $lhsLongSlots rhs: $rhsArgLongSlots "

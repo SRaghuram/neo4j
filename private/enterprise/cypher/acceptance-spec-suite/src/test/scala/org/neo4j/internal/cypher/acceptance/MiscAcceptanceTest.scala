@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util.concurrent.TimeUnit
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -144,8 +144,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // We actually execute it rather than just EXPLAIN, just to make sure that physical planning also happens in all versions of Neo4j
     val params = Map("param0" -> "", "param1" -> "", "param2" -> "")
 
-    // Should work with executeWith(Configs.All - Configs.Compiled - Configs.Version2_3 - Configs.Cost3_1, ...), but limited to default-only due to test execution time
-    val result = executeSingle(query, params = params)
+    val result = executeWith(Configs.All - Configs.Compiled, query, params = params)
 
     result.toList shouldBe empty
 

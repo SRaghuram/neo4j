@@ -189,7 +189,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
         runtimeConfig,
         morselRuntimeState = null)
      else
-      CommunityRuntimeContextCreator(runtimeConfig)
+      CommunityRuntimeContextCreator(NullLog.getInstance(), runtimeConfig)
 
     val runtimeContext = runtimeContextCreator.create(planContext,
                                                       txContextWrapper.kernelTransaction.schemaRead(),
