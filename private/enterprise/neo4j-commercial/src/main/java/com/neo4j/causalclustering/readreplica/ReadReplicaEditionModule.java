@@ -6,13 +6,13 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.discovery.DefaultDiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -27,6 +27,7 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.InternalOperator;
 import com.neo4j.dbms.LocalOperator;
@@ -171,36 +172,43 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log log )
     {
-        var databaseManager = new ReadReplicaDatabaseManager( platform, this, log, catchupComponentsProvider::createDatabaseComponents,
-                platform.getFileSystem(), platform.getPageCache(), logProvider, globalConfig );
+        var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, log, catchupComponentsProvider::createDatabaseComponents,
+                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
     private void createDatabaseManagerDependentModules( ClusteredDatabaseManager databaseManager )
     {
-        LifeSupport globalLife = globalModule.getGlobalLife();
-        Dependencies dependencies = globalModule.getGlobalDependencies();
-        LogService logService = globalModule.getLogService();
+        var globalLife = globalModule.getGlobalLife();
+        var globalDependencies = globalModule.getGlobalDependencies();
+        var globalLogService = globalModule.getLogService();
+        var fileSystem = globalModule.getFileSystem();
 
-        topologyService = createTopologyService( databaseManager, logService );
-        globalLife.add( dependencies.satisfyDependency( topologyService ) );
+        topologyService = createTopologyService( databaseManager, globalLogService );
+        globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
-        CatchupHandlerFactory handlerFactory = () -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
-        ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory );
+        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
+        var installedProtocolsHandler = new InstalledProtocolHandler();
+
+        var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
+        var backupServerOptional = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler );
+
+        var catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
+        var catchupClientFactory = catchupComponentsProvider.catchupClientFactory();
 
         // TODO: Most of this panic stuff isn't database manager dependent. Break out? Remove this catch-all method?
-        addPanicEventHandlers( panicService, globalModule.getGlobalLife(), globalHealth, serverModule.catchupServer(), serverModule.backupServer() );
+        addPanicEventHandlers( panicService, globalModule.getGlobalLife(), globalHealth, catchupServer, backupServerOptional );
 
-        globalLife.add( serverModule.catchupServer() ); // must start last and stop first, since it handles external requests
-        serverModule.backupServer().ifPresent( globalLife::add );
+        globalLife.add( catchupServer ); // must start last and stop first, since it handles external requests
+        backupServerOptional.ifPresent( globalLife::add );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
-        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler, logService, topologyService,
-                myIdentity, serverModule.catchupComponents(), globalModule.getTracers().getPageCursorTracerSupplier(), globalHealth,
-                serverModule.catchupClient() );
+        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler, globalLogService,
+                topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(), globalHealth,
+                catchupClientFactory );
     }
 
     @Override
