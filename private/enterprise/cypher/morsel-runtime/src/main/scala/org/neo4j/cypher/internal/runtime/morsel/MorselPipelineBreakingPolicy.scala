@@ -44,7 +44,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
       => true
 
       case plan =>
-        throw new UnsupportedOperationException(s"Not implemented: ${plan.getClass.getSimpleName}")
+        throw new UnsupportedOperationException(s"Morsel does not yet support the planned operator `${plan.getClass.getSimpleName}`, use another runtime.")
     }
   }
 
