@@ -27,9 +27,9 @@ abstract class WorkerManager(val numberOfWorkers: Int,
     }
     liveCounts.assertAllReleased()
 
-    for (w <- workers) {
-      if (w.sleeper.isActive) {
-        throw new RuntimeResourceLeakException("Worker $w is ACTIVE even though all resources should be released!")
+    for (worker <- workers) {
+      if (worker.sleeper.isActive) {
+        throw new RuntimeResourceLeakException(s"$worker is ACTIVE even though all resources should be released!")
       }
     }
   }

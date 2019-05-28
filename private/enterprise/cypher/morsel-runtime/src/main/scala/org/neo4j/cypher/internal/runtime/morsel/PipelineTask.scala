@@ -58,8 +58,12 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     *
     * @return `true` if the task has become obsolete.
     */
-  def filterCancelledArguments(): Boolean = {
-    startTask.filterCancelledArguments(pipelineState)
+  def filterCancelledArguments(resources: QueryResources): Boolean = {
+    val isCancelled = startTask.filterCancelledArguments(pipelineState)
+    if (isCancelled) {
+      close(resources)
+    }
+    isCancelled
   }
 
   /**

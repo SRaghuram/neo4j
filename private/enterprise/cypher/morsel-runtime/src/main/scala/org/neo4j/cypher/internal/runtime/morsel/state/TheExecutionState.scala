@@ -143,28 +143,19 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
                                         inputMorsel: MorselExecutionContext): Boolean = {
-    val isCancelled = buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
-    if (isCancelled)
-      closeWorkUnit(pipeline)
-    isCancelled
+    buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
                                         accumulator: MorselAccumulator[_]): Boolean = {
-    val isCancelled = buffers.argumentStateBuffer(pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
-    if (isCancelled)
-      closeWorkUnit(pipeline)
-    isCancelled
+    buffers.argumentStateBuffer(pipeline.inputBuffer.id).filterCancelledArguments(accumulator)
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
                                         inputMorsel: MorselExecutionContext,
                                         accumulator: MorselAccumulator[_]): Boolean = {
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
-    val isCancelled = buffer.filterCancelledArguments(accumulator, inputMorsel)
-    if (isCancelled)
-      closeWorkUnit(pipeline)
-    isCancelled
+    buffer.filterCancelledArguments(accumulator, inputMorsel)
   }
 
   override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {

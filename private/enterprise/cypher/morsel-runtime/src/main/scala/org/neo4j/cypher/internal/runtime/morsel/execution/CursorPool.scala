@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
-import org.neo4j.util.Preconditions
 
 class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
 
@@ -47,18 +47,23 @@ class LiveCounts(var nodeCursorPool: Long = 0,
                  var nodeLabelIndexCursorPool: Long = 0) {
 
   def assertAllReleased(): Unit = {
-    def assertReleased(liveCount: Long, poolName: String): Unit = {
+    def reportLeak(liveCount: Long, poolName: String): Option[String] = {
       if (liveCount != 0) {
-        throw new RuntimeResourceLeakException(s"${poolName}s had a total live count of $liveCount, " +
-                                                "even though all cursors should be released.")
-      }
+        Some(s"${poolName}s had a total live count of $liveCount")
+      } else None
     }
 
-    assertReleased(nodeCursorPool, "nodeCursorPool")
-    assertReleased(relationshipGroupCursorPool, "relationshipGroupCursorPool")
-    assertReleased(relationshipTraversalCursorPool, "relationshipTraversalCursorPool")
-    assertReleased(nodeValueIndexCursorPool, "nodeValueIndexCursorPool")
-    assertReleased(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")
+    val resourceLeaks = Seq(
+      reportLeak(nodeCursorPool, "nodeCursorPool"),
+      reportLeak(relationshipGroupCursorPool, "relationshipGroupCursorPool"),
+      reportLeak(relationshipTraversalCursorPool, "relationshipTraversalCursorPool"),
+      reportLeak(nodeValueIndexCursorPool, "nodeValueIndexCursorPool"),
+      reportLeak(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")).flatten
+
+    if (resourceLeaks.nonEmpty) {
+      throw new RuntimeResourceLeakException(resourceLeaks.mkString(
+        "Several cursors are live even though all cursors should have been released\n  ", "\n  ", "\n"))
+    }
   }
 }
 
@@ -67,8 +72,12 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   @volatile private var liveCount: Long = 0L
   private var cached: CURSOR = _
 
+  /**
+    * Allocate a cursor of type `CURSOR`.
+    */
   def allocate(): CURSOR = {
     liveCount += 1
+    DebugSupport.logCursors(topStack().mkString("+ allocate\n        ", "\n        ", ""))
     if (cached != null) {
       val temp = cached
       cached = null.asInstanceOf[CURSOR]
@@ -78,11 +87,17 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     }
   }
 
+  /**
+    * Free the given cursor. NOOP if `null`.
+    */
   def free(cursor: CURSOR): Unit = {
-    liveCount -= 1
-    if (cached != null)
-      cached.close()
-    cached = cursor
+    DebugSupport.logCursors(topStack().mkString("+ free\n        ", "\n        ", ""))
+    if (cursor != null) {
+      liveCount -= 1
+      if (cached != null)
+        cached.close()
+      cached = cursor
+    }
   }
 
   override def close(): Unit = {
@@ -91,4 +106,8 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   def getLiveCount: Long = liveCount
+
+  private def topStack(): Seq[String] = {
+    new Exception().getStackTrace.slice(4, 5).map(traceElement => "\tat "+traceElement)
+  }
 }

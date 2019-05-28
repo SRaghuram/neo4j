@@ -126,24 +126,20 @@ class Worker(val workerId: Int,
   }
 
   def close(): Unit = {
-    try {
-      assertAllReleased()
-    } finally {
-      resources.close()
-    }
+    resources.close()
   }
 
   def collectCursorLiveCounts(acc: LiveCounts): Unit = {
     resources.cursorPools.collectLiveCounts(acc)
   }
 
-  private def assertAllReleased(): Unit = {
+  def assertAllReleased(): Unit = {
     val liveCounts = new LiveCounts()
     collectCursorLiveCounts(liveCounts)
     liveCounts.assertAllReleased()
 
     if (sleeper.isActive) {
-      throw new RuntimeResourceLeakException("Worker $w is ACTIVE even though all resources should be released!")
+      throw new RuntimeResourceLeakException(s"$this is ACTIVE even though all resources should be released!")
     }
   }
 
@@ -151,6 +147,8 @@ class Worker(val workerId: Int,
     val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
     if (upstreamWorkUnitEvent != null) Array(upstreamWorkUnitEvent) else Worker.NO_WORK
   }
+
+  override def toString: String = s"Worker[$workerId, ${sleeper.statusString}]"
 }
 
 object Worker {
@@ -191,4 +189,5 @@ class Sleeper(val workerId: Int,
 
   def isSleeping: Boolean = status == SLEEPING
   def isActive: Boolean = status == ACTIVE
+  def statusString: String = status.toString
 }

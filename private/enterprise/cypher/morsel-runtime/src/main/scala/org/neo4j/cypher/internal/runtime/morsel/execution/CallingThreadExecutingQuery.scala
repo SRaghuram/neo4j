@@ -32,7 +32,11 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
 
   override def await(): Boolean = {
     if (executionState.isCompleted) {
-      worker.close()
+      try {
+        worker.assertAllReleased()
+      } finally {
+        worker.close()
+      }
     }
 
     flowControl.await()

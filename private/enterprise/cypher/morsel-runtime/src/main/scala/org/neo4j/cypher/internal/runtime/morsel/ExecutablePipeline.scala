@@ -84,7 +84,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
       }
       // filterCancelledArguments checks if there is work left to do for a task
       // if it returns `true`, there is no work left and the task has been already closed.
-    } while (task != null && task.filterCancelledArguments())
+    } while (task != null && task.filterCancelledArguments(resources))
     task
   }
 

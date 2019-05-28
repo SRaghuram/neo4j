@@ -88,12 +88,7 @@ class MorselBuffer(tracker: QueryCompletionTracker,
 
       decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
     }
-    if (morsel.isEmpty) {
-      tracker.decrement()
-      true
-    } else {
-      false
-    }
+    morsel.isEmpty
   }
 
   /**

@@ -83,7 +83,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     */
   class ParallelScanTask(val inputMorsel: MorselExecutionContext,
                          scan: Scan[NodeCursor],
-                         val cursor: NodeCursor,
+                         var cursor: NodeCursor,
                          val batchSizeHint: Int) extends ContinuableOperatorTaskWithMorsel {
 
     override def toString: String = "AllNodeScanParallelTask"
@@ -97,8 +97,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     scan.reserveBatch(cursor, batchSizeHint)
     inputMorsel.setToAfterLastRow()
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, queryState: QueryState, resources: QueryResources): Unit = {
-      while (next(queryState) && outputRow.isValidRow) {
+    override def operate(outputRow: MorselExecutionContext,
+                         context: QueryContext,
+                         queryState: QueryState,
+                         resources: QueryResources): Unit = {
+
+      while (next(queryState, resources) && outputRow.isValidRow) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
@@ -112,7 +116,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     }
 
 
-    private def next(queryState: QueryState): Boolean = {
+    private def next(queryState: QueryState, resources: QueryResources): Boolean = {
       while (true) {
         if (deferredRow) {
           deferredRow = false
@@ -126,7 +130,6 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
           // Do nothing
         } else {
           // We ran out of work
-          cursor.close()
           _canContinue = false
           return false
         }
@@ -137,7 +140,10 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = _canContinue
 
-    override protected def closeCursors(resources: QueryResources): Unit = resources.cursorPools.nodeCursorPool.free(cursor)
+    override protected def closeCursors(resources: QueryResources): Unit = {
+      resources.cursorPools.nodeCursorPool.free(cursor)
+      cursor = null
+    }
   }
 
 }
