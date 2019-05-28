@@ -34,6 +34,7 @@ import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
+import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
 import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
@@ -496,11 +497,12 @@ class CoreDatabaseFactory
     }
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging, final Replicator replicator, MemberId myself,
-            LeaderLocator leaderLocator, ReplicatedBarrierTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
+            LeaderLocator leaderLocator, ReplicatedBarrierTokenStateMachine barrierTokenStateMachine, DatabaseId databaseId )
     {
         LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
-        return new LeaderOnlyLockManager( myself, replicator, leaderLocator, localLocks, lockTokenStateMachine, databaseId );
+        BarrierState barrierState = new BarrierState( myself, replicator, leaderLocator, barrierTokenStateMachine, databaseId );
+        return new LeaderOnlyLockManager( localLocks, barrierState );
     }
 
     private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life,

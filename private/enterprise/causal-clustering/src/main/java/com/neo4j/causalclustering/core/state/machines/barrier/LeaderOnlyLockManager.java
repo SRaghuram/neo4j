@@ -7,24 +7,13 @@ package com.neo4j.causalclustering.core.state.machines.barrier;
 
 import java.util.stream.Stream;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
-import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
-import com.neo4j.causalclustering.core.replication.Replicator;
-import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
-import com.neo4j.causalclustering.identity.MemberId;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
-
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 
 /**
  * Each member of the cluster uses its own {@link LeaderOnlyLockManager} which wraps a local {@link Locks} manager.
@@ -51,103 +40,19 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 // TODO: Fix lock exception usage when lock exception hierarchy has been fixed.
 public class LeaderOnlyLockManager implements Locks
 {
-    public static final String LOCK_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take locks when leader.";
-
-    private final MemberId myself;
-
-    private final Replicator replicator;
-    private final LeaderLocator leaderLocator;
     private final Locks localLocks;
-    private final ReplicatedBarrierTokenStateMachine barrierTokenStateMachine;
-    private final DatabaseId databaseId;
+    private final BarrierState barrierState;
 
-    public LeaderOnlyLockManager( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, Locks localLocks,
-                                  ReplicatedBarrierTokenStateMachine barrierTokenStateMachine, DatabaseId databaseId )
+    public LeaderOnlyLockManager( Locks localLocks, BarrierState barrierState )
     {
-        this.myself = myself;
-        this.replicator = replicator;
-        this.leaderLocator = leaderLocator;
         this.localLocks = localLocks;
-        this.barrierTokenStateMachine = barrierTokenStateMachine;
-        this.databaseId = databaseId;
+        this.barrierState = barrierState;
     }
 
     @Override
     public Locks.Client newClient()
     {
         return new LeaderOnlyLockClient( localLocks.newClient() );
-    }
-
-    /**
-     * Acquires a valid token id owned by us or throws.
-     */
-    private synchronized int acquireTokenOrThrow()
-    {
-        BarrierToken currentToken = currentToken();
-        if ( myself.equals( currentToken.owner() ) )
-        {
-            return currentToken.id();
-        }
-
-        /* If we are not the leader then we will not even attempt to get the token,
-           since only the leader should take locks. */
-        ensureLeader();
-
-        ReplicatedBarrierTokenRequest lockTokenRequest =
-                new ReplicatedBarrierTokenRequest( myself, BarrierToken.nextCandidateId( currentToken.id() ), databaseId );
-
-        Result result;
-        try
-        {
-            result = replicator.replicate( lockTokenRequest );
-        }
-        catch ( ReplicationFailureException e )
-        {
-            throw new AcquireLockTimeoutException( e, "Replication failure acquiring lock token.", ReplicationFailure );
-        }
-
-        try
-        {
-            boolean success = (boolean) result.consume();
-            if ( success )
-            {
-                return lockTokenRequest.id();
-            }
-            else
-            {
-                throw new AcquireLockTimeoutException( "Failed to acquire lock token. Was taken by another candidate.",
-                        NotALeader );
-            }
-        }
-        catch ( Exception e )
-        {
-            throw new AcquireLockTimeoutException( e, "Failed to acquire lock token.", NotALeader );
-        }
-    }
-
-    private BarrierToken currentToken()
-    {
-        ReplicatedBarrierTokenState state = barrierTokenStateMachine.snapshot();
-        return new ReplicatedBarrierTokenRequest( state, databaseId );
-    }
-
-    private void ensureLeader()
-    {
-        MemberId leader;
-
-        try
-        {
-            leader = leaderLocator.getLeader();
-        }
-        catch ( NoLeaderFoundException e )
-        {
-            throw new AcquireLockTimeoutException( e, "Could not acquire lock token.", NoLeaderAvailable );
-        }
-
-        if ( !leader.equals( myself ) )
-        {
-            throw new AcquireLockTimeoutException( LOCK_NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
-        }
     }
 
     @Override
@@ -171,28 +76,10 @@ public class LeaderOnlyLockManager implements Locks
     private class LeaderOnlyLockClient implements Locks.Client
     {
         private final Client localClient;
-        private int lockTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
 
         LeaderOnlyLockClient( Client localClient )
         {
             this.localClient = localClient;
-        }
-
-        /**
-         * This ensures that a valid token was held at some point in time. It throws an
-         * exception if it was held but was later lost or never could be taken to
-         * begin with.
-         */
-        private void ensureHoldingToken()
-        {
-            if ( lockTokenId == BarrierToken.INVALID_BARRIER_TOKEN_ID )
-            {
-                lockTokenId = acquireTokenOrThrow();
-            }
-            else if ( lockTokenId != currentToken().id() )
-            {
-                throw new AcquireLockTimeoutException( "Local instance lost lock token.", NotALeader );
-            }
         }
 
         @Override
@@ -204,14 +91,14 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceId ) throws AcquireLockTimeoutException
         {
-            ensureHoldingToken();
+            barrierState.ensureHoldingToken();
             localClient.acquireExclusive( tracer, resourceType, resourceId );
         }
 
         @Override
         public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
         {
-            ensureHoldingToken();
+            barrierState.ensureHoldingToken();
             return localClient.tryExclusiveLock( resourceType, resourceId );
         }
 
@@ -230,7 +117,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
         {
-            ensureHoldingToken();
+            barrierState.ensureHoldingToken();
             return localClient.reEnterExclusive( resourceType, resourceId );
         }
 
@@ -267,7 +154,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public int getLockSessionId()
         {
-            return lockTokenId;
+            return barrierState.getCurrentToken();
         }
 
         @Override

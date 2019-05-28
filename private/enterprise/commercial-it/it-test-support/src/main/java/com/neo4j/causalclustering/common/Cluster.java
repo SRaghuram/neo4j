@@ -12,8 +12,8 @@ import com.neo4j.causalclustering.core.LeaderCanWrite;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
+import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
 import com.neo4j.causalclustering.core.state.machines.id.IdGenerationException;
-import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -553,7 +553,7 @@ public class Cluster
     private static boolean isLockOnFollower( Throwable e )
     {
         return e instanceof AcquireLockTimeoutException &&
-               (e.getMessage().equals( LeaderOnlyLockManager.LOCK_NOT_ON_LEADER_ERROR_MESSAGE ) ||
+               (e.getMessage().equals( BarrierState.TOKEN_NOT_ON_LEADER_ERROR_MESSAGE ) ||
                 e.getCause() instanceof NoLeaderFoundException);
     }
 

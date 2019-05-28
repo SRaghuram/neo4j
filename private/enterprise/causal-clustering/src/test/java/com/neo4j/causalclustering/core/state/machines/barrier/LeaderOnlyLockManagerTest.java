@@ -5,74 +5,48 @@
  */
 package com.neo4j.causalclustering.core.state.machines.barrier;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.replication.DirectReplicator;
-import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings( "unchecked" )
 public class LeaderOnlyLockManagerTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
-
     @Test
-    public void shouldIssueLocksOnLeader() throws Exception
+    public void shouldIssueLocksOnBarrierHolder()
     {
         // given
-        MemberId me = member( 0 );
-
-        ReplicatedBarrierTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedBarrierTokenStateMachine( new InMemoryStateStorage( ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN ) );
-
-        DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( me );
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
+        BarrierState barrierState = mock( BarrierState.class );
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseId );
+                new LeaderOnlyLockManager( locks, barrierState );
 
         // when
         lockManager.newClient().acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
-
-        // then
     }
 
     @Test
-    public void shouldNotIssueLocksOnNonLeader() throws Exception
+    public void shouldNotIssueLocksOnNonBarrierHolder()
     {
         // given
-        MemberId me = member( 0 );
-        MemberId leader = member( 1 );
-
-        ReplicatedBarrierTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedBarrierTokenStateMachine( new InMemoryStateStorage( ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN ) );
-        DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
-
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( leader );
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
+        BarrierState barrierState = mock( BarrierState.class );
+        doThrow( AcquireLockTimeoutException.class ).when( barrierState ).ensureHoldingToken();
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseId );
+                new LeaderOnlyLockManager( locks, barrierState );
 
         // when
         Locks.Client lockClient = lockManager.newClient();
