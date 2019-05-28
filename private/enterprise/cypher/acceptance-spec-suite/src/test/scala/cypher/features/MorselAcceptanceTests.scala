@@ -10,7 +10,7 @@ import java.util.Collections
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
+import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
 class MorselAcceptanceTests extends EnterpriseBaseAcceptanceTest {

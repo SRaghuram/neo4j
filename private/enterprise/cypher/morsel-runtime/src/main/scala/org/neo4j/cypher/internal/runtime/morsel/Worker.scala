@@ -90,7 +90,6 @@ class Worker(val workerId: Int,
         // Failure while executing `task`
         case throwable: Throwable =>
           executingQuery.executionState.failQuery(throwable, resources)
-          throwable.printStackTrace()
           task.close(resources)
           true
       }
