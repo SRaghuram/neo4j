@@ -27,7 +27,9 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.util.concurrent.Futures;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 public class MockCatchupClient implements VersionedCatchupClients
 {
@@ -99,7 +101,7 @@ public class MockCatchupClient implements VersionedCatchupClients
             {
                 return withProgressMonitor( v3Request.apply( v3Client ).execute( null ) ).get();
             }
-            return withProgressMonitor( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
+            return withProgressMonitor( failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
         }
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
@@ -121,21 +123,21 @@ public class MockCatchupClient implements VersionedCatchupClients
         @Override
         public PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId )
         {
-            return handler -> CompletableFuture.completedFuture( responses.coreSnapshot.get() );
+            return handler -> completedFuture( responses.coreSnapshot.get() );
         }
 
         @Override
         public PreparedRequest<StoreId> getStoreId( DatabaseId databaseId )
         {
             StoreId storeId = responses.storeId.apply( new GetStoreIdRequest( databaseId ) );
-            return handler -> CompletableFuture.completedFuture( storeId );
+            return handler -> completedFuture( storeId );
         }
 
         @Override
         public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId )
         {
             TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseId ) );
-            return handler -> CompletableFuture.completedFuture( pullResponse );
+            return handler -> completedFuture( pullResponse );
         }
 
         @Override
@@ -143,7 +145,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             PrepareStoreCopyResponse prepareStoreCopyResponse =
                     responses.prepareStoreCopyResponse.apply( new PrepareStoreCopyRequest( storeId, databaseId ) );
-            return handler -> CompletableFuture.completedFuture( prepareStoreCopyResponse );
+            return handler -> completedFuture( prepareStoreCopyResponse );
         }
 
         @Override
@@ -151,7 +153,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             StoreCopyFinishedResponse storeCopyFinishedResponse =
                     responses.storeFiles.apply( new GetStoreFileRequest( storeId, file, requiredTxId, databaseId ) );
-            return handler -> CompletableFuture.completedFuture( storeCopyFinishedResponse );
+            return handler -> completedFuture( storeCopyFinishedResponse );
         }
     }
 

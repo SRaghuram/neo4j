@@ -15,8 +15,8 @@ import java.util.function.Supplier;
 
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.util.concurrent.Futures;
 
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,7 +84,7 @@ class OperationProgressMonitorTest
         // given
         long inactivityTimeout = 1;
         RuntimeException cause = new RuntimeException( "Future failed" );
-        Future<Object> future = Futures.failedFuture( cause );
+        Future<Object> future = failedFuture( cause );
 
         OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 

@@ -19,13 +19,12 @@ import java.time.Clock;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 
-import static org.neo4j.util.concurrent.Futures.failedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 @SuppressWarnings( "unchecked" )
 class TrackingResponseHandler implements CatchupResponseHandler
 {
-    private static final CompletableFuture<Object> ILLEGAL_FUTURE =
-            failedFuture( new IllegalStateException( "Not expected" ) );
+    private static final CompletableFuture<Object> ILLEGAL_FUTURE = failedFuture( new IllegalStateException( "Not expected" ) );
     private static final CatchupResponseAdaptor ILLEGAL_HANDLER = new CatchupResponseAdaptor();
     private static final long NO_RESPONSE_TIME = 1;
 

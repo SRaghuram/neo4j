@@ -26,7 +26,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.net.NettyUtil.toCompletableFuture;
-import static org.neo4j.util.concurrent.Futures.failedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 public class ChannelPoolService implements Lifecycle
 {
