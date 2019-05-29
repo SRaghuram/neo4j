@@ -8,14 +8,18 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
 import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 
 public class ClusterStateMigrator extends LifecycleAdapter
 {
@@ -39,7 +43,7 @@ public class ClusterStateMigrator extends LifecycleAdapter
     public void init()
     {
         var persistedVersion = readClusterStateVersion();
-        log.info( "Persisted cluster state version is: " + persistedVersion );
+        log.info( "Persisted cluster state version is: %s", persistedVersion );
 
         if ( persistedVersion == null )
         {
@@ -55,14 +59,32 @@ public class ClusterStateMigrator extends LifecycleAdapter
     {
         try
         {
-            fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
+            // delete old cluster state files and directories except member ID
+            // member ID storage is created outside of the lifecycle and can't be deleted in a lifecycle method
+            // it is fine to keep member ID because it is a simple UUID and does not need to be migrated
+            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory(), this::isNotMemberIdStorage );
+            if ( isNotEmpty( oldClusterStateFiles ) )
+            {
+                for ( var oldClusterStateFile : oldClusterStateFiles )
+                {
+                    fs.deleteRecursively( oldClusterStateFile );
+                }
+                log.info( "Deleted old cluster state entries %s", Arrays.toString( oldClusterStateFiles ) );
+            }
+
             clusterStateVersionStorage.writeState( CURRENT_VERSION );
-            log.info( "Deleted existing cluster state and created a version storage for version " + CURRENT_VERSION );
+            log.info( "Created a version storage for version %s", CURRENT_VERSION );
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( "Unable to migrate the cluster state directory", e );
         }
+    }
+
+    private boolean isNotMemberIdStorage( File parentDir, String name )
+    {
+        return !(parentDir.equals( clusterStateLayout.getClusterStateDirectory() ) &&
+                 name.startsWith( clusterStateLayout.memberIdStateFile().getName() ));
     }
 
     private ClusterStateVersion readClusterStateVersion()

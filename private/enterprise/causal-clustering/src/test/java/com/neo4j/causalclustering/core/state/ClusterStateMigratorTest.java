@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +22,14 @@ import java.util.UUID;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_ID;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,6 +48,7 @@ class ClusterStateMigratorTest
 
     private static final DatabaseId DEFAULT_DATABASE_ID = new DatabaseId( DEFAULT_DATABASE_NAME );
 
+    private LogProvider logProvider;
     private ClusterStateLayout clusterStateLayout;
     private SimpleStorage<ClusterStateVersion> clusterStateVersionStorage;
     private ClusterStateMigrator migrator;
@@ -52,10 +56,10 @@ class ClusterStateMigratorTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        var logProvider = FormattedLogProvider.toOutputStream( System.out );
+        logProvider = FormattedLogProvider.toOutputStream( System.out );
 
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
-        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_ID ), logProvider );
+        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_ID ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), logProvider );
         migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
@@ -101,12 +105,28 @@ class ClusterStateMigratorTest
         assertMigrationDidNotHappen();
     }
 
+    @Test
+    void shouldKeepMemberIdStorage() throws Exception
+    {
+        var memberId = new MemberId( UUID.randomUUID() );
+        var memberIdFile = clusterStateLayout.memberIdStateFile();
+        assertFalse( fs.fileExists( memberIdFile ) );
+        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), logProvider );
+        memberIdStorage.writeState( memberId );
+        assertTrue( fs.fileExists( memberIdFile ) );
+
+        runMigration();
+
+        assertMigrationHappened();
+        assertEquals( memberId, memberIdStorage.readState() );
+    }
+
     private void runMigration()
     {
         migrator.init();
     }
 
-    private void writeRandomClusterId( File file, FormattedLogProvider logProvider ) throws IOException
+    private void writeRandomClusterId( File file ) throws IOException
     {
         assertFalse( fs.fileExists( file ) );
         var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), logProvider );

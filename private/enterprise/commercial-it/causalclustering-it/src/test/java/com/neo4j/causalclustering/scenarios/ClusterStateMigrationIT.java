@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,11 +21,13 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -40,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 @SkipThreadLeakageGuard
 @ClusterExtension
@@ -74,10 +80,10 @@ class ClusterStateMigrationIT
     @Test
     void shouldRecreateClusterStateWhenVersionIsAbsent() throws Exception
     {
-        // memorize current member IDs
-        var serverIdToMemberIdMap = cluster.coreMembers()
+        // memorize current raft IDs
+        var serverIdToRaftIdMap = cluster.coreMembers()
                 .stream()
-                .collect( toMap( CoreClusterMember::serverId, CoreClusterMember::id ) );
+                .collect( toMap( CoreClusterMember::serverId, ClusterStateMigrationIT::readRaftId ) );
 
         // collect all version files
         var clusterStateVersionFiles = cluster.coreMembers()
@@ -96,9 +102,9 @@ class ClusterStateMigrationIT
 
         for ( var member : cluster.coreMembers() )
         {
-            // all members should new member IDs as result of cluster-state recreation
-            assertTrue( serverIdToMemberIdMap.containsKey( member.serverId() ) );
-            assertNotEquals( serverIdToMemberIdMap.get( member.serverId() ), member.id() );
+            // all members should have new raft IDs as result of cluster-state recreation
+            assertTrue( serverIdToRaftIdMap.containsKey( member.serverId() ) );
+            assertNotEquals( serverIdToRaftIdMap.get( member.serverId() ), readRaftId( member ) );
 
             // version files should exist
             var versionStorage = clusterStateVersionStorage( member );
@@ -129,6 +135,20 @@ class ClusterStateMigrationIT
         assertThat( getRootCause( error ).getMessage(), containsString( "Illegal cluster state version" ) );
     }
 
+    private static RaftId readRaftId( CoreClusterMember member )
+    {
+        var storageFactory = storageFactory( member );
+        var raftIdStorage = storageFactory.createRaftIdStorage( new DatabaseId( DEFAULT_DATABASE_NAME ), nullDatabaseLogProvider() );
+        try
+        {
+            return raftIdStorage.readState();
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
     private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )
     {
         var storageFactory = storageFactory( member );
@@ -139,8 +159,7 @@ class ClusterStateMigrationIT
     {
         var clusterStateLayout = clusterStateLayout( member );
         var fs = member.defaultDatabase().getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
-        var logProvider = FormattedLogProvider.toOutputStream( System.out );
-        return new CoreStateStorageFactory( fs, clusterStateLayout, logProvider, Config.defaults() );
+        return new CoreStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults() );
     }
 
     private static ClusterStateLayout clusterStateLayout( ClusterMember member )
