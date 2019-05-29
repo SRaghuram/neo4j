@@ -64,9 +64,6 @@ import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
@@ -106,7 +103,6 @@ import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
-import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -270,33 +266,21 @@ public class CoreEditionModule extends ClusteringEditionModule
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
     }
 
-    private static RaftMessageLogger<MemberId> createRaftLogger( Config config, LifeSupport life, MemberId myself )
+    private static RaftMessageLogger<MemberId> createRaftLogger( GlobalModule globalModule, MemberId myself )
     {
-        final RaftMessageLogger<MemberId> raftMessageLogger;
+        RaftMessageLogger<MemberId> raftMessageLogger;
+        var config = globalModule.getGlobalConfig();
         if ( config.get( CausalClusteringSettings.raft_messages_log_enable ) )
         {
-            File logFile = config.get( CausalClusteringSettings.raft_messages_log_path );
-            raftMessageLogger = life.add( new BetterRaftMessageLogger<>( myself, raftMessagesLog( logFile ), Clocks.systemClock() ) );
+            var logFile = config.get( CausalClusteringSettings.raft_messages_log_path );
+            var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
+            raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }
         else
         {
             raftMessageLogger = new NullRaftMessageLogger<>();
         }
         return raftMessageLogger;
-    }
-
-    private static PrintWriter raftMessagesLog( File logFile )
-    {
-        //noinspection ResultOfMethodCallIgnored
-        logFile.getParentFile().mkdirs();
-        try
-        {
-            return new PrintWriter( new FileOutputStream( logFile, true ) );
-        }
-        catch ( FileNotFoundException e )
-        {
-            throw new RuntimeException( e );
-        }
     }
 
     private DiscoveryModule createDiscoveryModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
@@ -317,7 +301,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         topologyService = discoveryModule.topologyService();
 
-        final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalConfig, globalLife, myIdentity );
+        final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 

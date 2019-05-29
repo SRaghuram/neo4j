@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
-import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
@@ -26,6 +25,8 @@ import com.neo4j.causalclustering.messaging.Outbound;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -55,8 +56,7 @@ public class RaftTestFixture
             fixtureMember.raftLog = new InMemoryRaftLog();
             fixtureMember.member = id;
 
-            RaftMessageLogger<MemberId> raftMessageLogger =
-                    new BetterRaftMessageLogger<>( id, new PrintWriter( writer ), Clocks.systemClock() );
+            RaftTestFixtureLogger raftMessageLogger = new RaftTestFixtureLogger( id, new PrintWriter( writer ) );
             Inbound<RaftMessages.RaftMessage> inbound =
                     new LoggingInbound<>( net.new Inbound<>( fixtureMember.member ), raftMessageLogger, fixtureMember.member );
             Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member, raftMessageLogger );
@@ -204,6 +204,32 @@ public class RaftTestFixture
                     ", timeoutService=" + timerService +
                     ", raftLog=" + raftLog +
                     '}';
+        }
+    }
+
+    private static class RaftTestFixtureLogger extends BetterRaftMessageLogger<MemberId>
+    {
+        final PrintWriter printWriter;
+
+        RaftTestFixtureLogger( MemberId me, PrintWriter printWriter )
+        {
+            super( me, null, null, Clock.systemUTC() );
+            this.printWriter = printWriter;
+
+            try
+            {
+                start();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }
+
+        @Override
+        protected PrintWriter openPrintWriter()
+        {
+            return printWriter;
         }
     }
 }

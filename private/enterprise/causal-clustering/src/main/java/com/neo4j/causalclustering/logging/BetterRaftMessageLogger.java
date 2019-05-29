@@ -5,18 +5,24 @@
  */
 package com.neo4j.causalclustering.logging;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
+import static org.neo4j.io.IOUtils.closeAllSilently;
+import static org.neo4j.util.Preconditions.checkState;
 
 public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements RaftMessageLogger<MEMBER>
 {
@@ -34,15 +40,35 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         }
     }
 
-    private final PrintWriter printWriter;
+    private final MEMBER me;
+    private final File logFile;
+    private final FileSystemAbstraction fs;
     private final Clock clock;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss.SSSZ" );
 
-    public BetterRaftMessageLogger( MEMBER myself, PrintWriter printWriter, Clock clock )
+    private PrintWriter printWriter;
+
+    public BetterRaftMessageLogger( MEMBER me, File logFile, FileSystemAbstraction fs, Clock clock )
     {
-        this.printWriter = printWriter;
+        this.me = me;
+        this.logFile = logFile;
+        this.fs = fs;
         this.clock = clock;
-        log( myself, Direction.INFO, myself, "Info", "I am " + myself );
+    }
+
+    @Override
+    public void start() throws IOException
+    {
+        checkState( printWriter == null, "Already started" );
+        printWriter = openPrintWriter();
+        log( me, Direction.INFO, me, "Info", "I am " + me );
+    }
+
+    @Override
+    public void stop()
+    {
+        closeAllSilently( printWriter );
+        printWriter = null;
     }
 
     private void log( MEMBER me, Direction direction, MEMBER remote, String type, String message )
@@ -53,18 +79,25 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     }
 
     @Override
-    public <M extends RaftMessages.RaftMessage> void logOutbound( MEMBER me, M message, MEMBER remote )
+    public void logOutbound( MEMBER me, RaftMessage message, MEMBER remote )
     {
         log( me, Direction.OUTBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
     }
 
     @Override
-    public <M extends RaftMessages.RaftMessage> void logInbound( MEMBER remote, M message, MEMBER me )
+    public void logInbound( MEMBER me, RaftMessage message, MEMBER remote )
     {
         log( me, Direction.INBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
     }
 
-    private <M extends RaftMessages.RaftMessage> String nullSafeMessageType( M message )
+    @VisibleForTesting
+    protected PrintWriter openPrintWriter() throws IOException
+    {
+        fs.mkdirs( logFile.getParentFile() );
+        return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
+    }
+
+    private static String nullSafeMessageType( RaftMessage message )
     {
         if ( Objects.isNull( message ) )
         {
@@ -74,11 +107,5 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         {
             return message.type().toString();
         }
-    }
-
-    @Override
-    public void stop()
-    {
-        printWriter.close();
     }
 }

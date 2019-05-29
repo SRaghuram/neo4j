@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.logging;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 
 public interface RaftMessageLogger<MEMBER>
 {
-    <M extends RaftMessages.RaftMessage> void logOutbound( MEMBER me, M message, MEMBER remote );
+    void logOutbound( MEMBER me, RaftMessage message, MEMBER remote );
 
-    <M extends RaftMessages.RaftMessage> void logInbound( MEMBER remote, M message, MEMBER me );
+    void logInbound( MEMBER remote, RaftMessage message, MEMBER me );
 }
