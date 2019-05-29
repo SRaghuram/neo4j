@@ -57,6 +57,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(empty)
   }
 
+  test("should show database using mixed case name") {
+    // GIVEN
+    setup( defaultConfig )
+    execute("CREATE DATABASE FOO")
+
+    // WHEN
+    val result = execute("SHOW DATABASE FOO")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+  }
+
   test("should give nothing when showing a non-existing database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -129,6 +141,17 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should create database using mixed case name") {
+    setup( defaultConfig )
+
+    // WHEN
+    execute("CREATE DATABASE FoO")
+
+    // THEN
+    val result = execute("SHOW DATABASE fOo")
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
@@ -234,6 +257,21 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should contain("foo")
     databaseNames should not contain allOf("bar", "baz")
+  }
+
+  test("should drop database using mixed case name") {
+    // GIVEN
+    setup( defaultConfig )
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASES").toList should contain(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))
+
+    // WHEN
+    execute("DROP DATABASE FOO")
+
+    // THEN
+    val result2 = execute("SHOW DATABASES")
+    val databaseNames: Set[String] = result2.columnAs("name").toSet
+    databaseNames should not contain "foo"
   }
 
   test("should fail when dropping a non-existing database") {
@@ -422,6 +460,25 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
+  test("should re-start database using mixed case name") {
+    setup( defaultConfig )
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))) // make sure it was started
+    execute("STOP DATABASE foo")
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false))) // and stopped
+
+    // WHEN
+    execute("START DATABASE FOO")
+
+    // THEN
+    val result3 = execute("SHOW DATABASE foo")
+    result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+  }
+
   test("should fail when starting a database when not on system database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -448,6 +505,22 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     execute("STOP DATABASE foo")
+
+    // THEN
+    val result2 = execute("SHOW DATABASE foo")
+    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+  }
+
+  test("should stop database using mixed case name") {
+    setup( defaultConfig )
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+
+    // WHEN
+    execute("STOP DATABASE FoO")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
