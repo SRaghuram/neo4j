@@ -7,12 +7,10 @@ package org.neo4j.cypher.internal
 
 import java.lang.String.format
 import java.util
-import java.util.regex.Pattern
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.server.security.enterprise.auth._
 import org.neo4j.common.DependencyResolver
-import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
@@ -78,7 +76,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
       val initialPassword = UTF8.encode(initialStringPassword)
       try {
-        assertValidUsername(userName)
         validatePassword(initialPassword)
 
         // NOTE: If username already exists we will violate a constraint
@@ -194,7 +191,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // CREATE ROLE foo AS COPY OF bar
     case CreateRole(source, roleName) => (context, parameterMapping, currentUser) =>
-      assertValidRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
         """CREATE (new:Role {name: $new})
           |RETURN new.name""".stripMargin,
@@ -252,7 +248,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         QueryHandler
           .handleResult(row => clearCacheForUser(row.get("user").toString))
           .handleNoResult(() => throw new InvalidArgumentsException(s"Cannot grant non-existent role '$roleName' to user '$userName'"))
-          .handleError(e => throw new InvalidArgumentsException(s"Cannot grant role '$roleName' to non-existent user '$userName'")),
+          .handleError(e => throw new InvalidArgumentsException(s"Cannot grant role '$roleName' to non-existent user '$userName'", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -354,7 +350,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |Set d.default = false
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName.toLowerCase), DatabaseStatus.Online)),
+        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName), DatabaseStatus.Online)),
         onError = e => throw new DatabaseExistsException(s"The specified database '$dbName' already exists.", e)
       )
 
@@ -366,7 +362,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
+        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
         new QueryHandler,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
@@ -446,24 +442,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // Ultimately this should go to the trigger handling done in the reconciler
   }
 
-  // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
-  private val usernamePattern = Pattern.compile("^[\\x21-\\x2B\\x2D-\\x39\\x3B-\\x7E]+$")
-
-  def assertValidUsername(username: String): Unit = {
-    if (username == null || username.isEmpty) throw new InvalidArgumentsException("The provided username is empty.")
-    if (!usernamePattern.matcher(username).matches) throw new InvalidArgumentsException("Username '" + username + "' contains illegal characters. Use ascii characters that are not ',', ':' or whitespaces.")
-  }
-
   private def validatePassword(password: Array[Byte]): Array[Byte] = {
     if (password == null || password.length == 0) throw new InvalidArgumentsException("A password cannot be empty.")
     password
-  }
-
-  private val roleNamePattern = Pattern.compile("^[a-zA-Z0-9_]+$")
-
-  private def assertValidRoleName(name: String): Unit = {
-    if (name == null || name.isEmpty) throw new InvalidArgumentsException("The provided role name is empty.")
-    if (!roleNamePattern.matcher(name).matches) throw new InvalidArgumentsException("Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers.")
   }
 
   private def assertNotPredefinedRoleName(roleName: String): Unit = {
@@ -516,7 +497,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |RETURN 'GRANT' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleResult(row => clearCacheForRole(roleName))
+        .handleResult(_ => clearCacheForRole(roleName))
         .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + db + "' does not exist."))
         .handleError(t => throw new InvalidArgumentsException("Role '" + roleName + "' does not exist.", t)),
       source
@@ -537,7 +518,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.AllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
     }
-    val (dbName, db, scopeMatch) = database match {
+    val (dbName, _, scopeMatch) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")

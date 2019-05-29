@@ -8,7 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.Setting
@@ -17,7 +17,6 @@ import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
-import org.parboiled.errors.ParserRuntimeException
 
 import scala.collection.Map
 
@@ -151,12 +150,49 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when creating a database with invalid name") {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    val exception = the [ParserRuntimeException] thrownBy {
+    // Empty name
+    the [InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE ``")
-    }
     // THEN
-    exception.getMessage should include("The provided database name is empty.")
+    } should have message "The provided database name is empty."
+
+    // Starting on invalid character
+    the [InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE _default")
+      // THEN
+    } should have message "Database name '_default' is not starting with an ASCII alphabetic character."
+
+    // Has prefix 'system'
+    the [InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE system_mine")
+      // THEN
+    } should have message "Database name 'system_mine' is invalid, due to the prefix 'system'."
+
+    // Contains invalid characters
+    the [InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE `myDbWith/and%`")
+    // THEN
+    } should have message
+      """Database name 'mydbwith/and%' contains illegal characters.
+        |Use simple ascii characters and numbers.""".stripMargin
+
+    // Too short name
+    the [InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE me")
+      // THEN
+    } should have message "The provided database name must have a length between 3 and 63 characters."
+
+    // Too long name
+    the [InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE ihaveallooootoflettersclearlymorethenishould_ihaveallooootoflettersclearlymorethenishould")
+      // THEN
+    } should have message "The provided database name must have a length between 3 and 63 characters."
   }
 
   test("should fail when creating a database when not on system database") {

@@ -12,7 +12,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DEN
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.auth.SecurityTestUtils
-import org.parboiled.errors.ParserRuntimeException
 
 import scala.collection.Map
 
@@ -234,23 +233,33 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    val exceptionIllegalCharacter = the[ParserRuntimeException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
-      execute("CREATE USER `neo:4j` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
-    }
-    // THEN
-    exceptionIllegalCharacter.getMessage should include("Username 'neo:4j' contains illegal characters.")
+      execute("CREATE USER `` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
+      // THEN
+    } should have message "The provided username is empty."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
-    val exceptionUnescaped = the[SyntaxException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE USER `neo:4j` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
+      // THEN
+    } should have message
+      """Username 'neo:4j' contains illegal characters.
+        |Use ascii characters that are not ',', ':' or whitespaces.""".stripMargin
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    val exception = the[SyntaxException] thrownBy {
       // WHEN
       execute("CREATE USER `3neo4j` SET PASSWORD 'password'")
       execute("CREATE USER 4neo4j SET PASSWORD 'password'")
     }
     // THEN
-    exceptionUnescaped.getMessage should include("Invalid input '4'")
+    exception.getMessage should include("Invalid input '4'")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))

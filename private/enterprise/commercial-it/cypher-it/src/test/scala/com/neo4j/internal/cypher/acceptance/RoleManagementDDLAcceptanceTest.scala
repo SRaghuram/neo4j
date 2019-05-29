@@ -6,10 +6,9 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
-import org.parboiled.errors.ParserRuntimeException
 
 class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val defaultRoles = Set(
@@ -167,12 +166,19 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    val exception = the[ParserRuntimeException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE ``")
       // THEN
-    }
-    exception.getMessage should include("The provided role name is empty.")
+    } should have message "The provided role name is empty."
+
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE `my%role`")
+      // THEN
+    } should have message
+      """Role name 'my%role' contains illegal characters.
+        |Use simple ascii characters and numbers.""".stripMargin
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -240,12 +246,19 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE foo")
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
-    val exception = the[ParserRuntimeException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE `` AS COPY OF foo")
       // THEN
-    }
-    exception.getMessage should include("The provided role name is empty.")
+    } should have message "The provided role name is empty."
+
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE `my%role` AS COPY OF foo")
+      // THEN
+    } should have message
+      """Role name 'my%role' contains illegal characters.
+        |Use simple ascii characters and numbers.""".stripMargin
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
