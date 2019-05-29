@@ -34,15 +34,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.test.proc.ProcessUtil;
-import org.neo4j.tooling.ImportTool;
 
 import static com.neo4j.bench.client.model.Repository.IMPORT_BENCH;
 import static com.neo4j.bench.client.model.Repository.NEO4J;
@@ -160,15 +162,17 @@ public class Main
         BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
+        String storeDir = new File( "store" ).getAbsolutePath();
 
         for ( String size : sizes )
         {
+            String databaseName = "db" + size;
             long startTime = System.currentTimeMillis();
             BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-            int exitCode = runImport( size, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
+            int exitCode = runImport( size, storeDir, databaseName, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
             if ( exitCode == 0 )
             {
-                createIndexes( size, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
+                createIndexes( size, storeDir, databaseName, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
             }
             report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
         }
@@ -176,7 +180,8 @@ public class Main
     }
 
     // nodes.csv header - :ID,:LABEL,name:string,nr:int,date:long,rank:string,other:int
-    private int createIndexes( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
+    private int createIndexes( String size, String storeDir, String databaseName, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group,
+            Neo4jConfig neo4jConfig )
             throws IOException, InterruptedException
     {
         String name = "indexCreate" + size;
@@ -195,28 +200,37 @@ public class Main
         {
             additionalJvmArgs = new String[]{"-Dorg.neo4j.kernel.impl.index.schema.GenericNativeIndexPopulator.blockBasedPopulation=true"};
         }
-        String[] indexCreateArgs = (String.format( "--storeDir %s %s", size, indexPatterns.toString() )).split( " " );
+        String[] indexCreateArgs = (String.format( "--storeDir %s --database %s %s", storeDir, databaseName, indexPatterns.toString() )).split( " " );
         Class<CreateIndex> targetClass = CreateIndex.class;
-        return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, additionalJvmArgs, targetClass );
+        return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, additionalJvmArgs, Collections.emptyMap(), targetClass );
     }
 
-    private int runImport( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
-            throws IOException, InterruptedException
+    private int runImport( String size, String storeDir, String databaseName, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group,
+            Neo4jConfig neo4jConfig ) throws IOException, InterruptedException
     {
         Benchmark benchmark = Benchmark.benchmarkFor( "import benchmark", size, size + "import", Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
-        String[] importArgs = ("import --nodes " + csvLocation + size + "/nodes.csv --relationships " + csvLocation + size +
-                "/relationships.csv --bad-tolerance true --skip-bad-relationships true --skip-duplicate-nodes true --additional-config " + csvLocation + size +
-                "/additional.conf --into " + size ).split( " " ); // todo set --high-io true
-        Class<ImportTool> targetClass = ImportTool.class;
-        return runProcess( metrics, group, neo4jConfig, benchmark, importArgs, new String[0], targetClass );
+        String[] importArgs = {
+                "import",
+                "--mode", "csv",
+                "--database", databaseName,
+                "--nodes", CSV_LOCATION + size + "/nodes.csv",
+                "--relationships", CSV_LOCATION + size + "/relationships.csv",
+                "--ignore-missing-nodes", String.valueOf( true ),
+                "--ignore-duplicate-nodes", String.valueOf( true ),
+                "--additional-config", CSV_LOCATION + size + "/additional.conf"
+        };
+        Map<String,String> neo4jHomeEnvironment = Collections.singletonMap( "NEO4J_HOME", storeDir );
+        Class<AdminTool> targetClass = AdminTool.class;
+        return runProcess( metrics, group, neo4jConfig, benchmark, importArgs, new String[0], neo4jHomeEnvironment, targetClass );
     }
 
     private int runProcess( BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig, Benchmark benchmark, String[] programArgs,
-            String[] jvmArgs, Class<?> targetClass ) throws IOException, InterruptedException
+            String[] jvmArgs, Map<String,String> environmentVariables, Class<?> targetClass ) throws IOException, InterruptedException
     {
         long startTime = System.currentTimeMillis();
         String[] pbArgs = processBuilderArguments( targetClass, programArgs, jvmArgs );
         ProcessBuilder pb = new ProcessBuilder( pbArgs );
+        pb.environment().putAll( environmentVariables );
         pb.inheritIO();
         Process process = pb.start();
         int exitCode = process.waitFor();

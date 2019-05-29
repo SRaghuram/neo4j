@@ -24,15 +24,22 @@ import org.neo4j.graphdb.schema.IndexPopulationProgress;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.internal.helpers.Args;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class CreateIndex
 {
-    private void run( String storeDirString, List<String> indexPatterns )
+    private void run( String storeDirString, String dbName, List<String> indexPatterns )
     {
-        DatabaseManagementService managementService =
-                new CommercialDatabaseManagementServiceBuilder( new File( storeDirString ) ).build();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( new File( storeDirString ) )
+                .setConfig( neo4j_home, storeDirString )
+                .setConfig( databases_root_path, format( "%s/%s/%s", storeDirString, DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME ) )
+                .build();
+        managementService.createDatabase( dbName );
+        GraphDatabaseService db = managementService.database( dbName );
         try
         {
             Map<IndexDefinition,Integer> indexes = new HashMap<>();
@@ -106,7 +113,7 @@ public class CreateIndex
             for ( IndexDefinition index : indexes.keySet() )
             {
                 Schema.IndexState state = db.schema().getIndexState( index );
-                System.out.println( String.format( "%s%s %s", indent, index.toString(), state ) );
+                System.out.println( format( "%s%s %s", indent, index.toString(), state ) );
             }
             tx.success();
         }
@@ -116,7 +123,7 @@ public class CreateIndex
     {
         if ( prevComplete < currentComplete )
         {
-            System.out.println( String.format( "%s%s %d%%", indent, index.toString(), currentComplete * 10 ) );
+            System.out.println( format( "%s%s %d%%", indent, index.toString(), currentComplete * 10 ) );
         }
     }
 
@@ -134,11 +141,11 @@ public class CreateIndex
     {
         Args argz = Args.parse( args );
         List<String> indexPatterns = argz.orphans();
-        if ( !argz.has( "storeDir" ) || !indexPatternsOk( indexPatterns ) )
+        if ( !argz.has( "storeDir" ) || !argz.has( "database" ) || !indexPatternsOk( indexPatterns ) )
         {
             throw illegalArgsException( args );
         }
-        new CreateIndex().run( argz.get( "storeDir" ), indexPatterns );
+        new CreateIndex().run( argz.get( "storeDir" ), argz.get( "database" ), indexPatterns );
     }
 
     private static boolean indexPatternsOk( List<String> indexPatterns )
