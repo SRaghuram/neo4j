@@ -430,8 +430,12 @@ order by a.COL1""".format(a, b))
       // This syntax is valid today, but should give an exception in 1.5
       execute("CREATE a")
     } catch {
+      case e: QueryExecutionException if e.getCause.isInstanceOf[SyntaxException] =>
       case _: SyntaxException =>
-      case _: Throwable => fail("expected exception")
+      case e: Throwable => {
+        throw e
+        fail("expected exception")
+      }
     } finally {
       managementService.shutdown()
     }

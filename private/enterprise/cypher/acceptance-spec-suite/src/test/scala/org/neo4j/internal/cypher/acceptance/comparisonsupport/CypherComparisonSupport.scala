@@ -12,13 +12,16 @@ import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.kernel.impl.query.TransactionalContext
+import org.neo4j.kernel.impl.query.{QueryExecution, QuerySubscriber, RecordingQuerySubscriber, TransactionalContext}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
+import org.neo4j.values.virtual.MapValue
 
 import scala.util.{Failure, Success, Try}
 
@@ -38,6 +41,13 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   override def eengineExecute(query: String,
                               params: Map[String, Any]): Result = {
     executeOfficial(query, params.toSeq:_*)
+  }
+
+  override def eengineExecute(query: String,
+                     params: MapValue,
+                     context: TransactionalContext,
+                     subscriber: QuerySubscriber): QueryExecution = {
+    eengine.execute(query, params, context, profile = false, prePopulate = false, subscriber)
   }
 
   override def makeRewinadable(in: Result): RewindableExecutionResult = RewindableExecutionResult(in)
@@ -62,6 +72,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
   // abstract, can be defined through CypherComparisonSupport
   def eengineExecute(query: String, params: Map[String, Any]): Result
+
+  def eengineExecute(query: String,
+                     params: MapValue,
+                     context: TransactionalContext,
+                     subscriber: QuerySubscriber): QueryExecution
 
   def makeRewinadable(in:Result): RewindableExecutionResult
 
@@ -347,8 +362,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   }
 
   private def innerExecute(queryText: String, params: Map[String, Any]): RewindableExecutionResult = {
-    val innerResult: Result = eengineExecute(queryText, params)
-    makeRewinadable(innerResult)
+    val subscriber = new RecordingQuerySubscriber
+    val context = transactionalContext(queryText -> params)
+    val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
+    val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
+    RewindableExecutionResult(innerResult, queryContext, subscriber)
   }
 }
 
