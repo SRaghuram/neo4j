@@ -233,6 +233,62 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Database 'foo' does not exist."
   }
 
+  test("should fail on dropping system database") {
+    setup( defaultConfig )
+
+    // GIVEN
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE system")
+      // THEN
+    } should have message "Not allowed to drop system database."
+
+    // WHEN
+    val result = execute("SHOW DATABASE system")
+
+    // THEN
+    result.toSet should be(Set(Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should fail on dropping default database") {
+    setup( defaultConfig )
+
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE neo4j")
+      // THEN
+    } should have message "Not allowed to drop default database 'neo4j'."
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should fail on dropping custom default database") {
+    // GIVEN
+    val config = Config.defaults()
+    config.augment(default_database, "foo")
+    setup(config)
+
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE foo")
+      // THEN
+    } should have message "Not allowed to drop default database 'foo'."
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
   test("should fail when dropping a database when not on system database") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -396,6 +452,62 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List.empty)
+  }
+
+  test("should fail on stopping system database") {
+    setup( defaultConfig )
+
+    // GIVEN
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE system")
+      // THEN
+    } should have message "Not allowed to stop system database."
+
+    // WHEN
+    val result = execute("SHOW DATABASE system")
+
+    // THEN
+    result.toSet should be(Set(Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should fail on stopping default database") {
+    setup( defaultConfig )
+
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE neo4j")
+      // THEN
+    } should have message "Not allowed to stop default database 'neo4j'."
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should fail on stopping custom default database") {
+    // GIVEN
+    val config = Config.defaults()
+    config.augment(default_database, "foo")
+    setup(config)
+
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE foo")
+      // THEN
+    } should have message "Not allowed to stop default database 'foo'."
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should be able to stop a stopped database") {

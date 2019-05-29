@@ -30,6 +30,8 @@ import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.DatabaseManagementException
 
 /**
   * This runtime takes on queries that require no planning, such as multidatabase management commands
@@ -357,7 +359,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // DROP DATABASE foo
-    case DropDatabase(dbName) => (_, _, _) =>
+    case DropDatabase(source, dbName) => (context, parameterMapping, currentUser) =>
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
         """MATCH (d:Database {name: $name})
           |REMOVE d:Database
@@ -365,7 +367,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
-        QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+        QueryHandler.handleResult(_ => {}),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
     // START DATABASE foo
@@ -389,7 +392,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // STOP DATABASE foo
-    case StopDatabase(dbName) => (_, _, _) =>
+    case StopDatabase(source, dbName) => (context, parameterMapping, currentUser) =>
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
           |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
@@ -403,9 +406,29 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             DatabaseStatus.Offline
           )
         ),
-        QueryHandler.handleResult(record => {
-          if (record.get("db") == null) throw new DatabaseManagementException("Database '" + dbName + "' does not exist.")
-        })
+        QueryHandler.handleResult(_ => {}),
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
+      )
+
+    // Used to check whether a database is present and not the default or system database,
+    // which means it can be dropped and stopped.
+    case EnsureValidNonDefaultDatabase(dbName, action) => (_, _, _) =>
+      UpdatingSystemCommandExecutionPlan("EnsureValidNonDefaultDatabase", normalExecutionEngine,
+        """MATCH (db:Database {name: $name})
+          |RETURN db.default as default""".stripMargin,
+        VirtualValues.map(
+          Array("name"),
+          Array(Values.stringValue(dbName))
+        ),
+        QueryHandler
+          .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+          .handleResult(record => {
+            if (record.get("default").toString.equals("true")) {
+              throw new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'.")
+            } else if (dbName.equals(SYSTEM_DATABASE_NAME)) {
+              throw new DatabaseManagementException("Not allowed to " + action + " system database.")
+            }
+          })
       )
   }
 
