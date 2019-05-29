@@ -367,7 +367,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
-        QueryHandler.handleResult(_ => {}),
+        new QueryHandler,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -406,7 +406,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             DatabaseStatus.Offline
           )
         ),
-        QueryHandler.handleResult(_ => {}),
+        new QueryHandler,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
