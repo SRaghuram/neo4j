@@ -14,7 +14,7 @@ import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 
 /**
-  * Executor of queries. A spatula.
+  * Executor of queries. A zombie spatula.
   */
 trait QueryExecutor {
 

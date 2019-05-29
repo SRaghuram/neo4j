@@ -101,7 +101,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
       workerWaker.wakeOne()
     } else {
-      DebugSupport.logErrorHandling(s"Droped morsel $output because of query failure")
+      DebugSupport.logErrorHandling(s"Dropped morsel $output because of query failure")
     }
   }
 
