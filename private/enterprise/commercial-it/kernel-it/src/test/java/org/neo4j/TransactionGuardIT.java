@@ -35,9 +35,9 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
@@ -308,12 +308,12 @@ public class TransactionGuardIT
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         CommercialNeoServer neoServer = startNeoServer( customManagementService );
 
-        org.neo4j.driver.v1.Config driverConfig = getDriverConfig();
+        org.neo4j.driver.Config driverConfig = getDriverConfig();
 
         try ( Driver driver = GraphDatabase.driver( "bolt://localhost:" + boltPortDatabaseWithTimeout, driverConfig );
                 Session session = driver.session() )
         {
-            org.neo4j.driver.v1.Transaction transaction = session.beginTransaction();
+            org.neo4j.driver.Transaction transaction = session.beginTransaction();
             transaction.run( "create (n)" ).consume();
             transaction.success();
             fakeClock.forward( 3, TimeUnit.SECONDS );
@@ -340,7 +340,7 @@ public class TransactionGuardIT
         monitorSupplier.setTransactionMonitor( timeoutMonitor );
         CommercialNeoServer neoServer = startNeoServer( customManagementService );
 
-        org.neo4j.driver.v1.Config driverConfig = getDriverConfig();
+        org.neo4j.driver.Config driverConfig = getDriverConfig();
 
         try ( Driver driver = GraphDatabase.driver( "bolt://localhost:" + boltPortDatabaseWithTimeout, driverConfig );
                 Session session = driver.session() )
@@ -443,10 +443,10 @@ public class TransactionGuardIT
         return databaseWithoutTimeout;
     }
 
-    private static org.neo4j.driver.v1.Config getDriverConfig()
+    private static org.neo4j.driver.Config getDriverConfig()
     {
-        return org.neo4j.driver.v1.Config.build()
-                .withEncryptionLevel( org.neo4j.driver.v1.Config.EncryptionLevel.NONE )
+        return org.neo4j.driver.Config.build()
+                .withEncryptionLevel( org.neo4j.driver.Config.EncryptionLevel.NONE )
                 .toConfig();
     }
 

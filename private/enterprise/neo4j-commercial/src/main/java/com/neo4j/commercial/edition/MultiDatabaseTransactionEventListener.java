@@ -7,6 +7,8 @@ package com.neo4j.commercial.edition;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
+import java.util.List;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -21,9 +23,11 @@ import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
+import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.function.ThrowingAction.executeAll;
+import static org.neo4j.internal.helpers.collection.Iterables.safeForAll;
 
 public class MultiDatabaseTransactionEventListener extends TransactionEventListenerAdapter<Object>
 {
@@ -99,22 +103,28 @@ public class MultiDatabaseTransactionEventListener extends TransactionEventListe
     static void createDatabasesFromSystem( DatabaseManager<?> databaseManager, Config config )
     {
         final String defaultDatabase = config.get( GraphDatabaseSettings.default_database );
-        GraphDatabaseFacade systemFacade = databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) )
+        var systemFacade = databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( () -> new DatabaseNotFoundException( SYSTEM_DATABASE_NAME ) );
         try ( Transaction tx = systemFacade.beginTx() )
         {
-            //TODO:extract common validators
-            systemFacade.findNodes( DATABASE_LABEL ).stream()
-                    .filter( node -> ONLINE_STATUS.equals( node.getProperty( STATUS_PROPERTY_NAME ) ) )
-                    .map( MultiDatabaseTransactionEventListener::getDatabaseName )
-                    .filter( s -> !s.equals( defaultDatabase ) && !s.equals( SYSTEM_DATABASE_NAME ) )
-                    .forEach( name -> databaseManager.createDatabase( new DatabaseId( name ) ) );
-            systemFacade.findNodes( DATABASE_LABEL ).stream()
+            List<String> databasesToCreate = systemFacade.findNodes( DATABASE_LABEL ).stream()
+                            .filter( node -> ONLINE_STATUS.equals( node.getProperty( STATUS_PROPERTY_NAME ) ) )
+                            .map( MultiDatabaseTransactionEventListener::getDatabaseName )
+                            .filter( s -> !s.equals( defaultDatabase ) && !s.equals( SYSTEM_DATABASE_NAME ) )
+                            .collect( toList() );
+            List<String> stoppedDatabases = systemFacade.findNodes( DATABASE_LABEL ).stream()
                     .filter( node -> OFFLINE_STATUS.equals( node.getProperty( STATUS_PROPERTY_NAME ) ) )
                     .map( MultiDatabaseTransactionEventListener::getDatabaseName )
-                    .filter( s -> !s.equals( defaultDatabase ) && !s.equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
-                    .forEach( name -> ((MultiDatabaseManager<?>) databaseManager).createStoppedDatabase( new DatabaseId( name ) ) );
+                    .filter( s -> !s.equals( defaultDatabase ) && !s.equals( SYSTEM_DATABASE_NAME ) )
+                    .collect( toList() );
+            executeAll(
+                    () -> safeForAll( name -> databaseManager.createDatabase( new DatabaseId( name ) ), databasesToCreate ),
+                    () -> safeForAll( name -> ((MultiDatabaseManager<?>) databaseManager).createStoppedDatabase( new DatabaseId( name ) ), stoppedDatabases ) );
             tx.success();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
         }
     }
 }

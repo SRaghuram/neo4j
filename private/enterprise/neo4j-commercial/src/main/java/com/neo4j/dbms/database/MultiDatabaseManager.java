@@ -61,7 +61,14 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             DB databaseContext = createDatabaseContext( databaseId );
             if ( autostart && started )
             {
-                startDatabase( databaseId, databaseContext );
+                try
+                {
+                    startDatabase( databaseId, databaseContext );
+                }
+                catch ( Throwable t )
+                {
+                    databaseContext.fail( t );
+                }
             }
             return databaseContext;
         } );

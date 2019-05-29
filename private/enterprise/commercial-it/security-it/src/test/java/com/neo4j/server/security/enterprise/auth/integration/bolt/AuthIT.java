@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.driver.v1.Driver;
+import org.neo4j.driver.Driver;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 

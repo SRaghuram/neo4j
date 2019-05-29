@@ -33,20 +33,19 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.v1.AccessMode;
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Logging;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.Transaction;
-import org.neo4j.driver.v1.TransactionWork;
-import org.neo4j.driver.v1.exceptions.ClientException;
-import org.neo4j.driver.v1.exceptions.SessionExpiredException;
-import org.neo4j.driver.v1.summary.ServerInfo;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.StatementResult;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.TransactionWork;
+import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.summary.ServerInfo;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
@@ -62,7 +61,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.driver.v1.Values.parameters;
+import static org.neo4j.driver.AccessMode.READ;
+import static org.neo4j.driver.AccessMode.WRITE;
+import static org.neo4j.driver.Values.parameters;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -96,7 +97,7 @@ class BoltCausalClusteringIT
     @BeforeEach
     void removePersons() throws TimeoutException
     {
-        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ); Session session = driver.session( AccessMode.WRITE ) )
+        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ); Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
         {
             // when
             session.run( "MATCH (n:Person) DELETE n" ).consume();
@@ -165,7 +166,7 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( core.routingURI() ) )
         {
 
-            return inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
+            return inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
             {
                 // when
                 session.run( "MERGE (n:Person {name: 'Jim'})" ).consume();
@@ -185,7 +186,7 @@ class BoltCausalClusteringIT
             CoreClusterMember leader = cluster.awaitLeader();
 
             try ( Driver driver = makeDriver( leader.routingURI() );
-                    Session session = driver.session( AccessMode.READ ) )
+                    Session session = driver.session( t -> t.withDefaultAccessMode( READ ) ) )
             {
                 // when
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
@@ -340,7 +341,7 @@ class BoltCausalClusteringIT
                     fail( "Failed to write to the new leader in time. Addresses seen: " + seenAddresses );
                 }
 
-                try ( Session session = driver.session( AccessMode.WRITE ) )
+                try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
                 {
                     StatementResult result = session.run( "CREATE (p:Person)" );
                     ServerInfo server = result.summary().server();
@@ -446,7 +447,7 @@ class BoltCausalClusteringIT
 
             assertNotNull( bookmark );
 
-            try ( Session session = driver.session( bookmark ); Transaction tx = session.beginTransaction() )
+            try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) ); Transaction tx = session.beginTransaction() )
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                 assertEquals( 1, record.get( "count" ).asInt() );
@@ -463,14 +464,14 @@ class BoltCausalClusteringIT
 
         try ( Driver driver = makeDriver( leader.directURI() ) )
         {
-            inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
+            inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
             {
                 session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 return null;
             } );
 
             String bookmark;
-            try ( Session session = driver.session( AccessMode.READ ) )
+            try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ) ) )
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -483,7 +484,7 @@ class BoltCausalClusteringIT
 
             assertNotNull( bookmark );
 
-            inExpirableSession( driver, d -> d.session( AccessMode.WRITE, bookmark ), session ->
+            inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ).withBookmarks( bookmark ) ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -514,7 +515,7 @@ class BoltCausalClusteringIT
         try ( Driver driver1 = makeDriver( leader.directURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver1, d -> d.session( AccessMode.WRITE ), session ->
+            String bookmark = inExpirableSession( driver1, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -534,7 +535,7 @@ class BoltCausalClusteringIT
             try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
             {
 
-                try ( Session session = driver2.session( AccessMode.READ, bookmark ) )
+                try ( Session session = driver2.session( t-> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
                 {
                     try ( Transaction tx = session.beginTransaction() )
                     {
@@ -555,7 +556,7 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
+            String bookmark = inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -585,7 +586,7 @@ class BoltCausalClusteringIT
             {
                 for ( int i = 0; i < cluster.readReplicas().size(); i++ ) // don't care about cores
                 {
-                    try ( Session session = driver.session( AccessMode.READ, bookmark ) )
+                    try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
                     {
                         executeReadQuery( session );
 
@@ -646,7 +647,7 @@ class BoltCausalClusteringIT
             } );
 
             // then
-            try ( Session session = driver.session( AccessMode.READ, bookmark ) )
+            try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -715,9 +716,10 @@ class BoltCausalClusteringIT
 
             happyCount = 0;
             numberOfRequests = 1_000;
+            String bookmark = lastBookmark;
             for ( int i = 0; i < numberOfRequests; i++ ) // don't care about cores
             {
-                try ( Session session = driver.session( lastBookmark ) )
+                try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) ) )
                 {
                     happyCount += session.readTransaction( tx ->
                     {

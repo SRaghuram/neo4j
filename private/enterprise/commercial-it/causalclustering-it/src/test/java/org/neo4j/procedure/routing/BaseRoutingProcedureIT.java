@@ -8,14 +8,14 @@ package org.neo4j.procedure.routing;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.driver.v1.AccessMode;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Logging;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.exceptions.SessionExpiredException;
+import org.neo4j.driver.AccessMode;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 
@@ -64,7 +65,7 @@ class BaseRoutingProcedureIT
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
-            try ( Session session = driver.session( AccessMode.WRITE ) )
+            try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
             {
                 assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (:Node)" ).consume() );
             }
@@ -103,7 +104,7 @@ class BaseRoutingProcedureIT
 
     private static void performRead( Driver driver )
     {
-        try ( Session session = driver.session( AccessMode.READ ) )
+        try ( Session session = driver.session( t -> t.withDefaultAccessMode( AccessMode.READ ) ) )
         {
             Record record = session.readTransaction( tx -> tx.run( "RETURN 42 AS id" ).single() );
             assertEquals( 42, record.get( "id" ).asInt() );
@@ -112,7 +113,7 @@ class BaseRoutingProcedureIT
 
     private static void performWrite( Driver driver )
     {
-        try ( Session session = driver.session( AccessMode.WRITE ) )
+        try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
         {
             Record record = session.writeTransaction( tx -> tx.run( "CREATE (n:Node {id: 4242}) RETURN n.id AS id" ).single() );
             assertEquals( 4242, record.get( "id" ).asInt() );

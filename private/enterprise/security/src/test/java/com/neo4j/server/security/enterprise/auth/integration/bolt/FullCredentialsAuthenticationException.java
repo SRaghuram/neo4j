@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import org.neo4j.driver.v1.exceptions.AuthenticationException;
+import org.neo4j.driver.exceptions.AuthenticationException;
 
 public class FullCredentialsAuthenticationException extends AuthenticationException
 {
