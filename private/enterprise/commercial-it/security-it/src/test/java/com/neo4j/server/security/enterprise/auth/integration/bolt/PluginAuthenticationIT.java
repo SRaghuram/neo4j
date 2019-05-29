@@ -9,14 +9,12 @@ import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthenticationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCustomCacheableAuthenticationPlugin;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
@@ -25,6 +23,9 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.graphdb.config.Setting;
 
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.PLUGIN_REALM_NAME_PREFIX;
+import static java.util.stream.Collectors.joining;
+import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -42,11 +43,9 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
             "TestCustomParametersAuthenticationPlugin"
     );
 
-    private static final String DEFAULT_TEST_PLUGIN_REALMS = String.join( ", ",
-            defaultTestPluginRealmList.stream()
-                    .map( s -> StringUtils.prependIfMissing( s, SecuritySettings.PLUGIN_REALM_NAME_PREFIX ) )
-                    .collect( Collectors.toList() )
-    );
+    private static final String DEFAULT_TEST_PLUGIN_REALMS = defaultTestPluginRealmList.stream()
+            .map( s -> prependIfMissing( s, PLUGIN_REALM_NAME_PREFIX ) )
+            .collect( joining( ", " ) );
 
     @Override
     protected Map<Setting<?>,String> getSettings()
@@ -188,7 +187,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
             clearAuthCacheFromDifferentConnection( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
 
             // Then
-            assertAuthorizationExpired( driver );
+            assertAuthorizationExpired( driver, "plugin-TestCacheableAdminAuthPlugin" );
         }
     }
 
@@ -225,7 +224,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
 
         try ( Driver driver = connectDriver( "authorization_expired_user", "neo4j" ) )
         {
-            assertAuthorizationExpired( driver );
+            assertAuthorizationExpired( driver, "plugin-TestCombinedAuthPlugin" );
         }
     }
 }

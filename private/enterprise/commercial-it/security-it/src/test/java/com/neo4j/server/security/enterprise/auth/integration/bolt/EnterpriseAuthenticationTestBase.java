@@ -39,7 +39,6 @@ import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.AuthenticationException;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -214,18 +213,16 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         }
     }
 
-    void assertAuthorizationExpired( Driver driver )
+    void assertAuthorizationExpired( Driver driver, String pluginName )
     {
         try ( Session session = driver.session() )
         {
             session.run( "MATCH (n) RETURN n" ).single();
             fail( "should have gotten authorization expired exception" );
         }
-        catch ( ServiceUnavailableException e )
+        catch ( ClientException e )
         {
-            // TODO Bolt should handle the AuthorizationExpiredException better
-            //assertThat( e.getMessage(), equalTo( "Plugin 'plugin-TestCombinedAuthPlugin' authorization info expired: " +
-            //        "authorization_expired_user needs to re-authenticate." ) );
+            assertThat( e.getMessage(), containsString( "Plugin '" + pluginName + "' authorization info expired" ) );
         }
     }
 

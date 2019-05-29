@@ -53,6 +53,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
@@ -215,7 +216,7 @@ class BoltCausalClusteringIT
 
             SessionExpiredException sep =
                     Assertions.assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (n:Person {name: 'Mark'})" ).consume() );
-            assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
+            assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
         }
     }
 
@@ -404,8 +405,7 @@ class BoltCausalClusteringIT
                 }
                 catch ( SessionExpiredException sep )
                 {
-                    // then
-                    assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
+                    assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
                 }
                 catch ( InterruptedException e )
                 {

@@ -186,7 +186,7 @@ class BaseRoutingProcedureIT
                 .withLogging( Logging.none() )
                 .build();
 
-        return GraphDatabase.driver( "bolt+routing://" + boltHostnamePort, config );
+        return GraphDatabase.driver( "neo4j://" + boltHostnamePort, config );
     }
 
     private static Map<String,Object> paramsWithContext( Map<String,Object> context )

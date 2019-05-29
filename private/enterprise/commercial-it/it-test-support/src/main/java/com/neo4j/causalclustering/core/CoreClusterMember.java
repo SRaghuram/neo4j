@@ -160,7 +160,7 @@ public class CoreClusterMember implements ClusterMember
 
     public String routingURI()
     {
-        return String.format( "bolt+routing://%s", boltAdvertisedSocketAddress );
+        return String.format( "neo4j://%s", boltAdvertisedSocketAddress );
     }
 
     public String directURI()

@@ -49,7 +49,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.ServiceUnavailableException;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -182,14 +182,14 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                 session.run( "CALL dbms.security.clearAuthCache()" );
             }
 
-            try
+            try ( Session session = driver.session() )
             {
-                assertReadFails( driver );
+                session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
                 fail( "should have failed due to authorization expired" );
             }
-            catch ( ServiceUnavailableException e )
+            catch ( ClientException e )
             {
-                // TODO Bolt should handle the AuthorizationExpiredException better
+                assertThat( e.getMessage(), containsString( "LDAP authorization info expired." ) );
             }
         }
     }
