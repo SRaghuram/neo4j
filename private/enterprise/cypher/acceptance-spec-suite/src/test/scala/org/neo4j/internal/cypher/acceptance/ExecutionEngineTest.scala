@@ -933,14 +933,14 @@ order by a.COL1""".format(a, b))
     val planningListener = PlanningListener()
     kernelMonitors.addMonitorListener(planningListener)
 
-    val result1 = executeOfficial("match (n) return n").asScala.toList
+    val result1 = execute("match (n) return n")
     result1 shouldBe empty
 
     val ds = graph.getDependencyResolver.resolveDependency(classOf[Database])
     ds.stop()
     ds.start()
 
-    val result2 = executeOfficial("match (n) return n").asScala.toList
+    val result2 = execute("match (n) return n")
     result2 shouldBe empty
 
     planningListener.planRequests should equal(Seq(
