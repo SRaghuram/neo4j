@@ -96,7 +96,8 @@ class SystemGraphRealmIT
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
         assertAuthenticationSucceeds( realm, "alice" );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
+                info( "Completed import of %s %s into system graph.", "1", "user" ),
+                info( "Completed import of %s %s into system graph.", "1", "role" )
         );
     }
 
@@ -117,7 +118,8 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realm, "alice" );
         assertAuthenticationSucceeds( realm, "bob" );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "2", "users", "2", "roles" )
+                info( "Completed import of %s %s into system graph.", "2", "users" ),
+                info( "Completed import of %s %s into system graph.", "2", "roles" )
         );
     }
 
@@ -250,7 +252,8 @@ class SystemGraphRealmIT
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane" ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "0", "roles" ),
+                info( "Completed import of %s %s into system graph.", "1", "user" ),
+                info( "Completed import of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" )
         );
     }
@@ -282,7 +285,8 @@ class SystemGraphRealmIT
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "3", "users", "0", "roles" ),
+                info( "Completed import of %s %s into system graph.", "3", "users" ),
+                info( "Completed import of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" )
         );
     }
@@ -305,7 +309,8 @@ class SystemGraphRealmIT
         // Then
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "trinity" ) );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "3", "users", "0", "roles" ),
+                info( "Completed import of %s %s into system graph.", "3", "users" ),
+                info( "Completed import of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" )
         );
     }
@@ -324,7 +329,8 @@ class SystemGraphRealmIT
         assertThat( realm.getUsernamesForRole( "not_admin" ), contains( "alice" ) );
         assertTrue( realm.silentlyGetUsernamesForRole( PredefinedRoles.ADMIN ).isEmpty() );
         log.assertExactly(
-                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
+                info( "Completed import of %s %s into system graph.", "1", "user" ),
+                info( "Completed import of %s %s into system graph.", "1", "role" )
         );
     }
 

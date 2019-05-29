@@ -17,15 +17,12 @@ import org.apache.shiro.authz.SimpleRole;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -38,8 +35,6 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 
 public class SystemGraphInitializer extends BasicSystemGraphInitializer
@@ -51,7 +46,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log, Config config )
     {
         super( queryExecutor, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
-                importOptions.initialUserRepositorySupplier, secureHasher, log, config );
+                importOptions.initialUserRepositorySupplier, secureHasher, log, config, false );
 
         this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
@@ -60,14 +55,19 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
     @Override
     public void initializeSystemGraph() throws Exception
     {
+        super.initializeSystemGraphDatabases();
         // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)
         // we set it up with auth data in the following order:
         // 1) Do we have import files from running the `neo4j-admin import-auth` command?
         // 2) Otherwise, are there existing users and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
         // 3) If no users or roles were imported or migrated, create the predefined roles and one default admin user
-        if ( isSystemGraphEmpty() )
+        if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
         {
-            setupDefaultDatabasesAndConstraints();
+            deleteAllSystemGraphAuthData();
+        }
+        if ( nbrOfUsers() == 0 )
+        {
+            setupConstraints();
 
             if ( importOptions.shouldPerformImport )
             {
@@ -81,16 +81,18 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         else if ( importOptions.shouldPerformImport )
         {
             importUsersAndRoles();
-            updateDefaultDatabase( false );
-        }
-        else
-        {
-            updateDefaultDatabase( false );
         }
 
         // If no users or roles were imported we setup the
         // default predefined roles and user and make sure we have an admin user
         ensureDefaultUserAndRoles();
+    }
+
+    private void setupConstraints() throws InvalidArgumentsException
+    {
+        // Ensure that multiple roles cannot have the same name and are indexed
+        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), row -> true );
+        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), row -> true );
     }
 
     private void ensureDefaultUserAndRoles() throws Exception
@@ -217,7 +219,8 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
 
-        boolean importOk = doImportUsersAndRoles( userRepository, roleRepository, /* !purgeOnSuccess */ false );
+        doImportUsers( userRepository );
+        boolean importOk = doImportRoles( userRepository, roleRepository );
         if ( !importOk )
         {
             throw new InvalidArgumentsException(
@@ -234,7 +237,16 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
 
-        boolean importOK = doImportUsersAndRoles( userRepository, roleRepository, importOptions.shouldPurgeImportRepositoriesAfterSuccesfulImport );
+        doImportUsers( userRepository );
+        boolean importOK = doImportRoles( userRepository, roleRepository );
+        // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
+        if ( importOK && importOptions.shouldPurgeImportRepositoriesAfterSuccesfulImport )
+        {
+            userRepository.purge();
+            roleRepository.purge();
+
+            log.debug( "Source import user and role repositories were purged." );
+        }
         if ( !importOK )
         {
             throw new InvalidArgumentsException(
@@ -266,7 +278,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         roleRepository.shutdown();
     }
 
-    private boolean doImportUsersAndRoles( UserRepository userRepository, RoleRepository roleRepository, boolean purgeOnSuccess ) throws Exception
+    private boolean doImportRoles( UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
@@ -281,22 +293,10 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
 
         if ( !isEmpty )
         {
-            Pair<Integer,Integer> numberOfDeletedUsersAndRoles = Pair.of( 0, 0 );
-
             try ( Transaction transaction = queryExecutor.beginTx() )
             {
-                // If a reset of all existing auth data was requested we do it within the same transaction as the import
-                if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
-                {
-                    numberOfDeletedUsersAndRoles = deleteAllSystemGraphAuthData();
-                }
-
                 // This is not an efficient implementation, since it executes many queries
                 // If performance ever becomes an issue we could do this with a single query instead
-                for ( User user : users.values() )
-                {
-                    systemGraphOperations.addUser( user );
-                }
                 for ( RoleRecord role : roles.values() )
                 {
                     systemGraphOperations.newRole( role.name() );
@@ -313,33 +313,8 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             assert validateImportSucceeded( userRepository, roleRepository );
 
             // Log what happened to the security log
-            if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
-            {
-                String userString = numberOfDeletedUsersAndRoles.first() == 1 ? "user" : "users";
-                String roleString = numberOfDeletedUsersAndRoles.other() == 1 ? "role" : "roles";
-
-                log.info( "Deleted %s %s and %s %s into system graph.",
-                        Integer.toString( numberOfDeletedUsersAndRoles.first() ), userString,
-                        Integer.toString( numberOfDeletedUsersAndRoles.other() ), roleString );
-            }
-            {
-                String userString = users.values().size() == 1 ? "user" : "users";
-                String roleString = roles.values().size() == 1 ? "role" : "roles";
-
-                log.info( "Completed import of %s %s and %s %s into system graph.",
-                        Integer.toString( users.values().size() ), userString,
-                        Integer.toString( roles.values().size() ), roleString );
-            }
-
-        }
-
-        // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
-        if ( purgeOnSuccess )
-        {
-            userRepository.purge();
-            roleRepository.purge();
-
-            log.debug( "Source import user and role repositories were purged." );
+            String roleString = roles.values().size() == 1 ? "role" : "roles";
+            log.info( "Completed import of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
         }
         return true;
     }
@@ -349,7 +324,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
      * It is used in preparation for an import where the admin has requested
      * a reset of the auth graph.
      */
-    private Pair<Integer,Integer> deleteAllSystemGraphAuthData() throws InvalidArgumentsException
+    private void deleteAllSystemGraphAuthData() throws InvalidArgumentsException
     {
         // This is not an efficient implementation, since it executes many queries
         // If performance becomes an issue we could do this with a single query instead
@@ -366,9 +341,12 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             systemGraphOperations.deleteRole( roleName );
         }
 
-        // TODO: Delete Database nodes? (Only if they are exclusively used by the security module)
+        String userString = usernames.size() == 1 ? "user" : "users";
+        String roleString = roleNames.size() == 1 ? "role" : "roles";
 
-        return Pair.of( usernames.size(), roleNames.size() );
+        log.info( "Deleted %s %s and %s %s into system graph.",
+                Integer.toString( usernames.size() ), userString,
+                Integer.toString( roleNames.size() ), roleString );
     }
 
     private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Exception

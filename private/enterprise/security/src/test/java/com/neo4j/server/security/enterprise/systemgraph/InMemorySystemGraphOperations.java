@@ -42,6 +42,11 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
         super( mock( QueryExecutor.class ), secureHasher );
     }
 
+    public InMemorySystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
+    {
+        super( queryExecutor, secureHasher );
+    }
+
     @Override
     public void addUser( User user ) throws InvalidArgumentsException
     {
