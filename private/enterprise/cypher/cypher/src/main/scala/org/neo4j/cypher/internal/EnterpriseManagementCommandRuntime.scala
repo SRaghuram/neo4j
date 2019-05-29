@@ -418,7 +418,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN db.default as default""".stripMargin,
         VirtualValues.map(
           Array("name"),
-          Array(Values.stringValue(dbName))
+          Array(Values.stringValue(dbName.toLowerCase))
         ),
         QueryHandler
           .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
