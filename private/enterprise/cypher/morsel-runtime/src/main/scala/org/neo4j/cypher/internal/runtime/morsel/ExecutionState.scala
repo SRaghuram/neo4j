@@ -193,8 +193,10 @@ trait ExecutionState extends ArgumentStateMapCreator {
     *
     * @param throwable the observed exception
     * @param resources resources where to hand-back any open cursors
+    * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
+    *                       the failure happened pipeline execution
     */
-  def failQuery(throwable: Throwable, resources: QueryResources): Unit
+  def failQuery(throwable: Throwable, resources: QueryResources, failedPipeline: ExecutablePipeline): Unit
 
   /**
     * Check whether this query has completed. A query is completed if it has

@@ -214,8 +214,13 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     *
     * @param throwable the observed exception
     * @param resources resources where to hand-back any open cursors
+    * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
+    *                       the failure happened pipeline execution
     */
-  override def failQuery(throwable: Throwable, resources: QueryResources): Unit = {
+  override def failQuery(throwable: Throwable,
+                         resources: QueryResources,
+                         failedPipeline: ExecutablePipeline): Unit = {
+
     queryStatus.failed = true
 
     DebugSupport.logErrorHandling("Starting ExecutionState.failQuery")
@@ -223,8 +228,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
     for (pipeline <- pipelines) {
       val continuationBuffer = continuations(pipeline.id.x)
-      DebugSupport.logErrorHandling(s"${if (pipeline.serial) "Ignoring" else "Clearing"} continuation buffer $continuationBuffer")
-      if (!pipeline.serial) {
+      DebugSupport.logErrorHandling(s"Clearing continuation buffer $continuationBuffer")
+      if (!pipeline.serial || pipeline == failedPipeline || tryLock(pipeline)) {
         var c = continuationBuffer.take()
         while (c != null) {
           c.close(resources)

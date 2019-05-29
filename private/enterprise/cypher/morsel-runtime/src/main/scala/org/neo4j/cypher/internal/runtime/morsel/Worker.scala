@@ -87,7 +87,7 @@ class Worker(val workerId: Int,
       } catch {
         // Failure while executing `task`
         case throwable: Throwable =>
-          executingQuery.executionState.failQuery(throwable, resources)
+          executingQuery.executionState.failQuery(throwable, resources, task.pipelineState.pipeline)
           task.close(resources)
           true
       }
@@ -123,7 +123,7 @@ class Worker(val workerId: Int,
     } catch {
       // Failure in scheduling query
       case throwable: Throwable =>
-        executingQuery.executionState.failQuery(throwable, resources)
+        executingQuery.executionState.failQuery(throwable, resources, null)
         null
     }
   }
