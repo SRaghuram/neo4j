@@ -535,7 +535,7 @@ class BoltCausalClusteringIT
             try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
             {
 
-                try ( Session session = driver2.session( t-> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
+                try ( Session session = driver2.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
                 {
                     try ( Transaction tx = session.beginTransaction() )
                     {

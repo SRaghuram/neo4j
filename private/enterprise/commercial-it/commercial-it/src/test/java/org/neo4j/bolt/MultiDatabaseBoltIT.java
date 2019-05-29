@@ -33,7 +33,6 @@ import static org.neo4j.configuration.Settings.TRUE;
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class MultiDatabaseBoltIT
 {
-
     @Inject
     private TestDirectory testDirectory;
     @Inject
