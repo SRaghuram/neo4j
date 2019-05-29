@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -104,7 +105,7 @@ class WorkerManagerTest extends CypherFunSuite {
     }
   }
 
-  class RandomWorkerManager extends WorkerManager(3, null, () => new QueryResources(mock[CursorFactory])) {
+  class RandomWorkerManager extends WorkerManager(3, null, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))) {
 
     private val random = new Random()
 

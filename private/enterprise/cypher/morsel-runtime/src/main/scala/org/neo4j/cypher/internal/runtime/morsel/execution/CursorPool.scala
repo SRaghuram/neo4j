@@ -77,7 +77,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     */
   def allocate(): CURSOR = {
     liveCount += 1
-    DebugSupport.logCursors(topStack().mkString("+ allocate\n        ", "\n        ", ""))
+    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString("+ allocate\n        ", "\n        ", ""))
     if (cached != null) {
       val temp = cached
       cached = null.asInstanceOf[CURSOR]
@@ -91,7 +91,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Free the given cursor. NOOP if `null`.
     */
   def free(cursor: CURSOR): Unit = {
-    DebugSupport.logCursors(topStack().mkString("+ free\n        ", "\n        ", ""))
+    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString("+ free\n        ", "\n        ", ""))
     if (cursor != null) {
       liveCount -= 1
       if (cached != null)
@@ -107,7 +107,13 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
 
   def getLiveCount: Long = liveCount
 
-  private def topStack(): Seq[String] = {
-    new Exception().getStackTrace.slice(4, 5).map(traceElement => "\tat "+traceElement)
+  /**
+    * Collect a slice of the current stack trace.
+    *
+    * @param from first included stack trace frame, counting from the inner most nesting
+    * @param to first excluded stack trace frame, counting from the inner most nesting
+    */
+  private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
+    new Exception().getStackTrace.slice(from, to).map(traceElement => "\tat "+traceElement)
   }
 }
