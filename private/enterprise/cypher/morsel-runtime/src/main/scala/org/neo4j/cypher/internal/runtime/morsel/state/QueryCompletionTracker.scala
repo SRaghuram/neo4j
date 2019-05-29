@@ -66,7 +66,11 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     }
     if (count == 0) {
       try {
-        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        if (throwable != null) {
+          subscriber.onError(throwable)
+        } else {
+          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        }
       } finally {
         tracer.stopQuery()
       }
@@ -76,11 +80,6 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def error(throwable: Throwable): Unit = {
     this.throwable = throwable
-    try {
-      subscriber.onError(throwable)
-    } finally {
-      tracer.stopQuery()
-    }
   }
 
   override def getDemand: Long = demand
@@ -91,7 +90,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     demand -= newlyServed
   }
 
-  override def isCompleted: Boolean = throwable != null || count == 0 || cancelled
+  override def isCompleted: Boolean = count == 0 || cancelled
 
   // -------- Subscription Methods --------
 

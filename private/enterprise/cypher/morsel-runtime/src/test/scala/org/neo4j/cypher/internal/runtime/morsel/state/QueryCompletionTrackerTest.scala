@@ -105,6 +105,16 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.error(exception)
 
     // then
+    verify(subscriber, never()).onError(exception)
+    verify(subscriber, never()).onResultCompleted(stats)
+    verify(tracer, never()).stopQuery()
+    verify(transaction, never()).thawLocks()
+    x.isCompleted shouldBe false
+
+    // when
+    x.decrement()
+
+    // then
     verify(subscriber).onError(exception)
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer).stopQuery()
