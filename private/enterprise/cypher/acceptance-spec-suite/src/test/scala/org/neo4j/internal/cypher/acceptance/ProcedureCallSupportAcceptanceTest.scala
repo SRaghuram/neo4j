@@ -33,6 +33,17 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     ))
   }
 
+  test("procedure calls and pattern comprehensions with complex query") {
+    relate(createNode(), createNode(Map("age" -> 18L)))
+
+    registerDummyInOutProcedure(Neo4jTypes.NTAny)
+
+    // Using graph execute to get a Java value
+    graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)]) YIELD out0 UNWIND out0 AS result RETURN result").stream().toArray.toList should equal(List(
+      java.util.Collections.singletonMap("result", 18L)
+    ))
+  }
+
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {
     val value = new util.ArrayList[Any]()
     value.add("Norris")

@@ -56,7 +56,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected") {
-    val result = executeWith(Configs.All, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
@@ -66,7 +66,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when two properties are projected") {
-    val result = executeWith(Configs.All, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
       .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : n.prop2}")
@@ -78,7 +78,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected and renamed in a RETURN") {
-    val result = executeWith(Configs.All, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
       .containingArgument("{foo : cache[n.prop1]}")
@@ -102,7 +102,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected before the property access") {
-    val result = executeWith(Configs.All, "MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n MATCH (m)-[r]-(n) RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n MATCH (m)-[r]-(n) RETURN n.prop1", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
@@ -113,7 +113,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when the property is projected inside of a expression") {
-    val result = executeWith(Configs.All, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
       .containingArgument("{n.prop1 * 2 : cache[n.prop1] * $`  AUTOINT1`}")
@@ -255,7 +255,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with renaming of node") {
-    val config = Configs.All
+    val config = Configs.InterpretedAndSlotted + Configs.Compiled
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
     val result = executeWith(config, query, executeBefore = createSomeNodes)
 
@@ -268,7 +268,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with two renamed nodes") {
-    val config = Configs.All
+    val config = Configs.InterpretedAndSlotted + Configs.Compiled
     val query =
       """
         |PROFILE
@@ -305,7 +305,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
       """.stripMargin
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")
@@ -394,7 +394,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue and DoNotGetValue when only one property is projected (composite index)") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Awesome) WHERE n.prop1 = 42 AND n.prop2 = 3 RETURN n.prop1",
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 AND n.prop2 = 3 RETURN n.prop1",
       executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
@@ -405,7 +405,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected after a renaming projection") {
-    val result = executeWith(Configs.All, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")

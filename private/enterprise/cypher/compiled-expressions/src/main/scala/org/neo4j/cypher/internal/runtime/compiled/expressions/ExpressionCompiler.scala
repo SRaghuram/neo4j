@@ -1249,14 +1249,14 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, cachedType) =>
+    case SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, entityType) =>
       val variableName = namer.nextVariableName()
-      val (cachedPropertyMethodInvocation, cursor) = cachedType match {
-        case CACHED_NODE =>
+      val (cachedPropertyMethodInvocation, cursor) = entityType match {
+        case NODE_TYPE =>
           (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
-        case CACHED_RELATIONSHIP =>
+        case RELATIONSHIP_TYPE =>
           (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
@@ -1281,15 +1281,15 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedPropertyLate(_, _, offset, propKey, cachedPropertyOffset, cachedType) =>
+    case SlottedCachedPropertyLate(_, _, offset, propKey, cachedPropertyOffset, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
-      val (cachedPropertyMethodInvocation, cursor) = cachedType match {
-        case CACHED_NODE =>
+      val (cachedPropertyMethodInvocation, cursor) = entityType match {
+        case NODE_TYPE =>
           (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
-        case CACHED_RELATIONSHIP =>
+        case RELATIONSHIP_TYPE =>
           (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
@@ -2617,10 +2617,10 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
-    case SlottedCachedProperty(_, _, offset, prop, _, cachedType) =>
-      val methodName = cachedType match {
-        case CACHED_NODE => "cachedNodePropertyExists"
-        case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"
+    case SlottedCachedProperty(_, _, offset, prop, _, entityType) =>
+      val methodName = entityType match {
+        case NODE_TYPE => "cachedNodePropertyExists"
+        case RELATIONSHIP_TYPE => "cachedRelationshipPropertyExists"
       }
 
       Some(IntermediateExpression(
@@ -2637,10 +2637,10 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq.empty, Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedPropertyLate(_, _, offset, prop, _, cachedType) =>
-      val methodName = cachedType match {
-        case CACHED_NODE => "cachedNodePropertyExists"
-        case CACHED_RELATIONSHIP => "cachedRelationshipPropertyExists"
+    case SlottedCachedPropertyLate(_, _, offset, prop, _, entityType) =>
+      val methodName = entityType match {
+        case NODE_TYPE => "cachedNodePropertyExists"
+        case RELATIONSHIP_TYPE => "cachedRelationshipPropertyExists"
       }
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()

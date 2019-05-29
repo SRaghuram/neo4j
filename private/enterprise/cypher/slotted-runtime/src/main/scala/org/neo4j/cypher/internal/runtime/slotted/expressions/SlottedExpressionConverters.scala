@@ -52,9 +52,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.ReferenceFromSlot(offset))
       case runtimeAst.NodeProperty(offset, token, _) =>
         Some(runtimeExpression.NodeProperty(offset, token))
-      case runtimeAst.SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, CACHED_NODE) =>
+      case runtimeAst.SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, NODE_TYPE) =>
         Some(runtimeExpression.SlottedCachedNodeProperty(offset, token, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
+      case runtimeAst.SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
         Some(runtimeExpression.SlottedCachedRelationshipProperty(offset, token, cachedPropertyOffset))
       case runtimeAst.RelationshipProperty(offset, token, _) =>
         Some(runtimeExpression.RelationshipProperty(offset, token))
@@ -62,9 +62,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.IdFromSlot(offset))
       case runtimeAst.NodePropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.NodePropertyLate(offset, propKey))
-      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, CACHED_NODE) =>
+      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
         Some(runtimeExpression.SlottedCachedNodePropertyLate(offset, propertyKey, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, CACHED_RELATIONSHIP) =>
+      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
         Some(runtimeExpression.SlottedCachedRelationshipPropertyLate(offset, propertyKey, cachedPropertyOffset))
       case runtimeAst.RelationshipPropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.RelationshipPropertyLate(offset, propKey))

@@ -127,8 +127,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   }
   override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
     slots.foreachCachedSlot {
-      case (cnp, refSlot) =>
-        val slot = slots.getLongSlotFor(cnp.variableName)
+      case (crp, refSlot) =>
+        val slot = slots.getLongSlotFor(crp.variableName)
         if (slot.typ == CTRelationship && getLongAt(slot.offset) == rel) {
           setCachedPropertyAt(refSlot.offset, null)
         }

@@ -12,11 +12,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Abstra
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.Value
 
-case class SlottedCachedRelationshipProperty(nodeOffset: Int,
+case class SlottedCachedRelationshipProperty(relationshipOffset: Int,
                                              propertyKey: Int,
                                              cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
+  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(relationshipOffset)
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
@@ -27,11 +27,11 @@ case class SlottedCachedRelationshipProperty(nodeOffset: Int,
   override def children: Seq[AstNode[_]] = Seq.empty
 }
 
-case class SlottedCachedRelationshipPropertyLate(nodeOffset: Int,
+case class SlottedCachedRelationshipPropertyLate(relationshipOffset: Int,
                                                  propertyKey: String,
                                                  cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
+  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(relationshipOffset)
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 

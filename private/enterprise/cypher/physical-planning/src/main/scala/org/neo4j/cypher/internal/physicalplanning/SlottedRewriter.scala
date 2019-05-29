@@ -137,13 +137,13 @@ class SlottedRewriter(tokenContext: TokenContext) {
             prop.copy(map = ReferenceFromSlot(offset, key))(prop.position)
         }
 
-      case prop@CachedProperty(variableName, _, pkn@PropertyKeyName(propKey), cachedType) =>
+      case prop@CachedProperty(variableName, _, pkn@PropertyKeyName(propKey), entityType) =>
         slotConfiguration(variableName) match {
           case LongSlot(offset, _, cypherType) if
-          (cypherType == CTNode && cachedType == CACHED_NODE) || (cypherType == CTRelationship && cachedType == CACHED_RELATIONSHIP) =>
+          (cypherType == CTNode && entityType == NODE_TYPE) || (cypherType == CTRelationship && entityType == RELATIONSHIP_TYPE) =>
             tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.SlottedCachedProperty(variableName, pkn, offset, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
-              case None => ast.SlottedCachedPropertyLate(variableName, pkn,  offset, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), cachedType)
+              case Some(propId) => ast.SlottedCachedProperty(variableName, pkn, offset, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case None => ast.SlottedCachedPropertyLate(variableName, pkn,  offset, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
           case slot@LongSlot(_, _, _) =>
             throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
