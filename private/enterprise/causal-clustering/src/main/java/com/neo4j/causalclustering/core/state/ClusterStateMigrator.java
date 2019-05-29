@@ -13,10 +13,11 @@ import java.io.UncheckedIOException;
 import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class ClusterStateMigrator
+public class ClusterStateMigrator extends LifecycleAdapter
 {
     private static final ClusterStateVersion CURRENT_VERSION = new ClusterStateVersion( 1, 0 );
 
@@ -34,7 +35,8 @@ public class ClusterStateMigrator
         this.log = logProvider.getLog( getClass() );
     }
 
-    public void migrateIfNeeded()
+    @Override
+    public void init()
     {
         var persistedVersion = readClusterStateVersion();
         log.info( "Persisted cluster state version is: " + persistedVersion );

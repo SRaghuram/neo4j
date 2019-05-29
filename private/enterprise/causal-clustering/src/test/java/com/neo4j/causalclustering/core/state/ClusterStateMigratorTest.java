@@ -64,7 +64,7 @@ class ClusterStateMigratorTest
     @Test
     void shouldDeleteClusterStateDirWhenVersionStorageDoesNotExist() throws Exception
     {
-        migrator.migrateIfNeeded();
+        runMigration();
 
         assertMigrationHappened();
     }
@@ -76,7 +76,7 @@ class ClusterStateMigratorTest
         fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParentFile() );
         fs.write( clusterStateLayout.clusterStateVersionFile() ).close();
 
-        assertThrows( UncheckedIOException.class, migrator::migrateIfNeeded );
+        assertThrows( UncheckedIOException.class, this::runMigration );
 
         assertMigrationDidNotHappen();
     }
@@ -86,7 +86,7 @@ class ClusterStateMigratorTest
     {
         clusterStateVersionStorage.writeState( new ClusterStateVersion( 1, 0 ) );
 
-        migrator.migrateIfNeeded();
+        runMigration();
 
         assertMigrationDidNotHappen();
     }
@@ -96,9 +96,14 @@ class ClusterStateMigratorTest
     {
         clusterStateVersionStorage.writeState( new ClusterStateVersion( 42, 3 ) );
 
-        assertThrows( IllegalStateException.class, migrator::migrateIfNeeded );
+        assertThrows( IllegalStateException.class, this::runMigration );
 
         assertMigrationDidNotHappen();
+    }
+
+    private void runMigration()
+    {
+        migrator.init();
     }
 
     private void writeRandomClusterId( File file, FormattedLogProvider logProvider ) throws IOException

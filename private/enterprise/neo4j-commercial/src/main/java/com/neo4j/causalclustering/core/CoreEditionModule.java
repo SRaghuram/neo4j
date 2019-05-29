@@ -161,7 +161,10 @@ public class CoreEditionModule extends ClusteringEditionModule
         globalDependencies.satisfyDependency( clusterStateLayout );
         storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
-        migrateClusterStateIfNeeded( globalModule, clusterStateLayout, storageFactory );
+        // migration needs to happen as early as possible in the lifecycle
+        var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
+        globalLife.add( clusterStateMigrator );
+
         temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
 
         panicService = new PanicService( logService.getUserLogProvider() );
@@ -406,13 +409,13 @@ public class CoreEditionModule extends ClusteringEditionModule
         setSecurityProvider( securityProvider );
     }
 
-    private static void migrateClusterStateIfNeeded( GlobalModule globalModule, ClusterStateLayout clusterStateLayout, CoreStateStorageFactory storageFactory )
+    private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,
+            CoreStateStorageFactory storageFactory )
     {
         var clusterStateVersionStorage = storageFactory.createClusterStateVersionStorage();
         var fs = globalModule.getFileSystem();
         var logProvider = globalModule.getLogService().getInternalLogProvider();
-        var clusterStateMigrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
-        clusterStateMigrator.migrateIfNeeded();
+        return new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
     }
 
     CoreDatabaseFactory coreDatabaseFactory()

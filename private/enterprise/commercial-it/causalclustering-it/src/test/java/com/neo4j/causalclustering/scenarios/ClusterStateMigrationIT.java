@@ -32,6 +32,9 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -122,7 +125,8 @@ class ClusterStateMigrationIT
         }
 
         // cluster should not be able to start
-        assertThrows( Exception.class, cluster::start );
+        var error = assertThrows( Exception.class, cluster::start );
+        assertThat( getRootCause( error ).getMessage(), containsString( "Illegal cluster state version" ) );
     }
 
     private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )
