@@ -44,8 +44,6 @@ class Worker(val workerId: Int,
           val worked = workOnQuery(executingQuery)
           if (!worked) {
             sleeper.reportIdle()
-          } else {
-            sleeper.reportWork()
           }
         } else {
           sleeper.reportIdle()
@@ -103,10 +101,16 @@ class Worker(val workerId: Int,
 
       DebugLog.log("[WORKER%2d] working on %s".format(workerId, task))
 
+      sleeper.reportStartWorkUnit()
       val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task,
                                                                                upstreamWorkUnitEvents(task)).start()
-      val preparedOutput = task.executeWorkUnit(resources, workUnitEvent)
-      workUnitEvent.stop()
+      val preparedOutput =
+        try {
+          task.executeWorkUnit(resources, workUnitEvent)
+        } finally {
+          workUnitEvent.stop()
+          sleeper.reportStopWorkUnit()
+        }
       preparedOutput.produce()
     } finally {
       executingQuery.unbindTransaction()
@@ -137,8 +141,8 @@ class Worker(val workerId: Int,
     collectCursorLiveCounts(liveCounts)
     liveCounts.assertAllReleased()
 
-    if (sleeper.isActive) {
-      throw new RuntimeResourceLeakException(s"$this is ACTIVE even though all resources should be released!")
+    if (sleeper.isWorking) {
+      throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
     }
   }
 
@@ -152,13 +156,16 @@ class Worker(val workerId: Int,
 
 object Worker {
   val NO_WORK: Seq[WorkUnitEvent] = Array.empty[WorkUnitEvent]
+
+  def WORKING_THOUGH_RELEASED(worker: Worker): String =
+    s"$worker is WORKING even though all resources should be released!"
 }
 
 object Sleeper {
   sealed trait Status
-  case object ACTIVE extends Status
-  case object SLEEPING extends Status
-  case object SLEEPY extends Status
+  case object ACTIVE extends Status // while the worker is not doing any of the below, e.g. looking for work
+  case object WORKING extends Status // while the worker is executing a work unit of some query
+  case object SLEEPING extends Status // while the worker is parked and not looking for work
 }
 
 class Sleeper(val workerId: Int,
@@ -168,12 +175,14 @@ class Sleeper(val workerId: Int,
 
   private val sleepNs = sleepDuration.toNanos
   private var workStreak = 0
-  @volatile private var status: Status = SLEEPY
+  @volatile private var status: Status = ACTIVE
 
-  def reportWork(): Unit = {
-    if (workStreak == 0) {
-      status = ACTIVE
-    }
+  def reportStartWorkUnit(): Unit = {
+    status = WORKING
+  }
+
+  def reportStopWorkUnit(): Unit = {
+    status = ACTIVE
     workStreak += 1
   }
 
@@ -183,10 +192,10 @@ class Sleeper(val workerId: Int,
     status = SLEEPING
     LockSupport.parkNanos(sleepNs)
     DebugSupport.logWorker(s"Worker($workerId) unparked")
-    status = SLEEPY
+    status = ACTIVE
   }
 
   def isSleeping: Boolean = status == SLEEPING
-  def isActive: Boolean = status == ACTIVE
+  def isWorking: Boolean = status == WORKING
   def statusString: String = status.toString
 }

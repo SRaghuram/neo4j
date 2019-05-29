@@ -27,10 +27,13 @@ abstract class WorkerManager(val numberOfWorkers: Int,
     }
     liveCounts.assertAllReleased()
 
-    for (worker <- workers) {
-      if (worker.sleeper.isActive) {
-        throw new RuntimeResourceLeakException(s"$worker is ACTIVE even though all resources should be released!")
-      }
+    val activeWorkers =
+      for {
+        worker <- workers.filter(_.sleeper.isWorking)
+      } yield Worker.WORKING_THOUGH_RELEASED(worker)
+
+    if (activeWorkers.nonEmpty) {
+      throw new RuntimeResourceLeakException(activeWorkers.mkString("\n"))
     }
   }
 }

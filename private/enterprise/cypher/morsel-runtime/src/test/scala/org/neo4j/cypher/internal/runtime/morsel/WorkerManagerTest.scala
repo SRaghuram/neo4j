@@ -92,17 +92,29 @@ class WorkerManagerTest extends CypherFunSuite {
     assertFor("nodeValueIndex", _.nodeValueIndexCursorPool)
   }
 
-  test("assertAllReleased should throw on active worker") {
+  test("assertAllReleased should throw on working worker") {
     // given
     val workerManager = new RandomWorkerManager()
 
     // when
-    workerManager.randomWorker().sleeper.reportWork()
+    workerManager.randomWorker().sleeper.reportStartWorkUnit()
 
     // then
     intercept[RuntimeResourceLeakException] {
       workerManager.assertAllReleased()
     }
+  }
+
+  test("assertAllReleased should not throw on active worker, because that will cause flaky tests") {
+    // given
+    val workerManager = new RandomWorkerManager()
+
+    // when
+    workerManager.randomWorker().sleeper.reportStartWorkUnit()
+    workerManager.randomWorker().sleeper.reportStopWorkUnit()
+
+    // then
+    workerManager.assertAllReleased()
   }
 
   class RandomWorkerManager extends WorkerManager(3, null, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))) {

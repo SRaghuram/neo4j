@@ -27,7 +27,7 @@ class WorkerTest extends CypherFunSuite {
     val worker = new Worker(1, queryManager, schedulingPolicy, null, sleeper)
     worker.run()
 
-    verify(sleeper, never()).reportWork()
+    verify(sleeper, never()).reportStopWorkUnit()
     verify(sleeper, times(ATTEMPTS)).reportIdle()
   }
 
@@ -50,7 +50,7 @@ class WorkerTest extends CypherFunSuite {
     val worker = new Worker(1, queryManager, schedulingPolicy, null, sleeper)
     worker.run()
 
-    verify(sleeper, never()).reportWork()
+    verify(sleeper, never()).reportStopWorkUnit()
     verify(sleeper, times(ATTEMPTS)).reportIdle()
   }
 
