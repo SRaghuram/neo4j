@@ -12,11 +12,11 @@ import java.util.regex.Pattern
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.server.security.enterprise.auth._
 import org.neo4j.common.DependencyResolver
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
-import org.neo4j.cypher.internal.result.InternalExecutionResult
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
@@ -366,6 +366,46 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName.toLowerCase))),
         QueryHandler.handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+      )
+
+    // START DATABASE foo
+    case StartDatabase(dbName) => (_, _, _) =>
+      UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
+        """OPTIONAL MATCH (d:Database {name: $name})
+          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
+          |SET d2.status = $status
+          |SET d2.started_at = datetime()
+          |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
+        VirtualValues.map(
+          Array("name", "oldStatus", "status"),
+          Array(Values.stringValue(dbName.toLowerCase),
+            DatabaseStatus.Offline,
+            DatabaseStatus.Online
+          )
+        ),
+        QueryHandler.handleResult(record => {
+          if (record.get("db") == null) throw new DatabaseManagementException("Database '" + dbName + "' does not exist.")
+        })
+      )
+
+    // STOP DATABASE foo
+    case StopDatabase(dbName) => (_, _, _) =>
+      UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
+        """OPTIONAL MATCH (d:Database {name: $name})
+          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
+          |SET d2.status = $status
+          |SET d2.stopped_at = datetime()
+          |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
+        VirtualValues.map(
+          Array("name", "oldStatus", "status"),
+          Array(Values.stringValue(dbName.toLowerCase),
+            DatabaseStatus.Online,
+            DatabaseStatus.Offline
+          )
+        ),
+        QueryHandler.handleResult(record => {
+          if (record.get("db") == null) throw new DatabaseManagementException("Database '" + dbName + "' does not exist.")
+        })
       )
   }
 
