@@ -19,6 +19,9 @@
 		<file>
 			<source>run-report-benchmarks.sh</source>
 		</file>
+		<file>
+			<source>target/micro-benchmarks.jar</source>
+		</file>
 	</files>
 	
 	<moduleSets>	
@@ -43,14 +46,5 @@
 		</moduleSet>
 	</moduleSets>
 	
-	<dependencySets>
-		<dependencySet>
-			<outputDirectory>.</outputDirectory>
-			<outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
-			<includes>
-				<include>com.neo4j.bench:micro</include>
-			</includes>
-		</dependencySet>
-	</dependencySets>
 
 </assembly>
