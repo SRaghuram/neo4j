@@ -12,6 +12,7 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -238,7 +239,7 @@ class CatchupServerIT
         }
     }
 
-    @Test
+    @Disabled
     void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
     {
         var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );

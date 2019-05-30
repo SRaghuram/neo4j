@@ -387,7 +387,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           )
         ),
         QueryHandler.handleResult(record => {
-          if (record.get("db") == null) throw new DatabaseManagementException("Database '" + dbName + "' does not exist.")
+          if (record.get("db") == null) throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")
         })
       )
 
