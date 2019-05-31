@@ -26,6 +26,7 @@ import org.neo4j.kernel.api.security.PasswordPolicy;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
+import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 
 import static java.lang.String.format;
 
@@ -37,11 +38,11 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     private final boolean authorizationEnabled;
     private final SystemGraphOperations systemGraphOperations;
 
-    public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
+    public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SecurityGraphInitializer systemGraphInitializer,
             SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
             boolean authorizationEnabled )
     {
-        super( systemGraphOperations, systemGraphInitializer, initOnStart, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
+        super( systemGraphOperations, systemGraphInitializer, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
         setName( SecuritySettings.NATIVE_REALM_NAME );
         this.authorizationEnabled = authorizationEnabled;
         this.systemGraphOperations = systemGraphOperations;

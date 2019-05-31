@@ -21,8 +21,8 @@ import com.neo4j.server.security.enterprise.auth.UserManagementProcedures;
 import com.neo4j.server.security.enterprise.auth.plugin.PluginRealm;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
@@ -43,11 +43,11 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -72,6 +72,7 @@ import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
@@ -92,6 +93,7 @@ public class CommercialSecurityModule extends SecurityModule
     private Config config;
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
+    private SystemGraphInitializer systemGraphInitializer;
     private CommercialAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
     private ThreadToStatementContextBridge threadToStatementContextBridge;
@@ -107,7 +109,8 @@ public class CommercialSecurityModule extends SecurityModule
     {
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
-        threadToStatementContextBridge = platformDependencies.resolveDependency( ThreadToStatementContextBridge.class );
+        this.threadToStatementContextBridge = platformDependencies.resolveDependency( ThreadToStatementContextBridge.class );
+        this.systemGraphInitializer = platformDependencies.resolveDependency( SystemGraphInitializer.class );
 
         this.config = dependencies.config();
         this.logProvider = dependencies.logService().getUserLogProvider();
@@ -128,8 +131,7 @@ public class CommercialSecurityModule extends SecurityModule
         // Register procedures
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
         globalProcedures.registerComponent( CommercialAuthManager.class, ctx -> authManager, false );
-        globalProcedures.registerComponent( CommercialSecurityContext.class,
-                ctx -> asCommercialEdition( ctx.securityContext() ), true );
+        globalProcedures.registerComponent( CommercialSecurityContext.class, ctx -> asCommercialEdition( ctx.securityContext() ), true );
 
         if ( securityConfig.nativeAuthEnabled )
         {
@@ -138,7 +140,7 @@ public class CommercialSecurityModule extends SecurityModule
                     ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
             if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
             {
-                globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users."  );
+                globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
             }
             else
             {
@@ -199,12 +201,12 @@ public class CommercialSecurityModule extends SecurityModule
             SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
             SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
             Log log = logProvider.getLog( getClass() );
-            SystemGraphInitializer initializer =
-                    new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, log, config );
-
+            EnterpriseSecurityGraphInitializer initializer =
+                    new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, log, systemGraphOperations, importOptions,
+                            secureHasher );
             try
             {
-                initializer.initializeSystemGraph();
+                initializer.initializeSecurityGraph();
             }
             catch ( Throwable e )
             {
@@ -288,13 +290,13 @@ public class CommercialSecurityModule extends SecurityModule
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
-        SystemGraphInitializer systemGraphInitializer = initSystemGraphOnStart ? new SystemGraphInitializer( queryExecutor, systemGraphOperations,
-                configureImportOptions( config, logProvider, fileSystem ), secureHasher, securityLog, config ) : null;
+        SecurityGraphInitializer securityGraphInitializer =
+                initSystemGraphOnStart ? new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, securityLog, systemGraphOperations,
+                        configureImportOptions( config, logProvider, fileSystem ), secureHasher ) : SecurityGraphInitializer.NO_OP;
 
         return new SystemGraphRealm(
                 systemGraphOperations,
-                systemGraphInitializer,
-                initSystemGraphOnStart,
+                securityGraphInitializer,
                 secureHasher,
                 new BasicPasswordPolicy(),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
@@ -614,8 +616,8 @@ public class CommercialSecurityModule extends SecurityModule
 
     // This is used by ImportAuthCommand for offline import of auth information
     public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, SecurityLog securityLog, DatabaseManager<?> databaseManager,
-            UserRepository importUserRepository, RoleRepository importRoleRepository, boolean shouldResetSystemGraphAuthBeforeImport,
-            ThreadToStatementContextBridge threadToStatementContextBridge )
+            SystemGraphInitializer systemGraphInitializer, UserRepository importUserRepository, RoleRepository importRoleRepository,
+            boolean shouldResetSystemGraphAuthBeforeImport, ThreadToStatementContextBridge threadToStatementContextBridge )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
                 new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
@@ -624,13 +626,13 @@ public class CommercialSecurityModule extends SecurityModule
                 configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
-        SystemGraphInitializer systemGraphInitializer =
-                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, securityLog, config );
+        EnterpriseSecurityGraphInitializer securityGraphInitializer =
+                new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, securityLog, systemGraphOperations, importOptions,
+                        secureHasher );
 
         return new SystemGraphRealm(
                 systemGraphOperations,
-                systemGraphInitializer,
-                true,
+                securityGraphInitializer,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),

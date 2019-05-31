@@ -8,12 +8,9 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
-
-import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +20,7 @@ import java.time.Clock;
 import java.util.Collections;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
@@ -35,12 +33,13 @@ import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -67,9 +66,10 @@ class UserManagementProceduresLoggingTest
                         InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
 
         InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( secureHasher );
-        SystemGraphInitializer graphInitializer =
-                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ), Config.defaults() );
-        userManager = new SystemGraphRealm( ops, graphInitializer, true, secureHasher, new BasicPasswordPolicy(),
+        EnterpriseSecurityGraphInitializer graphInitializer =
+                new EnterpriseSecurityGraphInitializer( SystemGraphInitializer.NO_OP, mock( QueryExecutor.class ), mock( Log.class ), ops, importOptions,
+                        secureHasher );
+        userManager = new SystemGraphRealm( ops, graphInitializer, secureHasher, new BasicPasswordPolicy(),
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
         ((SystemGraphRealm) userManager).start();
 

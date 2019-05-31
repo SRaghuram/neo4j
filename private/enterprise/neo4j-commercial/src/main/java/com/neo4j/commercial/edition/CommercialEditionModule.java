@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
+import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
@@ -33,11 +34,11 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.event.DatabaseEventContext;
 import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -183,12 +184,15 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public void createSecurityModule( GlobalModule globalModule )
+    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        createCommercialSecurityModule( this, globalModule, globalProcedures );
+        SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
+                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+        return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
     }
 
-    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, GlobalModule globalModule, GlobalProcedures globalProcedures )
+    @Override
+    public void createSecurityModule( GlobalModule globalModule )
     {
         SecurityProvider securityProvider;
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
@@ -202,7 +206,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         {
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
-        editionModule.setSecurityProvider( securityProvider );
+        setSecurityProvider( securityProvider );
     }
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )

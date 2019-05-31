@@ -30,6 +30,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
@@ -217,10 +218,12 @@ public class ImportAuthCommand implements AdminCommand
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db).getDependencyResolver();
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
         ThreadToStatementContextBridge threadToStatementContextBridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
+        SystemGraphInitializer systemGraphInitializer = dependencyResolver.resolveDependency( SystemGraphInitializer.class );
         return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
                 databaseManager,
+                systemGraphInitializer,
                 importUserRepository, importRoleRepository,
                 shouldResetSystemGraphAuthBeforeImport, threadToStatementContextBridge );
     }

@@ -22,9 +22,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
-import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
@@ -32,32 +31,31 @@ import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.server.security.systemgraph.BasicSystemGraphInitializer;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.UserSecurityGraphInitializer;
 
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 
-public class SystemGraphInitializer extends BasicSystemGraphInitializer
+public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer
 {
     private final SystemGraphOperations systemGraphOperations;
     private final SystemGraphImportOptions importOptions;
 
-    public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations,
-            SystemGraphImportOptions importOptions, SecureHasher secureHasher, Log log, Config config )
+    public EnterpriseSecurityGraphInitializer( SystemGraphInitializer systemGraphInitializer, QueryExecutor queryExecutor, Log log,
+            SystemGraphOperations systemGraphOperations, SystemGraphImportOptions importOptions, SecureHasher secureHasher )
     {
-        super( queryExecutor, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
-                importOptions.initialUserRepositorySupplier, secureHasher, log, config, false );
+        super( systemGraphInitializer, queryExecutor, log, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
+                importOptions.initialUserRepositorySupplier, secureHasher );
 
         this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
     }
 
     @Override
-    public void initializeSystemGraph() throws Exception
+    public void initializeSecurityGraph() throws Exception
     {
-        super.initializeSystemGraphDatabases();
-        // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)
-        // we set it up with auth data in the following order:
+        systemGraphInitializer.initializeSystemGraph();
+        // If the system graph has not been initialized (typically the first time you start neo4j) we set it up with auth data in the following order:
         // 1) Do we have import files from running the `neo4j-admin import-auth` command?
         // 2) Otherwise, are there existing users and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
         // 3) If no users or roles were imported or migrated, create the predefined roles and one default admin user
@@ -115,7 +113,7 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
     }
 
     /* Tries to find an admin candidate among the existing users */
-    private String ensureAdmin( ) throws Exception
+    private String ensureAdmin() throws Exception
     {
         String newAdmin = null;
 
@@ -126,8 +124,8 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
             if ( numberOfDefaultAdmins > 1 )
             {
-                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user." + " Please use `neo4j-admin " +
-                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " +
+                        "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
             }
             else if ( numberOfDefaultAdmins == 1 )
             {
@@ -144,8 +142,8 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             // We currently support only one default admin
             if ( systemGraphOperations.getUser( newAdmin, true ) == null )
             {
-                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. Please use `neo4j-admin " +
-                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " +
+                        "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
             }
             return newAdmin;
         }
@@ -162,8 +160,8 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
         else
         {
             throw new InvalidArgumentsException(
-                    "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                            "` to select an " + "admin." );
+                    "No roles defined, and cannot determine which user should be admin. " +
+                            "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME + "` to select an admin. " );
         }
     }
 

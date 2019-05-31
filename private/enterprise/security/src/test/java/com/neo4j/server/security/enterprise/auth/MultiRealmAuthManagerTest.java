@@ -26,6 +26,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -60,7 +61,7 @@ class MultiRealmAuthManagerTest
     {
         SecureHasher secureHasher = new SecureHasher();
         InMemorySystemGraphOperations operations = new InMemorySystemGraphOperations( secureHasher );
-        realm = new SystemGraphRealm( operations, null, false, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
+        realm = new SystemGraphRealm( operations, SecurityGraphInitializer.NO_OP, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
                 new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ),

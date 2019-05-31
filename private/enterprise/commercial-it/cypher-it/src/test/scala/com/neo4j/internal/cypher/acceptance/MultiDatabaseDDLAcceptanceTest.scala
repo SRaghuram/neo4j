@@ -5,11 +5,14 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.io.File
+
 import com.neo4j.server.security.enterprise.systemgraph._
-import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
 import org.neo4j.cypher.internal.DatabaseStatus
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -29,7 +32,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show default database") {
     // GIVEN
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // WHEN
     val result = execute("SHOW DATABASE neo4j")
@@ -59,7 +62,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show database using mixed case name") {
     // GIVEN
-    setup( defaultConfig )
+    setup(defaultConfig)
     execute("CREATE DATABASE FOO")
 
     // WHEN
@@ -71,7 +74,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should give nothing when showing a non-existing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     val result = execute("SHOW DATABASE foo")
@@ -88,7 +92,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing a default database when not on system database") {
-    the [DatabaseManagementException] thrownBy {
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW DATABASE neo4j")
       // THEN
@@ -97,7 +103,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show default databases") {
     // GIVEN
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // WHEN
     val result = execute("SHOW DATABASES")
@@ -124,7 +130,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing default databases when not on system database") {
-    the [DatabaseManagementException] thrownBy {
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW DATABASES")
       // THEN
@@ -134,7 +142,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Tests for creating databases
 
   test("should create database in systemdb") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // WHEN
     execute("CREATE DATABASE `f.o-o`")
@@ -145,7 +153,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should create database using mixed case name") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // WHEN
     execute("CREATE DATABASE FoO")
@@ -156,14 +164,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating an already existing database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
 
-    the [DatabaseExistsException] thrownBy {
+    the[DatabaseExistsException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
@@ -171,47 +179,48 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating a database with invalid name") {
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Empty name
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE ``")
-    // THEN
+      // THEN
     } should have message "The provided database name is empty."
 
     // Starting on invalid character
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE _default")
       // THEN
     } should have message "Database name '_default' is not starting with an ASCII alphabetic character."
 
     // Has prefix 'system'
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE `system-mine`")
       // THEN
     } should have message "Database name 'system-mine' is invalid, due to the prefix 'system'."
 
     // Contains invalid characters
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE `myDbWith_and%`")
-    // THEN
+      // THEN
     } should have message
       """Database name 'mydbwith_and%' contains illegal characters.
         |Use simple ascii characters, numbers, dots and dashes.""".stripMargin
 
     // Too short name
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE me")
       // THEN
     } should have message "The provided database name must have a length between 3 and 63 characters."
 
     // Too long name
-    the [InvalidArgumentException] thrownBy {
+    the[InvalidArgumentException] thrownBy {
       // WHEN
       val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
       execute(s"CREATE DATABASE `$name`")
@@ -220,7 +229,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating a database when not on system database") {
-    the [DatabaseManagementException] thrownBy {
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
@@ -230,7 +241,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Tests for dropping databases
 
   test("should create and drop databases") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -262,7 +273,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should drop database using mixed case name") {
     // GIVEN
-    setup( defaultConfig )
+    setup(defaultConfig)
     execute("CREATE DATABASE foo")
     execute("SHOW DATABASES").toList should contain(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))
 
@@ -276,16 +287,16 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping a non-existing database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE ``")
       // THEN
@@ -293,7 +304,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping a dropped database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -301,7 +312,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
@@ -309,10 +320,10 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on dropping system database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP DATABASE system")
       // THEN
@@ -326,9 +337,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on dropping default database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP DATABASE neo4j")
       // THEN
@@ -349,7 +360,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     config.augment(default_database, "foo")
     setup(config)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
@@ -366,11 +377,12 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when dropping a database when not on system database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
@@ -380,7 +392,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Tests for starting databases
 
   test("should start database on create") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // WHEN
     execute("CREATE DATABASE foo")
@@ -391,16 +403,16 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when starting a non-existing database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE ``")
       // THEN
@@ -408,14 +420,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when starting a dropped database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -427,7 +439,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should be able to start a started database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -443,7 +455,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should re-start database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -462,7 +474,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should re-start database using mixed case name") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -482,12 +494,13 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when starting a database when not on system database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -497,7 +510,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Tests for stopping databases
 
   test("should stop database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -513,7 +526,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should stop database using mixed case name") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -529,16 +542,16 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when stopping a non-existing database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
     } should have message "Database 'foo' does not exist."
 
     // and an invalid (non-existing) one
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE ``")
       // THEN
@@ -546,14 +559,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when stopping a dropped database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
 
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
@@ -565,10 +578,10 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on stopping system database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE system")
       // THEN
@@ -582,9 +595,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail on stopping default database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE neo4j")
       // THEN
@@ -605,7 +618,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     config.augment(default_database, "foo")
     setup(config)
 
-    the [DatabaseManagementException] thrownBy {
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
@@ -621,7 +634,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should be able to stop a stopped database") {
-    setup( defaultConfig )
+    setup(defaultConfig)
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -638,25 +651,35 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when stopping a database when not on system database") {
-    the [DatabaseManagementException] thrownBy {
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    the[DatabaseManagementException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
     } should have message "Trying to run `CATALOG STOP DATABASE` against non-system database."
   }
 
-  protected def setup(config: Config): Unit = {
+  // Disable normal database creation because we need different settings on each test
+  override protected def initTest() {}
+
+  protected def setup(config: Config) {
+    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfigRaw(config.getRaw).setInternalLogProvider(logProvider).build()
+    graphOps = managementService.database(SYSTEM_DATABASE_NAME)
+    graph = new GraphDatabaseCypherService(graphOps)
+
     val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new SystemGraphInitializer(queryExecutor, systemGraphOperations, importOptions, secureHasher, mock[Log], config)
+    val systemGraphInitializer = new CommercialSystemGraphInitializer(databaseManager, config)
+    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(systemGraphInitializer, queryExecutor, mock[Log], systemGraphOperations, importOptions, secureHasher)
     val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
-    val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
-    systemGraphInitializer.initializeSystemGraph()
-    systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, l))
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(SYSTEM_DATABASE_NAME)
+    systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(SYSTEM_DATABASE_NAME, l))
+    securityGraphInitializer.initializeSecurityGraph()
+    systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(SYSTEM_DATABASE_NAME, l))
+    selectDatabase(SYSTEM_DATABASE_NAME)
   }
 
   private def threadToStatementContextBridge(): ThreadToStatementContextBridge = {

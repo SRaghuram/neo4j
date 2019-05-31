@@ -84,7 +84,7 @@ class SystemGraphInternalsTest
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
         realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
-                securityLog, managementService, systemGraphExecutor, Config.defaults() );
+                securityLog, databaseManager, managementService, systemGraphExecutor, Config.defaults() );
     }
 
     @AfterEach

@@ -61,6 +61,7 @@ import com.neo4j.dbms.ReconcilingDatabaseOperator;
 import com.neo4j.dbms.SystemOperator;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
+import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -82,10 +83,12 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -378,6 +381,26 @@ public class CoreEditionModule extends ClusteringEditionModule
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
+    }
+
+    @Override
+    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    {
+        SystemGraphInitializer initializer =
+                CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
+                        () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+        databaseInitializerMap.put( new DatabaseId( SYSTEM_DATABASE_NAME ), db ->
+        {
+            try
+            {
+                initializer.initializeSystemGraph();
+            }
+            catch ( Exception e )
+            {
+                throw new RuntimeException( e );
+            }
+        } );
+        return globalModule.getGlobalDependencies().satisfyDependency( initializer );
     }
 
     @Override

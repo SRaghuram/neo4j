@@ -7,12 +7,9 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
-
-import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
@@ -23,6 +20,7 @@ import java.time.Clock;
 import java.util.Collections;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -30,7 +28,9 @@ import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,12 +55,14 @@ class CommercialLoginContextTest
         SystemGraphImportOptions importOptions =
                 new SystemGraphImportOptions( false, true, true, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
                         InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
-        SystemGraphInitializer graphInitializer =
-                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ), Config.defaults() );
-        SystemGraphRealm realm = new SystemGraphRealm( ops, graphInitializer, true, secureHasher, new BasicPasswordPolicy(),
+        EnterpriseSecurityGraphInitializer securityGraphInitializer =
+                new EnterpriseSecurityGraphInitializer( SystemGraphInitializer.NO_OP, mock( QueryExecutor.class ), mock( Log.class ), ops, importOptions,
+                        secureHasher );
+        SystemGraphRealm realm = new SystemGraphRealm( ops, securityGraphInitializer, secureHasher, new BasicPasswordPolicy(),
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
-                mock( SecurityLog.class ), false, false, Collections.emptyMap() );
+        authManager =
+                new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false, false,
+                        Collections.emptyMap() );
         authManager.start();
 
         userManager = authManager.getUserManager();

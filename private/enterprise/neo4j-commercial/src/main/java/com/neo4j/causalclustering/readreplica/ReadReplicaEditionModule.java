@@ -49,6 +49,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -245,6 +246,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<?> databaseManager )
     {
         return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
+    }
+
+    @Override
+    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    {
+        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
     }
 
     @Override

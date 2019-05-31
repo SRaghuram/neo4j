@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService;
 import org.neo4j.cypher.security.TestBasicSystemGraphRealm;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
@@ -62,20 +63,21 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
             throws Throwable
     {
         ContextSwitchingSystemGraphQueryExecutor executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
-        return testRealm( importOptions, securityLog, dbManager.getManagementService(), executor, config );
+        return testRealm( importOptions, securityLog, dbManager, dbManager.getManagementService(), executor, config );
     }
 
-    public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManagementService managementService,
-            QueryExecutor executor, Config config ) throws Throwable
+    public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager,
+            DatabaseManagementService managementService, QueryExecutor executor, Config config ) throws Throwable
     {
         GraphDatabaseCypherService graph = new GraphDatabaseCypherService( managementService.database( config.get( GraphDatabaseSettings.default_database ) ) );
         Collection<TransactionEventListener<?>> systemEventListener = unregisterListeners( graph);
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
-        SystemGraphInitializer systemGraphInitializer =
-                new SystemGraphInitializer( executor, systemGraphOperations, importOptions, secureHasher, securityLog, config );
+        CommercialSystemGraphInitializer systemGraphInitializer = new CommercialSystemGraphInitializer( dbManager, config );
+        EnterpriseSecurityGraphInitializer securityGraphInitializer =
+                new EnterpriseSecurityGraphInitializer( systemGraphInitializer, executor, securityLog, systemGraphOperations, importOptions, secureHasher );
 
-        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, systemGraphInitializer, true, secureHasher, new BasicPasswordPolicy(),
+        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, securityGraphInitializer, secureHasher, new BasicPasswordPolicy(),
                 newRateLimitedAuthStrategy(), true, true );
 
         realm.initialize();
