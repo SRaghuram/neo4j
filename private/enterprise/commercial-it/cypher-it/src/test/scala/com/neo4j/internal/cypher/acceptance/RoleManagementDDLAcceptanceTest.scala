@@ -178,7 +178,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message
       """Role name 'my%role' contains illegal characters.
-        |Use simple ascii characters and numbers.""".stripMargin
+        |Use simple ascii characters, numbers and underscores.""".stripMargin
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -258,7 +258,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message
       """Role name 'my%role' contains illegal characters.
-        |Use simple ascii characters and numbers.""".stripMargin
+        |Use simple ascii characters, numbers and underscores.""".stripMargin
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }

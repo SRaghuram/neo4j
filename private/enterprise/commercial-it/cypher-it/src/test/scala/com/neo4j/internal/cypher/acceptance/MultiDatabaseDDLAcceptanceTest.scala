@@ -137,11 +137,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup( defaultConfig )
 
     // WHEN
-    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE `f.o-o`")
 
     // THEN
-    val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    val result = execute("SHOW DATABASE `f.o-o`")
+    result.toList should be(List(Map("name" -> "f.o-o", "status" -> onlineStatus, "default" -> false)))
   }
 
   test("should create database using mixed case name") {
@@ -190,18 +190,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // Has prefix 'system'
     the [InvalidArgumentException] thrownBy {
       // WHEN
-      execute("CREATE DATABASE system_mine")
+      execute("CREATE DATABASE `system-mine`")
       // THEN
-    } should have message "Database name 'system_mine' is invalid, due to the prefix 'system'."
+    } should have message "Database name 'system-mine' is invalid, due to the prefix 'system'."
 
     // Contains invalid characters
     the [InvalidArgumentException] thrownBy {
       // WHEN
-      execute("CREATE DATABASE `myDbWith/and%`")
+      execute("CREATE DATABASE `myDbWith_and%`")
     // THEN
     } should have message
-      """Database name 'mydbwith/and%' contains illegal characters.
-        |Use simple ascii characters and numbers.""".stripMargin
+      """Database name 'mydbwith_and%' contains illegal characters.
+        |Use simple ascii characters, numbers, dots and dashes.""".stripMargin
 
     // Too short name
     the [InvalidArgumentException] thrownBy {
