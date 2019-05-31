@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
+import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 
@@ -40,8 +41,8 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
-        Monitors readReplicaMonitors = new Monitors( globalModule.getGlobalMonitors() );
         Dependencies readReplicaDependencies = new Dependencies( globalModule.getGlobalDependencies() );
+        Monitors readReplicaMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), readReplicaDependencies );
 
         DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, readReplicaDependencies, readReplicaMonitors );
         Database kernelDatabase = new Database( databaseCreationContext );

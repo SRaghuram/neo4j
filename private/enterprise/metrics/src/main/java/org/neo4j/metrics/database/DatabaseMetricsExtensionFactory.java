@@ -5,6 +5,9 @@
  */
 package org.neo4j.metrics.database;
 
+import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.service.ServiceProvider;
@@ -31,6 +34,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
     {
         Monitors monitors();
 
+        ClusterMonitors clusterMonitors();
+
         Config configuration();
 
         MetricsManager metricsManager();
@@ -48,6 +53,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
         LogRotationMonitor logRotationMonitor();
 
         StoreEntityCounters storeEntityCounters();
+
+        Supplier<CoreMetaData> coreMetadataSupplier();
     }
 
     public DatabaseMetricsExtensionFactory()

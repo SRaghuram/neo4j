@@ -5,6 +5,7 @@
  */
 package org.neo4j.metrics.database;
 
+import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -162,12 +163,6 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public Supplier<CoreMetaData> coreMetadataSupplier()
-        {
-            return null;
-        }
-
-        @Override
         public ConnectorPortRegister portRegister()
         {
             return null;
@@ -194,6 +189,12 @@ class DatabaseMetricsExtensionTest
         public Monitors monitors()
         {
             return new Monitors();
+        }
+
+        @Override
+        public ClusterMonitors clusterMonitors()
+        {
+            return null;
         }
 
         @Override
@@ -252,6 +253,12 @@ class DatabaseMetricsExtensionTest
 
         @Override
         public StoreEntityCounters storeEntityCounters()
+        {
+            return null;
+        }
+
+        @Override
+        public Supplier<CoreMetaData> coreMetadataSupplier()
         {
             return null;
         }

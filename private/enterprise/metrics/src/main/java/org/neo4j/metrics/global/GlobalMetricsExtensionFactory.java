@@ -5,10 +5,6 @@
  */
 package org.neo4j.metrics.global;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
-
-import java.util.function.Supplier;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -37,8 +33,6 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         FileSystemAbstraction fileSystemAbstraction();
 
         JobScheduler scheduler();
-
-        Supplier<CoreMetaData> coreMetadataSupplier();
 
         ConnectorPortRegister portRegister();
     }

@@ -10,10 +10,14 @@ import com.codahale.metrics.MetricRegistry;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.database.DatabaseMetricsExtensionFactory.Dependencies;
 import org.neo4j.metrics.output.EventReporter;
+import org.neo4j.metrics.source.causalclustering.CatchUpMetrics;
+import org.neo4j.metrics.source.causalclustering.CoreMetrics;
+import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
@@ -72,6 +76,21 @@ public class DatabaseMetricsExporter
         if ( config.get( MetricsSettings.cypherPlanningEnabled ) )
         {
             life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.causalClusteringEnabled ) )
+        {
+            OperationalMode mode = context.databaseInfo().operationalMode;
+            if ( mode == OperationalMode.CORE )
+            {
+                life.add( new CoreMetrics( metricsPrefix, dependencies.clusterMonitors(), registry, dependencies.coreMetadataSupplier() ) );
+                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
+            }
+            else if ( mode == OperationalMode.READ_REPLICA )
+            {
+                life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.clusterMonitors(), registry ) );
+                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
+            }
         }
     }
 

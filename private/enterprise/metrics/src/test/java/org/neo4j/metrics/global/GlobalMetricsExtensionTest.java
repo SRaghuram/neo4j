@@ -5,12 +5,9 @@
  */
 package org.neo4j.metrics.global;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -141,12 +138,6 @@ class GlobalMetricsExtensionTest
 
         @Override
         public JobScheduler scheduler()
-        {
-            return null;
-        }
-
-        @Override
-        public Supplier<CoreMetaData> coreMetadataSupplier()
         {
             return null;
         }
