@@ -10,11 +10,8 @@ import java.util.Collection
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.server.security.auth.SecurityTestUtils
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
@@ -892,11 +889,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse.database("foo").role("custom").label("B").map,
-      grantRead.database("foo").role("custom").label("A").property("foo").map,
-      grantRead.database("foo").role("custom").label("B").property("foo").map,
-      grantRead.database("foo").role("custom").label("A").property("bar").map,
-      grantRead.database("foo").role("custom").label("B").property("bar").map
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").label("A").property("foo").map,
+      grantRead().database("foo").role("custom").label("B").property("foo").map,
+      grantRead().database("foo").role("custom").label("A").property("bar").map,
+      grantRead().database("foo").role("custom").label("B").property("bar").map
     ))
 
     // WHEN
@@ -904,9 +901,9 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse.database("foo").role("custom").label("B").map,
-      grantRead.database("foo").role("custom").label("A").property("foo").map,
-      grantRead.database("foo").role("custom").label("A").property("bar").map
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").label("A").property("foo").map,
+      grantRead().database("foo").role("custom").label("A").property("bar").map
     ))
 
     // WHEN
@@ -914,8 +911,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse.database("foo").role("custom").label("B").map,
-      grantRead.database("foo").role("custom").label("A").property("bar").map
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").label("A").property("bar").map
     ))
   }
 
@@ -952,7 +949,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantTraverse().role("custom").database("bar").map
     ))
   }
-
   test("should fail revoke privilege from non-existent role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -963,7 +959,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
-    } should have message "The role 'wrongRole' does not exist."
+    } should have message "The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *."
+    // should accept both above message and "The role 'wrongRole' does not exist."
   }
 
   test("should fail revoke privilege not granted to role") {

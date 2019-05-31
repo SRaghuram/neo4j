@@ -348,8 +348,10 @@ public class AuthIT extends AuthTestBase
             userManager.newUser( PROC_USER, password.getBytes(), false );
             userManager.newUser( READ_USER, password.getBytes(), false );
             userManager.newUser( WRITE_USER, password.getBytes(), false );
+            userManager.newUser( ADMIN_USER, password.getBytes(), false );
             userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
+            userManager.addRoleToUser( PredefinedRoles.ADMIN, ADMIN_USER );
             userManager.newRole( "role1", PROC_USER );
         }
         checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
