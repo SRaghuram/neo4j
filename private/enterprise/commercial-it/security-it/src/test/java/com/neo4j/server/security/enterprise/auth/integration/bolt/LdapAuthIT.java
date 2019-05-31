@@ -29,6 +29,8 @@ import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -144,6 +146,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldShowCurrentUser()
     {
         try ( Driver driver = connectDriver( "smith", "abc123" ); Session session = driver.session() )
@@ -160,6 +163,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldBeAbleToLoginAndAuthorizeNoPermissionUserWithLdapOnlyAndNoGroupToRoleMapping() throws IOException
     {
         restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), null );
@@ -170,6 +174,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailIfAuthorizationExpiredWithserLdapContext()
     {
         // Given
@@ -195,6 +200,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithUserLdapContext()
     {
         // Given
@@ -215,6 +221,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldKeepAuthorizationForLifetimeOfTransaction() throws Throwable
     {
         assertKeepAuthorizationForLifetimeOfTransaction( "neo",
@@ -222,6 +229,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldKeepAuthorizationForLifetimeOfTransactionWithProcedureAllowed() throws Throwable
     {
         restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), "503=admin;504=role1" );
@@ -274,6 +282,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailIfInvalidLdapServer() throws IOException
     {
         // When
@@ -290,6 +299,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldTimeoutIfLdapServerDoesNotRespond() throws IOException
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
@@ -305,6 +315,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldTimeoutIfLdapServerDoesNotRespondWithoutConnectionPooling() throws IOException
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
@@ -321,6 +332,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailIfLdapSearchFails() throws IOException
     {
         try ( DirectoryServiceFailOnSearch ignore = new DirectoryServiceFailOnSearch() )
@@ -335,6 +347,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldTimeoutIfLdapServerDoesNotRespondWithLdapUserContext() throws IOException
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
@@ -355,6 +368,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldGetCombinedAuthorization() throws Throwable
     {
         restartServerWithOverriddenSettings(
@@ -388,6 +402,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     // ===== Logging tests =====
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
@@ -412,6 +427,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
@@ -436,6 +452,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldLogInvalidCredentialErrorFromLdapRealm() throws Throwable
     {
         // When
@@ -446,6 +463,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws Throwable
     {
         restartServerWithOverriddenSettings(
@@ -469,6 +487,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldLogConnectionRefusedFromLdapRealm() throws Throwable
     {
         // When
@@ -490,6 +509,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws Throwable
     {
         restartServerWithOverriddenSettings(
@@ -510,6 +530,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldClearAuthenticationCache() throws Throwable
     {
         getLdapServer().setConfidentialityRequired( true );
@@ -539,6 +560,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldClearAuthorizationCache() throws Throwable
     {
         getLdapServer().setConfidentialityRequired( true );
@@ -578,6 +600,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotSeeSystemPassword()
     {
         Config config = dbRule.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( Config.class );
@@ -592,6 +615,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin() throws Throwable
     {
         restartServerWithOverriddenSettings(

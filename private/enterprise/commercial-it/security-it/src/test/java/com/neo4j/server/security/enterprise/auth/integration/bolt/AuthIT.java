@@ -24,6 +24,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -386,6 +388,7 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldLoginWithSamAccountName()
     {
         assumeTrue( ldapWithAD );
@@ -399,6 +402,7 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailLoginSamAccountNameWrongPassword()
     {
         assumeTrue( ldapWithAD );
@@ -406,6 +410,7 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailLoginSamAccountNameWithDN()
     {
         assumeTrue( ldapWithAD );
@@ -413,6 +418,7 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     public void shouldReadWithSamAccountName()
     {
         assumeTrue( ldapWithAD );
