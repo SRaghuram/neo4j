@@ -29,9 +29,9 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 {
     public interface Monitor
     {
-        void waitingForCoreMembers( int minimumCount );
+        void waitingForCoreMembers( DatabaseId databaseId, int minimumCount );
 
-        void waitingForBootstrap();
+        void waitingForBootstrap( DatabaseId databaseId );
 
         void bootstrapped( CoreSnapshot snapshot, DatabaseId databaseId, RaftId raftId );
 
@@ -80,12 +80,12 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         int memberCount = coreTopology.members().size();
         if ( memberCount < minCoreHosts )
         {
-            monitor.waitingForCoreMembers( minCoreHosts );
+            monitor.waitingForCoreMembers( databaseId, minCoreHosts );
             return false;
         }
         else if ( !topologyService.canBootstrapRaftGroup( databaseId ) )
         {
-            monitor.waitingForBootstrap();
+            monitor.waitingForBootstrap( databaseId );
             return false;
         }
         else

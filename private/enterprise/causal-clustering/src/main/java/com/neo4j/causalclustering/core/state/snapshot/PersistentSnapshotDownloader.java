@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import java.io.IOException;
 import java.util.Optional;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 
@@ -24,9 +25,9 @@ public class PersistentSnapshotDownloader implements Runnable
 {
     public interface Monitor
     {
-        void startedDownloadingSnapshot();
+        void startedDownloadingSnapshot( DatabaseId databaseId );
 
-        void downloadSnapshotComplete();
+        void downloadSnapshotComplete( DatabaseId databaseId );
     }
 
     static final String OPERATION_NAME = "download of snapshot";
@@ -74,9 +75,10 @@ public class PersistentSnapshotDownloader implements Runnable
             return;
         }
 
+        var databaseId = context.databaseId();
         try
         {
-            monitor.startedDownloadingSnapshot();
+            monitor.startedDownloadingSnapshot( databaseId );
             applicationProcess.pauseApplier( OPERATION_NAME );
 
             context.stopForStoreCopy();
@@ -86,7 +88,6 @@ public class PersistentSnapshotDownloader implements Runnable
 
             boolean incomplete = false;
             Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( context );
-            var databaseId = context.databaseId();
 
             if ( snapshot.isPresent() )
             {
@@ -129,7 +130,7 @@ public class PersistentSnapshotDownloader implements Runnable
         finally
         {
             applicationProcess.resumeApplier( OPERATION_NAME );
-            monitor.downloadSnapshotComplete();
+            monitor.downloadSnapshotComplete( databaseId );
             state = State.COMPLETED;
         }
     }

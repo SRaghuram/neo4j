@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
@@ -39,32 +39,28 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
 
     private final Consumer<Runnable> binderLimit = Limiters.rateLimiter( Duration.ofSeconds( 10 ) );
 
-    public static void register( LogProvider debugLogProvider, LogProvider userLogProvider, Monitors monitors )
+    public static void register( LogService logService, Monitors monitors )
     {
-        new RaftMonitor( debugLogProvider, userLogProvider, monitors );
+        var raftMonitor = new RaftMonitor( logService );
+        monitors.addMonitorListener( raftMonitor );
     }
 
-    private RaftMonitor( LogProvider debugLogProvider, LogProvider userLogProvider, Monitors monitors )
+    private RaftMonitor( LogService logService )
     {
-        this.debug = debugLogProvider.getLog( getClass() );
-        this.user = userLogProvider.getLog( getClass() );
-
-        monitors.addMonitorListener( this );
-    }
-
-    @Override
-    public void waitingForCoreMembers( int minimumCount )
-    {
-        binderLimit.accept( () -> {
-            String message = "Waiting for a total of %d core members...";
-            user.info( format( message, minimumCount ) );
-        } );
+        this.debug = logService.getInternalLogProvider().getLog( getClass() );
+        this.user = logService.getUserLogProvider().getLog( getClass() );
     }
 
     @Override
-    public void waitingForBootstrap()
+    public void waitingForCoreMembers( DatabaseId databaseId, int minimumCount )
     {
-        binderLimit.accept( () -> user.info( "Waiting for bootstrap by other instance..." ) );
+        binderLimit.accept( () -> user.info( "Database '%s' is waiting for a total of %d core members...", databaseId.name(), minimumCount ) );
+    }
+
+    @Override
+    public void waitingForBootstrap( DatabaseId databaseId )
+    {
+        binderLimit.accept( () -> user.info( "Database '%s' is waiting for bootstrap by other instance...", databaseId.name() ) );
     }
 
     @Override
@@ -81,14 +77,14 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     }
 
     @Override
-    public void startedDownloadingSnapshot()
+    public void startedDownloadingSnapshot( DatabaseId databaseId )
     {
-        user.info( "Started downloading snapshot..." );
+        user.info( "Started downloading snapshot for database '%s'...", databaseId.name() );
     }
 
     @Override
-    public void downloadSnapshotComplete()
+    public void downloadSnapshotComplete( DatabaseId databaseId )
     {
-        user.info( "Download of snapshot complete." );
+        user.info( "Download of snapshot for database '%s' complete.", databaseId.name() );
     }
 }

@@ -156,7 +156,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         this.globalHealth = globalModule.getGlobalHealthService();
         this.logProvider = logService.getInternalLogProvider();
 
-        RaftMonitor.register( logProvider, logService.getUserLogProvider(), globalModule.getGlobalMonitors() );
+        RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
