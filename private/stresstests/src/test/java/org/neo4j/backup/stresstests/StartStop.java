@@ -15,19 +15,20 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helper.Workload;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class StartStop extends Workload
 {
     private final AtomicReference<GraphDatabaseService> dbRef;
     private final DatabaseManagementService managementService;
+    private final String databaseName;
 
     StartStop( Control control, AtomicReference<GraphDatabaseService> dbRef,
-            DatabaseManagementService managementService )
+            DatabaseManagementService managementService, String databaseName )
     {
         super( control );
         this.dbRef = dbRef;
         this.managementService = managementService;
+        this.databaseName = databaseName;
     }
 
     @Override
@@ -35,7 +36,7 @@ class StartStop extends Workload
     {
         TimeUnit.SECONDS.sleep( 10 ); // sleep between runs
         GraphDatabaseService db = dbRef.get();
-        managementService.shutdownDatabase( DEFAULT_DATABASE_NAME );
+        managementService.shutdownDatabase( databaseName );
         TimeUnit.SECONDS.sleep( 2 ); // sleep a bit while db is shutdown to let backup fail
         boolean replaced = dbRef.compareAndSet( db, restartDatabase() );
         assertTrue( replaced );
@@ -43,7 +44,7 @@ class StartStop extends Workload
 
     private GraphDatabaseService restartDatabase()
     {
-        managementService.startDatabase( DEFAULT_DATABASE_NAME );
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        managementService.startDatabase( databaseName );
+        return managementService.database( databaseName );
     }
 }

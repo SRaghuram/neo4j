@@ -12,7 +12,6 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -239,17 +238,18 @@ class CatchupServerIT
         }
     }
 
-    @Disabled
+    @Test
     void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
     {
-        var databaseId = new DatabaseId( DEFAULT_DATABASE_NAME );
+        var databaseId = new DatabaseId( "testDatabase" );
+        managementService.createDatabase( databaseId.name() );
 
         try ( var catchupClient = newSimpleCatchupClient( databaseId ) )
         {
             managementService.shutdownDatabase( databaseId.name() );
 
             var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( "database " + DEFAULT_DATABASE_NAME + " is stopped" ) );
+            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseId.name() + " is stopped" ) );
         }
     }
 

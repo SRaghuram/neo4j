@@ -26,6 +26,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helper.Workload;
 import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.utils.DumpUtils;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -38,7 +39,6 @@ import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
@@ -65,7 +65,9 @@ class BackupServiceStressTesting
         int backupPort = parseInt( fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_PORT", DEFAULT_PORT ) );
         String txPrune = fromEnv( "BACKUP_SERVICE_STRESS_TX_PRUNE", DEFAULT_TX_PRUNE );
 
-        File storeDir = testDirectory.storeDir( DEFAULT_DATABASE_NAME );
+        String databaseName = new DatabaseId( "testDatabase" ).name();
+
+        File storeDir = testDirectory.storeDir( databaseName );
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
@@ -83,11 +85,12 @@ class BackupServiceStressTesting
         try
         {
             managementService = databaseManagementServiceBuilder.build();
-            dbRef.set( managementService.database( DEFAULT_DATABASE_NAME ) );
+            managementService.createDatabase( databaseName );
+            dbRef.set( managementService.database( databaseName ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
             BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
-            StartStop startStopWorkload = new StartStop( control, dbRef, managementService );
+            StartStop startStopWorkload = new StartStop( control, dbRef, managementService, databaseName );
 
             executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 
