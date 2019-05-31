@@ -32,7 +32,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // Tests for showing databases
 
-  test("should show default database") {
+  test("should show database neo4j") {
     // GIVEN
     setup(defaultConfig)
 
@@ -43,7 +43,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
   }
 
-  test("should list custom default database") {
+  test("should show custom default database") {
     // GIVEN
     val config = Config.defaults()
     config.augment(default_database, "foo")
@@ -93,7 +93,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(List.empty)
   }
 
-  test("should fail when showing a default database when not on system database") {
+  test("should fail when showing a database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseManagementException] thrownBy {
@@ -116,7 +116,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should list custom default and system databases") {
+  test("should show custom default and system databases") {
     // GIVEN
     val config = Config.defaults()
     config.augment(default_database, "foo")
@@ -131,7 +131,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail when showing default databases when not on system database") {
+  test("should fail when showing databases when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseManagementException] thrownBy {
@@ -139,6 +139,44 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW DATABASES")
       // THEN
     } should have message "Trying to run `CATALOG SHOW DATABASES` against non-system database."
+  }
+
+  test("should show default database") {
+    // GIVEN
+    setup( defaultConfig )
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DATABASE")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus)))
+  }
+
+  test("should show custom default database using show default database command") {
+    // GIVEN
+    val config = Config.defaults()
+    config.augment(default_database, "foo")
+    setup(config)
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DATABASE")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
+
+    // WHEN
+    val result2 = execute("SHOW DATABASE neo4j")
+
+    // THEN
+    result2.toList should be(empty)
+  }
+
+  test("should fail when showing default database when not on system database") {
+    the [DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("SHOW DEFAULT DATABASE")
+      // THEN
+    } should have message "Trying to run `CATALOG SHOW DEFAULT DATABASE` against non-system database."
   }
 
   // Tests for creating databases
