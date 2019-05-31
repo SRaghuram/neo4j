@@ -213,7 +213,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // Too long name
     the [InvalidArgumentException] thrownBy {
       // WHEN
-      execute("CREATE DATABASE ihaveallooootoflettersclearlymorethenishould_ihaveallooootoflettersclearlymorethenishould")
+      val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
+      execute(s"CREATE DATABASE `$name`")
       // THEN
     } should have message "The provided database name must have a length between 3 and 63 characters."
   }
