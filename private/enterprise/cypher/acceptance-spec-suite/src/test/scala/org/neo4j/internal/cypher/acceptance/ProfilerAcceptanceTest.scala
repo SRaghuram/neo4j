@@ -10,11 +10,14 @@ import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults._
 import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
+import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException, TxCounts}
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
@@ -22,12 +25,12 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n")
-
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
-        includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
-      )
+    profile(Configs.All,
+            "MATCH (n) RETURN n",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
+                           includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
+                         ))
   }
 
   test("track db hits in Projection") {
@@ -35,14 +38,14 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
 
-    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN (n:Foo)")
-
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
-        includeSomewhere.aPlan("AllNodesScan").withRows(3) and
-        includeSomewhere.aPlan("Projection").withDBHits(3) and
-        includeSomewhere.aPlan("AllNodesScan").withDBHits(4)
-      )
+    profile(Configs.All,
+            "MATCH (n) RETURN (n:Foo)",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
+                           includeSomewhere.aPlan("AllNodesScan").withRows(3) and
+                           includeSomewhere.aPlan("Projection").withDBHits(3) and
+                           includeSomewhere.aPlan("AllNodesScan").withDBHits(4)
+                         ))
   }
 
   test("track time in Projection") {
@@ -62,7 +65,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
                   includeSomewhere.aPlan("AllNodesScan").withTime()
                 )
             ),
-        Configs.InterpretedAndSlottedAndMorsel)
+        expectPlansToFail = Configs.InterpretedAndSlottedAndMorsel)
     )
   }
 
@@ -70,7 +73,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Person")
     createLabeledNode("Animal")
 
-    val result = legacyProfile("CALL db.labels")
+    val result = profileSingle("CALL db.labels")
     result.executionPlanDescription() should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
       .withDBHits(1)
@@ -82,7 +85,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Person")
     createLabeledNode("Animal")
 
-    val result = legacyProfile("MATCH (n:Person) CALL db.labels() YIELD label RETURN *")
+    val result = profileSingle("MATCH (n:Person) CALL db.labels() YIELD label RETURN *")
 
     result.executionPlanDescription() should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
@@ -91,74 +94,51 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       .containingArgument("db.labels() :: (label :: String)")
   }
 
-  test("match (n) where (n)-[:FOO]->() return *") {
+  test("MATCH (n) WHERE (n)-[:FOO]->() RETURN *") {
     //GIVEN
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (n)-[:FOO]->() return *")
-
-    //THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("Filter").withRows(1).withDBHits(4) and
-        includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
-      )
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
+            _ should (
+                         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
+                           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
+                         ))
   }
 
-  test("match (n:A)-->(x:B) return *") {
+  test("MATCH (n:A)-->(x:B) RETURN *") {
     //GIVEN
     relate(createLabeledNode("A"), createLabeledNode("B"))
 
     //WHEN
-    val result = profileWithExecute(Configs.All, "match (n:A)-->(x:B) return *")
-
-    //THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
-        includeSomewhere.aPlan("Filter").withRows(1).withDBHits(1) and
-        includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(2) and
-        includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2)
-      )
+    profile(Configs.All,
+            "MATCH(n:A)-->(x:B) RETURN *",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
+                           includeSomewhere.aPlan("Filter").withRows(1).withDBHits(1) and
+                           includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(2) and
+                           includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2)
+                         ))
   }
 
-  test("PROFILE for Cypher 3.5") {
-    val result = graph.execute("cypher 3.5 profile match (n) where (n)-[:FOO]->() return *")
-
-    // materialize
-    result.resultAsString()
-
-    assert(result.getQueryExecutionType.requestedExecutionPlanDescription, "result not marked with planDescriptionRequested")
-    result.getExecutionPlanDescription.toString should include("DB Hits")
-  }
-
-  test("PROFILE for Cypher 4.0") {
-    val result = graph.execute("cypher 4.0 profile match (n) where (n)-[:FOO]->() return *")
-
-    // materialize
-    result.resultAsString()
-
-    assert(result.getQueryExecutionType.requestedExecutionPlanDescription, "result not marked with planDescriptionRequested")
-    result.getExecutionPlanDescription.toString should include("DB Hits")
-  }
-
-  test("match (n) where not (n)-[:FOO]->() return *") {
+  test("MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *") {
     //GIVEN
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) where not (n)-[:FOO]->() return *")
-
-    //THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("Filter").withRows(1).withDBHits(4) and
-        includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
-      )
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
+            _ should (
+                         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
+                           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
+                         ))
   }
 
   test("unfinished profiler complains [using MATCH]") {
     //GIVEN
     createNode("foo" -> "bar")
-    val result = graph.execute("PROFILE match (n) where id(n) = 0 RETURN n")
+    val result = graph.execute("PROFILE MATCH (n) WHERE id(n) = 0 RETURN n")
 
     //WHEN THEN
     val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
@@ -180,7 +160,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("unfinished profiler complains [using CALL within larger query]") {
     //GIVEN
     createLabeledNode("Person")
-    val result = graph.execute("PROFILE CALL db.labels() YIELD label WITH label as r RETURN r")
+    val result = graph.execute("PROFILE CALL db.labels() YIELD label WITH label AS r RETURN r")
 
     //WHEN THEN
     val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
@@ -189,14 +169,12 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("tracks number of rows") {
-    //GIVEN
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode())
 
-    val result = profileWithExecute(Configs.All, "match (n) where id(n) = 0 RETURN n")
-
-    //WHEN THEN
-    result.executionPlanDescription() should includeSomewhere.aPlan("NodeByIdSeek").withRows(1)
+    profile(Configs.All,
+            "MATCH (n) WHERE id(n) = 0 RETURN n",
+            _ should includeSomewhere.aPlan("NodeByIdSeek").withRows(1))
   }
 
   test("tracks number of graph accesses") {
@@ -204,19 +182,18 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode("foo" -> "bar"))
 
-    val result = profileWithExecute(Configs.All, "match (n) where id(n) = 0 RETURN n.foo")
-
-    //WHEN THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
-        includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
-        includeSomewhere.aPlan("NodeByIdSeek").withRows(1).withDBHits(1)
-      )
+    profile(Configs.All,
+            "MATCH (n) WHERE id(n) = 0 RETURN n.foo",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
+                           includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
+                           includeSomewhere.aPlan("NodeByIdSeek").withRows(1).withDBHits(1)
+                         ))
   }
 
   test("no problem measuring creation") {
     //GIVEN
-    val result = legacyProfile("CREATE (n)")
+    val result = profileSingle("CREATE (n)")
 
     //WHEN THEN
     result.executionPlanDescription() should includeSomewhere.aPlan("EmptyResult").withDBHits(0)
@@ -226,37 +203,34 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     //GIVEN
-    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n.foo")
-
-    //WHEN THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
-        includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
-        includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2)
-      )
+    profile(Configs.All,
+            "MATCH (n) RETURN n.foo",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
+                           includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
+                           includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2)
+                         ))
   }
 
-  test("tracks optional matches") {
+  test("tracks optional MATCHes") {
     //GIVEN
     createNode()
 
     // WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) optional match (n)-->(x) return x")
-
-    // THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("ProduceResults").withDBHits(0) and
-        includeSomewhere.aPlan("OptionalExpand(All)").withDBHits(1) and
-        includeSomewhere.aPlan("AllNodesScan").withDBHits(2)
-      )
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (n) OPTIONAL MATCH (n)-->(x) RETURN x",
+            _ should (
+                         includeSomewhere.aPlan("ProduceResults").withDBHits(0) and
+                           includeSomewhere.aPlan("OptionalExpand(All)").withDBHits(1) and
+                           includeSomewhere.aPlan("AllNodesScan").withDBHits(2)
+                         ))
   }
 
-  test("allows optional match to start a query") {
+  test("allows optional MATCH to start a query") {
     // WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, "optional match (n) return n")
-
-    // THEN
-    result.executionPlanDescription() should includeSomewhere.aPlan("Optional").withRows(1)
+    profile(Configs.InterpretedAndSlotted,
+            "OPTIONAL MATCH (n) RETURN n",
+            _ should includeSomewhere.aPlan("Optional").withRows(1))
   }
 
   test("should produce profile when using limit") {
@@ -264,94 +238,38 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profileWithExecute(Configs.All - Configs.Morsel, """MATCH (n) RETURN n LIMIT 1""")
-
-    // WHEN
-    result.toList
-
-    // THEN PASS
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2) and
-        includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
-      )
-
-    result.executionPlanDescription()
-  }
-
-  test("LIMIT should influence cardinality estimation even when parameterized") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT {limit}", params = Map("limit" -> 10))
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
-  }
-
-  test("LIMIT should influence cardinality estimation with literal") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT 10")
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
-  }
-
-  test("LIMIT should influence cardinality estimation with literal and parameters") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) WHERE 50 = {fifty} RETURN p LIMIT 10", params = Map("fifty" -> 50))
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
-  }
-
-  test("LIMIT should influence cardinality estimation with independent parameterless expression") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(ceil(cos(0))) + 4")
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(5)
-  }
-
-  test("LIMIT should influence cardinality estimation by default value when expression contains parameter") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(sin({limit}))", params = Map("limit" -> 1))
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
-  }
-
-  test("LIMIT should influence cardinality estimation by default value when expression contains rand()") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    // NOTE: We cannot executeWith because of random result
-    val result = executeSingle(s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(rand()*10)", Map.empty)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
-  }
-
-  test("LIMIT should influence cardinality estimation by default value when expression contains timestamp()") {
-    (0 until 100).map(_ => createLabeledNode("Person"))
-    //TODO this cannot be run with executeWith since it will occasionally succeed on 2.3 and we have decided not
-    //to fix this on 2.3. So if we fix the issue on 2.3 or if we no longer need to depend on 2.3 we should update test
-    //to run with `executeWith`
-    val r1 = executeSingle(s"PROFILE MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r1.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
-
-    val r2 = executeSingle(s"PROFILE CYPHER runtime=slotted MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r2.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
-
-    val r3 = executeSingle(s"PROFILE CYPHER runtime=interpreted MATCH (p:Person) with 10 as x, p RETURN p LIMIT timestamp()", Map.empty)
-    r3.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+    profile(Configs.All,
+            "MATCH (n) RETURN n LIMIT 1",
+            _ should (
+                         includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2) and
+                           includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
+                         ))
   }
 
   test("should support profiling union queries") {
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, "return 1 as A union return 2 as A")
-    result.toSet should equal(Set(Map("A" -> 1), Map("A" -> 2)))
+    profile(Configs.InterpretedAndSlotted,
+            "RETURN 1 AS A union RETURN 2 AS A",
+                       planDescription => ())
   }
 
   test("should support profiling merge_queries") {
-    val result = legacyProfile("merge (a {x: 1}) return a.x as A")
-    result.toList.head("A") should equal(1)
+    profile(Configs.InterpretedAndSlotted,
+            "MERGE (a {x: 1}) RETURN a.x AS A",
+                       planDescription => ())
   }
 
   test("should support profiling optional match queries") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
-    result("A") should equal(1)
-    result("B") should equal(null)
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (a:Label {x: 1}) OPTIONAL MATCH (a)-[:REL]->(b) RETURN a.x AS A, b.x AS B",
+                       planDescription => ())
   }
 
   test("should support profiling optional match and with") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val executionResult = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) optional match (n)--(m) with n, m where m is null return n.x as A")
-    val result = executionResult.toList.head
-    result("A") should equal(1)
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (n) OPTIONAL MATCH (n)--(m) WITH n, m WHERE m IS null RETURN n.x AS A",
+                       planDescription => ())
   }
 
   test("should handle PERIODIC COMMIT when profiling") {
@@ -367,7 +285,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     val initialTxCounts = graph.txCounts
 
     // when
-    val result = legacyProfile(query)
+    val result = profileSingle(query)
 
     // then
     val expectedTxCount = 10 // One per 10 rows of CSV file
@@ -378,34 +296,15 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("should not have a problem profiling empty results") {
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE (n)-->() RETURN n")
-
-    result shouldBe empty
-    result.executionPlanDescription().toString should include("AllNodes")
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            "MATCH (n) WHERE (n)-->() RETURN n",
+            _ should includeSomewhere.aPlan("AllNodesScan"))
   }
 
   test("reports COST planner when showing plan description") {
-    val result = graph.execute("CYPHER planner=cost match (n) return n")
+    val result = graph.execute("CYPHER planner=cost MATCH (n) RETURN n")
     result.resultAsString()
     result.getExecutionPlanDescription.toString should include("Planner COST" + System.lineSeparator())
-  }
-
-  test("does not use Apply for aggregation and order by") {
-    val a = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) return n, count(*) as c order by c")
-
-    a.executionPlanDescription().toString should not include "Apply"
-  }
-
-  //this test asserts a specific optimization in pipe building and is not
-  //valid for the compiled runtime
-  test("should not use eager plans for distinct") {
-    val a = executeSingle("PROFILE CYPHER runtime=interpreted MATCH (n) RETURN DISTINCT n.name", Map.empty)
-    a.executionPlanDescription().toString should not include "Eager"
-  }
-
-  test("should not show  EstimatedRows in legacy profiling") {
-    val result = legacyProfile("create()")
-    result.executionPlanDescription().toString should not include "EstimatedRows"
   }
 
   test("match (p:Person {name:'Seymour'}) return (p)-[:RELATED_TO]->()") {
@@ -425,25 +324,24 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     graph.createUniqueConstraint("Person", "name")
 
     //WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, "match (p:Person {name:'Seymour'}) return (p)-[:RELATED_TO]->()")
-
-    //THEN
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("Expand(All)").withDBHits(7) and
-        includeSomewhere.aPlan("NodeUniqueIndexSeek").withDBHits(2)
-      )
+    profile(Configs.InterpretedAndSlotted,
+            "MATCH (p:Person {name:'Seymour'}) RETURN (p)-[:RELATED_TO]->()",
+            _ should (
+                         includeSomewhere.aPlan("Expand(All)").withDBHits(7) and
+                           includeSomewhere.aPlan("NodeUniqueIndexSeek").withDBHits(2)
+                         ))
   }
 
   test("should show expand without types in a simple form") {
-    val a = profileWithExecute(Configs.All, "match (n)-->() return *")
-
-    a.executionPlanDescription().toString should include("()<--(n)")
+    profile(Configs.All,
+            "MATCH (n)-->() RETURN *",
+            _.toString should include("()<--(n)"))
   }
 
   test("should show expand with types in a simple form") {
-    val result = profileWithExecute(Configs.All, "match (n)-[r:T]->() return *")
-
-    result.executionPlanDescription().toString should include("()<-[r:T]-(n)")
+    profile(Configs.All,
+            "MATCH (n)-[r:T]->() RETURN *",
+            _.toString should include("()<-[r:T]-(n)"))
   }
 
   test("should report correct dbhits and rows for label scan") {
@@ -451,76 +349,71 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Label1")
 
     // when
-    val result = profileWithExecute(Configs.All, "match (n:Label1) return n")
-
-    // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2)
+    profile(Configs.All,
+            "MATCH (n:Label1) RETURN n",
+            _ should includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
   }
 
   test("should report correct dbhits and rows for expand") {
     // given
     relate(createNode(), createNode())
 
-    // when
-    val result = profileWithExecute(Configs.All, "match (n)-->(x) return x")
-
     // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(3)
+    profile(Configs.All,
+            "MATCH (n)-->(x) RETURN x",
+            _ should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(3))
   }
 
   test("should report correct dbhits and rows for literal addition") {
-    // when
-    val result = profileWithExecute(Configs.All, "return 5 + 3")
-
-    // then
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("Projection").withDBHits(0) and
-        includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
-      )
+    profile(Configs.All,
+            "RETURN 5 + 3",
+            _ should (
+                         includeSomewhere.aPlan("Projection").withDBHits(0) and
+                           includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
+                         ))
   }
 
   test("should report correct dbhits and rows for property addition") {
     // given
     createNode("name" -> "foo")
 
-    // when
-    val result = profileWithExecute(Configs.All, "match (n) return n.name + 3")
-
     // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1)
+    profile(Configs.All,
+            "MATCH (n) RETURN n.name + 3",
+            _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1))
   }
 
   test("should report correct dbhits and rows for property subtraction") {
     // given
     createNode("name" -> 10)
 
-    // when
-    val result = profileWithExecute(Configs.All, "match (n) return n.name - 3")
-
     // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1)
+    profile(Configs.All,
+            "MATCH (n) RETURN n.name - 3",
+            _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1))
   }
 
   test("should throw if accessing profiled results before they have been materialized") {
     createNode()
-    val result = graph.execute("profile match (n) return n")
+    val result = graph.execute("PROFILE MATCH (n) RETURN n")
 
     val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
     ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
     result.close() // ensure that the transaction is closed
   }
 
-  test("should handle cartesian products") {
+  test("should profile cartesian products") {
     createNode()
     createNode()
     createNode()
     createNode()
 
-    val result = profileWithExecute(Configs.All, "match (n), (m) return n, m")
-    result.executionPlanDescription() should includeSomewhere.aPlan("CartesianProduct").withRows(16)
+    profile(Configs.All,
+            "MATCH (n), (m) RETURN n, m",
+            _ should includeSomewhere.aPlan("CartesianProduct").withRows(16))
   }
 
-  test("should properly handle filters") {
+  test("should profile filters") {
     // given
     val n = createLabeledNode(Map("name" -> "Seymour"), "Glass")
     val o = createNode()
@@ -531,15 +424,15 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(o, createNode(), "R2")
     graph.createIndex("Glass", "name")
 
-    // when
-    val result = profileWithExecute(Configs.All,
-      "match (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass) USING INDEX n:Glass(name) return p.name")
-
     // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Filter").withRows(2)
+    profile(Configs.All,
+            """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass)
+                         |  USING INDEX n:Glass(name)
+                         |RETURN p.name""".stripMargin,
+            _ should includeSomewhere.aPlan("Filter").withRows(2))
   }
 
-  test("interpreted runtime projections") {
+  test("should profile projections") {
     // given
     val n = createLabeledNode(Map("name" -> "Seymour"), "Glass")
     val o = createNode()
@@ -550,31 +443,12 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(o, createNode(), "R2")
     graph.createIndex("Glass", "name")
 
-    // when
-    val result = executeSingle(
-      "profile cypher runtime=interpreted match (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass) USING INDEX n:Glass(name) return p.name", Map.empty)
-
     // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withDBHits(2)
-  }
-
-  test("profile projections") {
-    // given
-    val n = createLabeledNode(Map("name" -> "Seymour"), "Glass")
-    val o = createNode()
-    relate(n, o, "R1")
-    relate(o, createLabeledNode(Map("name" -> "Zoey"), "Glass"), "R2")
-    relate(o, createLabeledNode(Map("name" -> "Franny"), "Glass"), "R2")
-    relate(o, createNode(), "R2")
-    relate(o, createNode(), "R2")
-    graph.createIndex("Glass", "name")
-
-    // when
-    val result = executeSingle(
-      "profile match (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass) USING INDEX n:Glass(name) return p.name", Map.empty)
-
-    // then
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withDBHits(2)
+    profile(Configs.All,
+            """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass)
+                         |  USING INDEX n:Glass(name)
+                         |RETURN p.name""".stripMargin,
+            _ should includeSomewhere.aPlan("Projection").withDBHits(2))
   }
 
   test("profile filter") {
@@ -646,18 +520,16 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(aNode, createNode(), "HAS_CATEGORY")
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
-    // WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel,
-      """MATCH (cat:Category)
-        |WITH collect(cat) as categories
-        |MATCH (m:Entity)
-        |WITH m, categories
-        |MATCH (m)<-[r]-(n)
-        |WHERE ANY(x IN categories WHERE (n)-[:HAS_CATEGORY]->(x))
-        |RETURN count(n)""".stripMargin)
-
     // THEN
-    result.executionPlanDescription() should includeSomewhere.aPlan("Filter").withDBHits(14)
+    profile(Configs.InterpretedAndSlottedAndMorsel,
+            """MATCH (cat:Category)
+                         |WITH collect(cat) as categories
+                         |MATCH (m:Entity)
+                         |WITH m, categories
+                         |MATCH (m)<-[r]-(n)
+                         |WHERE ANY(x IN categories WHERE (n)-[:HAS_CATEGORY]->(x))
+                         |RETURN count(n)""".stripMargin,
+            _ should includeSomewhere.aPlan("Filter").withDBHits(14))
   }
 
   test("profile pruning var length expand"){
@@ -672,11 +544,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(b2, b3, "T1")
     relate(b2, b4, "T1")
 
-    val query = "profile match (b:Start)-[*3]->(d) return count(distinct d)"
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, query)
-
-    result.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7)
-
+    profile(Configs.InterpretedAndSlotted,
+            "PROFILE MATCH (b:Start)-[*3]->(d) RETURN count(distinct d)",
+            _ should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7))
   }
 
   test("profiling with compiled runtime") {
@@ -692,37 +562,39 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation").withRows(1)
   }
 
-  type Planner = (String, Map[String, Any]) => RewindableExecutionResult
-
-  def profileWithPlanner(planner: Planner, q: String, params: Map[String, Any]): RewindableExecutionResult = {
-    val result = planner("PROFILE " + q, params)
+  def profileSingle(query: String, params: (String, Any)*): RewindableExecutionResult = {
+    val result = executeSingle("PROFILE " + query, params.toMap)
     result.executionMode should equal(ProfileMode)
 
     val planDescription: InternalPlanDescription = result.executionPlanDescription()
-    planDescription.flatten.foreach {
-      p =>
-        if (!p.arguments.exists(_.isInstanceOf[DbHits])) {
-          fail("Found plan that was not profiled with DbHits: " + p.name)
-        }
-        if (!p.arguments.exists(_.isInstanceOf[Rows])) fail("Found plan that was not profiled with Rows: " + p.name)
-    }
+    planDescription.flatten.foreach(assertProfileData)
     result
   }
 
-  def profileWithExecute(configuration: TestConfiguration, q: String, configsWithDifferentResult: TestConfiguration = Configs.Empty): RewindableExecutionResult = {
-    val result = executeWith(configuration, "profile " + q, expectedDifferentResults = configsWithDifferentResult)
+  def profile(configuration: TestConfiguration,
+              query: String,
+              planDescriptionAssertion: InternalPlanDescription => Unit,
+              params: Map[String, Any] = Map.empty,
+              configsWithDifferentResult: TestConfiguration = Configs.Empty): RewindableExecutionResult = {
+
+    val result = executeWith(configuration,
+                             "PROFILE " + query,
+                             params = params,
+                             expectedDifferentResults = configsWithDifferentResult,
+                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+                               planDescription.flatten.foreach(assertProfileData)
+                               planDescriptionAssertion(planDescription)
+                             }))
     result.executionMode should equal(ProfileMode)
-
-    val planDescription: InternalPlanDescription = result.executionPlanDescription()
-    planDescription.flatten.foreach {
-      p =>
-        if (!p.arguments.exists(_.isInstanceOf[DbHits])) {
-          fail("Found plan that was not profiled with DbHits: " + p.name)
-        }
-        if (!p.arguments.exists(_.isInstanceOf[Rows])) fail("Found plan that was not profiled with Rows: " + p.name)
-    }
     result
   }
 
-  def legacyProfile(q: String, params: (String, Any)*): RewindableExecutionResult = profileWithPlanner(executeSingle, q, params.toMap)
+  private def assertProfileData(p: InternalPlanDescription): Unit = {
+    if (!p.arguments.exists(_.isInstanceOf[DbHits])) {
+      fail("Found plan that was not profiled with DbHits: " + p.name)
+    }
+    if (!p.arguments.exists(_.isInstanceOf[Rows])) {
+      fail("Found plan that was not profiled with Rows: " + p.name)
+    }
+  }
 }
