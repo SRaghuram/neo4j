@@ -10,8 +10,10 @@ import java.time.Clock;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.locking.LockingCompatibilityTestSuite;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
-import org.neo4j.test.OtherThreadExecutor.WaitDetails;
+import org.neo4j.lock.WaitStrategy;
+import org.neo4j.test.extension.actors.Actor;
 
 public class ForsetiLocksTest extends LockingCompatibilityTestSuite
 {
@@ -22,8 +24,10 @@ public class ForsetiLocksTest extends LockingCompatibilityTestSuite
     }
 
     @Override
-    protected boolean isAwaitingLockAcquisition( WaitDetails details )
+    protected boolean isAwaitingLockAcquisition( Actor actor ) throws Exception
     {
-        return details.isAt( ForsetiClient.class, "applyWaitStrategy" );
+        actor.untilWaitingIn( ForsetiClient.class.getDeclaredMethod(
+                "waitFor", ForsetiLockManager.Lock.class, ResourceType.class, long.class, boolean.class, int.class) );
+        return true;
     }
 }
