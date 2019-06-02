@@ -36,10 +36,16 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )
@@ -348,10 +354,9 @@ public class AuthIT extends AuthTestBase
             userManager.newUser( PROC_USER, password.getBytes(), false );
             userManager.newUser( READ_USER, password.getBytes(), false );
             userManager.newUser( WRITE_USER, password.getBytes(), false );
-            userManager.newUser( ADMIN_USER, password.getBytes(), false );
+            userManager.setUserPassword( ADMIN_USER, password.getBytes(), false );
             userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
-            userManager.addRoleToUser( PredefinedRoles.ADMIN, ADMIN_USER );
             userManager.newRole( "role1", PROC_USER );
         }
         checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
@@ -428,6 +433,44 @@ public class AuthIT extends AuthTestBase
         try ( Driver driver = connectDriver( "luser", "abc123" ) )
         {
             assertReadSucceeds( driver );
+        }
+    }
+
+    @Test
+    public void shouldFailNicelyOnCreateDuplicateUser()
+    {
+        assumeTrue( createUsers );
+
+        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "CREATE USER " + READ_USER + " SET PASSWORD 'foo'" ).list();
+                fail( "should have gotten exception" );
+            }
+            catch ( ClientException ce )
+            {
+                assertThat( ce.getMessage(), equalTo( "The specified user '" + READ_USER + "' already exists." ) );
+            }
+        }
+    }
+
+    @Test
+    public void shouldFailNicelyOnGrantToNonexistentRole()
+    {
+        assumeTrue( createUsers );
+
+        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "GRANT ROLE none TO " + READ_USER ).list();
+                fail( "should have gotten exception" );
+            }
+            catch ( ClientException ce )
+            {
+                assertThat( ce.getMessage(), equalTo( "Cannot grant non-existent role 'none' to user '" + READ_USER + "'" ) );
+            }
         }
     }
 
