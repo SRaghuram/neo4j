@@ -349,8 +349,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)))
 
     // CREATE DATABASE foo
-    case CreateDatabase(dbId) => (_, _, _) =>
-      val dbName = dbId.name()
+    case CreateDatabase(normalizedName) => (_, _, _) =>
+      val dbName = normalizedName.name
       SystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         """CREATE (d:Database {name: $name})
           |SET d.status = $status
@@ -362,8 +362,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // DROP DATABASE foo
-    case DropDatabase(source, dbId) => (context, parameterMapping, currentUser) =>
-      val dbName = dbId.name()
+    case DropDatabase(source, normalizedName) => (context, parameterMapping, currentUser) =>
+      val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
         """MATCH (d:Database {name: $name})
           |REMOVE d:Database
@@ -376,8 +376,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // START DATABASE foo
-    case StartDatabase(dbId) => (_, _, _) =>
-      val dbName = dbId.name()
+    case StartDatabase(normalizedName) => (_, _, _) =>
+      val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
           |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
@@ -398,8 +398,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // STOP DATABASE foo
-    case StopDatabase(source, dbId) => (context, parameterMapping, currentUser) =>
-      val dbName = dbId.name()
+    case StopDatabase(source, normalizedName) => (context, parameterMapping, currentUser) =>
+      val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
           |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
@@ -419,8 +419,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // Used to check whether a database is present and not the default or system database,
     // which means it can be dropped and stopped.
-    case EnsureValidNonDefaultDatabase(dbId, action) => (_, _, _) =>
-      val dbName = dbId.name()
+    case EnsureValidNonDefaultDatabase(normalizedName, action) => (_, _, _) =>
+      val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("EnsureValidNonDefaultDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
           |RETURN db.default as default""".stripMargin,
