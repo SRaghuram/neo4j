@@ -11,7 +11,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;

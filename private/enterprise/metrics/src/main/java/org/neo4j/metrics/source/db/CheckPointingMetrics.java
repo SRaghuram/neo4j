@@ -10,7 +10,7 @@ import com.codahale.metrics.MetricRegistry;
 
 import java.util.TreeMap;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitorAdapter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

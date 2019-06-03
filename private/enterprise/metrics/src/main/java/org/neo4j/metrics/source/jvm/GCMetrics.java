@@ -10,7 +10,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;

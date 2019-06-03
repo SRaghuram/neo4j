@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 
 import java.util.function.Supplier;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.monitoring.Monitors;

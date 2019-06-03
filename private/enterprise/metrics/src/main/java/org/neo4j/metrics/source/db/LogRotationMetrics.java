@@ -11,7 +11,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitorAdapter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

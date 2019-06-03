@@ -10,7 +10,7 @@ import com.codahale.metrics.MetricRegistry;
 
 import java.util.function.Supplier;
 
-import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.metrics.metric.MetricsCounter;

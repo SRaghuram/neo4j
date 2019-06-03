@@ -9,8 +9,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.commons.lang3.SystemUtils;
 
+import org.neo4j.annotations.documented.Documented;
 import org.neo4j.io.os.OsBeanUtil;
-import org.neo4j.kernel.impl.annotations.Documented;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
