@@ -11,6 +11,8 @@ import java.util
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.server.security.enterprise.auth._
 import org.neo4j.common.DependencyResolver
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
@@ -28,8 +30,6 @@ import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.cypher.DatabaseManagementException
 
 /**
   * This runtime takes on queries that require no planning, such as multidatabase management commands
@@ -115,7 +115,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN user""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
         QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleNoResult(() =>  Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
           .handleResult((_, _) => clearCacheForUser(userName))
       )
@@ -143,7 +143,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         s"$query RETURN oldCredentials",
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"User '$userName' does not exist."))
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
           .handleResult((_, value) => {
             val maybeThrowable = initialStringPassword match {
@@ -201,7 +201,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN new.name""".stripMargin,
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create '$roleName'."))
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create '$roleName'.")))
           .handleError(e => new InvalidArgumentsException(s"The specified role '$roleName' already exists.", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
@@ -212,7 +212,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         """MATCH (role:Role {name: $name})
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
-        QueryHandler.handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist.")),
+        QueryHandler.handleNoResult(() => Some(new InvalidArgumentsException(s"Role '$roleName' does not exist."))),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -237,7 +237,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => throw new InvalidArgumentsException(s"Role '$roleName' does not exist."))
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"Role '$roleName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
       )
 
@@ -356,7 +356,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.created_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName), DatabaseStatus.Online)),
-        onError = e => throw new DatabaseExistsException(s"The specified database '$dbName' already exists.", e)
+        onError = e => new DatabaseExistsException(s"The specified database '$dbName' already exists.", e)
       )
 
     // DROP DATABASE foo
@@ -427,13 +427,13 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           Array(Values.stringValue(dbName))
         ),
         QueryHandler
-          .handleNoResult(() => throw new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+          .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")))
           .handleResult((_, value) => {
             if (value == Values.TRUE) {
               Some(new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'."))
             }
             else if (dbName.equals(SYSTEM_DATABASE_NAME)) {
-              Some(throw new DatabaseManagementException("Not allowed to " + action + " system database."))
+              Some(new DatabaseManagementException("Not allowed to " + action + " system database."))
             } else None
           })
       )
