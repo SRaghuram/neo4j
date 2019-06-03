@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -33,7 +34,8 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     override def prepareOutput(morsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
-                               resources: QueryResources): PreSortedOutput = {
+                               resources: QueryResources,
+                               queryProfiler: QueryProfiler): PreSortedOutput = {
 
       val rowCloneForComparators = morsel.shallowCopy()
       val comparator: Comparator[Integer] = orderBy

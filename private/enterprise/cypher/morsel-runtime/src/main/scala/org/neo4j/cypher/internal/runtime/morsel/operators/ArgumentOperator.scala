@@ -25,6 +25,8 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
+    override def workIdentity: WorkIdentity = ArgumentOperator.this.workIdentity
+
     override def toString: String = "ArgumentTask"
 
     override def operate(outputRow: MorselExecutionContext,

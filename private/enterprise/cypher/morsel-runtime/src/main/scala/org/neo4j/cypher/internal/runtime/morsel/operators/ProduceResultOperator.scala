@@ -47,6 +47,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
+    override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
+
     override def toString: String = "ProduceResultInputTask"
     override def canContinue: Boolean = inputMorsel.isValidRow
 

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
@@ -188,7 +189,7 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
 /**
   * Operator related task.
   */
-trait OperatorTask {
+trait OperatorTask extends HasWorkIdentity {
 
   @throws[Exception]
   def operate(output: MorselExecutionContext,

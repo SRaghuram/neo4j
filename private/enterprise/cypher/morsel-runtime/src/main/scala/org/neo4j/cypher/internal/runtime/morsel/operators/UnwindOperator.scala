@@ -30,6 +30,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = UnwindOperator.this.workIdentity
+
     private var unwoundValues: java.util.Iterator[AnyValue] = _
 
     override protected def initializeInnerLoop(context: QueryContext,

@@ -51,6 +51,8 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     */
   class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = AllNodeScanOperator.this.workIdentity
+
     override def toString: String = "AllNodeScanSerialTask"
 
     private var cursor: NodeCursor = _
@@ -85,6 +87,8 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                          scan: Scan[NodeCursor],
                          var cursor: NodeCursor,
                          val batchSizeHint: Int) extends ContinuableOperatorTaskWithMorsel {
+
+    override def workIdentity: WorkIdentity = AllNodeScanOperator.this.workIdentity
 
     override def toString: String = "AllNodeScanParallelTask"
 

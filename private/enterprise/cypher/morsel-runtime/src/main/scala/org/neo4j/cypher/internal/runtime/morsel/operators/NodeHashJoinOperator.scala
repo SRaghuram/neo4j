@@ -61,6 +61,8 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     extends InputLoopTask
       with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, HashTable] {
 
+    override def workIdentity: WorkIdentity = NodeHashJoinOperator.this.workIdentity
+
     override val inputMorsel: MorselExecutionContext = rhsRow
 
     override def toString: String = "NodeHashJoinTask"

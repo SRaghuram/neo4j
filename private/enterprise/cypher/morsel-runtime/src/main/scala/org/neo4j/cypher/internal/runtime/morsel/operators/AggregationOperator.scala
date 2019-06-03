@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -34,8 +35,6 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                aggregations: Array[Aggregator],
                                groupings: GroupingExpression) {
 
-  self =>
-
   type AggPreMap = java.util.LinkedHashMap[groupings.KeyType, Array[Updater]]
 
   private val newUpdaters: java.util.function.Function[ groupings.KeyType, Array[Updater]] =
@@ -59,7 +58,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                   outputBufferId: BufferId,
                                   expressionValues: Array[Expression]) extends OutputOperator {
 
-    override def workIdentity: WorkIdentity = self.workIdentity
+    override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
@@ -186,7 +185,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     extends Operator
       with ReduceOperatorState[AggPreMap, AggregatingAccumulator] {
 
-    override def workIdentity: WorkIdentity = self.workIdentity
+    override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations))
@@ -203,6 +202,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     class OTask(override val accumulator: AggregatingAccumulator)
       extends ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator] {
+
+      override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
       private val resultIterator = accumulator.result()
 

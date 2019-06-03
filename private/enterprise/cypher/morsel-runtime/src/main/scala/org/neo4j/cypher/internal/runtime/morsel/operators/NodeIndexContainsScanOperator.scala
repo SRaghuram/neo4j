@@ -37,6 +37,8 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputMorsel: MorselExecutionContext, index: IndexReadSession) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = NodeIndexContainsScanOperator.this.workIdentity
+
     private var cursor: NodeValueIndexCursor = _
 
     override protected def initializeInnerLoop(context: QueryContext,

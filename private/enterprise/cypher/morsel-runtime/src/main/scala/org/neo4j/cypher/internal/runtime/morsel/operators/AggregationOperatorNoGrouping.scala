@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Updater}
@@ -125,6 +126,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     }
 
     class OTask(override val accumulator: AggregatingAccumulator) extends ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator] {
+
+      override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
       override def operate(outputRow: MorselExecutionContext,
                            context: QueryContext,

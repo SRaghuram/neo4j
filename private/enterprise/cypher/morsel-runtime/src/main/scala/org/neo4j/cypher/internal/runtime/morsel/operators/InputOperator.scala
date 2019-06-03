@@ -42,6 +42,8 @@ class InputOperator(val workIdentity: WorkIdentity,
     */
   class InputTask(input: MutatingInputCursor, val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
+    override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
+
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          queryState: QueryState,

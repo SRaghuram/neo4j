@@ -46,6 +46,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
 
+    override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
+
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,

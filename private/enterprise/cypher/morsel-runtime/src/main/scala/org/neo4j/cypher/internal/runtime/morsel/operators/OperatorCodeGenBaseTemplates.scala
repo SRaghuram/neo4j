@@ -154,6 +154,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           body = genCloseCursors,
                           genLocalVariables = () => Seq(CURSOR_POOL_V)
         ),
+        MethodDeclaration("workIdentity",
+                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          returnType = typeRefOf[WorkIdentity],
+                          parameters = Seq.empty,
+                          body = fail(newInstance(constructor[IllegalStateException, String], constant("Fused operators do not have a single WorkIdentity.")))
+        ),
         // This is only needed because we extend an abstract scala class containing `val dataRead`
         MethodDeclaration("dataRead",
                           owner = typeRefOf[ContinuableOperatorTaskWithMorsel],

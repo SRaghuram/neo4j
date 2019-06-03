@@ -41,6 +41,8 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = ExpandAllOperator.this.workIdentity
+
     override def toString: String = "ExpandAllTask"
 
     /*

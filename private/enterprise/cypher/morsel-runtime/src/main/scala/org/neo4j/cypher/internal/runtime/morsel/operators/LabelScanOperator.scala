@@ -37,6 +37,8 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     */
   class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = LabelScanOperator.this.workIdentity
+
     override def toString: String = "LabelScanSerialTask"
 
     private var cursor: NodeLabelIndexCursor = _

@@ -55,6 +55,8 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
    */
   class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, ArgumentStateBuffer] {
 
+    override def workIdentity: WorkIdentity = SortMergeOperator.this.workIdentity
+
     override def toString: String = "SortMergeTask"
 
     var sortedInputPerArgument: PriorityQueue[MorselExecutionContext] = _

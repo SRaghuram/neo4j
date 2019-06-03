@@ -48,6 +48,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
+    override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
+
     private var nodeCursors: Iterator[Seq[IndexQuery]] = _
     private var nodeCursor: NodeValueIndexCursor = _
     private var exactSeekValues: Array[Value] = _
