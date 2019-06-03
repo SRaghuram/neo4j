@@ -93,7 +93,10 @@ public class CommercialDbmsSupportExtension extends DbmsSupportExtension impleme
 
     private static String getUniqueTestName( ExtensionContext context )
     {
-        return context.getRequiredTestMethod().getName() + DigestUtils.md5Hex( context.getUniqueId() );
+        // Test name is restricted to 31 characters since database name must be less than or equal to 63 characters
+        String testName = context.getRequiredTestMethod().getName();
+        testName = testName.substring( 0, Math.min( 31, testName.length() ) );
+        return testName + DigestUtils.md5Hex( context.getUniqueId() );
     }
 
     private static DatabaseManagementService getDbmsFromStore( ExtensionContext context )
