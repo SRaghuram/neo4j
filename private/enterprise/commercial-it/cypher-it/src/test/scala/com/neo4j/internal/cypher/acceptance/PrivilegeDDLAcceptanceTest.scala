@@ -1540,7 +1540,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE custom TO user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "user"))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "user"))
   }
 
   test("should grant roles and list users with roles") {
@@ -1583,8 +1583,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE custom TO userA, userB")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> "userA")
-      + Map("role" -> "custom", "is_built_in" -> false, "member" -> "userB"))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userB"))
   }
 
   test("should grant multiple roles to user") {
@@ -1598,8 +1598,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE custom1, custom2 TO userA")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> "userA")
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> "userA"))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA"))
   }
 
   test("should grant multiple roles to several users") {
@@ -1615,10 +1615,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers
-      + Map("role" -> "custom1", "is_built_in" -> false, "member" -> "userA")
-      + Map("role" -> "custom1", "is_built_in" -> false, "member" -> "userB")
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> "userA")
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> "userB"))
+      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userB")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userB"))
   }
 
   test("should be able to grant already granted role to user") {
@@ -1667,7 +1667,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when granting role to non-existing user") {
     // GIVEN
-    val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "is_built_in" -> false, "member" -> null))
+    val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "isBuiltIn" -> false, "member" -> null))
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE dragon")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -1755,7 +1755,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE ROLE custom FROM user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should revoke role from several users") {
@@ -1771,7 +1771,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE ROLE custom FROM userA, userB")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should revoke multiple roles from user") {
@@ -1787,8 +1787,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE ROLE custom1, custom2 FROM userA")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should revoke multiple roles from several users") {
@@ -1811,8 +1811,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE ROLE custom1, custom2 FROM userA, userB, userC, userD")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "is_built_in" -> false, "member" -> null)
-      + Map("role" -> "custom2", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should be able to revoke already revoked role from user") {
@@ -1827,7 +1827,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE ROLE custom FROM user").toSet should be(Set.empty)
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should grant and revoke multiple roles to multiple users") {
@@ -1837,8 +1837,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
     execute("CREATE ROLE fum")
-    val admin = Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")
-    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "is_built_in" -> false)
+    val admin = Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")
+    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "isBuiltIn" -> false)
 
     // WHEN using single user and role version of GRANT
     execute("GRANT ROLE foo TO Bar")
@@ -1900,7 +1900,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Cannot revoke role 'custom' from non-existent user 'user'"
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "is_built_in" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
   }
 
   test("should fail revoking non-existing role from non-existing user") {

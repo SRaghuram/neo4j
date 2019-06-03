@@ -170,7 +170,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |CASE
           | WHEN r.name IN $predefined THEN true
           | ELSE false
-          |END as is_built_in
+          |END as isBuiltIn
         """.stripMargin
       else
         """MATCH (r:Role)<-[:HAS_ROLE]-(u:User)
@@ -178,7 +178,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |CASE
           | WHEN r.name IN $predefined THEN true
           | ELSE false
-          |END as is_built_in
+          |END as isBuiltIn
         """.stripMargin
       if (withUsers) {
         SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query + ", u.name as member",

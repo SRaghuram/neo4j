@@ -26,11 +26,11 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
-    Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
-    Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.READER, "is_built_in" -> true, "member" -> null)
+    Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
+    Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.PUBLISHER, "isBuiltIn" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.EDITOR, "isBuiltIn" -> true, "member" -> null),
+    Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true, "member" -> null)
   )
 
   lazy val defaultRolePrivileges = Set(

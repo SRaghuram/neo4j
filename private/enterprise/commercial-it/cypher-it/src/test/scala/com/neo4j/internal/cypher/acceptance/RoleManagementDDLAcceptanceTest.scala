@@ -12,14 +12,14 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val defaultRoles = Set(
-    Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true),
-    Map("role" -> PredefinedRoles.ARCHITECT, "is_built_in" -> true),
-    Map("role" -> PredefinedRoles.PUBLISHER, "is_built_in" -> true),
-    Map("role" -> PredefinedRoles.EDITOR, "is_built_in" -> true),
-    Map("role" -> PredefinedRoles.READER, "is_built_in" -> true)
+    Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true),
+    Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true),
+    Map("role" -> PredefinedRoles.PUBLISHER, "isBuiltIn" -> true),
+    Map("role" -> PredefinedRoles.EDITOR, "isBuiltIn" -> true),
+    Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true)
   )
-  private val foo = Map("role" -> "foo", "is_built_in" -> false)
-  private val bar = Map("role" -> "bar", "is_built_in" -> false)
+  private val foo = Map("role" -> "foo", "isBuiltIn" -> false)
+  private val bar = Map("role" -> "bar", "isBuiltIn" -> false)
 
   // Tests for showing roles
 
@@ -42,7 +42,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true)))
+    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true)))
   }
 
   test("should create and show roles") {
@@ -70,7 +70,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true), foo))
+    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true), foo))
   }
 
   test("should show default roles with users") {
@@ -104,7 +104,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW POPULATED ROLES WITH USERS")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j")))
+    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")))
   }
 
   test("should show populated roles with several users") {
@@ -121,7 +121,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     result.toSet should be(Set(
-      Map("role" -> PredefinedRoles.ADMIN, "is_built_in" -> true, "member" -> "neo4j"),
+      Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
       foo ++ Map("member" -> "Bar"),
       foo ++ Map("member" -> "Baz")
     ))
