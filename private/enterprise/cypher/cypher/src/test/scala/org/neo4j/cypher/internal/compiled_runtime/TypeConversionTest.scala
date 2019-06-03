@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.compiled_runtime
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.{CypherTypeException, ExecutionEngineFunSuite}
+import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 
 class TypeConversionTest extends ExecutionEngineFunSuite {
   test("should not allow adding node and number") {
