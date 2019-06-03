@@ -74,18 +74,24 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                  resources: QueryResources,
                                  queryProfiler: QueryProfiler): PreAggregatedOutput = {
 
-        val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots))
+        val operatorProfileEvent = queryProfiler.executeOperator(workIdentity.workId)
 
-        val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
-                                             morsel,
-                                             preAggregate(queryState))
+        try {
+          val queryState = new OldQueryState(context,
+                                             resources = null,
+                                             params = state.params,
+                                             resources.expressionCursors,
+                                             Array.empty[IndexReadSession],
+                                             resources.expressionVariables(state.nExpressionSlots))
 
-        new PreAggregatedOutput(preAggregated, sink)
+          val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
+                                               morsel,
+                                               preAggregate(queryState))
+
+          new PreAggregatedOutput(preAggregated, sink)
+        } finally {
+          operatorProfileEvent.close()
+        }
       }
 
       private def preAggregate(queryState: OldQueryState)

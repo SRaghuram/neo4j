@@ -37,16 +37,22 @@ class SortPreOperator(val workIdentity: WorkIdentity,
                                resources: QueryResources,
                                queryProfiler: QueryProfiler): PreSortedOutput = {
 
-      val rowCloneForComparators = morsel.shallowCopy()
-      val comparator: Comparator[Integer] = orderBy
-        .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
-        .reduce((a, b) => a.thenComparing(b))
+      val operatorProfileEvent = queryProfiler.executeOperator(workIdentity.workId)
 
-      val preSorted = ArgumentStateMap.map(argumentSlotOffset,
-                                           morsel,
-                                           morselView => sortInPlace(morselView, comparator))
+      try {
+        val rowCloneForComparators = morsel.shallowCopy()
+        val comparator: Comparator[Integer] = orderBy
+          .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
+          .reduce((a, b) => a.thenComparing(b))
 
-      new PreSortedOutput(preSorted, sink)
+        val preSorted = ArgumentStateMap.map(argumentSlotOffset,
+                                             morsel,
+                                             morselView => sortInPlace(morselView, comparator))
+
+        new PreSortedOutput(preSorted, sink)
+      } finally {
+        operatorProfileEvent.close()
+      }
     }
 
     private def sortInPlace(morsel: MorselExecutionContext, comparator: Comparator[Integer]): MorselExecutionContext = {

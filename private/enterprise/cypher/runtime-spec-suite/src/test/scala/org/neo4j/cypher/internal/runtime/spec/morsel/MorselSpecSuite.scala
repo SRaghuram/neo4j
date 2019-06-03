@@ -123,7 +123,7 @@ class MorselParallelWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL, M
 class MorselParallelNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 
 // PROFILE
-class MorselProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselProfileTest extends ProfileTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 
 abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, MorselRuntime) {
 
