@@ -15,7 +15,7 @@ import java.io.IOException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -25,7 +25,11 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ExistingDatabaseCreationIT
@@ -73,11 +77,59 @@ class ExistingDatabaseCreationIT
         verifyExpectedNodeCounts( cloneDatabaseService );
     }
 
+    @Test
+    void forceCreationOfDatabaseWithoutTransactionLogsWithAlreadyExistingDatabase() throws IOException
+    {
+        managementService = startManagementService();
+
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+        createSomeNodes( database );
+
+        managementService.createDatabase( anotherDatabaseName );
+
+        GraphDatabaseAPI anotherDatabaseService = (GraphDatabaseAPI) managementService.database( anotherDatabaseName );
+        createSomeNodes( anotherDatabaseService );
+        DatabaseLayout databaseLayout = anotherDatabaseService.databaseLayout();
+        managementService.shutdown();
+
+        DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        copyDatabaseData( databaseLayout, cloneLayout );
+
+        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( fail_on_missing_files, FALSE ).build();
+        managementService.createDatabase( cloneDatabase );
+        GraphDatabaseService cloneDatabaseService = managementService.database( cloneDatabase );
+        verifyExpectedNodeCounts( cloneDatabaseService );
+    }
+
+    @Test
+    void failToCreateDatabaseWithoutTransactionLogsWithAlreadyExistingDatabase() throws IOException
+    {
+        managementService = startManagementService();
+
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+        createSomeNodes( database );
+
+        managementService.createDatabase( anotherDatabaseName );
+
+        GraphDatabaseAPI anotherDatabaseService = (GraphDatabaseAPI) managementService.database( anotherDatabaseName );
+        createSomeNodes( anotherDatabaseService );
+        DatabaseLayout databaseLayout = anotherDatabaseService.databaseLayout();
+        managementService.shutdown();
+
+        DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        copyDatabaseData( databaseLayout, cloneLayout );
+
+        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+
+        assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( cloneDatabase ) );
+    }
+
     private void verifyExpectedNodeCounts( GraphDatabaseService cloneDatabaseService )
     {
         try ( Transaction ignore = cloneDatabaseService.beginTx() )
         {
-            assertEquals( NUMBER_OF_CREATED_NODES, Iterables.count( cloneDatabaseService.getAllNodes() ) );
+            assertEquals( NUMBER_OF_CREATED_NODES, count( cloneDatabaseService.getAllNodes() ) );
         }
     }
 
@@ -88,8 +140,18 @@ class ExistingDatabaseCreationIT
 
     private void copyDatabase( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
     {
-        fileSystem.copyRecursively( databaseLayout.databaseDirectory(), cloneLayout.databaseDirectory() );
+        copyDatabaseData( databaseLayout, cloneLayout );
+        copyDatabaseTxLogs( databaseLayout, cloneLayout );
+    }
+
+    private void copyDatabaseTxLogs( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
+    {
         fileSystem.copyRecursively( databaseLayout.getTransactionLogsDirectory(), cloneLayout.getTransactionLogsDirectory() );
+    }
+
+    private void copyDatabaseData( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
+    {
+        fileSystem.copyRecursively( databaseLayout.databaseDirectory(), cloneLayout.databaseDirectory() );
     }
 
     private void createSomeNodes( GraphDatabaseService database )
