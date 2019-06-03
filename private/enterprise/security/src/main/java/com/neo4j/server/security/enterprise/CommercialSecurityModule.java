@@ -63,7 +63,6 @@ import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.query.QueryExecution;
-import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -76,6 +75,7 @@ import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.service.Services;
@@ -184,7 +184,7 @@ public class CommercialSecurityModule extends SecurityModule
             QueryExecutor queryExecutor = new QueryExecutor()
             {
                 @Override
-                public void executeQuery( String query, Map<String,Object> params, QuerySubscriber subscriber )
+                public void executeQuery( String query, Map<String,Object> params, ErrorPreservingQuerySubscriber subscriber )
                 {
                     try ( Transaction tx = database.beginTx() )
                     {

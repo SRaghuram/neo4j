@@ -21,10 +21,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.query.QuerySubscriber;
-import org.neo4j.kernel.impl.query.QuerySubscriberAdapter;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
+import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -57,7 +56,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         Map<String,Object> params = map( "username", username );
 
-        final QuerySubscriber subscriber = new QuerySubscriberAdapter()
+        final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
         {
             @Override
             public void onField( int offset, AnyValue value )
@@ -300,7 +299,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
-        QuerySubscriber subscriber = new QuerySubscriberAdapter()
+        ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
         {
             private AnyValue[] fields;
             @Override
