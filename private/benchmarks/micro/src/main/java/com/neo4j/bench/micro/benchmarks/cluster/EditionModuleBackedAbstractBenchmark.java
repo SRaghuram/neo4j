@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Stack;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -53,11 +55,15 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     @Override
     protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( SystemGraphInitializer.NO_OP );   // disable system graph construction because it will interfere with some tests
         tempDirectory = createTempDirectory( group, benchmark, stores );
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY,
                                                                   TxProbingEditionModule::new ).build( tempDirectory.toFile(),
                                                                                                            Config.defaults(),
-                                                                                                           GraphDatabaseDependencies.newDependencies() );
+                                                                                                           GraphDatabaseDependencies
+                                                                                                                   .newDependencies()
+                                                                                                                   .dependencies( dependencies ) );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
     }
