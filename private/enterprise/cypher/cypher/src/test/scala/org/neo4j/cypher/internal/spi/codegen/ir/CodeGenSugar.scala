@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryExecutionTracer}
+import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
@@ -96,7 +96,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
                   params: MapValue = EMPTY_MAP): RewindableExecutionResult = {
 
     val generated = clazz.execute(queryContext,
-                                  tracer.getOrElse(QueryExecutionTracer.NONE),
+                                  tracer.getOrElse(QueryProfiler.NONE),
                                   params)
 
     val subscriber = new RecordingQuerySubscriber

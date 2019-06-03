@@ -18,7 +18,7 @@ import org.neo4j.codegen.{CodeGenerator, Parameter, TypeReference, _}
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.javacompat.ResultRecord
-import org.neo4j.cypher.internal.profiling.QueryExecutionTracer
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
@@ -98,16 +98,16 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
     }
     val query = using(generator.generateClass(conf.packageName, className, typeRef[GeneratedQuery])) { clazz =>
       using(clazz.generateMethod(typeRef[GeneratedQueryExecution], "execute",
-        param[QueryContext]("queryContext"),
-        param[QueryExecutionTracer]("tracer"),
-        param[MapValue]("params"))) { execute =>
+                                 param[QueryContext]("queryContext"),
+                                 param[QueryProfiler]("tracer"),
+                                 param[MapValue]("params"))) { execute =>
         execute.returns(
           invoke(
             newInstance(execution),
             constructorReference(execution,
-              typeRef[QueryContext],
-              typeRef[QueryExecutionTracer],
-              typeRef[MapValue]),
+                                 typeRef[QueryContext],
+                                 typeRef[QueryProfiler],
+                                 typeRef[MapValue]),
             execute.load("queryContext"),
             execute.load("tracer"),
             execute.load("params")))
@@ -182,7 +182,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
     Fields(
       entityAccessor = clazz.field(typeRef[EmbeddedProxySPI], "proxySpi"),
-      tracer = clazz.field(typeRef[QueryExecutionTracer], "tracer"),
+      tracer = clazz.field(typeRef[QueryProfiler], "tracer"),
       params = clazz.field(typeRef[MapValue], "params"),
       queryContext = clazz.field(typeRef[QueryContext], "queryContext"),
       cursors = clazz.field(typeRef[CursorFactory], "cursors"),

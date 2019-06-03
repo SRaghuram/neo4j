@@ -21,8 +21,6 @@ import scala.concurrent.duration.Duration
   * task to perform on that query.
   *
   * A worker has it's own [[QueryResources]] which it will use to execute tasks.
-  *
-  * TODO: integrate with lifecycle to ensure these are closed cleanly
   */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
@@ -106,7 +104,7 @@ class Worker(val workerId: Int,
                                                                                upstreamWorkUnitEvents(task)).start()
       val preparedOutput =
         try {
-          task.executeWorkUnit(resources, workUnitEvent)
+          task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
         } finally {
           workUnitEvent.stop()
           sleeper.reportStopWorkUnit()

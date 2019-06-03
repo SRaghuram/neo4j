@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.debug
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}

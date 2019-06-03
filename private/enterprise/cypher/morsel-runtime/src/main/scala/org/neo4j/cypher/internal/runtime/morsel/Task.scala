@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -21,7 +22,9 @@ trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
     * @param threadLocalResource resources to use for execution
     * @param workUnitEvent the current tracing even
     */
-  def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE, workUnitEvent: WorkUnitEvent): PreparedOutput
+  def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE,
+                      workUnitEvent: WorkUnitEvent,
+                      queryProfiler: QueryProfiler): PreparedOutput
 
   /**
     * Returns true if there is another work unit to execute.

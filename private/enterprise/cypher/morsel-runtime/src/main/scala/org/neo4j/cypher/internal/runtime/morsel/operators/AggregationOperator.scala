@@ -71,7 +71,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
-                                 resources: QueryResources): PreAggregatedOutput = {
+                                 resources: QueryResources,
+                                 queryProfiler: QueryProfiler): PreAggregatedOutput = {
 
         val queryState = new OldQueryState(context,
                                            resources = null,

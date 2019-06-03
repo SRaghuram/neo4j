@@ -5,15 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.tracing
 
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.morsel.Task
 import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case object NOP extends Task[Unit.type] {
-  override def executeWorkUnit(resource: Unit.type, workUnitEvent: WorkUnitEvent): PreparedOutput = () => ()
+  override def executeWorkUnit(resource: Unit.type,
+                               workUnitEvent: WorkUnitEvent,
+                               queryProfiler: QueryProfiler): PreparedOutput = () => ()
 
   override def canContinue: Boolean = false
 
-  override def workId: Int = 0
+  override def workId: Id = Id(0)
 
   override def workDescription: String = getClass.getSimpleName
 }

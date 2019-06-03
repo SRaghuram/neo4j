@@ -5,10 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
   * The [[Task]] of executing an [[ExecutablePipeline]] once.
@@ -26,25 +28,29 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   private var _output: MorselExecutionContext = _
 
-  override final def executeWorkUnit(resources: QueryResources, workUnitEvent: WorkUnitEvent): PreparedOutput = {
+  override final def executeWorkUnit(resources: QueryResources,
+                                     workUnitEvent: WorkUnitEvent,
+                                     queryProfiler: QueryProfiler): PreparedOutput = {
     if (_output == null) {
       _output = pipelineState.allocateMorsel(workUnitEvent, state)
-      executeStartOperators(resources)
+      executeOperators(resources, queryProfiler)
     }
-    executeOutputOperator(resources)
+    executeOutputOperator(resources, queryProfiler)
   }
 
-  private def executeStartOperators(resources: QueryResources): Unit = {
-    startTask.operate(_output, queryContext, state, resources)
-    for (op <- middleTasks) {
-      _output.resetToFirstRow()
-      op.operate(_output, queryContext, state, resources)
-    }
+  private def executeOperators(resources: QueryResources,
+                               queryProfiler: QueryProfiler): Unit = {
+    startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
     _output.resetToFirstRow()
+    for (op <- middleTasks) {
+      op.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
+      _output.resetToFirstRow()
+    }
   }
 
-  private def executeOutputOperator(resources: QueryResources): PreparedOutput = {
-    val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources)
+  private def executeOutputOperator(resources: QueryResources,
+                                    queryProfiler: QueryProfiler): PreparedOutput = {
+    val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources, queryProfiler)
     if (!outputOperatorState.canContinue) {
       // There is no continuation on the output operator,
       // next-time around we need a new output morsel
@@ -73,7 +79,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     startTask.close(pipelineState, resources)
   }
 
-  override def workId: Int = pipelineState.pipeline.workId
+  override def workId: Id = pipelineState.pipeline.workId
 
   override def workDescription: String = pipelineState.pipeline.workDescription
 

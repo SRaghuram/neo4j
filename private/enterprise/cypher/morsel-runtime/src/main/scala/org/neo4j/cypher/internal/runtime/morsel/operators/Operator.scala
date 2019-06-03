@@ -191,6 +191,21 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
   */
 trait OperatorTask extends HasWorkIdentity {
 
+  def operateWithProfile(output: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources,
+                         queryProfiler: QueryProfiler): Unit = {
+
+    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    try {
+      operate(output, context, state, resources)
+      operatorExecutionEvent.rows(output.getValidRows)
+    } finally {
+      operatorExecutionEvent.close()
+    }
+  }
+
   @throws[Exception]
   def operate(output: MorselExecutionContext,
               context: QueryContext,

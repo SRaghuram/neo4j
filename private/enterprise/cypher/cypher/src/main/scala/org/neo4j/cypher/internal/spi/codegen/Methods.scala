@@ -13,7 +13,7 @@ import org.neo4j.codegen.MethodReference
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
 import org.neo4j.cypher.internal.javacompat.ResultRecord
-import org.neo4j.cypher.internal.profiling.{QueryExecutionEvent, QueryExecutionTracer}
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
@@ -101,9 +101,9 @@ object Methods {
   val relId: MethodReference = method[VirtualRelationshipValue, Long]("id")
   val set: MethodReference = method[ResultRecord, Unit]("set", typeRef[Int], typeRef[AnyValue])
   val visit: MethodReference = method[QueryResultVisitor[_], Boolean]("visit", typeRef[Record])
-  val executeOperator: MethodReference = method[QueryExecutionTracer, QueryExecutionEvent]("executeOperator", typeRef[Id])
-  val dbHit: MethodReference = method[QueryExecutionEvent, Unit]("dbHit")
-  val row: MethodReference = method[QueryExecutionEvent, Unit]("row")
+  val executeOperator: MethodReference = method[QueryProfiler, OperatorProfileEvent]("executeOperator", typeRef[Id])
+  val dbHit: MethodReference = method[OperatorProfileEvent, Unit]("dbHit")
+  val row: MethodReference = method[OperatorProfileEvent, Unit]("row")
   val unboxInteger: MethodReference = method[java.lang.Integer, Int]("intValue")
   val unboxBoolean: MethodReference = method[java.lang.Boolean, Boolean]("booleanValue")
   val unboxLong: MethodReference = method[java.lang.Long, Long]("longValue")

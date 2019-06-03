@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Supplier
 
 import org.neo4j.cypher.internal.runtime.scheduling._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, WorkUnitEvent}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
@@ -18,24 +18,22 @@ import scala.collection.mutable.ArrayBuffer
 class ParallelismTracer extends SchedulerTracer {
 
   private val _workerCount = new AtomicInteger()
-  private val x: ThreadLocal[Int] = ThreadLocal.withInitial(new Supplier[Int] {override def get(): Int = _workerCount.getAndIncrement()})
+  private val x: ThreadLocal[Int] = ThreadLocal.withInitial(() => _workerCount.getAndIncrement())
 
   private val workUnitEventLists = new ConcurrentLinkedQueue[ArrayBuffer[TestWorkUnitEvent]]()
   private val workUnitEvents: ThreadLocal[ArrayBuffer[TestWorkUnitEvent]] =
     ThreadLocal.withInitial(
-      new Supplier[ArrayBuffer[TestWorkUnitEvent]] {
-        override def get(): ArrayBuffer[TestWorkUnitEvent] = {
-          val x = new ArrayBuffer[TestWorkUnitEvent]()
-          workUnitEventLists.add(x)
-          x
-        }
+      () => {
+        val x = new ArrayBuffer[TestWorkUnitEvent]()
+        workUnitEventLists.add(x)
+        x
       }
     )
 
   def hasEvidenceOfParallelism: Boolean = {
     import scala.collection.JavaConverters._
 
-    val allWorkUnitEvents: Map[Int, immutable.IndexedSeq[TestWorkUnitEvent]] =
+    val allWorkUnitEvents: Map[Id, immutable.IndexedSeq[TestWorkUnitEvent]] =
       workUnitEventLists.asScala.flatten.toIndexedSeq.sortBy(_.startTime).groupBy(_.workId)
 
     for (workIdGroup <- allWorkUnitEvents.values) {
@@ -62,7 +60,7 @@ class ParallelismTracer extends SchedulerTracer {
     override def stopQuery(): Unit = {}
   }
 
-  private class TestScheduledWorkUnitEvent(workId: Int, workDescription: String) extends ScheduledWorkUnitEvent {
+  private class TestScheduledWorkUnitEvent(workId: Id, workDescription: String) extends ScheduledWorkUnitEvent {
 
     override def start(): WorkUnitEvent = {
       x.get()
@@ -72,8 +70,8 @@ class ParallelismTracer extends SchedulerTracer {
   }
 
   private class TestWorkUnitEvent(val startTime: Long,
-                          val workId: Int,
-                          val workDescription: String) extends WorkUnitEvent {
+                                  val workId: Id,
+                                  val workDescription: String) extends WorkUnitEvent {
 
     var stopTime: Long = -1L
 

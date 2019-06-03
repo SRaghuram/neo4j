@@ -12,7 +12,8 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 class ExecutingQuery(val executionState: ExecutionState,
                      val queryContext: QueryContext,
                      val queryState: QueryState,
-                     val queryExecutionTracer: QueryExecutionTracer) {
+                     val queryExecutionTracer: QueryExecutionTracer,
+                     val workersQueryProfiler: WorkersQueryProfiler) {
 
   def bindTransactionToThread(): Unit =
     queryState.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)

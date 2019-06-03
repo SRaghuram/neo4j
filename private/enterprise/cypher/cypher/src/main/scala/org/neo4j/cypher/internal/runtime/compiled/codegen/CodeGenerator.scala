@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, Comp
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, compiled}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
-import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryExecutionTracer}
+import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
@@ -56,7 +56,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     subscriber: QuerySubscriber): RuntimeResult = {
 
             val execution: GeneratedQueryExecution = query.query.execute(queryContext,
-                                                                         tracer.getOrElse(QueryExecutionTracer.NONE), params)
+                                                                         tracer.getOrElse(QueryProfiler.NONE), params)
             new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults, subscriber)
           }
 

@@ -21,6 +21,21 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
+  test("morsel profile should include expected profiling data") {
+    createNode()
+    val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN n")
+    val planString = result.executionPlanDescription().toString
+    planString should include("Estimated Rows")
+    planString should include("Rows")
+    planString should include("DB Hits")
+    planString should not include "Page Cache Hits"
+    planString should not include "Page Cache Misses"
+    planString should not include "Page Cache Hit Ratio"
+    planString should include("Time (ms)")
+
+    planString.toLowerCase should not include "page cache"
+  }
+
   test("profile simple query") {
     createNode()
     createNode()

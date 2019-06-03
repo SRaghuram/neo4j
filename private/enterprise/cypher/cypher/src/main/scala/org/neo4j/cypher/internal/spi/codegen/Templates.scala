@@ -17,7 +17,7 @@ import org.neo4j.codegen._
 import org.neo4j.common.TokenNameLookup
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.javacompat.ResultRowImpl
-import org.neo4j.cypher.internal.profiling.QueryExecutionTracer
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeProxyById, newRelationshipProxyById}
@@ -149,11 +149,11 @@ object Templates {
 
   def constructor(classHandle: ClassHandle) = MethodTemplate.constructor(
     param[QueryContext]("queryContext"),
-    param[QueryExecutionTracer]("tracer"),
+    param[QueryProfiler]("tracer"),
     param[MapValue]("params")).
     invokeSuper().
     put(self(classHandle), typeRef[QueryContext], "queryContext", load("queryContext", typeRef[QueryContext])).
-    put(self(classHandle), typeRef[QueryExecutionTracer], "tracer", load("tracer", typeRef[QueryExecutionTracer])).
+    put(self(classHandle), typeRef[QueryProfiler], "tracer", load("tracer", typeRef[QueryProfiler])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[EmbeddedProxySPI], "proxySpi",
              invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, EmbeddedProxySPI]("entityAccessor"))).

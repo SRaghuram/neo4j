@@ -122,6 +122,9 @@ class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
 class MorselParallelWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
 class MorselParallelNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
 
+// PROFILE
+class MorselProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+
 abstract class MorselTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, MorselRuntime) {
 
   test("should handle allNodeScan") {

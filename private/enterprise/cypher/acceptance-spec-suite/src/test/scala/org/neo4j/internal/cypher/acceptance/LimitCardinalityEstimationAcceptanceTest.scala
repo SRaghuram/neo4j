@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.planner.spi.GraphStatistics
+import org.neo4j.cypher.internal.compiler.planner.logical.PlannerDefaults
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -18,7 +18,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
                                params = Map("limit" -> 10))
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit")
-        .withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+        .withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("should estimate rows when literal") {
@@ -48,7 +48,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(sin({limit}))",
                                params = Map("limit" -> 1))
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+      includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("should estimate rows by default value when expression contains rand()") {
@@ -56,21 +56,21 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     // NOTE: We cannot executeWith because of random result
     val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 AS x, p RETURN p LIMIT toInt(rand()*10)", Map.empty)
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+      includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("should estimate rows by default value when expression contains timestamp()") {
     (0 until 100).map(_ => createLabeledNode("Person"))
     val r1 = executeSingle("EXPLAIN MATCH (p:Person) with 10 AS x, p RETURN p LIMIT timestamp()")
     r1.executionPlanDescription() should
-      includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+      includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
 
     val r2 = executeSingle("EXPLAIN CYPHER runtime=slotted MATCH (p:Person) with 10 AS x, p RETURN p LIMIT timestamp()")
     r2.executionPlanDescription() should
-      includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+      includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
 
     val r3 = executeSingle("EXPLAIN CYPHER runtime=interpreted MATCH (p:Person) with 10 AS x, p RETURN p LIMIT timestamp()")
     r3.executionPlanDescription() should
-      includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
+      includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 }

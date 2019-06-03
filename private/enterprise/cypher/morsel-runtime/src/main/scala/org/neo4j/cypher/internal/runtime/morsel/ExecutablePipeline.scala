@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
@@ -35,7 +36,7 @@ case class ExecutablePipeline(id: PipelineId,
                       () => outputOperator.createState(executionState, id),
                       executionState)
 
-  override val workId: Int = start.workIdentity.workId
+  override val workId: Id = start.workIdentity.workId
   override val workDescription: String = composeWorkDescriptions(start, middleOperators, outputOperator)
 
   private def composeWorkDescriptions(first: HasWorkIdentity, others: Seq[HasWorkIdentity], last: HasWorkIdentity): String = {

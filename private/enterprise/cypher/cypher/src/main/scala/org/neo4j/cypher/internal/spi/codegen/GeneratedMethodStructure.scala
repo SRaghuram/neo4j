@@ -17,7 +17,7 @@ import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen._
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
-import org.neo4j.cypher.internal.profiling.QueryExecutionEvent
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{AnyValueType, BoolType, CodeGenType, CypherCodeGenType, FloatType, ListReferenceType, LongType, ReferenceType, RepresentationType, Parameter => _}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
@@ -215,7 +215,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     for (event <- events) {
       generator.expression(
         invoke(generator.load(event),
-               method[QueryExecutionEvent, Unit]("close")))
+               method[OperatorProfileEvent, Unit]("close")))
     }
     //close all cursors
     generator.expression(invoke(generator.self(), methodReference(generator.owner(), TypeReference.VOID,
@@ -332,7 +332,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
         //close all outstanding events
         for (event <- events) {
           body.expression(invoke(generator.load(event),
-                                 method[QueryExecutionEvent, Unit]("close")))
+                                 method[OperatorProfileEvent, Unit]("close")))
         }
       body.expression(invoke(body.self(), methodReference(body.owner(), TypeReference.VOID,
                                                                     "closeCursors")))
@@ -343,7 +343,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     for (event <- events) {
       onError.expression(
         invoke(onError.load(event),
-               method[QueryExecutionEvent, Unit]("close")))
+               method[OperatorProfileEvent, Unit]("close")))
     }
     onError.throwException(onError.load("e"))
   }
@@ -404,9 +404,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   else {
     val suffix = maybeSuffix.map("_" +_ ).getOrElse("")
     val eventName = s"event_$planStepId$suffix"
-    generator.assign(typeRef[QueryExecutionEvent], eventName, traceEvent(planStepId))
+    generator.assign(typeRef[OperatorProfileEvent], eventName, traceEvent(planStepId))
     val result = block(copy(events = eventName :: events, generator = generator))
-    generator.expression(invoke(generator.load(eventName), method[QueryExecutionEvent, Unit]("close")))
+    generator.expression(invoke(generator.load(eventName), method[OperatorProfileEvent, Unit]("close")))
     result
   }
 

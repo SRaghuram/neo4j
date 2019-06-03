@@ -14,8 +14,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   queryContext: QueryContext,
                                   queryState: QueryState,
                                   queryExecutionTracer: QueryExecutionTracer,
+                                  workersQueryProfiler: WorkersQueryProfiler,
                                   worker: Worker)
-  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer)
+  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler)
   with QuerySubscription {
   private val flowControl = queryState.flowControl
 

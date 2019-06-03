@@ -10,7 +10,7 @@ import java.util
 import org.neo4j.codegen.bytecode.ByteCode
 import org.neo4j.codegen.source.SourceCode
 import org.neo4j.codegen.{CodeGenerationStrategy, CodeGenerator, Expression, MethodDeclaration}
-import org.neo4j.cypher.internal.profiling.QueryExecutionTracer
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, CypherCodeGenType, ReferenceType}
@@ -212,7 +212,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
     val clazz = using(codeGen.generateClass(packageName, "Test")) { body =>
       val fields = Fields(
         entityAccessor = body.field(typeRef[EmbeddedProxySPI], "proxySpi"),
-        tracer = body.field(typeRef[QueryExecutionTracer], "tracer"),
+        tracer = body.field(typeRef[QueryProfiler], "tracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         queryContext = body.field(typeRef[QueryContext], "queryContext"),
         cursors = body.field(typeRef[CursorFactory], "cursors"),

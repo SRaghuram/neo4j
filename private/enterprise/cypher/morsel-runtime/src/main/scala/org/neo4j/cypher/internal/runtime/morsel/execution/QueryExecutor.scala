@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.morsel.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
@@ -30,7 +31,8 @@ trait QueryExecutor {
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
-                              subscriber: QuerySubscriber): QuerySubscription
+                              subscriber: QuerySubscriber,
+                              doProfile: Boolean): (QuerySubscription, QueryProfile)
 
   /**
     * Assert that all resources that have been acquired for query execution by any query have also been released

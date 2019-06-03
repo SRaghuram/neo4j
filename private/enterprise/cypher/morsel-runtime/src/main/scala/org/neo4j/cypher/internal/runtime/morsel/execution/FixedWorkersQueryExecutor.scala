@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, T
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManager}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.kernel.lifecycle.Lifecycle
@@ -80,7 +81,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: QuerySubscriber): QuerySubscription = {
+                                       subscriber: QuerySubscriber,
+                                       doProfile: Boolean): (QuerySubscription, QueryProfile) = {
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
@@ -111,15 +113,22 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                initResources,
                                                tracker)
 
+    val profiler =
+      if (doProfile)
+        new FixedWorkersQueryProfiler(numberOfWorkers)
+      else
+        WorkersQueryProfiler.NONE
+
     val executingQuery = new ExecutingQuery(executionState,
                                             queryContext,
                                             queryState,
-                                            tracer)
+                                            tracer,
+                                            profiler)
 
     queryContext.transactionalContext.transaction.freezeLocks()
 
     queryManager.addQuery(executingQuery)
     executionState.initializeState()
-    tracker
+    (tracker, profiler)
   }
 }

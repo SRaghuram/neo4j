@@ -100,18 +100,19 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
       new MorselRuntimeResult(executablePipelines,
-        executionGraphDefinition,
-        queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
-        nExpressionSlots,
-        prePopulateResults,
-        inputDataStream,
-        logicalPlan,
-        queryContext,
-        createParameterArray(params, parameterMapping),
-        fieldNames,
-        queryExecutor,
-        schedulerTracer,
-        subscriber: QuerySubscriber)
+                              executionGraphDefinition,
+                              queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+                              nExpressionSlots,
+                              prePopulateResults,
+                              inputDataStream,
+                              logicalPlan,
+                              queryContext,
+                              createParameterArray(params, parameterMapping),
+                              fieldNames,
+                              queryExecutor,
+                              schedulerTracer,
+                              subscriber,
+                              doProfile)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -134,10 +135,12 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             override val fieldNames: Array[String],
                             queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,
-                            subscriber: QuerySubscriber) extends RuntimeResult {
+                            subscriber: QuerySubscriber,
+                            doProfile: Boolean) extends RuntimeResult {
     private var resultRequested = false
 
     private var querySubscription: QuerySubscription = _
+    private var _queryProfile: QueryProfile = _
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
 
@@ -147,22 +150,26 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     override def close(): Unit = {}
 
-    override def queryProfile(): QueryProfile = QueryProfile.NONE
+    override def queryProfile(): QueryProfile = _queryProfile
 
     override def request(numberOfRecords: Long): Unit = {
       if (querySubscription == null) {
         resultRequested = true
-        querySubscription = queryExecutor.execute(
-          executablePipelines,
-          executionGraphDefinition,
-          inputDataStream,
-          queryContext,
-          params,
-          schedulerTracer,
-          queryIndexes,
-          nExpressionSlots,
-          prePopulateResults,
-          subscriber)
+        val (sub, prof) = queryExecutor.execute(executablePipelines,
+                                                executionGraphDefinition,
+                                                inputDataStream,
+                                                queryContext,
+                                                params,
+                                                schedulerTracer,
+                                                queryIndexes,
+                                                nExpressionSlots,
+                                                prePopulateResults,
+                                                subscriber,
+                                                doProfile)
+
+        querySubscription = sub
+        _queryProfile = prof
+
         //Only call onResult on first call
         subscriber.onResult(fieldNames.length)
       }

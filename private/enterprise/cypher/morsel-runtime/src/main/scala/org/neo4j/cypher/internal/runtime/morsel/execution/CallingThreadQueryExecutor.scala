@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{StandardStateFactory, The
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
@@ -37,7 +38,8 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        queryIndexes: Array[IndexReadSession],
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
-                                       subscriber: QuerySubscriber): QuerySubscription = {
+                                       subscriber: QuerySubscriber,
+                                       doProfile: Boolean): (QuerySubscription, QueryProfile) = {
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
@@ -66,11 +68,19 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
 
     executionState.initializeState()
 
-    val worker = new Worker(1, null, LazyScheduling, resources)
-    new CallingThreadExecutingQuery(executionState,
-                                    queryContext,
-                                    queryState,
-                                    tracer,
-                                    worker)
+    val profiler =
+      if (doProfile)
+        new FixedWorkersQueryProfiler(1)
+      else
+        WorkersQueryProfiler.NONE
+
+    val worker = new Worker(0, null, LazyScheduling, resources)
+    val executingQuery = new CallingThreadExecutingQuery(executionState,
+                                                         queryContext,
+                                                         queryState,
+                                                         tracer,
+                                                         profiler,
+                                                         worker)
+    (executingQuery, profiler)
   }
 }

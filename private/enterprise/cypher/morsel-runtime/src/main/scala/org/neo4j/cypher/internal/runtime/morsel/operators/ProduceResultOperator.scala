@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -52,13 +53,19 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def toString: String = "ProduceResultInputTask"
     override def canContinue: Boolean = inputMorsel.isValidRow
 
-    override def operate(outputIgnore: MorselExecutionContext,
+    override def operateWithProfile(outputIgnore: MorselExecutionContext,
+                                    context: QueryContext,
+                                    state: QueryState,
+                                    resources: QueryResources,
+                                    queryProfiler: QueryProfiler): Unit = {
+
+      produceOutputWithProfile(inputMorsel, context, state, resources, queryProfiler)
+    }
+
+    override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: QueryResources): Unit = {
-
-      produceOutput(inputMorsel, context, state, resources)
-    }
+                         resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
 
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }
@@ -77,8 +84,10 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def prepareOutput(outputMorsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
-                               resources: QueryResources): PreparedOutput = {
-      produceOutput(outputMorsel, context, state, resources)
+                               resources: QueryResources,
+                               queryProfiler: QueryProfiler): PreparedOutput = {
+
+      produceOutputWithProfile(outputMorsel, context, state, resources, queryProfiler)
       _canContinue = outputMorsel.isValidRow
       this
     }
@@ -89,6 +98,21 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = new OutputOOperatorState
 
   //==========================================================================
+
+  protected def produceOutputWithProfile(output: MorselExecutionContext,
+                                         context: QueryContext,
+                                         state: QueryState,
+                                         resources: QueryResources,
+                                         queryProfiler: QueryProfiler): Unit = {
+    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    try {
+      val rowBefore = output.getCurrentRow
+      produceOutput(output, context, state, resources)
+      operatorExecutionEvent.rows(output.getCurrentRow - rowBefore)
+    } finally {
+      operatorExecutionEvent.close()
+    }
+  }
 
   protected def produceOutput(output: MorselExecutionContext,
                               context: QueryContext,
