@@ -8,7 +8,7 @@ package com.neo4j.harness.junit.extension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.neo4j.harness.junit.Neo4j;
+import org.neo4j.harness.internal.Neo4j;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.harness.junit.extension.Neo4jExtensionBuilder;
 

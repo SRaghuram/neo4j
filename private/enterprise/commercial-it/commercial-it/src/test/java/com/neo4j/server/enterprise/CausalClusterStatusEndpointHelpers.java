@@ -23,7 +23,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.junit.Neo4j;
+import org.neo4j.harness.internal.Neo4j;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
