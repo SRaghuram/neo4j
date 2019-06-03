@@ -7,17 +7,20 @@ package com.neo4j.causalclustering.protocol.init;
 
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValueBuf;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class InitMagicMessageClientHandlerTest
+class InitClientHandlerTest
 {
     private final NoOpChannelInitializer handshakeInitializer = new NoOpChannelInitializer();
 
@@ -33,27 +36,30 @@ class InitMagicMessageClientHandlerTest
     void shouldSendInitMagicMessageWhenChannelBecomesActive()
     {
         assertTrue( channel.isActive() );
-        assertEquals( InitialMagicMessage.instance(), channel.readOutbound() );
+        assertEquals( magicValueBuf(), channel.readOutbound() );
     }
 
     @Test
     void shouldInstallNewPipelineWhenCorrectInitMagicMessageReceived()
     {
-        channel.writeInbound( InitialMagicMessage.instance() );
+        channel.writeInbound( magicValueBuf() );
 
         assertTrue( handshakeInitializer.invoked() );
-        assertNull( channel.pipeline().get( InitMagicMessageClientHandler.class ) );
+        assertNull( channel.pipeline().get( InitClientHandler.class ) );
     }
 
     @Test
-    void shouldFailWhenIncorrectInitMagicMessageReceived()
+    void shouldFailWhenWrongInitMagicMessageReceived()
     {
-        assertThrows( IllegalStateException.class, () -> channel.writeInbound( new InitialMagicMessage( "Wrong magic" ) ) );
+        var wrongMagic = channel.alloc().buffer();
+        wrongMagic.writeCharSequence( "NOT_NEO4J_CLUSTER", US_ASCII );
+
+        assertThrows( DecoderException.class, () -> channel.writeInbound( wrongMagic ) );
         assertTrue( channel.closeFuture().isDone() );
     }
 
-    private InitMagicMessageClientHandler newClientHandler()
+    private InitClientHandler newClientHandler()
     {
-        return new InitMagicMessageClientHandler( handshakeInitializer, NettyPipelineBuilderFactory.insecure(), NullLogProvider.getInstance() );
+        return new InitClientHandler( handshakeInitializer, NettyPipelineBuilderFactory.insecure(), NullLogProvider.getInstance() );
     }
 }

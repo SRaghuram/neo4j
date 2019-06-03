@@ -75,8 +75,6 @@ class ServerChannelInitializerTest
 
         assertThat( installedHandlers, containsInRelativeOrder(
                 instanceOf( ReadTimeoutHandler.class ),
-                instanceOf( InitMagicMessageEncoder.class ),
-                instanceOf( InitMagicMessageDecoder.class ),
-                instanceOf( InitMagicMessageServerHandler.class ) ) );
+                instanceOf( InitServerHandler.class ) ) );
     }
 }

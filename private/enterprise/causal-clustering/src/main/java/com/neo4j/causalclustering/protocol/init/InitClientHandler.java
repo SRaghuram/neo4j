@@ -6,28 +6,37 @@
 package com.neo4j.causalclustering.protocol.init;
 
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.ReplayingDecoder;
+
+import java.util.List;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-class InitMagicMessageClientHandler extends SimpleChannelInboundHandler<InitialMagicMessage>
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.isCorrectMagicValue;
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValueBuf;
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.readMagicValue;
+
+class InitClientHandler extends ReplayingDecoder<Void>
 {
-    static final String NAME = "init_magic_message_client_handler";
+    static final String NAME = "init_client_handler";
 
     private final ChannelInitializer<?> handshakeInitializer;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final LogProvider logProvider;
     private final Log log;
 
-    InitMagicMessageClientHandler( ChannelInitializer<?> handshakeInitializer, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
+    InitClientHandler( ChannelInitializer<?> handshakeInitializer, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
     {
         this.handshakeInitializer = handshakeInitializer;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
+        setSingleDecode( true );
     }
 
     @Override
@@ -35,20 +44,20 @@ class InitMagicMessageClientHandler extends SimpleChannelInboundHandler<InitialM
     {
         // write a magic message to the server once the channel is active
         // use void promise that fires errors back into the pipeline where they are handled by the installed error handlers
-        ctx.writeAndFlush( InitialMagicMessage.instance(), ctx.voidPromise() );
+        ctx.writeAndFlush( magicValueBuf(), ctx.voidPromise() );
     }
 
     @Override
-    protected void channelRead0( ChannelHandlerContext ctx, InitialMagicMessage msg ) throws Exception
+    protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out )
     {
-        var channel = ctx.channel();
+        var receivedMagicValue = readMagicValue( in );
 
-        if ( msg.isCorrectMagic() )
+        if ( isCorrectMagicValue( receivedMagicValue ) )
         {
-            log.debug( "Channel %s received a correct initialization message", channel );
+            log.debug( "Channel %s received a correct magic message", ctx.channel() );
 
             // install different handlers into the pipeline to handle protocol handshake
-            pipelineBuilderFactory.client( channel, logProvider.getLog( handshakeInitializer.getClass() ) )
+            pipelineBuilderFactory.client( ctx.channel(), logProvider.getLog( handshakeInitializer.getClass() ) )
                     .addFraming()
                     .add( "handshake_initializer", handshakeInitializer )
                     .install();
@@ -56,7 +65,7 @@ class InitMagicMessageClientHandler extends SimpleChannelInboundHandler<InitialM
         else
         {
             ctx.close();
-            throw new IllegalStateException( "Illegal initialization message: " + msg );
+            throw new DecoderException( "Wrong magic value: '" + receivedMagicValue + "'" );
         }
     }
 }

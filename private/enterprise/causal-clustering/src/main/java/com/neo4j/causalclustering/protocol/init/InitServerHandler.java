@@ -6,23 +6,31 @@
 package com.neo4j.causalclustering.protocol.init;
 
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.ReplayingDecoder;
+
+import java.util.List;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-class InitMagicMessageServerHandler extends SimpleChannelInboundHandler<InitialMagicMessage>
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.isCorrectMagicValue;
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValueBuf;
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.readMagicValue;
+
+class InitServerHandler extends ReplayingDecoder<Void>
 {
-    static final String NAME = "init_magic_message_server_handler";
+    static final String NAME = "init_server_handler";
 
     private final ChannelInitializer<?> handshakeInitializer;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final LogProvider logProvider;
     private final Log log;
 
-    InitMagicMessageServerHandler( ChannelInitializer<?> handshakeInitializer, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
+    InitServerHandler( ChannelInitializer<?> handshakeInitializer, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
     {
         this.handshakeInitializer = handshakeInitializer;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
@@ -31,17 +39,19 @@ class InitMagicMessageServerHandler extends SimpleChannelInboundHandler<InitialM
     }
 
     @Override
-    protected void channelRead0( ChannelHandlerContext ctx, InitialMagicMessage msg ) throws Exception
+    protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out )
     {
-        var channel = ctx.channel();
+        var receivedMagicValue = readMagicValue( in );
 
-        if ( msg.isCorrectMagic() )
+        if ( isCorrectMagicValue( receivedMagicValue ) )
         {
-            log.debug( "Channel %s received a correct initialization message", channel );
+            var channel = ctx.channel();
+
+            log.debug( "Channel %s received a correct magic message", channel );
 
             // write the same magic message back to the client so that it knows we are a valid neo4j server
             // use void promise that fires errors back into the pipeline where they are handled by the installed error handlers
-            channel.writeAndFlush( msg, channel.voidPromise() );
+            channel.writeAndFlush( magicValueBuf(), channel.voidPromise() );
 
             // install different handlers into the pipeline to handle protocol handshake
             pipelineBuilderFactory.server( channel, logProvider.getLog( handshakeInitializer.getClass() ) )
@@ -52,7 +62,7 @@ class InitMagicMessageServerHandler extends SimpleChannelInboundHandler<InitialM
         else
         {
             ctx.close();
-            throw new IllegalStateException( "Illegal initialization message: " + msg );
+            throw new DecoderException( "Wrong magic value: '" + receivedMagicValue + "'" );
         }
     }
 }

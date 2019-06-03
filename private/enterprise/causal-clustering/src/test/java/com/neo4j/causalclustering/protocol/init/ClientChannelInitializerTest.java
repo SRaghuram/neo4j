@@ -83,8 +83,6 @@ class ClientChannelInitializerTest
 
         assertThat( installedHandlers, containsInRelativeOrder(
                 instanceOf( ReadTimeoutHandler.class ),
-                instanceOf( InitMagicMessageEncoder.class ),
-                instanceOf( InitMagicMessageDecoder.class ),
-                instanceOf( InitMagicMessageClientHandler.class ) ) );
+                instanceOf( InitClientHandler.class ) ) );
     }
 }

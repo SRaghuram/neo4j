@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.protocol.init;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -16,6 +18,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.timeout.ReadTimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -24,9 +27,11 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.logging.AssertableLogProvider;
 
+import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValueBuf;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.contains;
@@ -42,8 +47,6 @@ class InitMagicMessageHandlingIT
 {
     private static final Duration SHORT_TIMEOUT = Duration.ofSeconds( 1 );
     private static final Duration LONG_TIMEOUT = Duration.ofHours( 1 );
-
-    private static final InitialMagicMessage ILLEGAL_MESSAGE = new InitialMagicMessage( "Illegal magic value" );
 
     private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
@@ -77,39 +80,30 @@ class InitMagicMessageHandlingIT
             @Override
             protected void initChannel( Channel ch )
             {
-                ch.pipeline().addLast( new InitMagicMessageEncoder() );
-                ch.pipeline().addLast( new InitMagicMessageDecoder( logProvider ) );
                 ch.pipeline().addLast( recordingClientHandler );
             }
         };
 
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
 
-        clientChannel.writeAndFlush( InitialMagicMessage.instance() );
+        clientChannel.writeAndFlush( magicValueBuf() );
 
         assertCorrectInitMessageReceived( "Client", recordingClientHandler );
         assertTrue( clientChannel.isActive() );
     }
 
     @Test
-    void serverShouldDropConnectionWhenIncorrectInitMagicMessageReceived() throws Exception
+    void serverShouldDropConnectionWhenWrongInitMagicMessageReceived() throws Exception
     {
         var serverInitializer = newServerChannelInitializer( LONG_TIMEOUT, new NoOpChannelInitializer() );
-        var clientInitializer = new ChannelInitializer<>()
-        {
-            @Override
-            protected void initChannel( Channel ch )
-            {
-                ch.pipeline().addLast( new InitMagicMessageEncoder() );
-            }
-        };
+        var clientInitializer = new NoOpChannelInitializer();
 
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
 
-        clientChannel.writeAndFlush( ILLEGAL_MESSAGE );
+        clientChannel.writeAndFlush( wrongMagicMessage() );
 
         assertEventuallyClosed( clientChannel );
-        assertIllegalMagicValueLogged( ServerChannelInitializer.class );
+        assertWrongMagicValueLogged( ServerChannelInitializer.class );
     }
 
     @Test
@@ -125,15 +119,14 @@ class InitMagicMessageHandlingIT
     }
 
     @Test
-    void clientShouldDropConnectionWhenIncorrectInitMagicMessageReceived() throws Exception
+    void clientShouldDropConnectionWhenWrongInitMagicMessageReceived() throws Exception
     {
         var serverInitializer = new ChannelInitializer<>()
         {
             @Override
             protected void initChannel( Channel ch )
             {
-                ch.pipeline().addLast( new InitMagicMessageEncoder() );
-                ch.writeAndFlush( ILLEGAL_MESSAGE );
+                ch.writeAndFlush( wrongMagicMessage() );
             }
         };
         var clientInitializer = newClientChannelInitializer( LONG_TIMEOUT, new NoOpChannelInitializer() );
@@ -141,7 +134,7 @@ class InitMagicMessageHandlingIT
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
 
         assertEventuallyClosed( clientChannel );
-        assertIllegalMagicValueLogged( ClientChannelInitializer.class );
+        assertWrongMagicValueLogged( ClientChannelInitializer.class );
     }
 
     @Test
@@ -153,7 +146,6 @@ class InitMagicMessageHandlingIT
             @Override
             protected void initChannel( Channel ch )
             {
-                ch.pipeline().addLast( new InitMagicMessageDecoder( logProvider ) );
                 ch.pipeline().addLast( recordingServerHandler );
             }
         };
@@ -204,16 +196,23 @@ class InitMagicMessageHandlingIT
                 containsString( "Exception in inbound" ), instanceOf( ReadTimeoutException.class ) ) );
     }
 
-    private void assertIllegalMagicValueLogged( Class<?> logClass )
+    private void assertWrongMagicValueLogged( Class<?> logClass )
     {
         logProvider.assertAtLeastOnce( inLog( logClass ).error( containsString( "Exception in inbound" ),
-                throwableWithMessage( IllegalStateException.class, containsString( "Illegal initialization message" ) ) ) );
+                throwableWithMessage( DecoderException.class, containsString( "Wrong magic value" ) ) ) );
     }
 
     private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler ) throws InterruptedException
     {
-        assertEventually( side + " did not receive a magic message",
-                () -> recordingHandler.messages, contains( InitialMagicMessage.instance() ), 1, MINUTES );
+        assertEventually( side + " did not receive a magic message", () -> recordingHandler.messages, contains( magicValueBuf() ), 1, MINUTES );
+    }
+
+    private static ByteBuf wrongMagicMessage()
+    {
+        var length = magicValueBuf().writerIndex();
+        var bytes = new byte[length];
+        ThreadLocalRandom.current().nextBytes( bytes );
+        return Unpooled.wrappedBuffer( bytes );
     }
 
     private class Server

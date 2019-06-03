@@ -20,7 +20,7 @@ import org.neo4j.logging.LogProvider;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A {@link ChannelInitializer} for server connections. It performs an initial handshake using a {@link InitialMagicMessage}
+ * A {@link ChannelInitializer} for server connections. It performs an initial handshake using a {@link MagicValueUtil#magicValueBuf()}
  * and then installs a different {@link ChannelInitializer}. The next initializer is supposed to handle further protocol negotiations.
  *
  * @see HandshakeServerInitializer
@@ -44,15 +44,13 @@ public class ServerChannelInitializer implements ChildInitializer
     }
 
     @Override
-    public void initChannel( Channel channel ) throws Exception
+    public void initChannel( Channel channel )
     {
         log.info( "Initializing server channel %s", channel );
 
         pipelineBuilderFactory.server( channel, log )
                 .add( "read_timeout_handler", new ReadTimeoutHandler( timeout.toMillis(), MILLISECONDS ) )
-                .add( InitMagicMessageEncoder.NAME, new InitMagicMessageEncoder() )
-                .add( InitMagicMessageDecoder.NAME, new InitMagicMessageDecoder( logProvider ) )
-                .add( InitMagicMessageServerHandler.NAME, new InitMagicMessageServerHandler( handshakeInitializer, pipelineBuilderFactory, logProvider ) )
+                .add( InitServerHandler.NAME, new InitServerHandler( handshakeInitializer, pipelineBuilderFactory, logProvider ) )
                 .install();
     }
 }
