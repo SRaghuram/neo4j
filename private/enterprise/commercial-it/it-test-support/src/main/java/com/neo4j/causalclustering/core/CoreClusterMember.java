@@ -184,11 +184,8 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public void start()
     {
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( SystemGraphInitializer.NO_OP );
-        GraphDatabaseDependencies gdbDependencies = GraphDatabaseDependencies.newDependencies().dependencies( dependencies );
         coreGraphDatabase = dbFactory.create( databasesDirectory, memberConfig,
-                gdbDependencies.monitors( monitors ), discoveryServiceFactory );
+                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
         defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // TODO: We currently require system database to start correctly and can't really test scenarios where it doesn't.

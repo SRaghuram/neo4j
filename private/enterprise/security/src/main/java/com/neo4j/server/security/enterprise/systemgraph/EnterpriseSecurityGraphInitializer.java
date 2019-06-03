@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
@@ -55,6 +56,18 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     public void initializeSecurityGraph() throws Exception
     {
         systemGraphInitializer.initializeSystemGraph();
+        doInitializeSecurityGraph();
+    }
+
+    @Override
+    public void initializeSecurityGraph( GraphDatabaseService database ) throws Exception
+    {
+        systemGraphInitializer.initializeSystemGraph( database );
+        doInitializeSecurityGraph();
+    }
+
+    private void doInitializeSecurityGraph() throws Exception
+    {
         // If the system graph has not been initialized (typically the first time you start neo4j) we set it up with auth data in the following order:
         // 1) Do we have import files from running the `neo4j-admin import-auth` command?
         // 2) Otherwise, are there existing users and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?

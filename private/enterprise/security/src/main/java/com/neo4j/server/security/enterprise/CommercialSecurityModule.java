@@ -206,7 +206,7 @@ public class CommercialSecurityModule extends SecurityModule
                             secureHasher );
             try
             {
-                initializer.initializeSecurityGraph();
+                initializer.initializeSecurityGraph( database );
             }
             catch ( Throwable e )
             {

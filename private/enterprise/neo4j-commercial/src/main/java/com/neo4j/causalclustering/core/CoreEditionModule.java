@@ -393,7 +393,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         {
             try
             {
-                initializer.initializeSystemGraph();
+                initializer.initializeSystemGraph( db );
             }
             catch ( Exception e )
             {

@@ -70,7 +70,6 @@ public class MultiRealmAuthManagerRule implements TestRule
                 );
 
         SecureHasher secureHasher = new SecureHasher();
-        DatabaseManager dbManager = mock( DatabaseManager.class );
         QueryExecutor queryExecutor = mock( QueryExecutor.class );
         InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( queryExecutor, secureHasher );
         when( queryExecutor.executeQueryLong( "MATCH (u:User) RETURN count(u)" ) ).thenReturn( (long) ops.getAllUsernames().size() );
