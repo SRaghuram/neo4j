@@ -15,9 +15,9 @@ import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
-import java.util.Collections;
-
 import org.neo4j.logging.LogProvider;
+
+import static java.util.Collections.emptyList;
 
 public class RaftProtocolInstallers implements ProtocolInstallers
 {
@@ -41,9 +41,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
     {
         if ( version == ProtocolVersion.V2 )
         {
-            return new RaftProtocolClientInstallerV2( pipelineBuilderFactory,
-                                                      Collections.emptyList(),
-                                                      logProvider );
+            return new RaftProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), logProvider );
         }
         throw new IllegalArgumentException( "Can't handle: " + version );
     }
@@ -56,10 +54,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
 
         if ( version == ProtocolVersion.V2 )
         {
-            return new RaftProtocolServerInstallerV2( raftMessageNettyHandler,
-                    pipelineBuilderFactory,
-                                                      Collections.emptyList(),
-                                                      logProvider );
+            return new RaftProtocolServerInstallerV2( raftMessageNettyHandler, pipelineBuilderFactory, emptyList(), logProvider );
         }
         throw new IllegalArgumentException( "Can't handle: " + version );
     }
