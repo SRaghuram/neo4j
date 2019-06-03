@@ -10,7 +10,7 @@ import org.neo4j.cypher.CypherRuntimeOption
 object EnterpriseRuntimeFactory {
 
   val interpreted = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, InterpretedRuntime), CypherRuntimeOption.interpreted)
-  val slotted = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.slotted)
+  val slotted = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, SlottedRuntime), CypherRuntimeOption.slotted)
   val compiledWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, CompiledRuntime), CypherRuntimeOption.compiled)
   val compiled = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, CompiledRuntime, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.compiled)
   val morselWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime), CypherRuntimeOption.morsel)
