@@ -9,8 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.codegen.QueryExecutionTracer
-import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSupport
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -24,6 +22,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryConte
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryExecutionTracer}
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}

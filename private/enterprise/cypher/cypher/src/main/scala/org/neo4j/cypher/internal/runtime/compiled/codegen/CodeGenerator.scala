@@ -8,8 +8,6 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 import java.time.Clock
 import java.util
 
-import org.neo4j.cypher.internal.codegen.QueryExecutionTracer
-import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.plandescription.Argument
@@ -21,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, Comp
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, compiled}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
+import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryExecutionTracer}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}

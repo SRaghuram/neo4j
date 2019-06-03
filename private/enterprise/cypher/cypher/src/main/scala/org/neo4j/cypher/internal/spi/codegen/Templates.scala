@@ -15,8 +15,9 @@ import org.neo4j.codegen.MethodDeclaration.Builder
 import org.neo4j.codegen.MethodReference._
 import org.neo4j.codegen._
 import org.neo4j.common.TokenNameLookup
-import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream, QueryExecutionTracer}
+import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.javacompat.ResultRowImpl
+import org.neo4j.cypher.internal.profiling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeProxyById, newRelationshipProxyById}

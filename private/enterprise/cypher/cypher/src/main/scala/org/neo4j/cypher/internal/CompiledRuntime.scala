@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenerator}
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, removeCachedProperties}

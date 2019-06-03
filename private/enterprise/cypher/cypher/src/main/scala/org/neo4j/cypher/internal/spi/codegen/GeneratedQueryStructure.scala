@@ -15,9 +15,10 @@ import org.neo4j.codegen.bytecode.ByteCode.{BYTECODE, VERIFY_GENERATED_BYTECODE}
 import org.neo4j.codegen.source.SourceCode.SOURCECODE
 import org.neo4j.codegen.source.{SourceCode, SourceVisitor}
 import org.neo4j.codegen.{CodeGenerator, Parameter, TypeReference, _}
-import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream, QueryExecutionTracer}
+import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.javacompat.ResultRecord
+import org.neo4j.cypher.internal.profiling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._

@@ -17,9 +17,10 @@ import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen._
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
+import org.neo4j.cypher.internal.profiling.QueryExecutionEvent
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{AnyValueType, BoolType, CodeGenType, CypherCodeGenType, FloatType, ListReferenceType, LongType, ReferenceType, RepresentationType, Parameter => _}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, QueryExecutionEvent}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure._
 import org.neo4j.cypher.internal.spi.codegen.Methods._
 import org.neo4j.cypher.internal.spi.codegen.Templates._
