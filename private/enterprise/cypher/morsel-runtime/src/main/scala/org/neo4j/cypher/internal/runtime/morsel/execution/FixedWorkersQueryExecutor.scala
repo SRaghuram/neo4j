@@ -115,7 +115,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
     val profiler =
       if (doProfile)
-        new FixedWorkersQueryProfiler(numberOfWorkers)
+        new FixedWorkersQueryProfiler(numberOfWorkers, executionGraphDefinition.applyRhsPlans)
       else
         WorkersQueryProfiler.NONE
 

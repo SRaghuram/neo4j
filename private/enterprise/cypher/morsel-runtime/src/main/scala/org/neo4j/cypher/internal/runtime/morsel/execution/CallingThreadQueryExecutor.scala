@@ -70,7 +70,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
 
     val profiler =
       if (doProfile)
-        new FixedWorkersQueryProfiler(1)
+        new FixedWorkersQueryProfiler(1, executionGraphDefinition.applyRhsPlans)
       else
         WorkersQueryProfiler.NONE
 

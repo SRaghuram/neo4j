@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -155,6 +156,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   extends TreeBuilder[PipelineDefinitionBuild, ApplyBufferDefinitionBuild] {
 
   private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefinitionBuild]
+  private[physicalplanning] val applyRhsPlans = new mutable.HashMap[Int, Int]()
 
   private def newPipeline(plan: LogicalPlan) = {
     val pipeline = new PipelineDefinitionBuild(PipelineId(pipelines.size), plan)
@@ -288,7 +290,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   override protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: PipelineDefinitionBuild, rhs: PipelineDefinitionBuild, argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
     plan match {
-      case _: plans.Apply =>
+      case apply: plans.Apply =>
+        val applyRhsPlan = if (rhs.middlePlans.isEmpty) rhs.headPlan else rhs.middlePlans.last
+        applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 
       case _: plans.NodeHashJoin =>

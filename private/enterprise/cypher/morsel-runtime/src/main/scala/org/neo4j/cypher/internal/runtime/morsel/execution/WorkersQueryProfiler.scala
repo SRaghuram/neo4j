@@ -23,7 +23,14 @@ object WorkersQueryProfiler {
   }
 }
 
-class FixedWorkersQueryProfiler(numberOfWorkers: Int) extends WorkersQueryProfiler {
+/**
+  * @param numberOfWorkers number of worker that can execute this query
+  * @param applyRhsPlans maps all apply ids to their corresponding rhs operator id. This is needed because the apply
+  *                      operator is not an executable operator in morsel, and thus there is no place to inject code
+  *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
+  *                      be identical.
+  */
+class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int]) extends WorkersQueryProfiler {
 
   private val profilers: Array[ProfilingTracer] =
     (0 until numberOfWorkers).map(_ => new ProfilingTracer(NoKernelStatisticProvider)).toArray
@@ -33,12 +40,36 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int) extends WorkersQueryProfil
   }
 
   override def operatorProfile(operatorId: Int): OperatorProfile = {
+    applyRhsPlans.get(operatorId) match {
+      case Some(applyRhsPlanId) => applyOperatorProfile(applyRhsPlanId)
+      case None => regularOperatorProfile(operatorId)
+    }
+  }
+
+  private def regularOperatorProfile(operatorId: Int): OperatorProfile = {
     var i = 0
     val data = new ProfilingTracerData()
     while (i < numberOfWorkers) {
       val workerData = profilers(i).operatorProfile(operatorId)
       data.update(workerData.time(),
                   workerData.dbHits(),
+                  workerData.rows(),
+                  0,
+                  0)
+
+      i += 1
+    }
+    data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+    data
+  }
+
+  private def applyOperatorProfile(applyRhsPlanId: Int): OperatorProfile = {
+    var i = 0
+    val data = new ProfilingTracerData()
+    while (i < numberOfWorkers) {
+      val workerData = profilers(i).operatorProfile(applyRhsPlanId)
+      data.update(0,
+                  0,
                   workerData.rows(),
                   0,
                   0)
