@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, RunWithConfigTestSupport, ShortestPathCommonEndNodesForbiddenException}
 import org.neo4j.graphdb.RelationshipType
@@ -109,7 +110,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
                     subscriber)
 
     RewindableExecutionResult(result,
-                              new TransactionBoundQueryContext(TransactionalContextWrapper(context)),
+                              new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor]),
                               subscriber)
   }
 }
