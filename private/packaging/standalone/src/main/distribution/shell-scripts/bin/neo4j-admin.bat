@@ -5,5 +5,5 @@ rem This file is a commercial add-on to Neo4j Enterprise Edition.
 
 SETLOCAL
 
-Powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File %~dp0neo4j-admin.ps1 %*
+Powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File "%~dp0neo4j-admin.ps1" %*
 EXIT /B %ERRORLEVEL%
