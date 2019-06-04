@@ -90,7 +90,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
-            .handleNoResult(() => throw new InvalidArgumentsException(s"Failed to create user '$userName'."))
+            .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create user '$userName'.")))
             .handleError(e => new InvalidArgumentsException(s"The specified user '$userName' already exists.", e))
             .handleResult((_, _) => clearCacheForUser(userName))
         )
@@ -115,7 +115,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN user""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
         QueryHandler
-          .handleNoResult(() =>  Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
           .handleResult((_, _) => clearCacheForUser(userName))
       )
@@ -484,7 +484,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
     }
-    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+    UpdatingSystemCommandExecutionPlan("GrantPrivilege", normalExecutionEngine,
       s"""
          |// Find or create the segment scope qualifier (eg. label qualifier, or all labels)
          |$qualifierMerge
@@ -539,7 +539,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant scope database $database")
     }
-    UpdatingSystemCommandExecutionPlan("GrantTraverse", normalExecutionEngine,
+    UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""
          |// Find the segment scope qualifier (eg. label qualifier, or all labels)
          |$qualifierMatch
@@ -558,14 +558,13 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |
          |// Remove the assignment
          |DELETE g
-         |RETURN g AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+         |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
         .handleResult((offset, value) => {
-          if (offset == 4 && value == Values.NO_VALUE) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
-          else if (offset == 0 && value != Values.NO_VALUE) clearCacheForRole(roleName)
-          else if (offset == 0 && value == Values.NO_VALUE) Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
-          else None
+          if (offset == 0 && value == Values.NO_VALUE) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
+          else if (offset == 1 && value == Values.NO_VALUE )Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
+          else clearCacheForRole(roleName)
         })
         .handleNoResult(() => Some(new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))),
       source
