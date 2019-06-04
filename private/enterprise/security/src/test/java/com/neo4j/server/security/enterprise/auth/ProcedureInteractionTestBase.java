@@ -118,7 +118,7 @@ public abstract class ProcedureInteractionTestBase<S>
         return PWD_CHANGE_CHECK_FIRST ? CHANGE_PWD_ERR_MSG : IS_EMBEDDED ? errMsg : BOLT_PWD_ERR_MSG;
     }
 
-    private final String EMPTY_ROLE = "empty";
+    final String EMPTY_ROLE = "empty";
 
     S adminSubject;
     S schemaSubject;

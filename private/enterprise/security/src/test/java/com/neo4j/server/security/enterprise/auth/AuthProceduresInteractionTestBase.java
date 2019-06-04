@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.auth;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
@@ -615,19 +616,6 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- delete role -----------
 
     @Test
-    void shouldThrowIfTryingToDeletePredefinedRole()
-    {
-        testFailDeleteRole( adminSubject, ADMIN,
-                format( "'%s' is a predefined role and can not be deleted or modified.", ADMIN ) );
-        testFailDeleteRole( adminSubject, ARCHITECT,
-                format( "'%s' is a predefined role and can not be deleted or modified.", ARCHITECT ) );
-        testFailDeleteRole( adminSubject, PUBLISHER,
-                format( "'%s' is a predefined role and can not be deleted or modified.", PUBLISHER ) );
-        testFailDeleteRole( adminSubject, READER,
-                format( "'%s' is a predefined role and can not be deleted or modified.", READER ) );
-    }
-
-    @Test
     void shouldThrowIfNonAdminTryingToDeleteRole()
     {
         assertEmpty( adminSubject, format( "CALL dbms.security.createRole('%s')", "new_role" ) );
@@ -650,6 +638,34 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertEmpty( adminSubject, format( "CALL dbms.security.deleteRole('%s')", "new_role" ) );
 
         assertThat( userManager.getAllRoleNames(), not( contains( "new_role" ) ) );
+    }
+
+    @Test
+    void shouldDeletePredefinedRoles()
+    {
+        assertEmpty( adminSubject, format( "CALL dbms.security.deleteRole('%s')", READER ) );
+        assertEmpty( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ARCHITECT ) );
+
+        assertThat( userManager.getAllRoleNames(), equalTo( Set.of( ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE ) ) );
+    }
+
+    @Test
+    void shouldLoseAdminRightsWhenAdminRoleIsDeleted()
+    {
+        assertEmpty( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ) );
+
+        assertFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", PUBLISHER ), "Permission denied" );
+
+        assertThat( userManager.getAllRoleNames(), equalTo( Set.of( READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE ) ) );
+    }
+
+    @Test
+    void shouldHaveAdminRightsUntilEndOfTransactionWhereAdminRoleIsDeleted()
+    {
+        assertSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s') CALL dbms.security.deleteRole('%s') RETURN 0 AS ignore", ADMIN, PUBLISHER ),
+                r -> assertKeyIs( r, "ignore", 0 ) );
+
+        assertThat( userManager.getAllRoleNames(), equalTo( Set.of( READER, EDITOR, ARCHITECT, EMPTY_ROLE ) ) );
     }
 
     @Test

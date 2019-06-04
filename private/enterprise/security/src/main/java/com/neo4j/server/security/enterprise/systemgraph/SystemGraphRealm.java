@@ -115,7 +115,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     @Override
     public boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
-        assertNotPredefinedRoleName( roleName );
         boolean success = systemGraphOperations.deleteRole( roleName );
         clearCachedAuthorizationInfo();
         return success;
@@ -214,15 +213,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         catch ( InvalidArgumentsException e )
         {
             return Collections.emptySet();
-        }
-    }
-
-    private static void assertNotPredefinedRoleName( String roleName ) throws InvalidArgumentsException
-    {
-        if ( roleName != null && PredefinedRolesBuilder.roles.keySet().contains( roleName ) )
-        {
-            throw new InvalidArgumentsException(
-                    format( "'%s' is a predefined role and can not be deleted or modified.", roleName ) );
         }
     }
 

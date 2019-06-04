@@ -493,14 +493,12 @@ class UserManagementProceduresLoggingTest
         catchInvalidArguments( () -> authProcedures.deleteRole( null ) );
         catchInvalidArguments( () -> authProcedures.deleteRole( "" ) );
         catchInvalidArguments( () -> authProcedures.deleteRole( "foo" ) );
-        catchInvalidArguments( () -> authProcedures.deleteRole( ADMIN ) );
 
         // Then
         log.assertExactly(
                 error( "[admin]: tried to delete role `%s`: %s", null, "Role 'null' does not exist." ),
                 error( "[admin]: tried to delete role `%s`: %s", "", "Role '' does not exist." ),
-                error( "[admin]: tried to delete role `%s`: %s", "foo", "Role 'foo' does not exist." ),
-                error( "[admin]: tried to delete role `%s`: %s", ADMIN, "'admin' is a predefined role and can not be deleted or modified." )
+                error( "[admin]: tried to delete role `%s`: %s", "foo", "Role 'foo' does not exist." )
         );
     }
 
