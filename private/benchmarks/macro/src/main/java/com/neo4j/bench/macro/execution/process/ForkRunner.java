@@ -58,6 +58,7 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, singletonList( profiler ) );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 neo4jConfig.writeToFile( neo4jConfigFile );
+                System.out.println( "Running " + profiler.name().toLowerCase() + " for query: " + query.name() );
                 RunnableFork profilerFork = fork( launcher,
                                                   query,
                                                   store,
