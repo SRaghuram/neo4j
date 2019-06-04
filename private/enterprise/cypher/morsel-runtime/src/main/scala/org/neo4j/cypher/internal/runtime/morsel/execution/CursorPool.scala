@@ -62,7 +62,7 @@ class LiveCounts(var nodeCursorPool: Long = 0,
 
     if (resourceLeaks.nonEmpty) {
       throw new RuntimeResourceLeakException(resourceLeaks.mkString(
-        "Several cursors are live even though all cursors should have been released\n  ", "\n  ", "\n"))
+        "Cursors are live even though all cursors should have been released\n  ", "\n  ", "\n"))
     }
   }
 }
@@ -91,7 +91,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Free the given cursor. NOOP if `null`.
     */
   def free(cursor: CURSOR): Unit = {
-    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString("+ free\n        ", "\n        ", ""))
+    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
     if (cursor != null) {
       liveCount -= 1
       if (cached != null)

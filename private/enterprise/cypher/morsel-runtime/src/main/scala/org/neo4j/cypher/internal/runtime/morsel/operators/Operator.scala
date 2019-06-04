@@ -203,8 +203,10 @@ trait OperatorTask {
 trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
   def close(operatorCloser: OperatorCloser, resources: QueryResources): Unit = {
-    closeInput(operatorCloser)
+    // NOTE: we have to close cursors before closing the input to make sure that all cursors
+    // are freed before the query is completed
     closeCursors(resources)
+    closeInput(operatorCloser)
   }
   protected def closeInput(operatorCloser: OperatorCloser): Unit
   protected def closeCursors(resources: QueryResources): Unit
