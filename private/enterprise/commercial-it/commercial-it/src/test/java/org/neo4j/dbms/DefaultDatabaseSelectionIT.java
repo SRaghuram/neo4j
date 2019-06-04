@@ -31,7 +31,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -162,7 +162,8 @@ class DefaultDatabaseSelectionIT
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
         Set<DatabaseId> databases = databaseManager.registeredDatabases().keySet();
-        assertThat( databases, containsInAnyOrder( new DatabaseId( databaseName ), new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
+        assertThat( databases, hasItem( new DatabaseId( databaseName ) ) );
+        assertThat( databases, hasItem( new DatabaseId( SYSTEM_DATABASE_NAME ) ) );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException
