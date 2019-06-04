@@ -316,19 +316,16 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
-  test("should fail when dropping default role") {
+  test("should drop built-in role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute(s"DROP ROLE ${PredefinedRoles.READER}")
-      // THEN
-    } should have message "'%s' is a predefined role and can not be deleted or modified.".format(PredefinedRoles.READER)
+    // WHEN
+    execute(s"DROP ROLE ${PredefinedRoles.READER}")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles)
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(Map("role" -> PredefinedRoles.READER, "is_built_in" -> true)))
   }
 
   test("should fail when dropping non-existing role") {

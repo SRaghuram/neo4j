@@ -227,7 +227,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // DROP ROLE foo
     case DropRole(roleName) => (_, _, _) =>
-      assertNotPredefinedRoleName(roleName)
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
           |RETURN role""".stripMargin,
@@ -459,11 +458,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
   private def validatePassword(password: Array[Byte]): Array[Byte] = {
     if (password == null || password.length == 0) throw new InvalidArgumentsException("A password cannot be empty.")
     password
-  }
-
-  private def assertNotPredefinedRoleName(roleName: String): Unit = {
-    // TODO: Find a way to not depend on enterprise security module
-    if (roleName != null && PredefinedRolesBuilder.roles.keySet.contains(roleName)) throw new InvalidArgumentsException(format("'%s' is a predefined role and can not be deleted or modified.", roleName))
   }
 
   private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String, source: Option[ExecutionPlan]) = {
