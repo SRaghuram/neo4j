@@ -69,8 +69,7 @@ class Grouping extends AbstractCypherBenchmark {
   def executePlan(threadState: GroupingThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(Grouping_distinctCount, subscriber)
   }
 }

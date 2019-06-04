@@ -75,8 +75,7 @@ class IndexScan extends AbstractCypherBenchmark {
   def executePlan(threadState: IndexScanThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, subscriber)
   }
 }

@@ -104,8 +104,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
   def executePlan(threadState: MultiColumnOrderByThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(EXPECTED_ROW_COUNT, subscriber)
   }
 }

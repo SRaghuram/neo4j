@@ -119,8 +119,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
                    profile = false,
                    prePopulate = false,
                    DO_NOTHING_SUBSCRIBER)
-    result1.request(Long.MaxValue)
-    result1.await()
+    result1.consumeAll()
 
     // when
     (0 until 1000).foreach { _ => createLabeledNode("Dog") }
@@ -130,8 +129,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
                    profile = false,
                    prePopulate = false,
                    DO_NOTHING_SUBSCRIBER)
-    result2.request(Long.MaxValue)
-    result2.await()
+    result2.consumeAll()
 
     logProvider.assertAtLeastOnce(
 

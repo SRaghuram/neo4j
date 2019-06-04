@@ -49,8 +49,7 @@ class FilterExpression extends AbstractCypherBenchmark with ListExpressionsHelpe
   def executePlan(threadState: FilterExpressionThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params = threadState.params, tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(ROWS, subscriber)
   }
 }

@@ -132,8 +132,7 @@ class Distinct extends AbstractCypherBenchmark {
   def executePlan(threadState: DistinctThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, subscriber)
   }
 }

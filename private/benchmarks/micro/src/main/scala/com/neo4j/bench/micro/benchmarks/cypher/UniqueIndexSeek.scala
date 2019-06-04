@@ -86,8 +86,7 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
     paramsMap.put(PARAM, value)
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(ValueUtils.asMapValue(paramsMap), tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(EXPECTED_VALUE_COUNT, subscriber)
   }
 }

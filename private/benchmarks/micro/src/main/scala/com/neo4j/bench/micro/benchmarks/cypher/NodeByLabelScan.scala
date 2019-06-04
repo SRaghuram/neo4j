@@ -53,8 +53,7 @@ class NodeByLabelScan extends AbstractCypherBenchmark {
   def executePlan(threadState: NodeByLabelScanThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(EXPECTED_ROW_COUNT, subscriber)
   }
 }

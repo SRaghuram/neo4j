@@ -45,7 +45,6 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-
 import org.neo4j.cypher.internal.javacompat.QueryExecutionProvider;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -192,8 +191,7 @@ public class CommercialSecurityModule extends SecurityModule
                         //TODO: This cast here should go away, we should get our hands on a `QueryExecutionEngine`
                         //      and use that instead
                         QueryExecution queryExecution = ((QueryExecutionProvider) result).queryExecution();
-                        queryExecution.request( Long.MAX_VALUE );
-                        queryExecution.await();
+                        queryExecution.consumeAll();
                         tx.success();
                     }
                     catch ( Exception e )

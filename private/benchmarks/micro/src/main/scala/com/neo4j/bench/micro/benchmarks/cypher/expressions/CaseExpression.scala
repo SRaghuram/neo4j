@@ -68,8 +68,7 @@ class CaseExpression extends AbstractCypherBenchmark {
     threadState.paramBuilder.add("x", doubleValue(rngState.rng.nextInt(CaseExpression_size + 1)))
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params = threadState.paramBuilder.build(), tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(CaseExpression.ROWS, subscriber)
   }
 }

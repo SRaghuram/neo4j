@@ -99,8 +99,7 @@ class PartialTop extends AbstractCypherBenchmark {
   def executePlan(threadState: PartialTopThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(PartialTop_limit.toInt, subscriber)
   }
 }

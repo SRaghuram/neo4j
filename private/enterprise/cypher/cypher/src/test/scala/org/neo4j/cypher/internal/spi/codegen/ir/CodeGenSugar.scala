@@ -60,8 +60,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
                                                         prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
-      result.request(Long.MaxValue)
-      result.await()
+      result.consumeAll()
       tx.success()
       result
     } finally {

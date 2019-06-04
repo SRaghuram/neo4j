@@ -64,8 +64,7 @@ class Aggregation extends AbstractCypherBenchmark {
   def executePlan(threadState: AggregationThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, threadState.tx, subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(EXPECTED_ROW_COUNT, subscriber)
   }
 }

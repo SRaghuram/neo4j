@@ -237,8 +237,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
-    result.request(Long.MaxValue)
-    result.await()
+    result.consumeAll()
     assertExpectedRowCount(threadState.expectedRowCount, subscriber)
   }
 }

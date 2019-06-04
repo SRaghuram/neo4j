@@ -299,7 +299,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
-        ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
+        final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
         {
             private AnyValue[] fields;
             @Override

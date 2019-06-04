@@ -142,8 +142,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
                                        prePopulate = prePopulateResults,
                                        subscriber = subscriber)
 
-          result.request(Long.MaxValue)
-          result.await()
+          result.consumeAll()
         } finally {
           context.close(true)
         }
