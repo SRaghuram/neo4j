@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
+import java.util.Optional;
+
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
@@ -102,29 +104,93 @@ public final class CompiledHelpers
         }
     }
 
-    public static Value cachedNodePropertyExists( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey )
+    public static Value cachedNodePropertyExists(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
     {
         long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE )
         {
             return NO_VALUE;
         }
+        else if ( propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
+        {
+            return Values.FALSE;
+        }
         else
         {
-            return Values.booleanValue( dbAccess.hasTxStatePropertyForCachedNodeProperty( nodeId, propertyKey ) );
+            Optional<Boolean> hasTxChanges = dbAccess.hasTxStatePropertyForCachedNodeProperty( nodeId, propertyKey );
+            if ( hasTxChanges.isEmpty() )
+            {
+                Value propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
+                if ( propertyOrNull == null )
+                {
+                    // the cached node property has been invalidated
+                    return Values.booleanValue( dbAccess.nodeHasProperty( nodeId, propertyKey, nodeCursor, propertyCursor ) );
+                }
+                else if ( propertyOrNull == NO_VALUE )
+                {
+                    return Values.FALSE;
+                }
+                else
+                {
+                    return Values.TRUE;
+                }
+            }
+            else
+            {
+                return Values.booleanValue( hasTxChanges.get() );
+            }
         }
     }
 
-    public static Value cachedRelationshipPropertyExists( ExecutionContext ctx, DbAccess dbAccess, int relOffset, int propertyKey )
+    public static Value cachedRelationshipPropertyExists(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
     {
         long relId = ctx.getLongAt( relOffset );
         if ( relId == StatementConstants.NO_SUCH_RELATIONSHIP )
         {
             return NO_VALUE;
         }
+        else if ( propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
+        {
+            return Values.FALSE;
+        }
         else
         {
-            return Values.booleanValue( dbAccess.hasTxStatePropertyForCachedRelationshipProperty( relId, propertyKey ) );
+            Optional<Boolean> hasTxChanges = dbAccess.hasTxStatePropertyForCachedRelationshipProperty( relId, propertyKey );
+            if ( hasTxChanges.isEmpty() )
+            {
+                Value propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
+                if ( propertyOrNull == null )
+                {
+                    // the cached rel property has been invalidated
+                    return Values.booleanValue( dbAccess.relationshipHasProperty( relId, propertyKey, relCursor, propertyCursor ) );
+                }
+                else if ( propertyOrNull == NO_VALUE )
+                {
+                    return Values.FALSE;
+                }
+                else
+                {
+                    return Values.TRUE;
+                }
+            }
+            else
+            {
+                return Values.booleanValue( hasTxChanges.get() );
+            }
         }
     }
 
