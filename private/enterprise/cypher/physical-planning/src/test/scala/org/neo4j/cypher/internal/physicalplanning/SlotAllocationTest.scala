@@ -929,41 +929,5 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     allocations(foreach.id) shouldBe theSameInstanceAs(lhsSlots)
   }
 
-  test("Should fallback on pattern expression") {
-    // given
-    val nbls = NodeByLabelScan("x", LABEL, Set.empty)
-    val patternExpression = PatternExpression(RelationshipsPattern(RelationshipChain(
-      NodePattern(None, Seq(), None)(pos),
-      RelationshipPattern(None, Seq(), None, None, SemanticDirection.BOTH)(pos),
-      NodePattern(None, Seq(), None)(pos)
-    )(pos))(pos))
-    val filter = Selection(Seq(patternExpression), nbls)
-
-    // then
-    a[SlotAllocationFailed] should be thrownBy {
-      // when
-      SlotAllocation.allocateSlots(filter, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS)
-    }
-  }
-
-  test("Should fallback on pattern comprehension") {
-    // given
-    val nbls = NodeByLabelScan("x", LABEL, Set.empty)
-    val relPattern = RelationshipsPattern(RelationshipChain(
-      NodePattern(None, Seq(), None)(pos),
-      RelationshipPattern(None, Seq(), None, None, SemanticDirection.BOTH)(pos),
-      NodePattern(None, Seq(), None)(pos)
-    )(pos))(pos)
-    val projectionExpression = prop("x", "prop")
-    val patternComprehension = PatternComprehension(None, relPattern, None, projectionExpression)(pos, Set.empty)
-
-    val filter = Selection(Seq(patternComprehension), nbls)
-    // then
-    a[SlotAllocationFailed] should be thrownBy {
-      // when
-      SlotAllocation.allocateSlots(filter, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS)
-    }
-  }
-
   def exprVar(offset: Int, name: String): ExpressionVariable = ExpressionVariable(offset, name)
 }
