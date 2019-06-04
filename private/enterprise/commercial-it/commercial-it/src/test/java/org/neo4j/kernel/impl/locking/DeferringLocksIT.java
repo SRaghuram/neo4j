@@ -44,7 +44,7 @@ public class DeferringLocksIT
     private static final String VALUE_2 = "value2";
 
     @Rule
-    public final DbmsRule dbRule = new CommercialDbmsRule().startLazily();
+    public final DbmsRule dbRule = new CommercialDbmsRule().startLazily().withoutSystemGraph();
     @Rule
     public final OtherThreadRule<Void> t2 = new OtherThreadRule<>();
     @Rule
