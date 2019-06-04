@@ -172,6 +172,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing default database when not on system database") {
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the [DatabaseManagementException] thrownBy {
       // WHEN
       execute("SHOW DEFAULT DATABASE")
