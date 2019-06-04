@@ -270,14 +270,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             .withExactVariables("n")
           )
           .withRHS(
-            includeSomewhere.aPlan("LockNodes")
-              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)")
-                .withRows(0)
-                .withExactVariables("s")
-              )
-          )
-          .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
               .containingArgument(":User(name,surname)")
               .withRows(0)
@@ -295,15 +287,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             .containingArgument(":User(name,surname)")
             .withRows(1)
             .withExactVariables("n")
-          )
-          .withRHS(
-            includeSomewhere.aPlan("LockNodes")
-              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)")
-                .withRows(0)
-                .withDBHits(0)
-                .withExactVariables("s")
-              )
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
@@ -339,15 +322,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             .containingArgument(":User(name,surname)")
             .withRows(2)
             .withExactVariables("n")
-          )
-          .withRHS(
-            includeSomewhere.aPlan("LockNodes")
-              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)")
-                .withRows(0)
-                .withDBHits(0)
-                .withExactVariables("s")
-              )
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
@@ -494,14 +468,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             .containingArgument(":User(name,surname)")
             .withRows(1)
             .withExactVariables("n")
-          )
-          .withRHS(
-            includeSomewhere.aPlan("LockNodes")
-              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)")
-                .withRows(0)
-                .withExactVariables("s", "cached[s.name]", "cached[s.surname]", "n")
-              )
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
