@@ -20,6 +20,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -96,26 +97,83 @@ class ExecutionResultTest
     }
 
     @Test
-    void shouldBePossibleToCloseNotFullyVisitedCompiledExecutionResult()
+    void shouldBePossibleToCloseNotFullyVisitedExecutionResult()
     {
         // Given
         createNode();
         createNode();
 
         // When
-        final List<Result.ResultRow> listResult = new ArrayList<>();
-        try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
         {
-            result.accept( row ->
+            final List<Result.ResultRow> listResult = new ArrayList<>();
+            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
             {
-                listResult.add( row );
-                // return false so that no more result rows would be visited
-                return false;
-            } );
-        }
+                result.accept( row ->
+                {
+                    listResult.add( row );
+                    // return false so that no more result rows would be visited
+                    return false;
+                } );
+            }
 
-        // Then
-        assertThat( listResult, hasSize( 1 ) );
+            // Then
+            assertThat( listResult, hasSize( 1 ) );
+        }
+    }
+
+    @Test
+    void shouldBePossibleToCloseNotFullyVisitedReadWriteExecutionResult()
+    {
+        // Given
+        createNode();
+        createNode();
+
+        // When
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED" ) )//TODO MORSEL leaves cursors open
+        {
+            final List<Result.ResultRow> listResult = new ArrayList<>();
+            //This is really a read query but the planner will think of it as a read-write and force it to be
+            //materialized
+            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MERGE (n) RETURN n", runtime ) ) )
+            {
+                result.accept( row ->
+                {
+                    listResult.add( row );
+                    // return false so that no more result rows would be visited
+                    return false;
+                } );
+            }
+
+            // Then
+            assertThat( listResult, hasSize( 1 ) );
+        }
+    }
+
+    @Test
+    void shouldBePossibleToCloseFullyVisitedExecutionResult()
+    {
+        // Given
+        createNode();
+        createNode();
+
+        // When
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
+        {
+            final List<Result.ResultRow> listResult = new ArrayList<>();
+            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+            {
+                result.accept( row ->
+                {
+                    listResult.add( row );
+                    // return false so that no more result rows would be visited
+                    return true;
+                } );
+            }
+
+            // Then
+            assertThat( listResult, hasSize( 2 ) );
+        }
     }
 
     @Test
