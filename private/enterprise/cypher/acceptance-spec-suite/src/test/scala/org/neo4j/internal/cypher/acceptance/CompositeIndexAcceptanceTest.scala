@@ -151,7 +151,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     Seq(
       ("n.name = 'Joe' AND n.surname = 'Soap'", "(equality,equality)", false, false, "", Set(Map("n" -> n1))),
       ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, false, "", Set(Map("n" -> n1))),
-      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", false, true, ".*cache\\[n\\.surname\\] STARTSWITH .*", Set(Map("n" -> n1))),
+      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", false, true, ".*cache\\[n\\.surname\\] STARTS WITH .*", Set(Map("n" -> n1))),
       ("n.name <= 'Je' AND exists(n.surname)", "(range,exists)", false, false, "", Set(Map("n" -> n3))),
       ("exists(n.name) AND n.surname > 'S'", "", true, true, ".*cache\\[n\\.surname\\] > .*", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3))),
       ("exists(n.name) AND exists(n.surname)", "", true, false, "", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
@@ -221,7 +221,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     Seq(
       ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, "", Set(Map("n" -> n1, "s" -> n2))),
-      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", true, ".*cache\\[n\\.surname\\] STARTSWITH .*", Set(Map("n" -> n1, "s" -> n2))),
+      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", true, ".*cache\\[n\\.surname\\] STARTS WITH .*", Set(Map("n" -> n1, "s" -> n2))),
       ("n.name <= 'Je' AND exists(n.surname)", "(range,exists)", false, "", Set(Map("n" -> n3, "s" -> n2))),
     ).foreach {
       case (predicates, seekString, shouldFilter, filterArgument, resultSet) =>
