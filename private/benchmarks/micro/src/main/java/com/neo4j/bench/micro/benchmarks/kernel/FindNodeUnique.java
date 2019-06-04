@@ -28,7 +28,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.IndexOrder;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.IndexReference;

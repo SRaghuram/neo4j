@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryS
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.TextValue
 
 class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
