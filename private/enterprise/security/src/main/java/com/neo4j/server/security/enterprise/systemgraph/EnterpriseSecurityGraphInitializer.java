@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
+import com.neo4j.server.security.enterprise.auth.Segment;
 import org.apache.shiro.authz.SimpleRole;
 
 import java.io.IOException;
@@ -205,24 +206,24 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource() ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.TokenResource() ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
             }
         }
     }

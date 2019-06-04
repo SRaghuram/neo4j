@@ -12,11 +12,8 @@ public class ResourcePrivilege
     private final Action action;
     private final Resource resource;
     private final Segment segment;
-
-    public ResourcePrivilege( Action action, Resource resource ) throws InvalidArgumentsException
-    {
-        this( action, resource, Segment.ALL );
-    }
+    private String dbname;
+    private boolean allDatabases;
 
     public ResourcePrivilege( Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
     {
@@ -39,6 +36,16 @@ public class ResourcePrivilege
     public Segment getSegment()
     {
         return segment;
+    }
+
+    public String getDbName()
+    {
+        return this.dbname;
+    }
+
+    public boolean isAllDatabases()
+    {
+        return allDatabases;
     }
 
     @Override

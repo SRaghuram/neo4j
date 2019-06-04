@@ -152,9 +152,9 @@ class SystemGraphInternalsTest
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
         DatabasePrivilege dbPrivilege1 = new DatabasePrivilege();
-        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
         DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
@@ -202,9 +202,9 @@ class SystemGraphInternalsTest
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
         DatabasePrivilege dbPrivilege1 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
         DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
@@ -219,8 +219,8 @@ class SystemGraphInternalsTest
 
         // Then
         DatabasePrivilege expected = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
         assertThat( realm.getPrivilegesForRoles( Set.of( "custom" ) ), containsInAnyOrder( expected ) );
         assertThat( nbrOfPrivilegeNodes(), equalTo( PRIVILEGE_NODE_COUNT + 2 ) );
         assertThat( nbrOfResourceNodes(), equalTo( RESOURCE_NODE_COUNT ) ); // no new resources added
@@ -232,9 +232,9 @@ class SystemGraphInternalsTest
         // Given
         realm.newRole( "custom" );
         DatabasePrivilege dbPrivilege1 = new DatabasePrivilege();
-        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
         DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
 
         // When
         realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
@@ -257,9 +257,9 @@ class SystemGraphInternalsTest
         // Given
         realm.newRole( "custom" );
         DatabasePrivilege dbPrivilege1 = new DatabasePrivilege();
-        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPrivilege1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
         DatabasePrivilege dbPrivilege2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        dbPrivilege2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
 
         realm.grantPrivilegeToRole( "custom", dbPrivilege1 );
         realm.grantPrivilegeToRole( "custom", dbPrivilege2 );

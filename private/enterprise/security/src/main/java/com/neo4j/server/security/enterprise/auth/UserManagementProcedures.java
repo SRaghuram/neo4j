@@ -180,7 +180,8 @@ public class UserManagementProcedures extends AuthProceduresBase
         DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
         privilege.addPrivilege( new ResourcePrivilege(
                 asAction( action ),
-                Resource.parse( resource, null, null ) )
+                Resource.parse( resource, null, null ),
+                Segment.ALL )
         );
         userManager.grantPrivilegeToRole( roleName, privilege );
     }
@@ -197,7 +198,8 @@ public class UserManagementProcedures extends AuthProceduresBase
         DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
         privilege.addPrivilege( new ResourcePrivilege(
                 asAction( action ),
-                Resource.parse( resource, null, null ) )
+                Resource.parse( resource, null, null ),
+                Segment.ALL )
         );
         userManager.revokePrivilegeFromRole( roleName, privilege );
     }

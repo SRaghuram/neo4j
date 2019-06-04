@@ -59,7 +59,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
         userManager.grantPrivilegeToRole( "custom", dbPriv );
 
         // Then
@@ -84,8 +84,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource() ) );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
         userManager.grantPrivilegeToRole( roleName, dbPriv );
 
         // Then
@@ -94,7 +94,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
         userManager.revokePrivilegeFromRole( roleName, dbPriv );
 
         // Then
@@ -111,7 +111,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource() ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
         userManager.grantPrivilegeToRole( "UserManager", dbPriv );
 
         // Then
@@ -124,7 +124,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
         DatabasePrivilege privilege = new DatabasePrivilege();
-        privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource() ) );
+        privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
 
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )
@@ -306,7 +306,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL )
         );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -321,7 +321,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL )
         );
 
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
@@ -394,7 +394,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL )
         );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
@@ -409,7 +409,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         CommercialLoginContext subject = setupUserAndLogin(
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
-                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource() )
+                new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL )
 
         );
 
@@ -614,7 +614,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         assertEmpty( adminSubject, "CREATE (:A)-[:REL {foo: 1}]->(:B)" );
         CommercialLoginContext subject = setupUserAndLogin(
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource() )
+                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL )
         );
 
         String query = "MATCH (:A)-[r]->(:B) RETURN r.foo";
