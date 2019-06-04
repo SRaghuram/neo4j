@@ -129,7 +129,11 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
         val context = graph.transactionalContext(query = q -> Map.empty)
         try {
           val subscriber = new QuerySubscriberAdapter {
-            override def onField(offset: Int, value: AnyValue): Unit = f(value)
+            override def onField(offset: Int, value: AnyValue): Unit = {
+              if (offset == 0) {
+                f(value)
+              }
+            }
           }
           val result = eengine.execute(q,
                                        EMPTY_MAP,
