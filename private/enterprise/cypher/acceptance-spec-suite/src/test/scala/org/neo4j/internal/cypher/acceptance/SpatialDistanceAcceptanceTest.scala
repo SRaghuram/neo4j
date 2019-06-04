@@ -196,7 +196,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work for points with different aliases") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(pointConfig - Configs.Version3_1,
       """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({x:55, y:12, srid: 4326}), p1) as dist
@@ -205,7 +205,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work for points with and without explicit srid") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(pointConfig - Configs.Version3_1,
       """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({latitude: 12, longitude: 55}), p1) as dist
@@ -223,7 +223,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work for points in same coordinate system") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(pointConfig - Configs.Version3_1,
       """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({latitude: 12, longitude: 55, crs: 'WGS-84'}), p1) as dist
@@ -689,12 +689,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       """.stripMargin
 
     // Then
-    val result = executeWith(distanceConfig, query,
-      planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-        plan should includeSomewhere.aPlan("Filter").containingArgument("distance")
-        plan should includeSomewhere.aPlan("NodeUniqueIndexSeekByRange").containingVariables(":Place(location)").containingArgument("distance")
-      })
-    )
+    val result = executeWith(distanceConfig, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("Filter").containingArgumentRegex("distance.*".r)
+    plan should includeSomewhere.aPlan("NodeUniqueIndexSeekByRange").containingArgumentRegex((":Place\\(location\\) WHERE distance\\(.+?\\) " +  "< " + ".*").r)
 
     result.toList should equal(List(Map("count(p)" -> 100)))
   }
