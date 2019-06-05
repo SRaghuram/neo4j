@@ -7,6 +7,9 @@ package com.neo4j.bench.macro.execution.measurement;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static java.util.stream.Collectors.toList;
 
 public class AggregateMeasurement
 {
@@ -97,4 +100,13 @@ public class AggregateMeasurement
             throw new RuntimeException( "Percentile must be in range [0..100]" );
         }
     }
+
+    public AggregateMeasurement convertUnit( TimeUnit fromTimeUnit, TimeUnit toTimeUnit )
+    {
+        return new AggregateMeasurement(
+                measurements.stream()
+                .map( m -> toTimeUnit.convert( m, fromTimeUnit ) )
+                .collect( toList() ) );
+    }
+
 }

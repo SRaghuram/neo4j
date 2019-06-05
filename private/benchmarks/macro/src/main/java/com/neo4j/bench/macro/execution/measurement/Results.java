@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static com.neo4j.bench.client.Units.toAbbreviation;
 
@@ -29,7 +30,6 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 
 public class Results
 {
@@ -75,10 +75,21 @@ public class Results
 
     public static Results loadFrom( BenchmarkDirectory benchmarkDirectory )
     {
-        return benchmarkDirectory.measurementForks()
+
+        TimeUnit smallestTimeUnit = smallestTimeUnit( benchmarkDirectory );
+
+        List<Long> durations = new ArrayList<>();
+        List<Long> rows = new ArrayList<>();
+        benchmarkDirectory.measurementForks()
                                  .stream()
-                                 .map( f -> loadFrom( f, Results.Phase.MEASUREMENT ) )
-                                 .reduce( Results.empty(), Results::merge );
+                                 .flatMap( f -> streamResults( f, Results.Phase.MEASUREMENT) )
+                                 .forEach( result -> {
+                                     durations.add( result.duration(smallestTimeUnit) );
+                                     rows.add( result.rows() );
+                                 });
+        return new Results( AggregateMeasurement.calculateFrom( durations ),
+                            AggregateMeasurement.calculateFrom( rows ),
+                            smallestTimeUnit );
     }
 
     public static Results loadFrom( ForkDirectory forkDirectory, Phase phase )
@@ -87,40 +98,54 @@ public class Results
         return loadFromFile( resultsFile );
     }
 
-    public static Results empty()
-    {
-        return new Results( new ArrayList<>(),
-                            AggregateMeasurement.createEmpty(),
-                            AggregateMeasurement.createEmpty(),
-                            MICROSECONDS );
-    }
-
     static Results loadFromFile( Path resultsFile )
     {
-        TimeUnit unit = extractUnit( resultsFile );
-        List<Result> results = readResults( resultsFile );
-        return createFromResults( results, unit );
+        TimeUnit timeUnit = extractUnit( resultsFile );
+        List<Long> durations = new ArrayList<>();
+        List<Long> rows = new ArrayList<>();
+        streamResults( resultsFile, timeUnit ).forEach( result -> {
+            durations.add( result.duration() );
+            rows.add( result.rows() );
+        });
+        return new Results(
+                AggregateMeasurement.calculateFrom( durations ),
+                AggregateMeasurement.calculateFrom( rows ),
+                timeUnit );
+    }
+    public static Results empty()
+    {
+        return new Results( AggregateMeasurement.createEmpty(),
+                AggregateMeasurement.createEmpty(),
+                MICROSECONDS );
     }
 
-    private static Results createFromResults( List<Result> results, TimeUnit unit )
+    /* -- time unit manipulation -- */
+
+    private static TimeUnit smallestTimeUnit( BenchmarkDirectory benchmarkDirectory )
     {
-        List<Long> durations = results.stream().map( Result::duration ).collect( toList() );
-        List<Long> rows = results.stream().map( Result::rows ).collect( toList() );
-        return new Results( results,
-                            AggregateMeasurement.calculateFrom( durations ),
-                            AggregateMeasurement.calculateFrom( rows ),
-                            unit );
+        return benchmarkDirectory.measurementForks()
+            .stream()
+            .map( forkDirectory -> forkDirectory.findOrFail( Phase.MEASUREMENT.filename ) )
+            .map( Results::extractUnit )
+            .min(Results::compareTimeUnits)
+            .get();
     }
 
-    private static List<Result> convertResultsUnit( TimeUnit from, TimeUnit to, List<Result> results )
+    private static int compareTimeUnits( TimeUnit tu1, TimeUnit tu2 )
     {
-        return results.stream()
-                      .map( result -> new Result(
-                              result.scheduledStartUtc(),
-                              result.startUtc(),
-                              to.convert( result.duration(), from ),
-                              result.rows() ) )
-                      .collect( toList() );
+        int tu1Index = indexOfValidTimeUnit( tu1 );
+        int tu2Index = indexOfValidTimeUnit( tu2 );
+        return tu1Index - tu2Index;
+    }
+
+    private static int indexOfValidTimeUnit( TimeUnit timeUnit )
+    {
+        int indexOf = VALID_UNITS.indexOf( timeUnit);
+        if ( indexOf < 0 )
+        {
+            throw new IllegalArgumentException( format( "invalid time unit %s, expected one of %s", timeUnit, VALID_UNITS ) );
+        }
+        return indexOf;
     }
 
     private static TimeUnit extractUnit( Path resultsFile )
@@ -137,44 +162,57 @@ public class Results
         }
     }
 
-    private static List<Result> readResults( Path resultsFile )
-    {
-        try ( BufferedReader reader = Files.newBufferedReader( resultsFile ) )
-        {
-            String firstLine = reader.readLine();
-            assertValidHeader( firstLine );
+    /* -- results as streams -- */
 
-            List<Result> results = new ArrayList<>();
-            String line;
-            while ( null != (line = reader.readLine()) )
+    private static Stream<Result> streamResults( ForkDirectory forkDirectory, Phase phase )
+    {
+        Path resultsFile = forkDirectory.findOrFail( phase.filename );
+        TimeUnit fromTimeUnit = extractUnit( resultsFile );
+        return streamResults( resultsFile , fromTimeUnit );
+    }
+
+    private static Stream<Result> streamResults( Path resultsFile, TimeUnit timeUnit )
+    {
+        try
+        {
+            try ( BufferedReader reader = Files.newBufferedReader( resultsFile ) )
             {
-                String[] row = line.split( SEPARATOR );
-                if ( row.length != 4 )
-                {
-                    throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
-                                                        "File   : %s\n" +
-                                                        "Line # : %s\n" +
-                                                        "Line   : %s\n" +
-                                                        "Row    : %s",
-                                                        row.length,
-                                                        resultsFile.toAbsolutePath(),
-                                                        results.size() + 1,
-                                                        line,
-                                                        Arrays.toString( row ) ) );
-                }
-                long scheduledStartUtc = Long.parseLong( row[0] );
-                long startUtc = Long.parseLong( row[1] );
-                long stopUtc = Long.parseLong( row[2] );
-                long rows = Long.parseLong( row[3] );
-                results.add( new Result( scheduledStartUtc, startUtc, stopUtc, rows ) );
+                String firstLine = reader.readLine();
+                assertValidHeader( firstLine );
             }
-            return results;
+
+            return Files.newBufferedReader( resultsFile )
+                .lines()
+                .skip( 1 ) // skip header
+                .map( line -> line.split( SEPARATOR ))
+                .map( row -> {
+                    if ( row.length != 4 )
+                    {
+                        throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
+                                "File   : %s\n" +
+                                "Line # : %s\n" +
+                                "Line   : %s\n" +
+                                "Row    : %s",
+                                row.length,
+                                resultsFile.toAbsolutePath(),
+                                /*results.size() + 1*/1,
+                                /*null*/null,
+                                Arrays.toString( row ) ) );
+                    }
+                    long scheduledStartUtc = Long.parseLong( row[0] );
+                    long startUtc = Long.parseLong( row[1] );
+                    long stopUtc = Long.parseLong( row[2] );
+                    long rows = Long.parseLong( row[3] );
+                    return new Result( scheduledStartUtc, startUtc, stopUtc, timeUnit, rows );
+                });
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( "Error reading results from " + resultsFile.toAbsolutePath(), e );
         }
     }
+
+    /* -- results headers --*/
 
     private static String makeHeader( TimeUnit unit )
     {
@@ -202,48 +240,20 @@ public class Results
         return Units.toTimeUnit( unitString );
     }
 
-    private final List<Result> results;
     private final AggregateMeasurement duration;
     private final AggregateMeasurement rows;
     private final TimeUnit unit;
 
-    private Results( List<Result> results, AggregateMeasurement duration, AggregateMeasurement rows, TimeUnit unit )
+    private Results( AggregateMeasurement duration, AggregateMeasurement rows, TimeUnit unit )
     {
-        this.results = results;
         this.duration = duration;
         this.rows = rows;
         this.unit = unit;
     }
 
-    public Results merge( Results other )
-    {
-        TimeUnit smallestUnit = smallestUnit( this.unit(), other.unit() );
-        List<Result> mergedResults = new ArrayList<>();
-        mergedResults.addAll( convertResultsUnit( this.unit, smallestUnit, this.results ) );
-        mergedResults.addAll( convertResultsUnit( other.unit, smallestUnit, other.results ) );
-        return createFromResults( mergedResults, smallestUnit );
-    }
-
-    public Results convertUnit( TimeUnit newUnit )
-    {
-        return createFromResults( convertResultsUnit( unit, newUnit, results ), newUnit );
-    }
-
-    private static TimeUnit smallestUnit( TimeUnit unit1, TimeUnit unit2 )
-    {
-        int smallestIndex = Math.min( VALID_UNITS.indexOf( unit1 ),
-                                      VALID_UNITS.indexOf( unit2 ) );
-        return VALID_UNITS.get( smallestIndex );
-    }
-
     public TimeUnit unit()
     {
         return unit;
-    }
-
-    public List<Result> results()
-    {
-        return results;
     }
 
     public AggregateMeasurement rows()
@@ -315,5 +325,10 @@ public class Results
         {
             writer.close();
         }
+    }
+
+    public Results convertUnit( TimeUnit toTimeUnit )
+    {
+        return new Results( duration.convertUnit(unit, toTimeUnit), rows, toTimeUnit );
     }
 }

@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public final class Result
 {
@@ -13,13 +14,15 @@ public final class Result
     private final long startUtc;
     private final long duration;
     private final long rows;
+    private final TimeUnit timeUnit;
 
-    public Result( long scheduledStartUtc, long startUtc, long duration, long rows )
+    Result( long scheduledStartUtc, long startUtc, long duration, TimeUnit timeUnit, long rows )
     {
         this.scheduledStartUtc = scheduledStartUtc;
         this.startUtc = startUtc;
         this.duration = duration;
         this.rows = rows;
+        this.timeUnit = timeUnit;
     }
 
     public long scheduledStartUtc()
@@ -35,6 +38,11 @@ public final class Result
     public long duration()
     {
         return duration;
+    }
+
+    public long duration( TimeUnit toTimeUnit )
+    {
+        return toTimeUnit.convert( duration, timeUnit );
     }
 
     public long rows()
