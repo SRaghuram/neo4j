@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -20,12 +21,12 @@ class ProfilerRecordingsTestUtil
     static int recordingCountIn( Path dir, RecordingType recordingType )
     {
         BenchmarkUtil.assertDirectoryExists( dir );
-        try
+        try ( Stream<Path> paths = Files.walk( dir ) )
         {
-            return (int) Files.walk( dir )
-                              .filter( Files::isRegularFile )
-                              .filter( file -> file.toString().endsWith( recordingType.extension() ) )
-                              .count();
+            return (int) paths
+                    .filter( Files::isRegularFile )
+                    .filter( file -> file.toString().endsWith( recordingType.extension() ) )
+                    .count();
         }
         catch ( IOException e )
         {
