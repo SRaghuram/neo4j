@@ -196,10 +196,11 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                           getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY")
                   )
          ),
-         assign(resultBoolean, constant(true))
+         assign(resultBoolean, constant(true)),
+         setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
        )
       },
-      setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+
       load(resultBoolean)
     )
   }
