@@ -68,9 +68,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE USER foo WITH PASSWORD password
-    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspended) => (_, _, _) =>
+    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspendedOptional) => (_, _, _) =>
       // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
       val initialPassword = UTF8.encode(initialStringPassword)
+      val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
 
