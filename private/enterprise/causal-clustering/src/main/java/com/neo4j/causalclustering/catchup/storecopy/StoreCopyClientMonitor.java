@@ -7,6 +7,8 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 public interface StoreCopyClientMonitor
 {
+    void start();
+
     void startReceivingStoreFiles();
 
     void finishReceivingStoreFiles();
@@ -19,8 +21,27 @@ public interface StoreCopyClientMonitor
 
     void finishReceivingTransactions( long endTxId );
 
+    void startRecoveringStore();
+
+    void finishRecoveringStore();
+
+    void startReceivingIndexSnapshots();
+
+    void startReceivingIndexSnapshot( long indexId );
+
+    void finishReceivingIndexSnapshot( long indexId );
+
+    void finishReceivingIndexSnapshots();
+
+    void finish();
+
     class Adapter implements StoreCopyClientMonitor
     {
+        @Override
+        public void start()
+        {   // empty
+        }
+
         @Override
         public void startReceivingStoreFiles()
         {   // empty
@@ -51,5 +72,39 @@ public interface StoreCopyClientMonitor
         {   // empty
         }
 
+        @Override
+        public void startRecoveringStore()
+        {   // empty
+        }
+
+        @Override
+        public void finishRecoveringStore()
+        {   // empty
+        }
+
+        @Override
+        public void startReceivingIndexSnapshots()
+        {   // empty
+        }
+
+        @Override
+        public void startReceivingIndexSnapshot( long indexId )
+        {   // empty
+        }
+
+        @Override
+        public void finishReceivingIndexSnapshot( long indexId )
+        {   // empty
+        }
+
+        @Override
+        public void finishReceivingIndexSnapshots()
+        {   // empty
+        }
+
+        @Override
+        public void finish()
+        {   // empty
+        }
     }
 }

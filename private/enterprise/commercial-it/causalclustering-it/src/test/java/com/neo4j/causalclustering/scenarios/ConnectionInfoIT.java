@@ -64,8 +64,8 @@ class ConnectionInfoIT
             executor.shutdown();
         }
         String expectedPartOfMessage = String.format( "server-name: cannot bind to '%s' with transport ", listenSocketAddress );
-        logProvider.assertContainsMessageContaining( expectedPartOfMessage );
-        userLogProvider.assertContainsMessageContaining( expectedPartOfMessage );
+        logProvider.rawMessageMatcher().assertContains( expectedPartOfMessage );
+        userLogProvider.rawMessageMatcher().assertContains( expectedPartOfMessage );
     }
 
     @SuppressWarnings( "SameParameterValue" )

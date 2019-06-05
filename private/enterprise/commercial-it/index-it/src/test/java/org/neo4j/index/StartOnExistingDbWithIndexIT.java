@@ -40,7 +40,7 @@ public class StartOnExistingDbWithIndexIT
         db = getDatabase( logProvider );
         managementService.shutdown();
 
-        logProvider.assertNoMessagesContaining( "Failed to open index" );
+        logProvider.rawMessageMatcher().assertNotContains( "Failed to open index" );
     }
 
     private GraphDatabaseService prepareDb( Label label, String propertyName, LogProvider logProvider )

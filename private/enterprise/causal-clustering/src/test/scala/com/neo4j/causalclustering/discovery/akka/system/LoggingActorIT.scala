@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.Ar
 import org.neo4j.configuration.Config
 import org.neo4j.logging.{AssertableLogProvider, Level}
 
-
 class LoggingActorIT extends NeoSuite {
 
   "LoggingActor receiving logging messages" when {
@@ -24,9 +23,9 @@ class LoggingActorIT extends NeoSuite {
       "pass warning messages on to Neo logProvider" in new Fixture(Level.WARN) {
 
         withLogging {
-          logProvider.assertNoLogCallContaining("debug test")
-          logProvider.assertNoLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
+          logProvider.rawMessageMatcher().assertNotContains("debug test")
+          logProvider.rawMessageMatcher().assertNotContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
         }
       }
     }
@@ -36,9 +35,10 @@ class LoggingActorIT extends NeoSuite {
       "pass info and warning messages on to Neo logProvider" in new Fixture(Level.INFO) {
 
         withLogging {
-          logProvider.assertNoLogCallContaining("debug test")
-          logProvider.assertContainsLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
+          println( Thread.currentThread().getName )
+          logProvider.rawMessageMatcher().assertNotContains("debug test")
+          logProvider.rawMessageMatcher().assertContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
         }
       }
     }
@@ -48,9 +48,9 @@ class LoggingActorIT extends NeoSuite {
       "pass all messages on to Neo logProvider" in new Fixture(Level.DEBUG) {
 
         withLogging {
-          logProvider.assertContainsLogCallContaining("info test")
-          logProvider.assertContainsLogCallContaining("warning test")
-          logProvider.assertContainsLogCallContaining("debug test")
+          logProvider.rawMessageMatcher().assertContains("info test")
+          logProvider.rawMessageMatcher().assertContains("warning test")
+          logProvider.rawMessageMatcher().assertContains("debug test")
         }
       }
     }

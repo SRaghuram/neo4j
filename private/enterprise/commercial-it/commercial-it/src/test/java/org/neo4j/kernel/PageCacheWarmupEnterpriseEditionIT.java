@@ -218,8 +218,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
 
-        logProvider.assertContainsMessageContaining( "Page cache warmup started." );
-        logProvider.assertContainsMessageContaining( "Page cache warmup completed. %d pages loaded. Duration: %s." );
+        logProvider.rawMessageMatcher().assertContains( "Page cache warmup started." );
+        logProvider.rawMessageMatcher().assertContains( "Page cache warmup completed. %d pages loaded. Duration: %s." );
     }
 
     private void executeBackup( File backupDir ) throws Exception

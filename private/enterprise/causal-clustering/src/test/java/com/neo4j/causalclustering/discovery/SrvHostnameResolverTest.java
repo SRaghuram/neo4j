@@ -88,7 +88,7 @@ public class SrvHostnameResolverTest
         );
 
         // then
-        userLogProvider.assertContainsMessageContaining( "Resolved initial host '%s' to %s" );
+        userLogProvider.rawMessageMatcher().assertContains( "Resolved initial host '%s' to %s" );
     }
 
     @Test
@@ -98,7 +98,7 @@ public class SrvHostnameResolverTest
         resolver.resolve( new AdvertisedSocketAddress( "unknown.com", 0 ) );
 
         // then
-        logProvider.assertContainsMessageContaining( "Failed to resolve srv records for '%s'" );
+        logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
     }
 
     @Test
@@ -108,7 +108,7 @@ public class SrvHostnameResolverTest
         resolver.resolve( new AdvertisedSocketAddress( "emptyrecord.com", 0 ) );
 
         // then
-        logProvider.assertContainsMessageContaining( "Failed to resolve srv records for '%s'" );
+        logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
     }
 
     @Test

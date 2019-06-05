@@ -52,13 +52,13 @@ class MultiDatabaseDiagnosticsLoggingIT
     @Test
     void dumpDefaultDatabaseInformation()
     {
-        provider.assertContainsMessageContaining( "Database: neo4j" );
-        provider.assertContainsMessageContaining( "Version" );
-        provider.assertContainsMessageContaining( "Store files" );
-        provider.assertContainsMessageContaining( "Transaction log" );
-        provider.assertContainsMessageContaining( "Id usage" );
-        provider.assertContainsMessageContaining( "Neostore records" );
-        provider.assertContainsMessageContaining( "Store versions" );
+        provider.rawMessageMatcher().assertContains( "Database: neo4j" );
+        provider.rawMessageMatcher().assertContains( "Version" );
+        provider.rawMessageMatcher().assertContains( "Store files" );
+        provider.rawMessageMatcher().assertContains( "Transaction log" );
+        provider.rawMessageMatcher().assertContains( "Id usage" );
+        provider.rawMessageMatcher().assertContains( "Neostore records" );
+        provider.rawMessageMatcher().assertContains( "Store versions" );
     }
 
     @Test
@@ -70,12 +70,12 @@ class MultiDatabaseDiagnosticsLoggingIT
 
         DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         databaseManager.createDatabase( new DatabaseId( "NewDatabase" ) );
-        provider.assertContainsMessageContaining( "Database: newdatabase" );
-        provider.assertContainsMessageContaining( "Version" );
-        provider.assertContainsMessageContaining( "Store files" );
-        provider.assertContainsMessageContaining( "Transaction log" );
-        provider.assertContainsMessageContaining( "Id usage" );
-        provider.assertContainsMessageContaining( "Neostore records" );
-        provider.assertContainsMessageContaining( "Store versions" );
+        provider.rawMessageMatcher().assertContains( "Database: newdatabase" );
+        provider.rawMessageMatcher().assertContains( "Version" );
+        provider.rawMessageMatcher().assertContains( "Store files" );
+        provider.rawMessageMatcher().assertContains( "Transaction log" );
+        provider.rawMessageMatcher().assertContains( "Id usage" );
+        provider.rawMessageMatcher().assertContains( "Neostore records" );
+        provider.rawMessageMatcher().assertContains( "Store versions" );
     }
 }

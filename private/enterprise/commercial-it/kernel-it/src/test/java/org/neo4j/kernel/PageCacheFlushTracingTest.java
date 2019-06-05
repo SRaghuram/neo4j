@@ -41,6 +41,6 @@ class PageCacheFlushTracingTest
             transaction.success();
         }
         managementService.shutdown();
-        logProvider.assertContainsMessageContaining( "Flushing file" );
+        logProvider.rawMessageMatcher().assertContains( "Flushing file" );
     }
 }

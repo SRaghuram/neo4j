@@ -80,7 +80,7 @@ public class DnsHostnameResolverTest
         resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) );
 
         // then
-        userLogProvider.assertContainsMessageContaining( "Resolved initial host '%s' to %s" );
+        userLogProvider.rawMessageMatcher().assertContains( "Resolved initial host '%s' to %s" );
     }
 
     @Test
@@ -90,7 +90,7 @@ public class DnsHostnameResolverTest
         resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) );
 
         // then
-        logProvider.assertContainsMessageContaining( "Failed to resolve host '%s'" );
+        logProvider.rawMessageMatcher().assertContains( "Failed to resolve host '%s'" );
     }
 
     @Test

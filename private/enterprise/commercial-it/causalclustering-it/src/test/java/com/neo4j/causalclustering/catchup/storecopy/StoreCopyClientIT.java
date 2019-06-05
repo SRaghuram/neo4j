@@ -344,8 +344,8 @@ class StoreCopyClientIT
         assertThrows( StoreCopyFailedException.class, () ->
                 subject.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
-        assertableLogProvider.assertContainsExactlyOneMessageMatching( startsWith( "Unable to resolve address for" ) );
-        assertableLogProvider.assertLogStringContains( catchupAddressResolutionException.getMessage() );
+        assertableLogProvider.rawMessageMatcher().assertContainsSingle( startsWith( "Unable to resolve address for" ) );
+        assertableLogProvider.internalToStringMessageMatcher().assertContains( catchupAddressResolutionException.getMessage() );
     }
 
     private File relative( String filename )

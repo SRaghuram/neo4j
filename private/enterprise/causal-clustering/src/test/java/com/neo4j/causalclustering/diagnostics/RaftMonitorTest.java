@@ -50,8 +50,8 @@ class RaftMonitorTest
         raftBinderMonitor.boundToRaft( databaseId, raftId );
 
         var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", databaseId.name(), raftId.uuid() ) );
-        user.assertContainsExactlyOneMessageMatching( expected );
-        debug.assertContainsExactlyOneMessageMatching( expected );
+        user.rawMessageMatcher().assertContainsSingle( expected );
+        debug.rawMessageMatcher().assertContainsSingle( expected );
     }
 
     @Test
