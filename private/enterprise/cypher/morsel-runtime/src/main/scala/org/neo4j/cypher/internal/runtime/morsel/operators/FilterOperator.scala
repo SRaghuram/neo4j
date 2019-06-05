@@ -5,15 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation.{condition, equal, trueValue, block}
+import org.neo4j.codegen.api.IntermediateRepresentation.{block, condition, equal, trueValue}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.Values
 
@@ -51,7 +53,9 @@ class FilterOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate: () => IntermediateExpression) extends OperatorTaskTemplate {
+class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
+                             override val id: Id,
+                             generatePredicate: () => IntermediateExpression) extends OperatorTaskTemplate {
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
@@ -65,7 +69,10 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, generatePredicate:
     predicate = generatePredicate()
 
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
-      inner.genOperate
+      block(
+        profileRow(id),
+        inner.genOperate
+      )
     )
   }
 

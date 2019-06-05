@@ -68,7 +68,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       output match {
         case ProduceResultOutput(p) =>
           innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
-          val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)(expressionCompiler)
+          val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(expressionCompiler)
           (template, List(p), NoOutput)
 
         case unhandled =>
@@ -81,10 +81,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
       reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
 
-          case plans.AllNodesScan(nodeVariableName, _) =>
+          case plan@plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
             val newTemplate =
               new SingleThreadedAllNodeScanTaskTemplate(acc.template,
+                                                        plan.id,
                                                         innermostTemplate,
                                                         nodeVariableName,
                                                         slots.getLongOffsetFor(nodeVariableName),
@@ -93,7 +94,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
+          case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
             val toOffset = slots.getLongOffsetFor(to)
@@ -110,6 +111,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               case Right(name: String) => name
             }
             val newTemplate = new ExpandAllOperatorTaskTemplate(acc.template,
+                                                                plan.id,
                                                                 innermostTemplate,
                                                                 fromOffset,
                                                                 relOffset,
@@ -121,16 +123,16 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plans.Selection(predicate, _) =>
+          case plan@plans.Selection(predicate, _) =>
             val compiledPredicate = () => expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
               return (None, middlePlans, acc.unhandledOutput)
             )
             acc.copy(
-              template = new FilterOperatorTemplate(acc.template, compiledPredicate),
+              template = new FilterOperatorTemplate(acc.template, plan.id, compiledPredicate),
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plans.Input(nodes, variables, nullable) =>
-            val newTemplate = new InputOperatorTemplate(acc.template, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)),
+          case plan@plans.Input(nodes, variables, nullable) =>
+            val newTemplate = new InputOperatorTemplate(acc.template, plan.id, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)),
                                                         variables.map(v => slots.getReferenceOffsetFor(v)), nullable)(expressionCompiler)
             acc.copy(template = newTemplate,
                      fusedPlans = nextPlan :: acc.fusedPlans)

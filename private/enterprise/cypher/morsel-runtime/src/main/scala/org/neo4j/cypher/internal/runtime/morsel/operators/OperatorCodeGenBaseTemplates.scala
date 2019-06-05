@@ -11,14 +11,16 @@ import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.values.AnyValue
 
@@ -58,12 +60,86 @@ object ContinuableOperatorTaskWithMorselGenerator {
 
 }
 
+/**
+  * We need to specialize this because we don't have support for compiling try-finally.
+  */
+trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
+  override def operateWithProfile(output: MorselExecutionContext,
+                                  context: QueryContext,
+                                  state: QueryState,
+                                  resources: QueryResources,
+                                  queryProfiler: QueryProfiler): Unit = {
+    initializeProfileEvents(queryProfiler)
+    try {
+      compiledOperate(output, context, state, resources, queryProfiler)
+    } finally {
+      closeProfileEvents()
+    }
+  }
+
+  /**
+    * Generated code that initializes the profile events.
+    */
+  def initializeProfileEvents(queryProfiler: QueryProfiler): Unit
+
+  /**
+    * Generated code that executes the operator.
+    */
+  @throws[Exception]
+  def compiledOperate(output: MorselExecutionContext,
+                      context: QueryContext,
+                      state: QueryState,
+                      resources: QueryResources,
+                      queryProfiler: QueryProfiler): Unit
+
+  /**
+    * Generated code that closes all events for profiling.
+    */
+  def closeProfileEvents(): Unit
+
+  override def operate(output: MorselExecutionContext,
+                       context: QueryContext,
+                       state: QueryState,
+                       resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
+
+  override def workIdentity: WorkIdentity = throw new IllegalStateException("Fused operators do not have a single WorkIdentity.")
+
+}
+
 trait OperatorTaskTemplate {
-  def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
+  /**
+    * The operator template that this template is wrapping around, or `null`.
+    */
+  def inner: OperatorTaskTemplate
+
+  /**
+    * ID of the Logical plan of this template.
+    */
+  def id: Id
+
+  def genClassDeclaration(packageName: String, className: String): ClassDeclaration[CompiledTask] = {
     throw new InternalException("Illegal start operator template")
   }
 
   def genInit: IntermediateRepresentation = noop()
+
+  def genProfileEventFields: Seq[Field] = {
+    field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x) +: inner.genProfileEventFields
+  }
+
+  def genInitializeProfileEvents: IntermediateRepresentation = {
+    block(
+      setField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x),
+        invoke(QUERY_PROFILER, method[QueryProfiler, OperatorProfileEvent, Int, Boolean]("executeOperator"), constant(id.x), constant(false))),
+      inner.genInitializeProfileEvents)
+  }
+
+  def genCloseProfileEvents: IntermediateRepresentation = {
+    block(
+      invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("close")),
+      inner.genCloseProfileEvents
+    )
+  }
 
   // TODO: Make separate genOperate and genOperateSingleRow methods to clarify the distinction
   //       between streaming (loop over the whole output morsel) and stateless (processing of single row inlined into outer loop) usage
@@ -72,7 +148,9 @@ trait OperatorTaskTemplate {
     * {{{
     *     def operate(output: MorselExecutionContext,
     *                 context: QueryContext,
-    *                 state: QueryState, resources: QueryResources): Unit
+    *                 state: QueryState,
+    *                 resources: QueryResources,
+    *                 queryProfiler: QueryProfiler): Unit
     * }}}
     */
   def genOperate: IntermediateRepresentation
@@ -94,9 +172,8 @@ trait OperatorTaskTemplate {
     *   override def closeCursors(resources: QueryResources): Unit
     * }}}
     */
-  def genCloseCursors: IntermediateRepresentation
+  def genCloseCursors: IntermediateRepresentation //FIXME recursive calls are missing
 }
-
 
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   import IntermediateRepresentation._
@@ -106,22 +183,29 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 
   // TODO: Use methods of actual interface to generate declaration?
-  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[ContinuableOperatorTaskWithMorsel] = {
+  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[CompiledTask] = {
 
-    ClassDeclaration[ContinuableOperatorTaskWithMorsel](packageName, className,
+    ClassDeclaration[CompiledTask](packageName, className,
                                                         extendsClass = None,
-                                                        implementsInterfaces =  Seq(typeRefOf[ContinuableOperatorTaskWithMorsel]),
+                                                        implementsInterfaces =  Seq(typeRefOf[CompiledTask]),
                                                         constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER,
                                                                                     INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
                                                         initializationCode = genInit,
                                                         methods = Seq(
-        MethodDeclaration("operate",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+        MethodDeclaration("initializeProfileEvents",
+                          owner = typeRefOf[CompiledTask],
+                          returnType = typeRefOf[Unit],
+                          parameters = Seq(param[QueryProfiler]("queryProfiler")),
+                          body = genInitializeProfileEvents
+        ),
+        MethodDeclaration("compiledOperate",
+                          owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],
                           Seq(param[MorselExecutionContext]("context"),
                               param[QueryContext]("dbAccess"),
                               param[QueryState]("state"),
-                              param[QueryResources]("resources")
+                              param[QueryResources]("resources"),
+                              param[QueryProfiler]("queryProfiler")
                           ),
                           body = genOperate,
                           genLocalVariables = () => {
@@ -141,41 +225,41 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           },
                           parameterizedWith = None, throws = Some(typeRefOf[Exception])
         ),
+        MethodDeclaration("closeProfileEvents",
+                          owner = typeRefOf[CompiledTask],
+                          returnType = typeRefOf[Unit],
+                          parameters = Seq.empty,
+                          body = genCloseProfileEvents
+        ),
         MethodDeclaration("canContinue",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Boolean],
                           parameters = Seq.empty,
                           body = genCanContinue.getOrElse(falseValue)
         ),
         MethodDeclaration("closeCursors",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],
                           parameters = Seq(QUERY_RESOURCE_PARAMETER),
                           body = genCloseCursors,
                           genLocalVariables = () => Seq(CURSOR_POOL_V)
         ),
-        MethodDeclaration("workIdentity",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
-                          returnType = typeRefOf[WorkIdentity],
-                          parameters = Seq.empty,
-                          body = fail(newInstance(constructor[IllegalStateException, String], constant("Fused operators do not have a single WorkIdentity.")))
-        ),
         // This is only needed because we extend an abstract scala class containing `val dataRead`
         MethodDeclaration("dataRead",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Read],
                           parameters = Seq.empty,
                           body = loadField(DATA_READ)
         ),
         // This is only needed because we extend an abstract scala class containing `val inputMorsel`
         MethodDeclaration("inputMorsel",
-                          owner = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[MorselExecutionContext],
                           parameters = Seq.empty,
                           body = loadField(INPUT_MORSEL)
         )
       ),
-      genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ genFields) // NOTE: This has to be called after genOperate!
+      genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ genFields ++ genProfileEventFields) // NOTE: This has to be called after genOperate!
   }
 }
 
@@ -183,6 +267,16 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+
+  override def inner: OperatorTaskTemplate = null
+
+  override val id: Id = Id.INVALID_ID
+
+  override def genInitializeProfileEvents: IntermediateRepresentation = noop()
+
+  override def genProfileEventFields: Seq[Field] = Seq.empty
+
+  override def genCloseProfileEvents: IntermediateRepresentation = noop()
 
   override def genOperate: IntermediateRepresentation = {
     if (shouldWriteToContext) {

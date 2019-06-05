@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -151,7 +152,10 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns: Seq[String], slots: SlotConfiguration)
+class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                        override val id: Id,
+                                        columns: Seq[String],
+                                        slots: SlotConfiguration)
                                        (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
@@ -234,6 +238,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
       project,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
       assign(SERVED, add(load(SERVED), constant(1L))),
+      profileRow(id),
       inner.genOperate)
   }
 

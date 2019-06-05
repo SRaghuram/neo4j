@@ -206,7 +206,6 @@ trait OperatorTask extends HasWorkIdentity {
     }
   }
 
-  @throws[Exception]
   def operate(output: MorselExecutionContext,
               context: QueryContext,
               state: QueryState,

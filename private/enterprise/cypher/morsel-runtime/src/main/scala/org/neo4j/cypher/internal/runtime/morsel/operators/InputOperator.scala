@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNoValue
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.AnyValue
@@ -112,7 +113,8 @@ class MutatingInputCursor(input: InputDataStream) {
     }
 }
 
-class InputOperatorTemplate(inner: OperatorTaskTemplate,
+class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
+                            override val id: Id,
                             innermost: DelegateOperatorTaskTemplate,
                             nodeOffsets: Array[Int],
                             refOffsets: Array[Int],
@@ -169,6 +171,7 @@ class InputOperatorTemplate(inner: OperatorTaskTemplate,
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
+          profileRow(id),
           inner.genOperate,
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))
           )

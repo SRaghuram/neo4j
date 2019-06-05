@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
 import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
 import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor, TokenRead}
@@ -115,6 +116,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 }
 
 class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                    id: Id,
                                     innermost: DelegateOperatorTaskTemplate,
                                     fromOffset: Int,
                                     relOffset: Int,
@@ -122,7 +124,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     dir: SemanticDirection,
                                     types: Array[Int],
                                     missingTypes: Array[String])
-                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
@@ -246,6 +248,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
+        profileRow(id),
         inner.genOperate,
         setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
       )

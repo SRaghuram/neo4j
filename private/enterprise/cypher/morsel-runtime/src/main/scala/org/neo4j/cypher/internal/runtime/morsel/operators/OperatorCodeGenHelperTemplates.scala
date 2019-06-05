@@ -7,7 +7,9 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.execution.{CursorPool, CursorPools, FlowControl, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -37,6 +39,7 @@ object OperatorCodeGenHelperTemplates {
   val INNER_LOOP: InstanceField = field[Boolean]("innerLoop", constant(false))
 
   // IntermediateRepresentation code
+  val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
   val QUERY_STATE: IntermediateRepresentation = load("state")
   val QUERY_RESOURCES: IntermediateRepresentation = load("resources")
   val CURSOR_POOL_V: LocalVariable =
@@ -104,4 +107,9 @@ object OperatorCodeGenHelperTemplates {
   def cursorNext[CURSOR](cursor: IntermediateRepresentation)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
     invoke(cursor, method[CURSOR, Boolean]("next"))
 
+
+  // Profiling
+  def profileRow(id: Id): IntermediateRepresentation = {
+    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("row"))
+  }
 }

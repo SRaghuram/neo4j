@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
 
 class AllNodeScanOperator(val workIdentity: WorkIdentity,
@@ -152,12 +153,13 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
 }
 
-class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
+class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
+                                            id: Id,
                                             val innermost: DelegateOperatorTaskTemplate,
                                             val nodeVarName: String,
                                             val offset: Int,
                                             val argumentSize: SlotConfiguration.Size)
-                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, innermost, codeGen) {
+                                           (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
@@ -215,6 +217,7 @@ class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
+        profileRow(id),
         inner.genOperate,
         setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField)))
         )

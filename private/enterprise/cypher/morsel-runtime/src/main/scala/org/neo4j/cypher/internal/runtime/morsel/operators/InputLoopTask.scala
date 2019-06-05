@@ -10,6 +10,7 @@ import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
   * Operator task which takes an input morsel and produces one or many output rows
@@ -88,7 +89,8 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   }
 }
 
-abstract class InputLoopTaskTemplate(inner: OperatorTaskTemplate,
+abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
+                                     override val id: Id,
                                      innermost: DelegateOperatorTaskTemplate,
                                      codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
