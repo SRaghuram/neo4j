@@ -346,6 +346,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)))
 
+    // SHOW DEFAULT DATABASE
+    case ShowDefaultDatabase() => (_, _, _) =>
+      SystemCommandExecutionPlan("ShowDefaultDatabase", normalExecutionEngine,
+        "MATCH (d:Database {default: true}) RETURN d.name as name, d.status as status", VirtualValues.EMPTY_MAP)
+
     // CREATE DATABASE foo
     case CreateDatabase(normalizedName) => (_, _, _) =>
       val dbName = normalizedName.name
