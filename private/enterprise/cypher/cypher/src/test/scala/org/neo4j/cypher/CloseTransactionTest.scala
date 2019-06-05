@@ -65,11 +65,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime return 1").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime return 1").cancel()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when closing the result for a profile query - runtime=$runtime") {
@@ -88,16 +83,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      engine.execute(s"CYPHER runtime=$runtime profile return 1").cancel()
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute("PROFILE return 1").cancel()
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
       engine.execute("PROFILE return 1").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
@@ -110,11 +95,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
       // when
       db.execute(s"CYPHER runtime=$runtime explain return 1").close()
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime explain return 1").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -152,11 +132,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").cancel()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when closing the result for a profile procedure query - runtime=$runtime") {
@@ -169,11 +144,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
       // when
       db.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").close()
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -200,11 +170,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").cancel()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").cancel()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when consuming the whole iterator for a regular query - runtime=$runtime") {
@@ -215,11 +180,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       import scala.collection.JavaConverters._
       // when
       db.execute(s"CYPHER runtime=$runtime return 1").asScala.length
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime return 1").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -244,11 +204,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime profile return 1").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime profile return 1").consumeAll()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when consuming the whole iterator for an explain query - runtime=$runtime") {
@@ -259,11 +214,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       import scala.collection.JavaConverters._
       // when
       db.execute(s"CYPHER runtime=$runtime explain return 1").asScala.length
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime explain return 1").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -291,11 +241,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").consumeAll()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when consuming the whole iterator for a profile procedure query - runtime=$runtime") {
@@ -316,11 +261,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       engine.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").consumeAll()
-      // then
-      txBridge(service).hasTransaction shouldBe false
     }
 
     test(s"should not leak transaction when consuming the whole iterator for an explain procedure query - runtime=$runtime") {
@@ -334,11 +274,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       import scala.collection.JavaConverters._
       // when
       db.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").asScala.length
-      // then
-      txBridge(service).hasTransaction shouldBe false
-
-      // when
-      engine.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").consumeAll()
       // then
       txBridge(service).hasTransaction shouldBe false
 
