@@ -39,7 +39,7 @@ class DataGeneratorDataCharacteristicsIT
     @Inject
     private TestDirectory temporaryFolder;
 
-    private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfig.empty();
+    private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfig.withDefaults();
 
     private static final double TOLERANCE = 0.05;
     private static final long RNG_SEED = 42;

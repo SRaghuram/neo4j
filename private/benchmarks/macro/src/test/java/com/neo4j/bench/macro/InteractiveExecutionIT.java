@@ -51,10 +51,11 @@ class InteractiveExecutionIT
         try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
-            Store store = createEmptyStoreFor( workload );
 
             Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
             Neo4jConfig.withDefaults().writeToFile( neo4jConfigFile );
+
+            Store store = createEmptyStoreFor( workload, neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()
                     .withNeo4jConfig( neo4jConfigFile )
                     .withForks( 0 )
@@ -78,11 +79,10 @@ class InteractiveExecutionIT
     }
 
     // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload ) throws IOException
+    private Store createEmptyStoreFor( Workload workload, Path neo4jConfigFile ) throws IOException
     {
         Schema schema = workload.expectedSchema();
         Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
-        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
         EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
         return store;
     }

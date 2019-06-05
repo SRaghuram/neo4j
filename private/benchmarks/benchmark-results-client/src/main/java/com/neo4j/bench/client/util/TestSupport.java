@@ -12,11 +12,14 @@ import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+
 public class TestSupport
 {
     public static Store createEmptyStore( Path storeDir )
     {
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDir.toFile() )
+                .setConfig( online_backup_enabled,"false" )
                 .build();
         managementService.shutdown();
         return Store.createFrom( storeDir );

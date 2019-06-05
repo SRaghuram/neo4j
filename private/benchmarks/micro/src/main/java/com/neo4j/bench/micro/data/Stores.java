@@ -219,15 +219,15 @@ public class Stores
         Path topLevelStoreDir = randomTopLevelStoreDir();
         tryMkDir( topLevelStoreDir );
 
-        // will create an empty database directory under top level
-        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() ).build()
-                .shutdown();
-
         // store Neo4j config every time, even if DataGeneratorConfig is identical -- they are retrieved later
         Path neo4jConfig = writeNeo4jConfig( config.neo4jConfig(), benchmarkName, topLevelStoreDir );
 
         System.out.println( "Generating store in: " + topLevelStoreDir.toAbsolutePath() );
         System.out.println( config );
+
+        // will create an empty database directory under top level
+        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() ).setConfigRaw( config.neo4jConfig().toMap() ).build().shutdown();
+
         try
         {
             new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfig );

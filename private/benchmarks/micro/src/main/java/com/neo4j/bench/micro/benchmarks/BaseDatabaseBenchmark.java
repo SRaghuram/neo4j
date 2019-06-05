@@ -6,16 +6,16 @@
 package com.neo4j.bench.micro.benchmarks;
 
 import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.micro.JMHResultUtil;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.JMHResultUtil;
 import com.neo4j.bench.micro.data.Augmenterizer;
+import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.Stores;
-import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;

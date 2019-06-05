@@ -225,10 +225,9 @@ class RunWorkloadCommandIT
         {
             Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
             Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
-            Store store = createEmptyStoreFor( workload );
-
             Path neo4jConfiguration = createTempFilePath( temporaryFolder.absolutePath() );
             Neo4jConfig.withDefaults().writeToFile( neo4jConfiguration );
+            Store store = createEmptyStoreFor( workload, neo4jConfiguration );
             Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );
@@ -317,12 +316,11 @@ class RunWorkloadCommandIT
     }
 
     // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload ) throws IOException
+    private Store createEmptyStoreFor( Workload workload, Path neo4jConfiguration ) throws IOException
     {
         Schema schema = workload.expectedSchema();
         Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
-        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
+        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfiguration, schema );
         return store;
     }
 
