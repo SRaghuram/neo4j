@@ -110,8 +110,9 @@ class WorkerManagerTest extends CypherFunSuite {
     val workerManager = new RandomWorkerManager()
 
     // when
-    workerManager.randomWorker().sleeper.reportStartWorkUnit()
-    workerManager.randomWorker().sleeper.reportStopWorkUnit()
+    val worker = workerManager.randomWorker()
+    worker.sleeper.reportStartWorkUnit()
+    worker.sleeper.reportStopWorkUnit()
 
     // then
     workerManager.assertAllReleased()
