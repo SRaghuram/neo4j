@@ -249,7 +249,7 @@ class RebuildFromLogs
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
             DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders );
             FullCheck fullCheck = new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
-                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
+                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), false );
 
             ConsistencySummaryStatistics summaryStatistics =
                     fullCheck.execute( stores, FormattedLog.toOutputStream( System.err ) );
@@ -257,7 +257,6 @@ class RebuildFromLogs
             {
                 throw new InconsistentStoreException( summaryStatistics );
             }
-
         }
 
         @Override
