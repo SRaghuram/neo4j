@@ -868,6 +868,169 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct traverse privilege different databases") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH bar NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantTraverse().role("custom").database("foo").map,
+      grantTraverse().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantTraverse().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("bar").map
+    ))
+  }
+
+  test("should revoke correct MATCH privilege different label qualifier") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("bar").map,
+      grantTraverse().database("foo").role("custom").label("A").map,
+      grantRead().database("foo").role("custom").property("bar").label("A").map,
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("bar").map,
+      grantTraverse().database("foo").role("custom").label("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").label("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").label("B").map,
+      grantRead().database("foo").role("custom").property("bar").label("B").map
+    ))
+  }
+
+  test("should revoke correct MATCH privilege different property") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH (a) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH (b) ON GRAPH foo NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("a").map,
+      grantRead().database("foo").role("custom").property("b").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (a) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("b").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("b").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").map // TODO: this should be an empty set
+    ))
+  }
+
+  test("should revoke correct MATCH privilege different databases") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH bar NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantRead().role("custom").map,
+      grantTraverse().role("custom").database("foo").map,
+      grantRead().role("custom").database("foo").map,
+      grantTraverse().role("custom").database("bar").map,
+      grantRead().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map,
+      grantRead().role("custom").map,
+      grantTraverse().role("custom").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").database("bar").map,
+      grantRead().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").database("bar").map,
+      grantRead().role("custom").database("bar").map
+    ))
+  }
+
   test("should revoke correct traverse and read privileges from different MATCH privileges") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -916,50 +1079,74 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  test("should revoke correct traverse privilege different databases") {
+  test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH bar NODES * (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH (a) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT READ  (b) ON GRAPH foo NODES * (*) TO custom")
+
+    execute("GRANT TRAVERSE  ON GRAPH foo NODES A (*) TO custom")
+    execute("GRANT MATCH (a) ON GRAPH foo NODES A (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").map,
-      grantTraverse().role("custom").database("foo").map,
-      grantTraverse().role("custom").database("bar").map
+      grantTraverse().role("custom").database("foo").map, // From both MATCH on NODES *
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("a").map,
+      grantRead().database("foo").role("custom").property("b").map,
+
+      grantTraverse().role("custom").database("foo").label("A").map, // From both MATCH and TRAVERSE on NODES A
+      grantRead().database("foo").role("custom").property("a").label("A").map
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").map,
-      grantTraverse().role("custom").database("bar").map
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("a").map,
+
+      grantTraverse().role("custom").database("foo").label("A").map,
+      grantRead().database("foo").role("custom").property("a").label("A").map
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("bar").map
+      grantTraverse().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").map,
+      grantRead().database("foo").role("custom").property("a").map,
+
+      grantTraverse().role("custom").database("foo").label("A").map
     ))
   }
+
   test("should fail revoke privilege from non-existent role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
     the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
     } should have message "The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *."
+    // should accept both above message and "The role 'wrongRole' does not exist."
+
+    // WHEN
+    val e = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
+    }
+    // THEN
+    e.getMessage should include("The role 'wrongRole' does not have the specified privilege")
     // should accept both above message and "The role 'wrongRole' does not exist."
   }
 
@@ -970,12 +1157,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE role")
     execute("CREATE DATABASE foo")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    val e = the [InvalidArgumentsException] thrownBy {
+    val errorRead = the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role")
     }
-    e.getMessage should include("The role 'role' does not have the specified privilege")
+    // THEN
+    errorRead.getMessage should include("The role 'role' does not have the specified privilege")
+
+    // WHEN
+    val errorMatch = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM role")
+    }
+    // THEN
+    errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
   }
 
   test("should fail when revoking traversal privilege with missing database") {
@@ -996,6 +1192,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
     } should have message "The privilege 'read * ON GRAPH foo NODES *' does not exist."
+  }
+
+  test("should fail when revoking MATCH privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    val e = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+    }
+    // THEN
+    e.getMessage should (be("The privilege 'find  ON GRAPH foo NODES *' does not exist.") or
+      be("The privilege 'read * ON GRAPH foo NODES *' does not exist."))
   }
 
   test("should fail when revoking traversal privilege to custom role when not on system database") {
