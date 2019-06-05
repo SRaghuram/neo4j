@@ -82,7 +82,7 @@ class OperationProgressMonitorTest
         }
 
         // then
-        logProvider.assertContainsLogCallContaining( "Request timed out" );
+        logProvider.rawMessageMatcher().assertContains( "Request timed out" );
         verify( future, atLeast( 3 ) ).get( anyLong(), any() );
     }
 
