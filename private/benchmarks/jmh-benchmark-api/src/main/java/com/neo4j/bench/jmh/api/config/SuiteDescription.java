@@ -26,11 +26,11 @@ import static java.util.stream.Collectors.toSet;
  */
 public class SuiteDescription
 {
-    public static SuiteDescription fromAnnotations( Annotations annotations, Validation validation )
+    public static SuiteDescription fromAnnotations( BenchmarksFinder benchmarksFinder, Validation validation )
     {
-        Map<String,BenchmarkDescription> benchmarkDescriptions = annotations.getBenchmarks().stream()
-                                                                            .map( clazz -> BenchmarkDescription.of( clazz, validation, annotations ) )
-                                                                            .collect( toMap( BenchmarkDescription::className, identity() ) );
+        Map<String,BenchmarkDescription> benchmarkDescriptions = benchmarksFinder.getBenchmarks().stream()
+                                                                                 .map( clazz -> BenchmarkDescription.of( clazz, validation, benchmarksFinder ) )
+                                                                                 .collect( toMap( BenchmarkDescription::className, identity() ) );
         return create( benchmarkDescriptions, validation );
     }
 

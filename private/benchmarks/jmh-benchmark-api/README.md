@@ -1,5 +1,6 @@
 == Backlog
 
+- Turn this README into instructions
 - Improve / Rewrite Config File
   - use a nested format (e.g. JSON) to improve readability / simplify parsing and generation
   - allow configuration of per benchmark thread counts

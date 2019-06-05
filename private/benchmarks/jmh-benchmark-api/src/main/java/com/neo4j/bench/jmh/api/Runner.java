@@ -17,8 +17,8 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.jmh.api.config.Annotations;
-import com.neo4j.bench.jmh.api.config.AnnotationsValidator.AnnotationsValidationResult;
+import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
+import com.neo4j.bench.jmh.api.config.BenchmarksValidator.BenchmarkValidationResult;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -68,12 +68,12 @@ public abstract class Runner
 {
     public static SuiteDescription createSuiteDescriptionFor( String packageName, Path benchConfigFile )
     {
-        Annotations annotations = new Annotations( packageName );
-        AnnotationsValidationResult annotationsValidationResult = annotations.validate();
-        AnnotationsValidationResult.assertValid( annotationsValidationResult );
+        BenchmarksFinder benchmarksFinder = new BenchmarksFinder( packageName );
+        BenchmarkValidationResult benchmarkValidationResult = benchmarksFinder.validate();
+        BenchmarkValidationResult.assertValid( benchmarkValidationResult );
 
         Validation validation = new Validation();
-        SuiteDescription defaultBenchmarks = SuiteDescription.fromAnnotations( annotations, validation );
+        SuiteDescription defaultBenchmarks = SuiteDescription.fromAnnotations( benchmarksFinder, validation );
         assertValid( validation );
 
         SuiteDescription finalBenchmarks = (benchConfigFile == null)
@@ -82,7 +82,7 @@ public abstract class Runner
                                            // config file provided, execute exact contents of config file
                                            : fromConfig(
                                                    defaultBenchmarks,
-                                                   fromFile( benchConfigFile, validation, annotations ),
+                                                   fromFile( benchConfigFile, validation, benchmarksFinder ),
                                                    validation );
         assertValid( validation );
         return finalBenchmarks;
@@ -97,13 +97,13 @@ public abstract class Runner
     {
         String packageName = benchmarkClass.getPackage().getName();
 
-        Annotations annotations = new Annotations( packageName );
-        AnnotationsValidationResult annotationsValidationResult = annotations.validate();
-        AnnotationsValidationResult.assertValid( annotationsValidationResult );
+        BenchmarksFinder benchmarksFinder = new BenchmarksFinder( packageName );
+        BenchmarkValidationResult benchmarkValidationResult = benchmarksFinder.validate();
+        BenchmarkValidationResult.assertValid( benchmarkValidationResult );
 
         Validation validation = new Validation();
         // force enable the benchmark, in case it is disabled by default
-        BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, annotations ).copyAndEnable();
+        BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, benchmarksFinder ).copyAndEnable();
         assertValid( validation );
         if ( methods != null && methods.length != 0 )
         {

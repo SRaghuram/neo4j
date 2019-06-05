@@ -305,10 +305,10 @@ public class BenchmarkDescription
 
     // FACTORY METHODS
 
-    public static BenchmarkDescription of( Class clazz, Validation validation, Annotations annotations )
+    public static BenchmarkDescription of( Class clazz, Validation validation, BenchmarksFinder benchmarksFinder )
     {
-        Map<String,BenchmarkParamDescription> parameters = annotations.getParamFieldsFor( clazz ).stream()
-                                                                      .collect( toMap(
+        Map<String,BenchmarkParamDescription> parameters = benchmarksFinder.getParamFieldsFor( clazz ).stream()
+                                                                           .collect( toMap(
                                                                               field -> simplifyParamName( field.getName() ),
                                                                               field ->
                                                                               {
@@ -344,8 +344,8 @@ public class BenchmarkDescription
                                                                                                                         allowedValues,
                                                                                                                         defaultValues );
                                                                               } ) );
-        Map<String,BenchmarkMethodDescription> methods = annotations.getBenchmarkMethodsFor( clazz ).stream()
-                                                                    .map( benchmarkMethod -> {
+        Map<String,BenchmarkMethodDescription> methods = benchmarksFinder.getBenchmarkMethodsFor( clazz ).stream()
+                                                                         .map( benchmarkMethod -> {
                                                                         Optional<Mode[]> mode = getAnnotationOrReport(
                                                                                 BenchmarkMode.class,
                                                                                 benchmarkMethod,
@@ -353,14 +353,14 @@ public class BenchmarkDescription
                                                                                 () -> validation.missingBenchmarkMode( benchmarkMethod ) );
 
                                                                         return new BenchmarkMethodDescription(
-                                                                                annotations.benchmarkNameFor( benchmarkMethod ),
+                                                                                benchmarksFinder.benchmarkNameFor( benchmarkMethod ),
                                                                                 mode.orElse( new Mode[0] )
                                                                         );
                                                                     } )
-                                                                    // distinct is needed because @Group benchmarks have multiple methods all with same name
-                                                                    // distinct is safe because every method of the same group should have the same mode
-                                                                    .distinct()
-                                                                    .collect( toMap( BenchmarkMethodDescription::name, identity() ) );
+                                                                         // distinct is needed because @Group benchmarks have multiple methods all with same name
+                                                                         // distinct is safe because every method of the same group should have the same mode
+                                                                         .distinct()
+                                                                         .collect( toMap( BenchmarkMethodDescription::name, identity() ) );
         return new BenchmarkDescription(
                 clazz.getName(),
                 BenchmarkDiscoveryUtils.benchmarkGroupFor( clazz ),
