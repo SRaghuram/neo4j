@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
+import java.lang.management.ManagementFactory
 import java.nio.file.{Files, Path}
 
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -91,7 +92,10 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     queryIds.size should be(1)
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be <= WORKER_COUNT
-    executionThreadIds.size should be > 1
+    if (!isWindows) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
+                      // omit this assumption to avoid getting a flaky test.
+      executionThreadIds.size should be > 1
+    }
     withClue("Expect no duplicate work unit IDs"){
       dataLookup.size should be(dataRows.size)
     }
@@ -106,6 +110,10 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
         }
       }
     }
+  }
+
+  private def isWindows = {
+    ManagementFactory.getOperatingSystemMXBean.getName.toLowerCase.indexOf("win") >= 0
   }
 
   private def parseTrace(path: Path): (Array[String], ArrayBuffer[DataRow]) = {
