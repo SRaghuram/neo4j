@@ -255,17 +255,16 @@ class RebuildFromLogs
         {
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, storageEngine.testAccessCountsStore(), tokenHolders );
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders );
             FullCheck fullCheck = new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
-                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
+                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), false );
 
             ConsistencySummaryStatistics summaryStatistics =
-                    fullCheck.execute( stores, FormattedLog.toOutputStream( System.err ) );
+                    fullCheck.execute( stores, storageEngine.testAccessCountsStore(), FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );
             }
-
         }
 
         @Override
