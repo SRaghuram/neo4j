@@ -8,3 +8,4 @@
   - SuiteDescription.fromConfig should not take a SuiteDescription as input parameter
 - Overhaul Validation
   - instead of storing strings, we should store references to the classes that contained errors, as well as the reasons
+- Extract logic of 'ls' command into a reusable class, so other Runner implementors can use it 

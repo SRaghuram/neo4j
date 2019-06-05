@@ -12,6 +12,8 @@ import org.openjdk.jmh.annotations.Mode;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -309,54 +311,12 @@ public class BenchmarkDescription
     {
         Map<String,BenchmarkParamDescription> parameters = benchmarksFinder.getParamFieldsFor( clazz ).stream()
                                                                            .collect( toMap(
-                                                                              field -> simplifyParamName( field.getName() ),
-                                                                              field ->
-                                                                              {
-                                                                                  String paramName = simplifyParamName( field.getName() );
-
-                                                                                  Optional<ParamValues> paramValues = getAnnotationOrReport(
-                                                                                          ParamValues.class,
-                                                                                          field,
-                                                                                          identity(),
-                                                                                          () -> validation.missingParameterValue( field ) );
-
-                                                                                  String[] allowed = paramValues.map( ParamValues::allowed )
-                                                                                                                .orElse( new String[0] );
-                                                                                  String[] base = paramValues.map( ParamValues::base )
-                                                                                                             .orElse( new String[0] );
-
-                                                                                  Set<String> allowedValues = newHashSet( allowed );
-                                                                                  if ( allowedValues.size() != allowed.length )
-                                                                                  {
-                                                                                      validation.duplicateAllowedValue( clazz.getName(),
-                                                                                                                        paramName,
-                                                                                                                        allowed );
-                                                                                  }
-
-                                                                                  Set<String> defaultValues = newHashSet( base );
-                                                                                  if ( defaultValues.size() != base.length )
-                                                                                  {
-                                                                                      validation.duplicateBaseValue( clazz.getName(),
-                                                                                                                     paramName,
-                                                                                                                     base );
-                                                                                  }
-                                                                                  return new BenchmarkParamDescription( paramName,
-                                                                                                                        allowedValues,
-                                                                                                                        defaultValues );
-                                                                              } ) );
+                                                                                   field -> simplifyParamName( field.getName() ),
+                                                                                   field -> createBenchmarkParamDescriptionFor( field, validation, clazz ) ) );
         Map<String,BenchmarkMethodDescription> methods = benchmarksFinder.getBenchmarkMethodsFor( clazz ).stream()
-                                                                         .map( benchmarkMethod -> {
-                                                                        Optional<Mode[]> mode = getAnnotationOrReport(
-                                                                                BenchmarkMode.class,
-                                                                                benchmarkMethod,
-                                                                                BenchmarkMode::value,
-                                                                                () -> validation.missingBenchmarkMode( benchmarkMethod ) );
-
-                                                                        return new BenchmarkMethodDescription(
-                                                                                benchmarksFinder.benchmarkNameFor( benchmarkMethod ),
-                                                                                mode.orElse( new Mode[0] )
-                                                                        );
-                                                                    } )
+                                                                         .map( method -> createBenchmarkMethodDescriptionFor( method,
+                                                                                                                              validation,
+                                                                                                                              benchmarksFinder ) )
                                                                          // distinct is needed because @Group benchmarks have multiple methods all with same name
                                                                          // distinct is safe because every method of the same group should have the same mode
                                                                          .distinct()
@@ -372,6 +332,55 @@ public class BenchmarkDescription
     }
 
     // HELPERS
+
+    private static BenchmarkParamDescription createBenchmarkParamDescriptionFor( Field field, Validation validation, Class clazz )
+    {
+        String paramName = simplifyParamName( field.getName() );
+
+        Optional<ParamValues> paramValues = getAnnotationOrReport(
+                ParamValues.class,
+                field,
+                identity(),
+                () -> validation.missingParameterValue( field ) );
+
+        String[] allowed = paramValues.map( ParamValues::allowed )
+                                      .orElse( new String[0] );
+        String[] base = paramValues.map( ParamValues::base )
+                                   .orElse( new String[0] );
+
+        Set<String> allowedValues = newHashSet( allowed );
+        if ( allowedValues.size() != allowed.length )
+        {
+            validation.duplicateAllowedValue( clazz.getName(),
+                                              paramName,
+                                              allowed );
+        }
+
+        Set<String> defaultValues = newHashSet( base );
+        if ( defaultValues.size() != base.length )
+        {
+            validation.duplicateBaseValue( clazz.getName(),
+                                           paramName,
+                                           base );
+        }
+        return new BenchmarkParamDescription( paramName,
+                                              allowedValues,
+                                              defaultValues );
+    }
+
+    private static BenchmarkMethodDescription createBenchmarkMethodDescriptionFor( Method benchmarkMethod, Validation validation,
+                                                                                   BenchmarksFinder benchmarksFinder )
+    {
+        Optional<Mode[]> mode = getAnnotationOrReport(
+                BenchmarkMode.class,
+                benchmarkMethod,
+                BenchmarkMode::value,
+                () -> validation.missingBenchmarkMode( benchmarkMethod ) );
+
+        return new BenchmarkMethodDescription(
+                benchmarksFinder.benchmarkNameFor( benchmarkMethod ),
+                mode.orElse( new Mode[0] ) );
+    }
 
     private static <ANNOTATION extends Annotation, RETURN> Optional<RETURN> getAnnotationOrReport( Class<ANNOTATION> annotationClass,
                                                                                                    AccessibleObject object,

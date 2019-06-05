@@ -152,7 +152,7 @@ public abstract class Runner
             }
             else
             {
-                List<BenchmarkDescription> benchmarksWithProfiles = profileBenchmarks(
+                List<BenchmarkDescription> benchmarksAfterProfiling = profileBenchmarks(
                         benchmarksAfterPrepare,
                         jvm,
                         jvmArgs,
@@ -162,7 +162,7 @@ public abstract class Runner
                         workDir,
                         errorReporter );
 
-                if ( benchmarksWithProfiles.isEmpty() )
+                if ( benchmarksAfterProfiling.isEmpty() )
                 {
                     System.out.println( "\n\n No benchmarks were successfully profiled, no benchmarks can be run\n\n" );
                 }
@@ -170,7 +170,7 @@ public abstract class Runner
                 {
                     executeBenchmarks(
                             benchmarkGroupBenchmarkMetrics,
-                            benchmarksWithProfiles,
+                            benchmarksAfterProfiling,
                             jvm,
                             jvmArgs,
                             jmhArgs,
