@@ -30,10 +30,16 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
@@ -43,10 +49,12 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public final class CausalClusteringTestHelpers
@@ -136,6 +144,45 @@ public final class CausalClusteringTestHelpers
         raftServer.start();
     }
 
+    public static void removeCheckPointFromDefaultDatabaseTxLog( ClusterMember member ) throws IOException
+    {
+        assertThat( member.isShutdown(), is( true ) );
+
+        var fs = new DefaultFileSystemAbstraction();
+        var databaseLayout = member.databaseLayout();
+        var txLogsDirectory = databaseLayout.getTransactionLogsDirectory();
+        var logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( txLogsDirectory, fs ).build();
+
+        var checkPointsRemoved = 0;
+        while ( removeCheckPointFromTxLog( logFiles, fs ) )
+        {
+            checkPointsRemoved++;
+        }
+
+        assertThat( checkPointsRemoved, greaterThan( 0 ) );
+    }
+
+    private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException
+    {
+        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), new Monitors() );
+        var logTailInformation = logTailScanner.getTailInformation();
+
+        if ( logTailInformation.commitsAfterLastCheckpoint() )
+        {
+            assertThat( logTailInformation.isRecoveryRequired(), is( true ) );
+            return false;
+        }
+        else
+        {
+            assertThat( logTailInformation.lastCheckPoint, is( notNullValue() ) );
+            var logPosition = logTailInformation.lastCheckPoint.getLogPosition();
+            var logFile = logFiles.getLogFileForVersion( logPosition.getLogVersion() );
+            var byteOffset = logPosition.getByteOffset();
+            fs.truncate( logFile, byteOffset );
+            return true;
+        }
+    }
+
     private static CoreClusterMember randomClusterMember( Cluster cluster, CoreClusterMember except )
     {
         CoreClusterMember[] members = cluster.coreMembers()
@@ -156,7 +203,7 @@ public final class CausalClusteringTestHelpers
         @Override
         public <T> T select( Class<T> type, Iterable<? extends T> candidates ) throws IllegalArgumentException
         {
-            assertEquals( Server.class, type );
+            assertThat( type, is( Server.class ) );
             return Iterables.stream( candidates )
                     .map( Server.class::cast )
                     .filter( server -> RAFT_SERVER_NAME.equals( server.name() ) )
