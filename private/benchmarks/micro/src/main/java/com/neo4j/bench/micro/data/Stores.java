@@ -226,7 +226,10 @@ public class Stores
         System.out.println( config );
 
         // will create an empty database directory under top level
-        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() ).setConfigRaw( config.neo4jConfig().toMap() ).build().shutdown();
+        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
+                .setConfigRaw( config.neo4jConfig().toMap() )
+                .build()
+                .shutdown();
 
         try
         {

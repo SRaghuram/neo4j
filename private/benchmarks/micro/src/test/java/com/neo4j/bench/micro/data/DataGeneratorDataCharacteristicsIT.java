@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.stream.IntStream;
 
 import org.neo4j.graphdb.RelationshipType;
@@ -46,19 +47,23 @@ class DataGeneratorDataCharacteristicsIT
     private static final int NODE_COUNT = 100_000;
 
     private DataGeneratorConfigBuilder builder;
+    private Path neo4jConfigPath;
 
     @BeforeEach
     void createBuilder()
     {
         builder = new DataGeneratorConfigBuilder()
                 .withRngSeed( RNG_SEED );
+        Path absoluteTempPath = temporaryFolder.absolutePath().toPath();
+        neo4jConfigPath = absoluteTempPath.resolve( "neo4j.config" );
+        NEO4J_CONFIG.writeToFile( neo4jConfigPath );
     }
 
     @Test
     void shouldCreateEmptyGraph() throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withNeo4jConfig( NEO4J_CONFIG )
@@ -84,7 +89,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateJustNodes( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -111,7 +116,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldNotCrashWhenConfiguredToCreateJustRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -142,7 +147,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateShuffledNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -206,7 +211,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldOrderedNodePropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -270,7 +275,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateUniqueConstrainedAndIndexedNodeProperties( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -336,7 +341,7 @@ class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -377,7 +382,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateOrderedRelationshipPropertyChain( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -418,7 +423,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsCollocatedByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -447,7 +452,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateRelationshipsScatteredByStartNode( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -476,7 +481,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -516,7 +521,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -556,7 +561,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedOrderedLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -596,7 +601,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateCollocatedShuffledLabels( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -637,7 +642,7 @@ class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -672,7 +677,7 @@ class DataGeneratorDataCharacteristicsIT
     private void shouldCreateScatteredOrderedRelationships( GraphWriter graphWriter ) throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath() );
+        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withGraphWriter( graphWriter )

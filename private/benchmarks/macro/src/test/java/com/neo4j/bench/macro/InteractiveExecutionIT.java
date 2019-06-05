@@ -82,7 +82,7 @@ class InteractiveExecutionIT
     private Store createEmptyStoreFor( Workload workload, Path neo4jConfigFile ) throws IOException
     {
         Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
+        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ), neo4jConfigFile );
         EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
         return store;
     }

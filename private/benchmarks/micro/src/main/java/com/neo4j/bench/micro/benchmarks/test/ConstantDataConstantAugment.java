@@ -81,7 +81,7 @@ public class ConstantDataConstantAugment extends BaseDatabaseBenchmark
             @Override
             public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
-                GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store(),storeAndConfig.config() );
+                GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store(), storeAndConfig.config() );
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();

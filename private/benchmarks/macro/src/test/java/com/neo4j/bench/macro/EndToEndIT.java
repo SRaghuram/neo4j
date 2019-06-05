@@ -32,7 +32,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import io.findify.s3mock.S3Mock;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -170,7 +169,7 @@ class EndToEndIT
 
             // create empty store
             Path dbPath = absoluteTempPath.resolve( "db" );
-            TestSupport.createEmptyStore( dbPath );
+            TestSupport.createEmptyStore( dbPath, neo4jConfig );
 
             Path resultsPath = absoluteTempPath.resolve( "results.json" );
 

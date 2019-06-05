@@ -319,7 +319,7 @@ class RunWorkloadCommandIT
     private Store createEmptyStoreFor( Workload workload, Path neo4jConfiguration ) throws IOException
     {
         Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ) );
+        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ), neo4jConfiguration );
         EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfiguration, schema );
         return store;
     }
