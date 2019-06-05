@@ -11,16 +11,16 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
-public class AnnotationsValidator
+public class BenchmarksValidator
 {
-    private final Annotations annotations;
+    private final BenchmarksFinder benchmarksFinder;
 
-    AnnotationsValidator( Annotations annotations )
+    BenchmarksValidator( BenchmarksFinder benchmarksFinder )
     {
-        this.annotations = annotations;
+        this.benchmarksFinder = benchmarksFinder;
     }
 
-    AnnotationsValidationResult validate()
+    BenchmarkValidationResult validate()
     {
         boolean valid = hasAtLeastOneBenchmarkClass() &&
                         hasClassNamePrefixOnAllParamFieldNames() &&
@@ -34,13 +34,13 @@ public class AnnotationsValidator
                         noBenchmarkHasInvalidTearDown() &&
                         allBenchmarkMethodsHaveModeAnnotation();
         String validationMessage = valid ? "Validation Passed" : validationErrors();
-        return new AnnotationsValidationResult( valid, validationMessage );
+        return new BenchmarkValidationResult( valid, validationMessage );
     }
 
     private boolean hasAtLeastOneBenchmarkClass()
     {
         // Sanity check that reflection code finds benchmark classes, if it finds one class it probably finds them all
-        return annotations.getBenchmarkMethods().keySet().size() > 0;
+        return benchmarksFinder.getBenchmarkMethods().keySet().size() > 0;
     }
 
     private boolean hasClassNamePrefixOnAllParamFieldNames()
@@ -48,7 +48,7 @@ public class AnnotationsValidator
         // JMH options builder does not allow for setting param:value pairs on individual classes, only globally
         // To get around that this benchmark suite prepends benchmark class names onto the param names of those classes
         // This test makes sure this policy is being followed
-        return annotations.getParamFieldsWithoutClassNamePrefix().size() == 0;
+        return benchmarksFinder.getParamFieldsWithoutClassNamePrefix().size() == 0;
     }
 
     private boolean hasEmptyValueOnAllParamFields()
@@ -56,52 +56,52 @@ public class AnnotationsValidator
         // JMH options builder does not allow for setting param:value pairs on individual classes, only globally
         // To get around that this benchmark suite prepends benchmark class names onto the param names of those classes
         // This test makes sure this policy is being followed
-        return annotations.assignedParamFields().size() == 0;
+        return benchmarksFinder.assignedParamFields().size() == 0;
     }
 
     private boolean hasParamValueOnAllParamFields()
     {
-        return annotations.paramFieldsWithoutParamValue().size() == 0;
+        return benchmarksFinder.paramFieldsWithoutParamValue().size() == 0;
     }
 
     private boolean hasParamOnAllParamValueFields()
     {
-        return annotations.paramValueFieldsWithoutParam().size() == 0;
+        return benchmarksFinder.paramValueFieldsWithoutParam().size() == 0;
     }
 
     private boolean hasNonEmptyAllowedOnAllParamValueFields()
     {
-        return annotations.paramValueFieldsWithEmptyAllowed().size() == 0;
+        return benchmarksFinder.paramValueFieldsWithEmptyAllowed().size() == 0;
     }
 
     private boolean allBenchmarksExtendBaseBenchmark()
     {
-        return annotations.classesThatDoNotExtendBaseBenchmark().isEmpty();
+        return benchmarksFinder.classesThatDoNotExtendBaseBenchmark().isEmpty();
     }
 
     private boolean hasNonEmptyBaseOnAllParamValueFields()
     {
-        return annotations.paramValueFieldsWithEmptyBase().size() == 0;
+        return benchmarksFinder.paramValueFieldsWithEmptyBase().size() == 0;
     }
 
     private boolean isBaseValuesSubsetsOfAllowed()
     {
-        return annotations.erroneousBaseValues().isEmpty();
+        return benchmarksFinder.erroneousBaseValues().isEmpty();
     }
 
     private boolean noBenchmarkHasInvalidSetup()
     {
-        return annotations.classesWithSetupMethod().isEmpty();
+        return benchmarksFinder.classesWithSetupMethod().isEmpty();
     }
 
     private boolean noBenchmarkHasInvalidTearDown()
     {
-        return annotations.classesWithTearDownMethod().isEmpty();
+        return benchmarksFinder.classesWithTearDownMethod().isEmpty();
     }
 
     private boolean allBenchmarkMethodsHaveModeAnnotation()
     {
-        return annotations.benchmarkMethodsWithoutModeAnnotation().isEmpty();
+        return benchmarksFinder.benchmarkMethodsWithoutModeAnnotation().isEmpty();
     }
 
     private String validationErrors()
@@ -116,7 +116,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* @" ).append( Param.class.getSimpleName() )
                     .append( " fields lack class name prefix:\n" );
-            annotations.getParamFieldsWithoutClassNamePrefix().forEach( field -> sb
+            benchmarksFinder.getParamFieldsWithoutClassNamePrefix().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getName() )
                     .append( " in " ).append( field.getDeclaringClass().getName() )
@@ -129,7 +129,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* @" ).append( Param.class.getSimpleName() )
                     .append( " annotations should have no value, but these fields do:\n" );
-            annotations.assignedParamFields().forEach( field -> sb
+            benchmarksFinder.assignedParamFields().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getDeclaringClass().getName() ).append( "." ).append( field.getName() )
                     .append( "\n" )
@@ -141,7 +141,7 @@ public class AnnotationsValidator
                     .append( "\t" ).append( "* @" ).append( Param.class.getSimpleName() )
                     .append( " fields should also have @" ).append( ParamValues.class.getSimpleName() )
                     .append( " annotation. These do not:\n" );
-            annotations.paramFieldsWithoutParamValue().forEach( field -> sb
+            benchmarksFinder.paramFieldsWithoutParamValue().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getDeclaringClass().getName() ).append( "." ).append( field.getName() )
                     .append( "\n" )
@@ -153,7 +153,7 @@ public class AnnotationsValidator
                     .append( "\t" ).append( "* @" ).append( ParamValues.class.getSimpleName() )
                     .append( " fields should have @" ).append( Param.class.getSimpleName() )
                     .append( " annotation. These do not:\n" );
-            annotations.paramValueFieldsWithoutParam().forEach( field -> sb
+            benchmarksFinder.paramValueFieldsWithoutParam().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getDeclaringClass().getName() ).append( "." ).append( field.getName() )
                     .append( "\n" )
@@ -164,7 +164,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* @" ).append( ParamValues.class.getSimpleName() )
                     .append( " annotations should have non-empty 'allowed' field. These do not:\n" );
-            annotations.paramValueFieldsWithEmptyAllowed().forEach( field -> sb
+            benchmarksFinder.paramValueFieldsWithEmptyAllowed().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getDeclaringClass().getName() ).append( "." ).append( field.getName() )
                     .append( "\n" )
@@ -175,7 +175,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* @" ).append( ParamValues.class.getSimpleName() )
                     .append( " annotations should have non-empty 'base' field. These do not:\n" );
-            annotations.paramValueFieldsWithEmptyBase().forEach( field -> sb
+            benchmarksFinder.paramValueFieldsWithEmptyBase().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getDeclaringClass().getName() ).append( "." ).append( field.getName() )
                     .append( "\n" )
@@ -186,7 +186,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* @" ).append( ParamValues.class.getSimpleName() )
                     .append( " 'base' & 'extended' value must be subset of 'allowed'. These are not:\n" );
-            annotations.erroneousBaseValues().entrySet().forEach( entry -> sb
+            benchmarksFinder.erroneousBaseValues().entrySet().forEach( entry -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( entry.getKey().getDeclaringClass().getName() ).append( "." )
                     .append( entry.getKey().getName() )
@@ -198,7 +198,7 @@ public class AnnotationsValidator
         {
             sb
                     .append( "\t" ).append( "* Classes should extend base benchmarks. These classes do not:\n" );
-            annotations.classesThatDoNotExtendBaseBenchmark().forEach( clazz -> sb
+            benchmarksFinder.classesThatDoNotExtendBaseBenchmark().forEach( clazz -> sb
                     .append( "\t\t" ).append( "> " ).append( clazz.getName() ).append( "\n" )
             );
         }
@@ -207,7 +207,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* Benchmarks should not have methods with @" )
                     .append( Setup.class.getName() ).append( "(" ).append( Level.Trial ).append( "), but these benchmarks do: \n " );
-            annotations.classesWithSetupMethod().forEach( benchmark -> sb
+            benchmarksFinder.classesWithSetupMethod().forEach( benchmark -> sb
                     .append( "\t\t" ).append( "> " ).append( benchmark.getName() ).append( "\n" )
             );
         }
@@ -216,7 +216,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* Benchmarks should not have methods with @" )
                     .append( TearDown.class.getName() ).append( "(" ).append( Level.Trial ).append( "), but these benchmarks do: \n " );
-            annotations.classesWithTearDownMethod().forEach( benchmark -> sb
+            benchmarksFinder.classesWithTearDownMethod().forEach( benchmark -> sb
                     .append( "\t\t" ).append( "> " ).append( benchmark.getName() ).append( "\n" )
             );
         }
@@ -225,7 +225,7 @@ public class AnnotationsValidator
             sb
                     .append( "\t" ).append( "* Benchmark methods should be annotated with " )
                     .append( BenchmarkMode.class.getName() ).append( ", these methods do not:\n" );
-            annotations.benchmarkMethodsWithoutModeAnnotation().forEach( method -> sb
+            benchmarksFinder.benchmarkMethodsWithoutModeAnnotation().forEach( method -> sb
                     .append( "\t\t" ).append( "> " ).append( method.getDeclaringClass().getName() ).append( "." )
                     .append( method.getName() ).append( "\n" )
             );
@@ -233,12 +233,12 @@ public class AnnotationsValidator
         return sb.toString();
     }
 
-    public static class AnnotationsValidationResult
+    public static class BenchmarkValidationResult
     {
         private final boolean valid;
         private final String message;
 
-        AnnotationsValidationResult( boolean valid, String message )
+        BenchmarkValidationResult( boolean valid, String message )
         {
             this.valid = valid;
             this.message = message;
@@ -254,11 +254,11 @@ public class AnnotationsValidator
             return message;
         }
 
-        public static void assertValid( AnnotationsValidationResult annotationsValidationResult )
+        public static void assertValid( BenchmarkValidationResult benchmarkValidationResult )
         {
-            if ( !annotationsValidationResult.isValid() )
+            if ( !benchmarkValidationResult.isValid() )
             {
-                throw new RuntimeException( annotationsValidationResult.message() );
+                throw new RuntimeException( benchmarkValidationResult.message() );
             }
         }
     }

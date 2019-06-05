@@ -28,7 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class BenchmarkConfigFileTest extends AnnotationsFixture
+public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
 {
     // READ
 
@@ -38,7 +38,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         // when
         Validation validation = new Validation();
         String benchmarkName = ValidDisabledBenchmark.class.getName();
-        BenchmarkConfigFile benchmarkConfigFile = fromMap( map( benchmarkName, "true" ), validation, getAnnotations() );
+        BenchmarkConfigFile benchmarkConfigFile = fromMap( map( benchmarkName, "true" ), validation, getBenchmarksFinder() );
 
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
@@ -54,7 +54,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         Validation validation = new Validation();
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         BenchmarkConfigFile benchmarkConfigFile =
-                fromMap( map( benchmarkName, "false" ), validation, getAnnotations() );
+                fromMap( map( benchmarkName, "false" ), validation, getBenchmarksFinder() );
 
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
@@ -71,7 +71,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         String paramName = "number";
         String paramValue = "2";
         BenchmarkConfigFile benchmarkConfigFile =
-                fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, paramValue ), validation, getAnnotations() );
+                fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, paramValue ), validation, getBenchmarksFinder() );
 
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
@@ -94,7 +94,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         BenchmarkConfigFile benchmarkConfigFile = fromMap(
                 map( benchmarkName, "true", benchmarkName + "." + paramName, paramValue ),
                 validation,
-                getAnnotations() );
+                getBenchmarksFinder() );
 
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
@@ -115,7 +115,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         String benchmarkName1 = ValidEnabledBenchmark1.class.getName();
         String benchmarkName2 = ValidDisabledBenchmark.class.getName();
         BenchmarkConfigFile benchmarkConfigFile =
-                fromMap( map( benchmarkName1, "true", benchmarkName2, "true" ), validation, getAnnotations() );
+                fromMap( map( benchmarkName1, "true", benchmarkName2, "true" ), validation, getBenchmarksFinder() );
 
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 2 ) );
@@ -135,7 +135,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
         Validation validation = new Validation();
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         String paramName = "number";
-        fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, "" ), validation, getAnnotations() );
+        fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, "" ), validation, getBenchmarksFinder() );
 
         // then
         assertEquals( validation.report(), validation.errors(), singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
@@ -150,7 +150,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
 
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         String paramName = "number";
-        fromMap( map( benchmarkName + "." + paramName, "1" ), validation, getAnnotations() );
+        fromMap( map( benchmarkName + "." + paramName, "1" ), validation, getBenchmarksFinder() );
 
         // then
         assertEquals( validation.report(), validation.errors(), singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
@@ -162,7 +162,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteBenchmark()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
@@ -178,7 +178,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteTwoBenchmarks()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
@@ -196,7 +196,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteVerboseBenchmark()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,
@@ -221,7 +221,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteDisabledBenchmarks()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
         Set<String> enabled = newHashSet( ValidEnabledBenchmark1.class.getName() );
         String serializedConf = BenchmarkConfigFile.toString(
@@ -240,7 +240,7 @@ public class BenchmarkConfigFileTest extends AnnotationsFixture
     @Test
     public void shouldWriteVerboseDisabledBenchmark()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
         String serializedConf = BenchmarkConfigFile.toString(
                 suiteDescription,

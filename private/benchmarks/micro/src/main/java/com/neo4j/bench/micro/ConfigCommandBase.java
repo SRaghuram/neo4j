@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import io.airlift.airline.Option;
@@ -51,8 +51,8 @@ abstract class ConfigCommandBase implements Runnable
     protected SuiteDescription allBenchmarks()
     {
         Validation validation = new Validation();
-        Annotations annotations = new Annotations( BenchmarksRunner.class.getPackage().getName() );
-        SuiteDescription allByReflection = SuiteDescription.fromAnnotations( annotations, validation );
+        BenchmarksFinder benchmarksFinder = new BenchmarksFinder( BenchmarksRunner.class.getPackage().getName() );
+        SuiteDescription allByReflection = SuiteDescription.fromAnnotations( benchmarksFinder, validation );
         Validation.assertValid( validation );
         return allByReflection;
     }

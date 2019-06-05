@@ -87,7 +87,6 @@
 
     <build>
         <plugins>
-            <!--TODO do we need this?-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
