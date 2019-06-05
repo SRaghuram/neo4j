@@ -56,14 +56,14 @@ public class BenchmarkConfigFile
         return benchmarkConfigFileEntries.get( benchmarkName );
     }
 
-    public static BenchmarkConfigFile fromFile( Path path, Validation validation, Annotations annotations )
+    public static BenchmarkConfigFile fromFile( Path path, Validation validation, BenchmarksFinder benchmarksFinder )
     {
-        return fromMap( propertiesPathToMap( path ), validation, annotations );
+        return fromMap( propertiesPathToMap( path ), validation, benchmarksFinder );
     }
 
-    static BenchmarkConfigFile fromMap( Map<String,String> confMap, Validation validation, Annotations annotations )
+    static BenchmarkConfigFile fromMap( Map<String,String> confMap, Validation validation, BenchmarksFinder benchmarksFinder )
     {
-        Map<String,BenchmarkConfigFileEntry> benchmarkConfigFileEntries = benchmarks( confMap, annotations );
+        Map<String,BenchmarkConfigFileEntry> benchmarkConfigFileEntries = benchmarks( confMap, benchmarksFinder );
         for ( String key : confMap.keySet() )
         {
             int separator = key.lastIndexOf( "." );
@@ -73,13 +73,13 @@ public class BenchmarkConfigFile
                 continue;
             }
 
-            if ( annotations.hasBenchmark( key ) )
+            if ( benchmarksFinder.hasBenchmark( key ) )
             {
                 continue;
             }
 
             String benchmarkNamePrefix = key.substring( 0, separator );
-            if ( !annotations.hasBenchmark( benchmarkNamePrefix ) )
+            if ( !benchmarksFinder.hasBenchmark( benchmarkNamePrefix ) )
             {
                 validation.configuredBenchmarkDoesNotExist( key );
                 continue;
@@ -108,10 +108,10 @@ public class BenchmarkConfigFile
         return new BenchmarkConfigFile( benchmarkConfigFileEntries );
     }
 
-    private static Map<String,BenchmarkConfigFileEntry> benchmarks( Map<String,String> confMap, Annotations annotations )
+    private static Map<String,BenchmarkConfigFileEntry> benchmarks( Map<String,String> confMap, BenchmarksFinder benchmarksFinder )
     {
         return confMap.keySet().stream()
-                .filter( annotations::hasBenchmark )
+                .filter( benchmarksFinder::hasBenchmark )
                 .collect( toMap(
                         identity(),
                         name -> new BenchmarkConfigFileEntry( name, Boolean.valueOf( confMap.get( name ) ) ) ) );

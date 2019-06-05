@@ -42,7 +42,7 @@ import static org.openjdk.jmh.annotations.Mode.AverageTime;
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 import static org.openjdk.jmh.annotations.Mode.Throughput;
 
-public class BenchmarkDescriptionTest extends AnnotationsFixture
+public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
 {
     private static final Map<String,BenchmarkMethodDescription> METHODS = Collections.emptyMap();
     private String group = "regular";
@@ -54,7 +54,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         Validation validation = new Validation();
         Class benchmarkClass = ValidEnabledBenchmark1.class;
         String name = benchmarkClass.getName();
-        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getAnnotations() );
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getBenchmarksFinder() );
 
         // then
         assertThat( benchDesc.className(), equalTo( name ) );
@@ -87,7 +87,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
         Validation validation = new Validation();
         Class benchmarkClass = ValidDisabledBenchmark.class;
         String benchName = benchmarkClass.getName();
-        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getAnnotations() );
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getBenchmarksFinder() );
 
         assertThat( benchDesc.className(), equalTo( benchName ) );
         assertThat( benchDesc.group(), equalTo( "Example" ) );
@@ -268,7 +268,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     {
         // given
         Validation validation = new Validation();
-        BenchmarkDescription benchDesc = BenchmarkDescription.of( ValidEnabledBenchmark1.class, validation, getAnnotations() );
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( ValidEnabledBenchmark1.class, validation, getBenchmarksFinder() );
 
         // when
         String nonExistentBenchmark = "NonExistentBenchmark";
@@ -361,7 +361,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        BenchmarkDescription.of( DuplicateAllowedBenchmark.class, validation, getAnnotations() );
+        BenchmarkDescription.of( DuplicateAllowedBenchmark.class, validation, getBenchmarksFinder() );
 
         // then
         assertEquals( validation.report(),
@@ -375,7 +375,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        BenchmarkDescription.of( DuplicateBaseBenchmark.class, validation, getAnnotations() );
+        BenchmarkDescription.of( DuplicateBaseBenchmark.class, validation, getBenchmarksFinder() );
 
         // then
         assertEquals( validation.report(),
@@ -389,7 +389,7 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     {
         Validation validation = new Validation();
 
-        BenchmarkDescription benchDesc = BenchmarkDescription.of( ValidEnabledBenchmark1.class, validation, getAnnotations() );
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( ValidEnabledBenchmark1.class, validation, getBenchmarksFinder() );
         assertThat( benchDesc.executionCount( 1 ), equalTo( 6 ) );
 
         benchDesc = benchDesc.copyWithConfig(
@@ -797,9 +797,9 @@ public class BenchmarkDescriptionTest extends AnnotationsFixture
     public void shouldExplodeEqualNumberOfElementsToExecutionCount()
     {
         Validation validation = new Validation();
-        for ( Class benchmarkClass : getValidAnnotations().getBenchmarks() )
+        for ( Class benchmarkClass : getValidBenchmarksFinder().getBenchmarks() )
         {
-            BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, getAnnotations() );
+            BenchmarkDescription benchmark = BenchmarkDescription.of( benchmarkClass, validation, getBenchmarksFinder() );
             int executionCount = benchmark.executionCount( 1 );
             int explodedSize = benchmark.explode().size();
             assertThat( executionCount, equalTo( explodedSize ) );

@@ -36,7 +36,7 @@ import static java.util.stream.Collectors.toMap;
  * This class discovers available benchmarks in a given package and extracts available benchmark methods and parameter fields and values.
  * It also provides utility functions to benchmark verification.
  */
-public class Annotations
+public class BenchmarksFinder
 {
     /**
      * Scans all classes accessible from the context class loader which belong to the given package and subpackages
@@ -56,7 +56,7 @@ public class Annotations
                             .map( ClassPath.ClassInfo::load )
                             .filter( clazz -> !Modifier.isAbstract( clazz.getModifiers() ) )
                             // has benchmark method
-                            .filter( Annotations::isMaybeBenchmark )
+                            .filter( BenchmarksFinder::isMaybeBenchmark )
                             .collect( toList() );
         }
         catch ( IOException e )
@@ -88,7 +88,7 @@ public class Annotations
      *
      * @param packageName the package (including subpackages) in which to find benchmark classes
      */
-    public Annotations( String packageName )
+    public BenchmarksFinder( String packageName )
     {
         List<Class> benchmarks = benchmarkClasses( packageName );
 
@@ -154,9 +154,9 @@ public class Annotations
     // ------------------------------------ Validation Related ------------------------------------
     // --------------------------------------------------------------------------------------------
 
-    public AnnotationsValidator.AnnotationsValidationResult validate()
+    public BenchmarksValidator.BenchmarkValidationResult validate()
     {
-        return new AnnotationsValidator( this ).validate();
+        return new BenchmarksValidator( this ).validate();
     }
 
     Map<Class,List<Method>> getBenchmarkMethods()

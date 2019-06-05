@@ -15,7 +15,7 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -49,8 +49,8 @@ public class RunIT
         Path workDir = temporaryFolder.newFolder().toPath();
         Path profilerRecordingsOutputDir = temporaryFolder.newFolder().toPath();
 
-        Annotations annotations = new Annotations( SimpleBenchmark.class.getPackage().getName() );
-        SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( annotations, new Validation() );
+        BenchmarksFinder benchmarksFinder = new BenchmarksFinder( SimpleBenchmark.class.getPackage().getName() );
+        SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( benchmarksFinder, new Validation() );
         BenchmarkConfigFile.write(
                 defaultSuiteDescription,
                 ImmutableSet.of( SimpleBenchmark.class.getName() ),
@@ -82,9 +82,9 @@ public class RunIT
         assertThat( benchmarks.size(), equalTo( 4 ) );
 
         List<String> expectedBenchmarkNames = new ArrayList<>();
-        for ( Class benchmark : annotations.getBenchmarks() )
+        for ( Class benchmark : benchmarksFinder.getBenchmarks() )
         {
-            for ( BenchmarkDescription benchmarkDescription : BenchmarkDescription.of( benchmark, new Validation(), annotations ).explode() )
+            for ( BenchmarkDescription benchmarkDescription : BenchmarkDescription.of( benchmark, new Validation(), benchmarksFinder ).explode() )
             {
                 // there is only 1 method per benchmark at this point, because explode() was called above
                 String methodName = benchmarkDescription.methods().iterator().next().name();
