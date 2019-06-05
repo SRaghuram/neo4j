@@ -25,11 +25,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import org.neo4j.causalclustering.catchup.CatchupServerBuilder;
-import org.neo4j.causalclustering.catchup.CatchupServerHandler;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
@@ -40,9 +38,6 @@ import org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.net.Server;
-import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.collection.Iterators;
@@ -55,23 +50,16 @@ import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyList;
 import static org.hamcrest.CoreMatchers.any;
-import static org.hamcrest.CoreMatchers.both;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.getCatchupServer;
-import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class StoreCopyClientIT
@@ -352,8 +340,8 @@ public class StoreCopyClientIT
         }
         catch ( StoreCopyFailedException e )
         {
-            assertableLogProvider.assertContainsExactlyOneMessageMatching( startsWith( "Unable to resolve address for" ) );
-            assertableLogProvider.assertLogStringContains(catchupAddressResolutionException.getMessage() );
+            assertableLogProvider.rawMessageMatcher().assertContainsSingle( startsWith( "Unable to resolve address for" ) );
+            assertableLogProvider.internalToStringMessageMatcher().assertContains( catchupAddressResolutionException.getMessage() );
         }
     }
 

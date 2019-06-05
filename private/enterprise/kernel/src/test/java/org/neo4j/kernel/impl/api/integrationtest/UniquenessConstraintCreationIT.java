@@ -286,7 +286,7 @@ public class UniquenessConstraintCreationIT
             assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
             assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
         }
-        assertableLogProvider.assertContainsMessageMatching( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );
+        assertableLogProvider.rawMessageMatcher().assertContains( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );
     }
 
     private NeoStores neoStores()

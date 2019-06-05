@@ -99,6 +99,8 @@ public class StoreCopyClient
 
     public void copyStore( StoreCopyRequester requester, CancellationRequest cancellationRequest, MoveAfterCopy moveAfterCopy ) throws Exception
     {
+        monitor.start();
+
         // Create a temp directory (or clean if present)
         File tempDatabaseDirectory = databaseLayout.file( StoreUtil.TEMP_COPY_DIRECTORY_NAME );
         try
@@ -131,6 +133,8 @@ public class StoreCopyClient
             // Note that the stream is lazy, so the file system traversal won't happen until *after* the store files
             // have been moved. Thus we ensure that we only attempt to move them once.
             moveFromTemporaryLocationToCorrect( tempDatabaseDirectory, moveAfterCopy );
+
+            monitor.finish();
         }
         finally
         {
