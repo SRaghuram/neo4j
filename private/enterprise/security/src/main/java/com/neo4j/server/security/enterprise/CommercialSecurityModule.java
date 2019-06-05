@@ -44,24 +44,33 @@ import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.javacompat.QueryExecutionProvider;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecution;
+import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.impl.query.TransactionalContext;
+import org.neo4j.kernel.impl.query.TransactionalContextFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -79,9 +88,12 @@ import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
+import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
+import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
+import static org.neo4j.kernel.impl.util.ValueUtils.asParameterMapValue;
 
 @ServiceProvider
 public class CommercialSecurityModule extends SecurityModule
@@ -180,33 +192,8 @@ public class CommercialSecurityModule extends SecurityModule
 
         return Optional.of( database ->
         {
-            QueryExecutor queryExecutor = new QueryExecutor()
-            {
-                @Override
-                public void executeQuery( String query, Map<String,Object> params, ErrorPreservingQuerySubscriber subscriber )
-                {
-                    try ( Transaction tx = database.beginTx() )
-                    {
-                        Result result = database.execute( query, params );
-                        //TODO: This cast here should go away, we should get our hands on a `QueryExecutionEngine`
-                        //      and use that instead
-                        QueryExecution queryExecution = ((QueryExecutionProvider) result).queryExecution();
-                        queryExecution.consumeAll();
-                        tx.success();
-                    }
-                    catch ( Exception e )
-                    {
-                        throw new IllegalStateException( "Failed to request data", e );
-                    }
-                }
 
-                @Override
-                public Transaction beginTx()
-                {
-                    return database.beginTx();
-                }
-            };
-
+            QueryExecutor queryExecutor = new SecurityQueryExecutor( database );
             SecureHasher secureHasher = new SecureHasher();
             SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
             SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
@@ -676,5 +663,53 @@ public class CommercialSecurityModule extends SecurityModule
                 false,
                 true // At least one of these needs to be true for the realm to consider imports
         );
+    }
+
+    private static class SecurityQueryExecutor implements QueryExecutor
+    {
+        private final TransactionalContextFactory contextFactory;
+        private final GraphDatabaseAPI api;
+        private final QueryExecutionEngine engine;
+
+        private SecurityQueryExecutor( GraphDatabaseService database )
+        {
+            this.api = (GraphDatabaseAPI) database;
+            this.engine =
+                    api.getDependencyResolver().resolveDependency( QueryExecutionEngine.class );
+            DependencyResolver resolver = api.getDependencyResolver();
+            ThreadToStatementContextBridge bridge =
+                    resolver.resolveDependency( ThreadToStatementContextBridge.class );
+            EmbeddedProxySPI embeddedProxySPI = resolver.resolveDependency( EmbeddedProxySPI.class );
+            this.contextFactory = Neo4jTransactionalContextFactory.create( embeddedProxySPI,
+                    () -> api.getDependencyResolver().resolveDependency( GraphDatabaseQueryService.class ), bridge );
+        }
+
+        @Override
+        public void executeQuery( String query, Map<String,Object> params, ErrorPreservingQuerySubscriber subscriber )
+        {
+            try ( InternalTransaction tx = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
+            {
+                MapValue parameters = asParameterMapValue( params );
+                TransactionalContext context = contextFactory.newContext( tx, query, parameters );
+                QueryExecution execution =
+                        engine.executeQuery( query,
+                                parameters,
+                                context,
+                                false,
+                                subscriber );
+                execution.consumeAll();
+                tx.success();
+            }
+            catch ( Exception e )
+            {
+                throw new IllegalStateException( "Failed to request data", e );
+            }
+        }
+
+        @Override
+        public Transaction beginTx()
+        {
+            return api.beginTx();
+        }
     }
 }
