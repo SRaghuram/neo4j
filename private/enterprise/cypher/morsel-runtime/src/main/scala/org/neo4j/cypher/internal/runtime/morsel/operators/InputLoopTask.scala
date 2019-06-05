@@ -104,8 +104,11 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
   }
 
   override def genCloseCursors: IntermediateRepresentation = {
-    condition(loadField(INNER_LOOP))(
-      genCloseInnerLoop
+    block(
+      condition(loadField(INNER_LOOP))(
+        genCloseInnerLoop
+      ),
+      inner.genCloseCursors
     )
   }
 

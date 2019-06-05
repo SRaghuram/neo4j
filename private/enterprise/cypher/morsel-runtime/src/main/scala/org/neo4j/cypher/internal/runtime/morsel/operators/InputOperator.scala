@@ -129,7 +129,10 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
 
   override def genCloseCursors: IntermediateRepresentation =
-    invoke(loadField(inputCursorField), method[MutatingInputCursor, Unit]("close"))
+    block(
+      invoke(loadField(inputCursorField), method[MutatingInputCursor, Unit]("close")),
+      inner.genCloseCursors
+    )
 
   /**
     * {{{

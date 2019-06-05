@@ -86,5 +86,5 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
-  override def genCloseCursors: IntermediateRepresentation = block()
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 }

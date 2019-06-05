@@ -172,7 +172,7 @@ trait OperatorTaskTemplate {
     *   override def closeCursors(resources: QueryResources): Unit
     * }}}
     */
-  def genCloseCursors: IntermediateRepresentation //FIXME recursive calls are missing
+  def genCloseCursors: IntermediateRepresentation
 }
 
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
