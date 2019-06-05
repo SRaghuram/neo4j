@@ -258,12 +258,10 @@ public class RunExportCommand implements Runnable
         // trim anything like '-M01' from end of Neo4j version string
         neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
 
-        Neo4jConfig baseNeo4jConfig = (neo4jConfigFile == null)
-                                      ? Neo4jConfig.withDefaults()
-                                      : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
-        baseNeo4jConfig = baseNeo4jConfig
-                .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-                .withSetting( new HttpConnector( "http" ).enabled, "false" );
+        Neo4jConfig baseNeo4jConfig = Neo4jConfig.withDefaults()
+                                                 .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+                                                 .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                                                 .withSetting( new HttpConnector( "http" ).enabled, "false" );
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );
@@ -316,8 +314,6 @@ public class RunExportCommand implements Runnable
                 parentBuild,
                 triggeredBy );
         BenchmarkConfig benchmarkConfig = suiteDescription.toBenchmarkConfig();
-        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty()
-                                                            : Neo4jConfig.fromFile( neo4jConfigFile );
         BenchmarkTool tool = new BenchmarkTool( Repository.MICRO_BENCH, toolCommit, toolOwner, toolBranch );
         Java java = Java.current( String.join( " ", jvmArgs ) );
 
@@ -325,7 +321,7 @@ public class RunExportCommand implements Runnable
                 testRun,
                 benchmarkConfig,
                 Sets.newHashSet( new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner ) ),
-                neo4jConfig,
+                baseNeo4jConfig,
                 Environment.current(),
                 resultMetrics,
                 tool,

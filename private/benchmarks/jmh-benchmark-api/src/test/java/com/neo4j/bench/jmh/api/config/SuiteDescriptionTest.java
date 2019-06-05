@@ -25,7 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class SuiteDescriptionTest extends AnnotationsFixture
+public class SuiteDescriptionTest extends BenchmarksFinderFixture
 {
     @Test
     public void shouldFailValidationWhenOnlySomeParametersAreSet()
@@ -51,7 +51,7 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         assertTrue( configFile.getEntry( benchmarkName ).isEnabled() );
         assertThat( configFile.getEntry( benchmarkName ).values().size(), equalTo( 2 ) );
 
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
         assertEquals( validation.report(),
@@ -83,7 +83,7 @@ public class SuiteDescriptionTest extends AnnotationsFixture
         assertThat( configFile.getEntry( benchmarkName ).values().size(), equalTo( 1 ) );
         assertTrue( configFile.getEntry( benchmarkName ).values().containsKey( paramName ) );
 
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
         assertEquals( validation.report(),
@@ -95,14 +95,14 @@ public class SuiteDescriptionTest extends AnnotationsFixture
     @Test
     public void shouldReturnCorrectGroupBenchmarkNames()
     {
-        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         Map<String,List<String>> groupBenchmarks = suiteDescription.getGroupBenchmarkNames();
         // contains 'Example' group only
         assertThat( groupBenchmarks.toString(), groupBenchmarks.size(), equalTo( 1 ) );
 
         List<String> exampleBenchmarks = groupBenchmarks.get( "Example" );
         assertThat( exampleBenchmarks.size(), equalTo( 9 ) );
-        getAnnotations().getBenchmarks().forEach(
+        getBenchmarksFinder().getBenchmarks().forEach(
                 benchmark -> assertTrue( exampleBenchmarks.contains( benchmark.getName() ) ) );
     }
 }

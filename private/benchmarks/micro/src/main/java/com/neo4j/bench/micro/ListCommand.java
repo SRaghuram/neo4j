@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.jmh.api.config.Annotations;
+import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import io.airlift.airline.Command;
@@ -29,8 +29,8 @@ public class ListCommand implements Runnable
     public void run()
     {
         Validation validation = new Validation();
-        Annotations annotations = new Annotations( "com.neo4j.bench.micro" );
-        SuiteDescription suite = SuiteDescription.fromAnnotations( annotations, validation );
+        BenchmarksFinder benchmarksFinder = new BenchmarksFinder( "com.neo4j.bench.micro" );
+        SuiteDescription suite = SuiteDescription.fromAnnotations( benchmarksFinder, validation );
         Validation.assertValid( validation );
         Map<String,List<String>> groupBenchmarks = suite.getGroupBenchmarkNames();
         System.out.println( makeGroupBenchmarksString( groupBenchmarks, verbose ) );

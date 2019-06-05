@@ -31,7 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class AnnotationsTest extends AnnotationsFixture
+public class BenchmarksFinderTest extends BenchmarksFinderFixture
 {
     private Set<Class> invalidBenchmarks = Sets.newHashSet( DuplicateAllowedBenchmark.class,
                                                             DuplicateBaseBenchmark.class,
@@ -47,8 +47,8 @@ public class AnnotationsTest extends AnnotationsFixture
     @Test
     public void shouldGetParameterFieldsForBenchmark()
     {
-        Annotations annotations = getAnnotations();
-        List<Field> fields = annotations.getParamFieldsFor( ValidDisabledBenchmark.class );
+        BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
+        List<Field> fields = benchmarksFinder.getParamFieldsFor( ValidDisabledBenchmark.class );
         Set<String> fieldNames = fields.stream().map( Field::getName ).collect( toSet() );
         assertThat( fieldNames, equalTo( Sets.newHashSet( "ValidDisabledBenchmark_param1", "ValidDisabledBenchmark_param2" ) ) );
     }
@@ -56,17 +56,17 @@ public class AnnotationsTest extends AnnotationsFixture
     @Test
     public void shouldGetParameterFieldsForBenchmarksWithoutParameters()
     {
-        Annotations annotations = getAnnotations();
-        List<Field> fields = annotations.getParamFieldsFor( ValidEnabledBenchmarkWithoutParams.class );
+        BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
+        List<Field> fields = benchmarksFinder.getParamFieldsFor( ValidEnabledBenchmarkWithoutParams.class );
         assertTrue( fields.isEmpty() );
     }
 
     @Test
     public void shouldGetAllBenchmarks()
     {
-        assertThat( getAnnotations().getBenchmarks(), equalTo( Sets.union( invalidBenchmarks, validBenchmarks ) ) );
-        assertThat( getInvalidAnnotations().getBenchmarks(), equalTo( invalidBenchmarks ) );
-        assertThat( getValidAnnotations().getBenchmarks(), equalTo( validBenchmarks ) );
+        assertThat( getBenchmarksFinder().getBenchmarks(), equalTo( Sets.union( invalidBenchmarks, validBenchmarks ) ) );
+        assertThat( getInvalidBenchmarksFinder().getBenchmarks(), equalTo( invalidBenchmarks ) );
+        assertThat( getValidBenchmarksFinder().getBenchmarks(), equalTo( validBenchmarks ) );
     }
 
     @Test
@@ -74,39 +74,39 @@ public class AnnotationsTest extends AnnotationsFixture
     {
         for ( Class benchmark : invalidBenchmarks )
         {
-            assertTrue( getAnnotations().hasBenchmark( benchmark.getName() ) );
-            assertTrue( getInvalidAnnotations().hasBenchmark( benchmark.getName() ) );
-            assertFalse( getValidAnnotations().hasBenchmark( benchmark.getName() ) );
+            assertTrue( getBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
+            assertTrue( getInvalidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
+            assertFalse( getValidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
         }
         for ( Class benchmark : validBenchmarks )
         {
-            assertTrue( getAnnotations().hasBenchmark( benchmark.getName() ) );
-            assertFalse( getInvalidAnnotations().hasBenchmark( benchmark.getName() ) );
-            assertTrue( getValidAnnotations().hasBenchmark( benchmark.getName() ) );
+            assertTrue( getBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
+            assertFalse( getInvalidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
+            assertTrue( getValidBenchmarksFinder().hasBenchmark( benchmark.getName() ) );
         }
     }
 
     @Test
     public void shouldGetBenchmarkMethods()
     {
-        Annotations annotations = getAnnotations();
+        BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
 
         // group benchmark
         List<String> groupBenchmarkMethods =
-                annotations.getBenchmarkMethodsFor( ValidEnabledGroupBenchmark.class ).stream().map( annotations::benchmarkNameFor ).collect( toList() );
+                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledGroupBenchmark.class ).stream().map( benchmarksFinder::benchmarkNameFor ).collect( toList() );
         assertThat( groupBenchmarkMethods, equalTo( Lists.newArrayList( "group", "group" ) ) );
 
         // regular benchmark
         Set<String> benchmarkMethods =
-                annotations.getBenchmarkMethodsFor( ValidEnabledBenchmark1.class ).stream().map( annotations::benchmarkNameFor ).collect( toSet() );
+                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledBenchmark1.class ).stream().map( benchmarksFinder::benchmarkNameFor ).collect( toSet() );
         assertThat( benchmarkMethods, equalTo( Sets.newHashSet( "methodOne", "methodTwo" ) ) );
     }
 
     @Test
     public void shouldPassValidationWhenAllBenchmarksAreValid()
     {
-        Annotations annotations = getValidAnnotations();
-        AnnotationsValidator.AnnotationsValidationResult validationResult = annotations.validate();
+        BenchmarksFinder benchmarksFinder = getValidBenchmarksFinder();
+        BenchmarksValidator.BenchmarkValidationResult validationResult = benchmarksFinder.validate();
 
         assertTrue( validationResult.message(), validationResult.isValid() );
     }
@@ -114,8 +114,8 @@ public class AnnotationsTest extends AnnotationsFixture
     @Test
     public void shouldFailValidationWhenSomeBenchmarksAreInvalid()
     {
-        Annotations annotations = getAnnotations();
-        AnnotationsValidator.AnnotationsValidationResult validationResult = annotations.validate();
+        BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
+        BenchmarksValidator.BenchmarkValidationResult validationResult = benchmarksFinder.validate();
 
         assertFalse( validationResult.isValid() );
     }
@@ -123,9 +123,9 @@ public class AnnotationsTest extends AnnotationsFixture
     @Test
     public void shouldReadParameterFields()
     {
-        Set<String> parameters = getAnnotations().getParamFieldsFor( ValidEnabledBenchmark1.class ).stream()
-                                                 .map( Field::getName )
-                                                 .collect( toSet() );
+        Set<String> parameters = getBenchmarksFinder().getParamFieldsFor( ValidEnabledBenchmark1.class ).stream()
+                                                      .map( Field::getName )
+                                                      .collect( toSet() );
 
         assertThat(
                 parameters,
@@ -135,7 +135,7 @@ public class AnnotationsTest extends AnnotationsFixture
     @Test
     public void shouldReadBenchmarkMethods()
     {
-        Set<String> benchmarkMethodNames = getAnnotations()
+        Set<String> benchmarkMethodNames = getBenchmarksFinder()
                 .getBenchmarkMethodsFor( ValidEnabledBenchmark1.class )
                 .stream()
                 .map( Method::getName )
