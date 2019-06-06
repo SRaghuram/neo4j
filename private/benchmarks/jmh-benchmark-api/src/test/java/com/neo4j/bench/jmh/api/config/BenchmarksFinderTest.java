@@ -93,12 +93,16 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
 
         // group benchmark
         List<String> groupBenchmarkMethods =
-                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledGroupBenchmark.class ).stream().map( benchmarksFinder::benchmarkNameFor ).collect( toList() );
+                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledGroupBenchmark.class ).stream()
+                                .map( benchmarksFinder::benchmarkNameFor )
+                                .collect( toList() );
         assertThat( groupBenchmarkMethods, equalTo( Lists.newArrayList( "group", "group" ) ) );
 
         // regular benchmark
         Set<String> benchmarkMethods =
-                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledBenchmark1.class ).stream().map( benchmarksFinder::benchmarkNameFor ).collect( toSet() );
+                benchmarksFinder.getBenchmarkMethodsFor( ValidEnabledBenchmark1.class ).stream()
+                                .map( benchmarksFinder::benchmarkNameFor )
+                                .collect( toSet() );
         assertThat( benchmarkMethods, equalTo( Sets.newHashSet( "methodOne", "methodTwo" ) ) );
     }
 
