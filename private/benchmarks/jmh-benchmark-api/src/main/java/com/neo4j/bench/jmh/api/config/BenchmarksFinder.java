@@ -99,14 +99,16 @@ public class BenchmarksFinder
                                                                       .collect( toList() ) ) );
 
         this.benchmarkParamFields = benchmarks.stream()
-                                              .collect( toMap( identity(), b -> Stream.of( b.getDeclaredFields() )
-                                                                                      .filter( field -> field.isAnnotationPresent( Param.class ) )
-                                                                                      .collect( toList() ) ) );
+                                              .collect( toMap( identity(),
+                                                               b -> Stream.of( b.getDeclaredFields() )
+                                                                          .filter( field -> field.isAnnotationPresent( Param.class ) )
+                                                                          .collect( toList() ) ) );
 
         this.benchmarkParamValueFields = benchmarks.stream()
-                                                   .collect( toMap( identity(), b -> Stream.of( b.getDeclaredFields() )
-                                                                                           .filter( field -> field.isAnnotationPresent( ParamValues.class ) )
-                                                                                           .collect( toList() ) ) );
+                                                   .collect( toMap( identity(),
+                                                                    b -> Stream.of( b.getDeclaredFields() )
+                                                                               .filter( field -> field.isAnnotationPresent( ParamValues.class ) )
+                                                                               .collect( toList() ) ) );
     }
 
     List<Method> getBenchmarkMethodsFor( Class benchmarkClass )
