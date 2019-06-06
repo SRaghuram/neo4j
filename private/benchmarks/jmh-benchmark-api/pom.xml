@@ -17,7 +17,6 @@
         <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
-        <test.runner.jvm.settings.additional>-Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
     </properties>
 
     <licenses>
