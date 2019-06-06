@@ -320,7 +320,7 @@ public class BenchmarkDescription
                                                                          .map( method -> createBenchmarkMethodDescriptionFor( method,
                                                                                                                               validation,
                                                                                                                               benchmarksFinder ) )
-                                                                         // distinct is needed because @Group benchmarks have multiple methods all with same name
+                                                                         // distinct is needed because @Group benchmarks have multiple methods with same name
                                                                          // distinct is safe because every method of the same group should have the same mode
                                                                          .distinct()
                                                                          .collect( toMap( BenchmarkMethodDescription::name, identity() ) );
