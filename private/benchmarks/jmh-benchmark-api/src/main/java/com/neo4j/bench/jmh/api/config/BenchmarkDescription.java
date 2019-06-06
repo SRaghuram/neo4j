@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -136,29 +137,31 @@ public class BenchmarkDescription
                                                 className ) );
         }
         Map<String,BenchmarkParamDescription> newParameters = new HashMap<>( parameters );
-        benchmarkConfigEntry.values().forEach( ( paramName, newValues ) ->
-                                               {
-                                                   if ( !parameters.containsKey( paramName ) )
-                                                   {
-                                                       validation.configuredParameterDoesNotExist( className, paramName );
-                                                   }
-                                                   else
-                                                   {
-                                                       BenchmarkParamDescription oldValues = parameters.get( paramName );
-                                                       for ( String newValue : newValues )
-                                                       {
-                                                           if ( !oldValues.allowedValues().contains( newValue ) )
-                                                           {
-                                                               validation.configuredValueIsNotAllowed(
-                                                                       className,
-                                                                       paramName,
-                                                                       oldValues.allowedValues(),
-                                                                       newValue );
-                                                           }
-                                                       }
-                                                       newParameters.put( paramName, oldValues.withValues( newValues ) );
-                                                   }
-                                               } );
+
+        BiConsumer<String,Set<String>> updateParametersFun = ( paramName, newValues ) -> {
+            if ( !parameters.containsKey( paramName ) )
+            {
+                validation.configuredParameterDoesNotExist( className, paramName );
+            }
+            else
+            {
+                BenchmarkParamDescription oldValues = parameters.get( paramName );
+                for ( String newValue : newValues )
+                {
+                    if ( !oldValues.allowedValues().contains( newValue ) )
+                    {
+                        validation.configuredValueIsNotAllowed(
+                                className,
+                                paramName,
+                                oldValues.allowedValues(),
+                                newValue );
+                    }
+                }
+                newParameters.put( paramName, oldValues.withValues( newValues ) );
+            }
+        };
+        benchmarkConfigEntry.values().forEach( updateParametersFun );
+
         if ( benchmarkConfigEntry.isEnabled() )
         {
             newParameters.keySet().stream()
@@ -276,9 +279,9 @@ public class BenchmarkDescription
                 {
                     HashMap<String,BenchmarkMethodDescription> methodForCombination = new HashMap<>();
                     methodForCombination.put( method.name(), method );
-                    Map<String,BenchmarkParamDescription> parametersForCombination = parameterCombination.stream()
-                                                                                                         .collect( toMap( BenchmarkParamDescription::name,
-                                                                                                                          p -> p ) );
+                    Map<String,BenchmarkParamDescription> parametersForCombination =
+                            parameterCombination.stream().collect( toMap( BenchmarkParamDescription::name,
+                                                                          identity() ) );
 
                     allCombinations.add(
                             new BenchmarkDescription(
