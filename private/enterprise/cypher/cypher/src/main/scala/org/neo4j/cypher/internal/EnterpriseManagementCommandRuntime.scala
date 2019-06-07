@@ -451,17 +451,13 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
   }
 
   protected def clearCacheForUser(username: String): Option[Throwable] = {
-    // TODO: Get handle on BasicSystemGraphRealm to clear the cache
-    //See: BasicSystemGraphRealm.clearCacheForUser(username)
     authManager.clearAuthCache()
-
     // Ultimately this should go to the trigger handling done in the reconciler
     None
   }
 
   protected def clearCacheForRole(role: String): Option[Throwable]  = {
-    // TODO: Get handle on BasicSystemGraphRealm to clear the cache
-    //See: BasicSystemGraphRealm.clearCacheForRole(rolename)
+    authManager.clearCacheForRole(role)
     // Ultimately this should go to the trigger handling done in the reconciler
     None
   }

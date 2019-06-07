@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
@@ -344,41 +343,41 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig );
 
         // When
-        Set<DatabasePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
+        Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
-        DatabasePrivilege expected = new DatabasePrivilege();
-        expected.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        expected.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
-        assertThat( privileges, contains( expected ) );
+        ResourcePrivilege readPrivilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL );
+        ResourcePrivilege writePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL );
+        ResourcePrivilege tokenPrivilege = new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL );
+        ResourcePrivilege schemaPrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL );
+        ResourcePrivilege adminPrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
+
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
 
         // Then
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
-        assertThat( privileges, contains( expected ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege, writePrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
 
         // Then
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL ) );
-        assertThat( privileges, contains( expected ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege, writePrivilege, tokenPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
 
         // Then
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL ) );
-        assertThat( privileges, contains( expected ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege, writePrivilege, tokenPrivilege, schemaPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
 
         // Then
-        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
-        assertThat( privileges, contains( expected ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege, writePrivilege, tokenPrivilege, schemaPrivilege, adminPrivilege ) );
     }
 
     @Test
@@ -393,21 +392,22 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig );
 
         // When
-        DatabasePrivilege customPriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        customPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        customPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
+        ResourcePrivilege customPriv1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege customPriv2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
 
-        DatabasePrivilege rolePriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
-        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL ) );
-        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL ) );
+        ResourcePrivilege rolePriv1 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege rolePriv2 = new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege rolePriv3 = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
 
-        realm.grantPrivilegeToRole( "custom", customPriv );
-        realm.grantPrivilegeToRole( "role", rolePriv );
+        realm.grantPrivilegeToRole( "custom", customPriv1 );
+        realm.grantPrivilegeToRole( "custom", customPriv2 );
+        realm.grantPrivilegeToRole( "role", rolePriv1 );
+        realm.grantPrivilegeToRole( "role", rolePriv2 );
+        realm.grantPrivilegeToRole( "role", rolePriv3 );
 
         // Then
-        assertThat( realm.getPrivilegesForRoles( singleton( "custom" ) ), contains( customPriv ) );
-        assertThat( realm.getPrivilegesForRoles( singleton( "role" ) ), contains( rolePriv ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "custom" ) ), containsInAnyOrder( customPriv1, customPriv2 ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "role" ) ), containsInAnyOrder( rolePriv1, rolePriv2, rolePriv3 ) );
     }
 
     @Test
@@ -424,15 +424,14 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
-        realm.grantPrivilegeToRole( "CustomAdmin", dbPriv );
+        ResourcePrivilege privilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
+        realm.grantPrivilegeToRole( "CustomAdmin", privilege );
 
         // Then
-        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), contains( dbPriv ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), contains( privilege ) );
 
         // When
-        realm.revokePrivilegeFromRole( "CustomAdmin", dbPriv );
+        realm.revokePrivilegeFromRole( "CustomAdmin", privilege );
 
         // Then
         assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), empty() );
@@ -451,9 +450,7 @@ class SystemGraphRealmIT
         try
         {
             // When
-            DatabasePrivilege dbPriv = new DatabasePrivilege();
-            dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-            realm.grantPrivilegeToRole( "custom", dbPriv );
+            realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
             fail( "Should not allow setting privilege on non existing role." );
         }
         catch ( InvalidArgumentsException e )
@@ -474,21 +471,22 @@ class SystemGraphRealmIT
                 .migrateRole( "custom", "bob" )
                 .build(), securityLog, dbManager, defaultConfig );
 
-        DatabasePrivilege dbPriv1 = new DatabasePrivilege( SYSTEM_DATABASE_NAME );
-        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
-        dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL ) );
+        ResourcePrivilege sysPrivilege1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
+        ResourcePrivilege sysPrivilege2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
+        ResourcePrivilege sysPrivilege3 = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
 
-        DatabasePrivilege dbPriv2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPriv2.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        dbPriv2.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
+        ResourcePrivilege privilege1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege privilege2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
 
-        realm.grantPrivilegeToRole( "custom", dbPriv1 );
-        realm.grantPrivilegeToRole( "custom", dbPriv2 );
+        realm.grantPrivilegeToRole( "custom", sysPrivilege1 );
+        realm.grantPrivilegeToRole( "custom", sysPrivilege2 );
+        realm.grantPrivilegeToRole( "custom", sysPrivilege3 );
+        realm.grantPrivilegeToRole( "custom", privilege1 );
+        realm.grantPrivilegeToRole( "custom", privilege2 );
 
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
 
-        assertThat( privileges, containsInAnyOrder( dbPriv1, dbPriv2 ) );
+        assertThat( privileges, containsInAnyOrder( sysPrivilege1, sysPrivilege2, sysPrivilege3, privilege1, privilege2 ) );
     }
 
     @Test
@@ -502,16 +500,13 @@ class SystemGraphRealmIT
                 .migrateRole( "custom", "bob" )
                 .build(), securityLog, dbManager, defaultConfig );
 
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
 
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        realm.grantPrivilegeToRole( "custom", dbPriv );
+        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
+
         privileges = realm.showPrivilegesForUser( "bob" );
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege();
-        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+        assertThat( privileges, containsInAnyOrder( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) ) );
     }
 
     @Test
@@ -525,19 +520,18 @@ class SystemGraphRealmIT
                 .migrateRole( "custom", "bob" )
                 .build(), securityLog, dbManager, defaultConfig );
 
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
         assertTrue( privileges.isEmpty() );
 
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege();
-        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
-        realm.grantPrivilegeToRole( "custom", databasePrivilege );
+        ResourcePrivilege privilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
+        realm.grantPrivilegeToRole( "custom", privilege );
 
         // Then
         privileges = realm.showPrivilegesForUser( "bob" );
-        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+        assertThat( privileges, containsInAnyOrder( privilege ) );
 
         // When
-        realm.revokePrivilegeFromRole( "custom", databasePrivilege );
+        realm.revokePrivilegeFromRole( "custom", privilege );
 
         // Then
         privileges = realm.showPrivilegesForUser( "bob" );
@@ -577,13 +571,12 @@ class SystemGraphRealmIT
         );
 
         // Give Alice read privileges in 'neo4j'
-        DatabasePrivilege dbPriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        realm.grantPrivilegeToRole( "custom", dbPriv );
+        ResourcePrivilege privilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        realm.grantPrivilegeToRole( "custom", privilege );
 
         assertAuthenticationSucceeds( realm, "alice" );
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "alice" );
+        assertThat( privileges, containsInAnyOrder( privilege ) );
 
         realm.stop();
 
@@ -598,12 +591,10 @@ class SystemGraphRealmIT
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+        assertThat( privileges, containsInAnyOrder( privilege ) );
 
         // Alice should NOT have read privileges in 'foo'
-        DatabasePrivilege dbPrivFoo = new DatabasePrivilege( "foo" );
-        dbPrivFoo.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-        assertFalse( privileges.contains( dbPrivFoo ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, "foo" ) ) );
 
         realm.stop();
 
@@ -617,7 +608,7 @@ class SystemGraphRealmIT
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( dbPriv ) );
+        assertThat( privileges, containsInAnyOrder( privilege ) );
     }
 
     private void prePopulateUsers( String... usernames ) throws Throwable

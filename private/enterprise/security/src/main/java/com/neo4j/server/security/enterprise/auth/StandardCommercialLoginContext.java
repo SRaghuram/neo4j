@@ -57,13 +57,13 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         Set<String> roles = queryForRoleNames();
         StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver );
 
-        Set<DatabasePrivilege> privileges = authManager.getPermissions( roles );
-        for ( DatabasePrivilege privilege : privileges )
+        Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
+        for ( ResourcePrivilege privilege : privileges )
         {
             String privilegeDbName = privilege.getDbName();
             if ( privilege.isAllDatabases() || privilegeDbName.equals( dbName ) )
             {
-                accessModeBuilder.addPrivileges( privilege );
+                accessModeBuilder.addPrivilege( privilege );
             }
         }
 
@@ -327,93 +327,90 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         whitelistTraverseLabels );
             }
 
-            void addPrivileges( DatabasePrivilege dbPrivilege ) throws KernelException
+            void addPrivilege( ResourcePrivilege privilege ) throws KernelException
             {
-                for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+                Resource resource = privilege.getResource();
+                switch ( privilege.getAction() )
                 {
-                    Resource resource = privilege.getResource();
-                    switch ( privilege.getAction() )
+                case FIND:
+                    read = true;
+                    if ( privilege.getSegment().equals( Segment.ALL ) )
                     {
-                    case FIND:
+                        allowsTraverseAllLabels = true;
+                    }
+                    else
+                    {
+                        int labelId = resolveLabelId( privilege.getSegment().getLabel() );
+                        whitelistTraverseLabels.add( labelId );
+                    }
+                    break;
+                case READ:
+                    switch ( resource.type() )
+                    {
+                    case GRAPH:
+                        whitelistAllPropertiesInWholeGraph = true;
                         read = true;
-                        if ( privilege.getSegment().equals( Segment.ALL ) )
+                        break;
+                    case PROPERTY:
+                        read = true;
+                        int propertyId = resolvePropertyId( resource.getArg1() );
+                        if ( privilege.getSegment() == Segment.ALL )
                         {
-                            allowsTraverseAllLabels = true;
+                            whitelistNodeProperties.add( propertyId );
+                        }
+                        else
+                        {
+                            MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
+                                    .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                            int labelId = resolveLabelId( privilege.getSegment().getLabel() );
+                            allowedNodesWithLabels.add( labelId );
+                        }
+                        break;
+                    case ALL_PROPERTIES:
+                        read = true;
+                        if ( privilege.getSegment() == Segment.ALL )
+                        {
+                            whitelistAllPropertiesInWholeGraph = true;
                         }
                         else
                         {
                             int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                            whitelistTraverseLabels.add( labelId );
-                        }
-                        break;
-                    case READ:
-                        switch ( resource.type() )
-                        {
-                        case GRAPH:
-                            whitelistAllPropertiesInWholeGraph = true;
-                            read = true;
-                            break;
-                        case PROPERTY:
-                            read = true;
-                            int propertyId = resolvePropertyId( resource.getArg1() );
-                            if ( privilege.getSegment() == Segment.ALL )
-                            {
-                                whitelistNodeProperties.add( propertyId );
-                            }
-                            else
-                            {
-                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
-                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
-                                int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                                allowedNodesWithLabels.add( labelId );
-                            }
-                            break;
-                        case ALL_PROPERTIES:
-                            read = true;
-                            if ( privilege.getSegment() == Segment.ALL )
-                            {
-                                whitelistAllPropertiesInWholeGraph = true;
-                            }
-                            else
-                            {
-                                int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                                allowedSegmentForAllProperties.add( labelId );
-                            }
-                            break;
-                        default:
-                        }
-                        break;
-                    case WRITE:
-                        switch ( resource.type() )
-                        {
-                        case GRAPH:
-                        case PROPERTY:
-                        case ALL_PROPERTIES:
-                            write = true;
-                            break;
-                        case TOKEN:
-                            token = true;
-                            break;
-                        case SCHEMA:
-                            schema = true;
-                            break;
-                        case SYSTEM:
-                            admin = true;
-                            break;
-                        default:
-                        }
-                        break;
-                    case EXECUTE:
-                        switch ( resource.type() )
-                        {
-                        case PROCEDURE:
-                            // implement when porting procedure execute privileges to system graph
-                            break;
-                        default:
+                            allowedSegmentForAllProperties.add( labelId );
                         }
                         break;
                     default:
                     }
+                    break;
+                case WRITE:
+                    switch ( resource.type() )
+                    {
+                    case GRAPH:
+                    case PROPERTY:
+                    case ALL_PROPERTIES:
+                        write = true;
+                        break;
+                    case TOKEN:
+                        token = true;
+                        break;
+                    case SCHEMA:
+                        schema = true;
+                        break;
+                    case SYSTEM:
+                        admin = true;
+                        break;
+                    default:
+                    }
+                    break;
+                case EXECUTE:
+                    switch ( resource.type() )
+                    {
+                    case PROCEDURE:
+                        // implement when porting procedure execute privileges to system graph
+                        break;
+                    default:
+                    }
+                    break;
+                default:
                 }
             }
 

@@ -177,12 +177,23 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
-        privilege.addPrivilege( new ResourcePrivilege(
-                asAction( action ),
-                Resource.parse( resource, null, null ),
-                Segment.ALL )
-        );
+        ResourcePrivilege privilege;
+        if ( database.isBlank() )
+        {
+            privilege = new ResourcePrivilege(
+                    asAction( action ),
+                    Resource.parse( resource, null, null ),
+                    Segment.ALL
+            );
+        }
+        else
+        {
+            privilege = new ResourcePrivilege(
+                    asAction( action ),
+                    Resource.parse( resource, null, null ),
+                    Segment.ALL,
+                    database );
+        }
         userManager.grantPrivilegeToRole( roleName, privilege );
     }
 
@@ -195,12 +206,23 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( "resource" ) String resource,
             @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = database.isBlank() ? new DatabasePrivilege() : new DatabasePrivilege( database );
-        privilege.addPrivilege( new ResourcePrivilege(
-                asAction( action ),
-                Resource.parse( resource, null, null ),
-                Segment.ALL )
-        );
+        ResourcePrivilege privilege;
+        if ( database.isBlank() )
+        {
+            privilege = new ResourcePrivilege(
+                    asAction( action ),
+                    Resource.parse( resource, null, null ),
+                    Segment.ALL
+            );
+        }
+        else
+        {
+            privilege = new ResourcePrivilege(
+                    asAction( action ),
+                    Resource.parse( resource, null, null ),
+                    Segment.ALL,
+                    database );
+        }
         userManager.revokePrivilegeFromRole( roleName, privilege );
     }
 

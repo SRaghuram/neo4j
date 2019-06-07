@@ -12,14 +12,26 @@ public class ResourcePrivilege
     private final Action action;
     private final Resource resource;
     private final Segment segment;
-    private String dbname;
-    private boolean allDatabases;
+    private final String dbName;
+    private final boolean allDatabases;
 
     public ResourcePrivilege( Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
     {
         this.action = action;
         this.resource = resource;
         this.segment = segment;
+        this.dbName = "";
+        this.allDatabases = true;
+        resource.assertValidCombination( action );
+    }
+
+    public ResourcePrivilege( Action action, Resource resource, Segment segment, String dbName ) throws InvalidArgumentsException
+    {
+        this.action = action;
+        this.resource = resource;
+        this.segment = segment;
+        this.dbName = dbName;
+        this.allDatabases = false;
         resource.assertValidCombination( action );
     }
 
@@ -40,7 +52,7 @@ public class ResourcePrivilege
 
     public String getDbName()
     {
-        return this.dbname;
+        return this.dbName;
     }
 
     public boolean isAllDatabases()
@@ -66,7 +78,11 @@ public class ResourcePrivilege
         if ( obj instanceof ResourcePrivilege )
         {
             ResourcePrivilege other = (ResourcePrivilege) obj;
-            return other.action.equals( this.action ) && other.resource.equals( this.resource ) && other.segment.equals( this.segment );
+            return other.action.equals( this.action )
+                    && other.resource.equals( this.resource )
+                    && other.segment.equals( this.segment )
+                    && other.dbName.equals( this.dbName )
+                    && other.allDatabases == this.allDatabases;
         }
         return false;
     }

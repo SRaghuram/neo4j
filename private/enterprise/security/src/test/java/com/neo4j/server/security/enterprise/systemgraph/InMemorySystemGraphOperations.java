@@ -5,12 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
-
-import org.neo4j.internal.batchimport.input.csv.Data;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
@@ -22,6 +18,7 @@ import java.util.Set;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
+import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicInMemorySystemGraphOperations;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
@@ -35,7 +32,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     private BasicInMemorySystemGraphOperations basic = new BasicInMemorySystemGraphOperations();
     private Map<String,Set<String>> rolesForUsers = new HashMap<>();
     private Map<String,RoleRecord> roles = new HashMap<>();
-    private Map<String,Map<String,DatabasePrivilege>> rolePrivileges = new HashMap<>();
+    private Map<String,Set<ResourcePrivilege>> rolePrivileges = new HashMap<>();
 
     public InMemorySystemGraphOperations( SecureHasher secureHasher )
     {
@@ -161,67 +158,38 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
-        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
-        DatabasePrivilege dbPrivilege = databasePrivilegeMap.computeIfAbsent( "", db -> new DatabasePrivilege() );
-        dbPrivilege.addPrivilege( resourcePrivilege );
+        Set<ResourcePrivilege> privilegesForRole = rolePrivileges.computeIfAbsent( roleName, k -> new HashSet<>() );
+        privilegesForRole.add( resourcePrivilege );
     }
 
     @Override
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
-        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
-        dbPrivilege.addPrivilege( resourcePrivilege );
+        Set<ResourcePrivilege> privilegesForRole = rolePrivileges.getOrDefault( roleName, Collections.emptySet() );
+        privilegesForRole.remove( resourcePrivilege );
     }
 
     @Override
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
-    {
-        assertRoleExists( roleName );
-        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.get( roleName );
-        if ( databasePrivilegeMap != null )
-        {
-            if ( dbPrivilege != null )
-            {
-                dbPrivilege.removePrivilege( resourcePrivilege );
-            }
-        }
-    }
-
-    @Override
-    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
     {
         getUser( username, false );
         return getPrivilegeForRoles( getRoleNamesForUser( username ) );
     }
 
     @Override
-    Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    Set<ResourcePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
-        Map<String,DatabasePrivilege> privileges = new HashMap<>();
+        Set<ResourcePrivilege> privileges = new HashSet<>();
         for ( String role : roles )
         {
-            Map<String,DatabasePrivilege> privilegeMap = rolePrivileges.get( role );
-            if ( privilegeMap != null )
+            Set<ResourcePrivilege> privilegeForRole = rolePrivileges.get( role );
+            if ( privilegeForRole != null )
             {
-                for ( DatabasePrivilege dbPrivilege : privilegeMap.values() )
-                {
-                    DatabasePrivilege oldPrivilege = privileges.get( dbPrivilege.getDbName() );
-                    if ( oldPrivilege == null )
-                    {
-                        privileges.put( dbPrivilege.getDbName(), dbPrivilege );
-                    }
-                    else
-                    {
-                        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
-                        {
-                            oldPrivilege.addPrivilege( privilege );
-                        }
-                    }
-                }
+                privileges.addAll( privilegeForRole );
             }
         }
-        return new HashSet<>( privileges.values() );
+        return privileges;
     }
 
     @Override

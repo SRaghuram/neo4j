@@ -33,10 +33,10 @@ class ResourcePrivilegeTest
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.TokenResource(), Segment.ALL ) );
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SchemaResource(), Segment.ALL ) );
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SystemResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
-
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
-
+        assertThrows( InvalidArgumentsException.class,
+                () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
+        assertThrows( InvalidArgumentsException.class,
+                () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.GraphResource(), Segment.ALL ) );
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.TokenResource(), Segment.ALL ) );
         assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SchemaResource(), Segment.ALL ) );

@@ -318,6 +318,12 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         }
     }
 
+    @Override
+    public void clearCacheForRole( String role )
+    {
+        userManager.clearCacheForRole( role );
+    }
+
     public Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
     {
         List<AuthorizationInfo> infoList = new ArrayList<>( 1 );
@@ -336,7 +342,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         return infoList;
     }
 
-    Set<DatabasePrivilege> getPermissions( Set<String> roles )
+    Set<ResourcePrivilege> getPermissions( Set<String> roles )
     {
         return userManager.getPrivilegesForRoles( roles );
     }

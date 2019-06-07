@@ -161,11 +161,9 @@ class PersonalUserManagerTest
                 error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
     }
 
-    private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
+    private ResourcePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( action, resource, Segment.ALL ) );
-        return dbPriv;
+        return new ResourcePrivilege( action, resource, Segment.ALL );
     }
 
     private PersonalUserManager getUserManager( String userName, boolean isAdmin )
@@ -382,29 +380,29 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+        public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
                 throw new InvalidArgumentsException( "assignPrivilegeToRoleException" );
             }
-            delegate.grantPrivilegeToRole( roleName, dbPrivilege );
+            delegate.grantPrivilegeToRole( roleName, privilege );
         }
 
         @Override
-        public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
                 throw new InvalidArgumentsException( "revokePrivilegeFromRoleException" );
             }
-            delegate.revokePrivilegeFromRole( roleName, dbPrivilege );
+            delegate.revokePrivilegeFromRole( roleName, privilege );
         }
 
         @Override
-        public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+        public Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
@@ -415,9 +413,15 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+        public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return delegate.getPrivilegesForRoles( roles );
+        }
+
+        @Override
+        public void clearCacheForRole( String role )
+        {
+            delegate.clearCacheForRole( role );
         }
 
         @Override

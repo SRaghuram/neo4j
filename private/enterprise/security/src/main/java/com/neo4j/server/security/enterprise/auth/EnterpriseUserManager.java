@@ -54,20 +54,20 @@ public interface EnterpriseUserManager extends UserManager
      * If the role already have this privilege nothing will change.
      *
      * @param roleName name of role
-     * @param dbPrivilege privilege to grant
+     * @param privilege privilege to grant
      * @throws InvalidArgumentsException if the role or database does not exist
      */
-    void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException;
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException;
 
     /**
      * Revoke a privilege on a resource from a role. The role have to exist.
      * If the role does not have a existing grant on the privilege, no change will happen.
      *
      * @param roleName name of role
-     * @param dbPrivilege privilege to revoke
+     * @param privilege privilege to revoke
      * @throws InvalidArgumentsException if the role or database does not exist
      */
-    void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException;
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException;
 
     /**
      * Show the privileges for a user.
@@ -75,9 +75,15 @@ public interface EnterpriseUserManager extends UserManager
      * @param username name of user
      * @throws InvalidArgumentsException if the user does not exist
      */
-    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException;
+    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException;
 
-    Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles );
+    Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles );
+
+    /**
+     * Clear the cached privileges for a role.
+     * @param role name of the role
+     */
+    void clearCacheForRole( String role );
 
     Set<String> getAllRoleNames();
 
@@ -133,25 +139,30 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
-        public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege )
+        public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege )
         {
         }
 
         @Override
-        public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege )
+        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege )
         {
         }
 
         @Override
-        public Set<DatabasePrivilege> showPrivilegesForUser( String username )
+        public Set<ResourcePrivilege> showPrivilegesForUser( String username )
         {
             return emptySet();
         }
 
         @Override
-        public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+        public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return emptySet();
+        }
+
+        @Override
+        public void clearCacheForRole( String role )
+        {
         }
 
         @Override

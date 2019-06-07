@@ -58,9 +58,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailRead( subject, 3 );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
-        userManager.grantPrivilegeToRole( "custom", dbPriv );
+        userManager.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
 
         // Then
         testSuccessfulRead( subject, 3 );
@@ -83,19 +81,17 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailWrite( subject );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
-        userManager.grantPrivilegeToRole( roleName, dbPriv );
+        ResourcePrivilege privilege1 = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL );
+        ResourcePrivilege privilege2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL );
+        userManager.grantPrivilegeToRole( roleName, privilege1 );
+        userManager.grantPrivilegeToRole( roleName, privilege2 );
 
         // Then
         testSuccessfulRead( subject, 3 );
         testSuccessfulWrite( subject );
 
         // When
-        dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL ) );
-        userManager.revokePrivilegeFromRole( roleName, dbPriv );
+        userManager.revokePrivilegeFromRole( roleName, privilege2 );
 
         // Then
         testSuccessfulRead( subject, 4 );
@@ -110,9 +106,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         userManager.newRole( "UserManager", "Alice" );
 
         // When
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
-        userManager.grantPrivilegeToRole( "UserManager", dbPriv );
+        userManager.grantPrivilegeToRole( "UserManager", new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL ) );
 
         // Then
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
@@ -123,8 +117,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
-        DatabasePrivilege privilege = new DatabasePrivilege();
-        privilege.addPrivilege( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
+        ResourcePrivilege privilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL );
 
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )
@@ -594,14 +587,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         assertEmpty( adminSubject, "CREATE (n:A)" );
 
+        ResourcePrivilege privilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL );
+
         CommercialLoginContext subject = setupUserAndLogin(
                 "Alice", "custom",
-                new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ),
+                privilege,
                 new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), new Segment( "A" ) )
         );
-
-        DatabasePrivilege privilege = new DatabasePrivilege();
-        privilege.addPrivilege( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL ) );
 
         userManager.revokePrivilegeFromRole( "custom", privilege );
 
@@ -632,14 +624,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
     private CommercialLoginContext setupUserAndLogin( String username, String roleName, ResourcePrivilege... privileges ) throws Exception
     {
-        DatabasePrivilege dbPriv = new DatabasePrivilege();
-        for ( ResourcePrivilege privilege : privileges )
-        {
-            dbPriv.addPrivilege( privilege );
-        }
         userManager.newUser( username, password( "foo" ), false );
         userManager.newRole( roleName, username );
-        userManager.grantPrivilegeToRole( roleName, dbPriv );
+        for ( ResourcePrivilege privilege : privileges )
+        {
+            userManager.grantPrivilegeToRole( roleName, privilege );
+        }
         return neo.login( username, "foo" );
     }
 

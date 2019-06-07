@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
@@ -141,35 +140,35 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+    public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
     {
-        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
-        {
-            systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege );
-        }
-        clearCachedAuthorizationInfo();
+        systemGraphOperations.grantPrivilegeToRole( roleName, privilege );
+        clearCacheForRole( roleName );
     }
 
     @Override
-    public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
     {
-        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
-        {
-            systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege );
-        }
-        clearCachedAuthorizationInfo();
+        systemGraphOperations.revokePrivilegeFromRole( roleName, privilege );
+        clearCacheForRole( roleName );
     }
 
     @Override
-    public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    public Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
     {
         return systemGraphOperations.showPrivilegesForUser( username );
     }
 
     @Override
-    public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
+    public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
+    }
+
+    @Override
+    public void clearCacheForRole( String role )
+    {
+        systemGraphOperations.clearCacheForRole( role );
     }
 
     @Override

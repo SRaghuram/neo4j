@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
@@ -13,12 +13,14 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.auth.SecureHasher;
@@ -37,9 +39,16 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class SystemGraphOperations extends BasicSystemGraphOperations
 {
+    private com.github.benmanes.caffeine.cache.Cache<String,Set<ResourcePrivilege>> privilegeCache;
+
     public SystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
     {
         super( queryExecutor, secureHasher );
+        Caffeine<Object,Object> builder = Caffeine.newBuilder()
+                .maximumSize( 10000 )
+                .executor( ForkJoinPool.commonPool() )
+                .expireAfterAccess( Duration.ofHours( 1 ) );
+        privilegeCache = builder.build();
     }
 
     AuthorizationInfo doGetAuthorizationInfo( String username )
@@ -206,32 +215,26 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
     }
 
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    private Map<String,Object> makePrivilegeParameters( String roleName, ResourcePrivilege resourcePrivilege )
     {
-        grantPrivilegeToRole( roleName, resourcePrivilege, new DatabasePrivilege() );
-    }
-
-    private Map<String,Object> makePrivilegeParameters( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege )
-    {
-        assert dbPrivilege.isAllDatabases() || !dbPrivilege.getDbName().isEmpty();
+        assert resourcePrivilege.isAllDatabases() || !resourcePrivilege.getDbName().isEmpty();
         Resource resource = resourcePrivilege.getResource();
-        Map<String,Object> params = map(
+        return map(
                 "roleName", roleName,
-                "dbName", dbPrivilege.getDbName(),
+                "dbName", resourcePrivilege.getDbName(),
                 "action", resourcePrivilege.getAction().toString(),
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
                 "label", resourcePrivilege.getSegment().getLabel()
         );
-        return params;
     }
 
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
-        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege, dbPrivilege );
+        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
         boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
-        String databaseMatch = dbPrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
+        String databaseMatch = resourcePrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
         String qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}" : "q:LabelQualifier {label: $label}";
 
         String query = String.format(
@@ -245,14 +248,14 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "RETURN id(p)",
                 databaseMatch, qualifierPattern
         );
-        assertPrivilegeSuccess( roleName, query, params, dbPrivilege );
+        assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
     }
 
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
-        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege, dbPrivilege );
+        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
         boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
-        String databasePattern = dbPrivilege.isAllDatabases() ? "db:DatabaseAll" : "db:Database {name: $dbName}";
+        String databasePattern = resourcePrivilege.isAllDatabases() ? "db:DatabaseAll" : "db:Database {name: $dbName}";
         String qualifierPattern = fullSegment ? "q:LabelQualifierAll" : "q:LabelQualifier {label: label}";
 
         String query = String.format(
@@ -264,97 +267,134 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "DELETE g RETURN 0",
                 databasePattern, qualifierPattern
         );
-        assertPrivilegeSuccess( roleName, query, params, dbPrivilege );
+        assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
     }
 
-    private void assertPrivilegeSuccess( String roleName, String query, Map<String,Object> params, DatabasePrivilege dbPrivilege )
+    private void assertPrivilegeSuccess( String roleName, String query, Map<String,Object> params, ResourcePrivilege resourcePrivilege )
             throws InvalidArgumentsException
     {
         if ( !queryExecutor.executeQueryWithParamCheck( query, params ) )
         {
             assertRoleExists( roleName );
-            if ( !dbPrivilege.isAllDatabases() )
+            if ( !resourcePrivilege.isAllDatabases() )
             {
-                assertDbExists( dbPrivilege.getDbName() );
+                assertDbExists( resourcePrivilege.getDbName() );
             }
         }
     }
 
-    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
     {
         getUser( username, false );
         Set<String> roles = getRoleNamesForUser( username );
         return getPrivilegeForRoles( roles );
     }
 
-    Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    Set<ResourcePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
-        String query =
-                "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment), " +
-                "(a)-[:APPLIES_TO]->(res) " +
-                "WHERE r.name IN $roles " +
-                "MATCH (segment)-[:FOR]->(db) " +
-                "MATCH (segment)-[:QUALIFIED]->(q) " +
-                "RETURN db.name, db, a.action, res, q";
-
-        Map<String, DatabasePrivilege> results = new HashMap<>();
-
-        final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
+        Map<String,Set<ResourcePrivilege>> resultsPerRole = new HashMap<>();
+        // check if all in cache else lookup and store in cache
+        boolean lookupPrivileges = false;
+        for ( String role : roles )
         {
-            private AnyValue[] fields;
-            @Override
-            public void onResult( int numberOfFields )
+            Set<ResourcePrivilege> privileges = privilegeCache.getIfPresent( role );
+            if ( privileges == null )
             {
-                this.fields = new AnyValue[numberOfFields];
+                lookupPrivileges = true;
             }
-
-            @Override
-            public void onField( int offset, AnyValue value )
+            else
             {
-              fields[offset] = value;
+                // save cached result in output map
+                resultsPerRole.put( role, privileges );
             }
+        }
 
-            @Override
-            public void onRecordCompleted()
+        if ( lookupPrivileges )
+        {
+            String query =
+                    "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment), " +
+                            "(a)-[:APPLIES_TO]->(res) " +
+                            "WHERE r.name IN $roles " +
+                            "MATCH (segment)-[:FOR]->(db) " +
+                            "MATCH (segment)-[:QUALIFIED]->(q) " +
+                            "RETURN r.name, db.name, db, a.action, res, q";
+
+            final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
             {
-                AnyValue dbNameValue = fields[0];
-                NodeValue database = (NodeValue) fields[1];
-                assert database.labels().length() == 1;
-                DatabasePrivilege dbpriv;
-                if ( database.labels().stringValue( 0 ).equals( "Database" ) )
+                private AnyValue[] fields;
+
+                @Override
+                public void onResult( int numberOfFields )
                 {
-                    String dbName = ((TextValue) dbNameValue).stringValue();
-                    dbpriv = results.computeIfAbsent( dbName, DatabasePrivilege::new );
-                }
-                else if ( database.labels().stringValue( 0 ).equals( "DatabaseAll" ) )
-                {
-                    dbpriv = results.computeIfAbsent( "", db -> new DatabasePrivilege() );
-                }
-                else
-                {
-                    throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+                    this.fields = new AnyValue[numberOfFields];
                 }
 
-                String actionValue = ((TextValue) fields[2]).stringValue();
-                NodeValue resource = (NodeValue) fields[3];
-                NodeValue qualifier = (NodeValue) fields[4];
-                try
+                @Override
+                public void onField( int offset, AnyValue value )
                 {
-                    dbpriv.addPrivilege( PrivilegeBuilder.grant( actionValue )
-                            .withinScope( qualifier )
-                            .onResource( resource )
-                            .build() );
+                    fields[offset] = value;
                 }
-                catch ( InvalidArgumentsException ie )
+
+                @Override
+                public void onRecordCompleted()
                 {
-                    throw new IllegalStateException( "Failed to authorize", ie );
+                    String roleName = ((TextValue) fields[0]).stringValue();
+                    Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
+
+                    AnyValue dbNameValue = fields[1];
+                    NodeValue database = (NodeValue) fields[2];
+                    String actionValue = ((TextValue) fields[3]).stringValue();
+                    NodeValue resource = (NodeValue) fields[4];
+                    NodeValue qualifier = (NodeValue) fields[5];
+
+                    try
+                    {
+                        PrivilegeBuilder privilegeBuilder = PrivilegeBuilder.grant( actionValue )
+                                .withinScope( qualifier )
+                                .onResource( resource );
+                        assert database.labels().length() == 1;
+                        switch ( database.labels().stringValue( 0 ) )
+                        {
+                        case "Database":
+                            String dbName = ((TextValue) dbNameValue).stringValue();
+                            privilegeBuilder.forDatabase( dbName );
+                            break;
+                        case "DatabaseAll":
+                            privilegeBuilder.forAllDatabases();
+                            break;
+                        default:
+                            throw new IllegalStateException(
+                                    "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+                        }
+
+                        rolePrivileges.add( privilegeBuilder.build() );
+                    }
+                    catch ( InvalidArgumentsException ie )
+                    {
+                        throw new IllegalStateException( "Failed to authorize", ie );
+                    }
                 }
-            }
-        };
+            };
 
-        queryExecutor.executeQuery( query, Collections.singletonMap( "roles", roles ), subscriber );
+            queryExecutor.executeQuery( query, Collections.singletonMap( "roles", roles ), subscriber );
+        }
 
-        return new HashSet<>( results.values() );
+        if ( !resultsPerRole.isEmpty() )
+        {
+            // cache the privileges we looked up
+            privilegeCache.putAll( resultsPerRole );
+        }
+        Set<ResourcePrivilege> combined = new HashSet<>();
+        for ( Set<ResourcePrivilege> privs : resultsPerRole.values() )
+        {
+            combined.addAll( privs );
+        }
+        return combined;
+    }
+
+    void clearCacheForRole( String role )
+    {
+        privilegeCache.invalidate( role );
     }
 
     Set<String> getAllRoleNames()

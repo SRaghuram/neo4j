@@ -20,6 +20,8 @@ class PrivilegeBuilder
     private String label;
     private ResourcePrivilege.Action action;
     private Resource resource;
+    private String dbName = "";
+    private boolean allDatabases;
 
     private PrivilegeBuilder( boolean allowed, String action )
     {
@@ -30,6 +32,18 @@ class PrivilegeBuilder
     static PrivilegeBuilder grant( String action )
     {
         return new PrivilegeBuilder( true, action );
+    }
+
+    PrivilegeBuilder forAllDatabases()
+    {
+        this.allDatabases = true;
+        return this;
+    }
+
+    PrivilegeBuilder forDatabase( String database )
+    {
+        this.dbName = database;
+        return this;
     }
 
     PrivilegeBuilder withinScope( NodeValue qualifier )
@@ -106,6 +120,13 @@ class PrivilegeBuilder
     ResourcePrivilege build() throws InvalidArgumentsException
     {
         Segment segment = label == null ? Segment.ALL : new Segment( label );
-        return new ResourcePrivilege( action, resource, segment );
+        if ( allDatabases )
+        {
+            return new ResourcePrivilege( action, resource, segment );
+        }
+        else
+        {
+            return new ResourcePrivilege( action, resource, segment, dbName );
+        }
     }
 }
