@@ -13,7 +13,7 @@ import com.neo4j.backup.stores.EmptyBackupStore;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.load.ClusterLoad;
 import com.neo4j.causalclustering.load.NoLoad;
 import com.neo4j.causalclustering.load.SmallBurst;
@@ -94,7 +94,7 @@ public class NewMemberSeedingIT
     public void setup()
     {
         this.fileCopyDetector = new FileCopyDetector();
-        cluster = new Cluster( testDir.directory( "cluster-b" ), 3, 0, new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(),
+        cluster = new Cluster( testDir.directory( "cluster-b" ), 3, 0, new AkkaDiscoveryServiceFactory(), emptyMap(), emptyMap(),
                 emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
         baseBackupDir = testDir.directory( "backups" );
     }

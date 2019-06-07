@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -45,7 +44,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @ExtendWith( SuppressOutputExtension.class )
-abstract class BaseClusterOverviewIT
+class ClusterOverviewIT
 {
     private static final String DB = DEFAULT_DATABASE_NAME;
 
@@ -54,11 +53,6 @@ abstract class BaseClusterOverviewIT
             .withSharedReadReplicaParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
-
-    BaseClusterOverviewIT( DiscoveryServiceType discoveryServiceType )
-    {
-        clusterConfig.withDiscoveryServiceType( discoveryServiceType );
-    }
 
     @Nested
     @ClusterExtension

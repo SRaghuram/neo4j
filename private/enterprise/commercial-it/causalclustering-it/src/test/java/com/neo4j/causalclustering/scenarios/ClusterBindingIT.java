@@ -9,19 +9,17 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -31,56 +29,61 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.database.UnableToStartDatabaseException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.upstream.TestStoreId.assertAllStoresHaveTheSameStoreId;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
-public class ClusterBindingIT
+@ExtendWith( DefaultFileSystemExtension.class )
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ClusterBindingIT
 {
-    private final ClusterRule clusterRule = new ClusterRule()
-                        .withNumberOfCoreMembers( 3 )
-                        .withNumberOfReadReplicas( 0 )
-                        .withSharedCoreParam( CausalClusteringSettings.raft_log_pruning_strategy, "3 entries" )
-                        .withSharedCoreParam( CausalClusteringSettings.raft_log_rotation_size, "1K" );
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( clusterRule );
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private FileSystemAbstraction fs;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        fs = fileSystemRule.get();
-        cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( CausalClusteringSettings.raft_log_pruning_strategy, "3 entries" )
+                .withSharedCoreParam( CausalClusteringSettings.raft_log_rotation_size, "1K" );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+
         DataCreator.createSchema( cluster );
     }
 
     @Test
-    public void allServersShouldHaveTheSameStoreId() throws Throwable
+    void allServersShouldHaveTheSameStoreId() throws Throwable
     {
         // WHEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
 
         cluster.shutdown();
 
@@ -89,7 +92,7 @@ public class ClusterBindingIT
     }
 
     @Test
-    public void whenWeRestartTheClusterAllServersShouldStillHaveTheSameStoreId() throws Throwable
+    void whenWeRestartTheClusterAllServersShouldStillHaveTheSameStoreId() throws Throwable
     {
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
@@ -98,7 +101,7 @@ public class ClusterBindingIT
         // WHEN
         cluster.start();
 
-        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
 
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
@@ -109,31 +112,24 @@ public class ClusterBindingIT
     }
 
     @Test
-    @Ignore( "Fix this test by having the bootstrapper augment his store and bind it using store-id on disk." )
-    public void shouldNotJoinClusterIfHasDataWithDifferentStoreId() throws Exception
+    @Disabled( "Fix this test by having the bootstrapper augment his store and bind it using store-id on disk." )
+    void shouldNotJoinClusterIfHasDataWithDifferentStoreId() throws Exception
     {
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        DatabaseLayout databaseLayout = cluster.getCoreMemberById( 0 ).databaseLayout();
+        var databaseLayout = cluster.getCoreMemberById( 0 ).databaseLayout();
 
         cluster.removeCoreMemberWithServerId( 0 );
         changeStoreId( databaseLayout );
 
-        // WHEN
-        try
-        {
-            cluster.addCoreMemberWithId( 0 ).start();
-            fail( "Should not have joined the cluster" );
-        }
-        catch ( RuntimeException e )
-        {
-            assertThat( e.getCause(), instanceOf( LifecycleException.class ) );
-        }
+        // WHEN / THEN
+        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithId( 0 ).start(), "Should not have joined the cluster" );
+        assertThat( error.getCause(), instanceOf( LifecycleException.class ) );
     }
 
     @Test
-    public void laggingFollowerShouldDownloadSnapshot() throws Exception
+    void laggingFollowerShouldDownloadSnapshot() throws Exception
     {
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
@@ -143,7 +139,7 @@ public class ClusterBindingIT
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( CoreClusterMember db : cluster.coreMembers() )
+        for ( var db : cluster.coreMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
@@ -156,48 +152,42 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 3, cluster.healthyCoreMembers().size() );
 
-        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
     @Test
-    public void badFollowerShouldNotJoinCluster() throws Exception
+    @Disabled( "Fix is already in 3.6 and will be eventually forward merged" )
+    void badFollowerShouldNotJoinCluster() throws Exception
     {
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        CoreClusterMember coreMember = cluster.getCoreMemberById( 0 );
+        var coreMember = cluster.getCoreMemberById( 0 );
         cluster.removeCoreMemberWithServerId( 0 );
         DatabaseId systemDatabase = new TestDatabaseIdRepository().systemDatabase();
         changeRaftId( coreMember, systemDatabase );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( CoreClusterMember db : cluster.coreMembers() )
+        for ( var db : cluster.coreMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
 
-        // WHEN
-        try
-        {
-            cluster.addCoreMemberWithId( 0 ).start();
-            fail( "Should not have joined the cluster" );
-        }
-        catch ( RuntimeException e )
-        {
-            assertThat( e.getCause(), instanceOf( UnableToStartDatabaseException.class ) );
-        }
+        // WHEN / THEN
+        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithId( 0 ).start(), "Should not have joined the cluster" );
+        assertThat( error.getCause(), instanceOf( UnableToStartDatabaseException.class ) );
     }
 
     @Test
-    public void aNewServerShouldJoinTheClusterByDownloadingASnapshot() throws Exception
+    void aNewServerShouldJoinTheClusterByDownloadingASnapshot() throws Exception
     {
         // GIVEN
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
-        for ( CoreClusterMember db : cluster.coreMembers() )
+        for ( var db : cluster.coreMembers() )
         {
             db.resolveDependency( DEFAULT_DATABASE_NAME, RaftLogPruner.class ).prune();
         }
@@ -210,7 +200,7 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 4, cluster.healthyCoreMembers().size() );
 
-        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
+        var databaseLayouts = databaseLayouts( cluster.coreMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
@@ -222,17 +212,17 @@ public class ClusterBindingIT
 
     private void changeRaftId( CoreClusterMember coreMember, DatabaseId databaseId ) throws IOException
     {
-        ClusterStateLayout layout = coreMember.clusterStateLayout();
-        CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId, nullDatabaseLogProvider() );
+        var layout = coreMember.clusterStateLayout();
+        var storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
+        var raftIdStorage = storageFactory.createRaftIdStorage( databaseId, nullDatabaseLogProvider() );
         raftIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
     }
 
     private void changeStoreId( DatabaseLayout databaseLayout ) throws Exception
     {
-        File neoStoreFile = databaseLayout.metadataStore();
-        try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
-              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler ) )
+        var neoStoreFile = databaseLayout.metadataStore();
+        try ( var jobScheduler = new ThreadPoolJobScheduler();
+              var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler ) )
         {
             MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis() );
         }

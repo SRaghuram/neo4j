@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
@@ -32,8 +31,7 @@ public class ReadReplicaHierarchicalCatchupIT
             new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
                     .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
                     .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA );
+                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" );
 
     @Test
     public void shouldCatchupThroughHierarchy() throws Throwable

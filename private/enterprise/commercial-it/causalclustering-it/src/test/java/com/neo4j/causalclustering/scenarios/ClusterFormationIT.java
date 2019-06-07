@@ -17,19 +17,21 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @ClusterExtension
@@ -77,7 +79,7 @@ public class ClusterFormationIT
     }
 
     @Test
-    void shouldBeAbleToAddAndRemoveCoreMembers()
+    void shouldBeAbleToAddAndRemoveCoreMembers() throws Exception
     {
         // when
         CoreClusterMember coreMember = getExistingCoreMember();
@@ -85,23 +87,23 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 2 );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
     }
 
     @Test
-    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws TimeoutException
+    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws Exception
     {
         // given
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -121,19 +123,19 @@ public class ClusterFormationIT
         coreMember.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
 
         // when
         removeCoreMember();
 
         // then
-        assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 2 );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
 
         executorService.shutdown();
     }
@@ -142,14 +144,14 @@ public class ClusterFormationIT
     void shouldBeAbleToRestartTheCluster() throws Exception
     {
         // when started then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
 
         // when
         cluster.shutdown();
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
 
         // when
         removeCoreMember();
@@ -160,16 +162,21 @@ public class ClusterFormationIT
         cluster.start();
 
         // then
-        assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        verifyNumberOfCoresReportedByTopology( 3 );
     }
 
     private CoreClusterMember getExistingCoreMember()
     {
-        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Could not find any available cores" ) );
+        return Iterables.last( cluster.coreMembers() );
     }
 
     private void removeCoreMember()
     {
         cluster.removeCoreMember( getExistingCoreMember() );
+    }
+
+    private void verifyNumberOfCoresReportedByTopology( int expected ) throws InterruptedException
+    {
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), is( expected ), 30, SECONDS );
     }
 }

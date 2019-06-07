@@ -26,7 +26,7 @@ public class ClusterConfig
 {
     private int noCoreMembers = 3;
     private int noReadReplicas = 3;
-    private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.Reliable.SHARED;
+    private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.AKKA;
     private Map<String,String> coreParams = stringMap();
     private Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
     private Map<String,String> readReplicaParams = stringMap();
@@ -47,7 +47,7 @@ public class ClusterConfig
 
     static Cluster createCluster( File directory, ClusterConfig clusterConfig )
     {
-        return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
+        return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
                 clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard );
     }

@@ -17,14 +17,13 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -62,14 +61,14 @@ class PanicIT
         void shouldShutdownOnPanic( Context context ) throws InterruptedException
         {
             // given
-            assertEquals( context.expectedMembersBeforePanic(), context.membersInTopology() );
+            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic(), context );
             PanicService panicService = context.panicService();
 
             // when
             panicService.panic( null );
 
             // then
-            assertEventually( context::membersInTopology, equalTo( context.expectedMembersBeforePanic() - 1 ), 60, TimeUnit.SECONDS );
+            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic() - 1, context );
         }
     }
 
@@ -86,6 +85,11 @@ class PanicIT
     static Stream<ReadReplicaContext> readReplicas( Cluster cluster )
     {
         return IntStream.range( 0, INITIAL_READ_REPLICAS ).mapToObj( i -> new ReadReplicaContext( i, cluster ) );
+    }
+
+    private static void assertNumberOfMembersInTopology( int expected, Context context ) throws InterruptedException
+    {
+        assertEventually( context::membersInTopology, equalTo( expected ), 3, MINUTES );
     }
 
     private static class CoreContext extends Context

@@ -31,7 +31,6 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.AKKA;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
@@ -182,7 +181,6 @@ class ClusterOverviewProcedureIT
     private static ClusterConfig buildClusterConfig()
     {
         return clusterConfig()
-                .withDiscoveryServiceType( AKKA )
                 .withNumberOfCoreMembers( CORES )
                 .withNumberOfReadReplicas( REPLICAS )
                 .withInstanceCoreParam( server_groups, id -> "core,eu-" + id )

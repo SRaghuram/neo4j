@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
@@ -102,8 +101,7 @@ public class ReadReplicaReplicationIT
     public final ClusterRule clusterRule = new ClusterRule()
             .withNumberOfCoreMembers( NR_CORE_MEMBERS )
             .withNumberOfReadReplicas( NR_READ_REPLICAS )
-            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-            .withDiscoveryServiceType( DiscoveryServiceType.Reliable.AKKA );
+            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" );
 
     @Test
     public void shouldNotBeAbleToWriteToReadReplica() throws Exception

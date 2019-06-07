@@ -12,33 +12,35 @@ import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
-import org.neo4j.graphdb.Result;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
-import static java.util.function.Function.identity;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.procedure.builtin.routing.Role.READ;
 import static org.neo4j.procedure.builtin.routing.Role.ROUTE;
 import static org.neo4j.procedure.builtin.routing.Role.WRITE;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 @TestInstance( Lifecycle.PER_METHOD )
@@ -50,9 +52,9 @@ class ClusterDiscoveryIT
     @Test
     void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersAllowed() throws Exception
     {
-        boolean allowReadsOnFollowers = true;
+        var allowReadsOnFollowers = true;
 
-        Cluster cluster = startCluster( allowReadsOnFollowers );
+        var cluster = startCluster( allowReadsOnFollowers );
 
         testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
     }
@@ -60,21 +62,21 @@ class ClusterDiscoveryIT
     @Test
     void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersDisallowed() throws Exception
     {
-        boolean allowReadsOnFollowers = false;
+        var allowReadsOnFollowers = false;
 
-        Cluster cluster = startCluster( allowReadsOnFollowers );
+        var cluster = startCluster( allowReadsOnFollowers );
 
         testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
     }
 
     private static void testReadWriteAndRouteServersDiscovery( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws Exception
     {
-        for ( CoreClusterMember coreMember : cluster.coreMembers() )
+        for ( var coreMember : cluster.coreMembers() )
         {
             verifyServersDiscovery( cluster, coreMember, expectFollowersAsReadEndPoints );
         }
 
-        for ( ReadReplica readReplica : cluster.readReplicas() )
+        for ( var readReplica : cluster.readReplicas() )
         {
             verifyServersDiscovery( readReplica );
         }
@@ -82,30 +84,27 @@ class ClusterDiscoveryIT
 
     private static void verifyServersDiscovery( Cluster cluster, CoreClusterMember coreMember, boolean expectFollowersAsReadEndPoints ) throws Exception
     {
-        List<Map<String,Object>> members = getMembers( coreMember.defaultDatabase() );
+        var expectedWriteEndpoints = expectedWriteEndpoints( cluster );
+        var expectedReadEndpoints = expectedReadEndpoints( cluster, expectFollowersAsReadEndPoints );
+        var expectedRouteEndpoints = expectedRouteEndpoints( cluster );
+        var routingTableMatcher = new RoutingTableMatcher( expectedWriteEndpoints, expectedReadEndpoints, expectedRouteEndpoints );
 
-        Set<String> expectedWriteEndpoints = expectedWriteEndpoints( cluster );
-        Set<String> expectedReadEndpoints = expectedReadEndpoints( cluster, expectFollowersAsReadEndPoints );
-        Set<String> expectedRouteEndpoints = expectedRouteEndpoints( cluster );
-
-        assertEquals( expectedWriteEndpoints, addresses( members, WRITE ) );
-        assertEquals( expectedReadEndpoints, addresses( members, READ ) );
-        assertEquals( expectedRouteEndpoints, addresses( members, ROUTE ) );
+        assertEventually( () -> getMembers( coreMember.defaultDatabase() ), routingTableMatcher, 30, SECONDS );
     }
 
     private static Set<String> expectedWriteEndpoints( Cluster cluster ) throws TimeoutException
     {
-        CoreClusterMember leader = cluster.awaitLeader();
+        var leader = cluster.awaitLeader();
         return singleton( leader.boltAdvertisedAddress() );
     }
 
     private static Set<String> expectedReadEndpoints( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws TimeoutException
     {
-        ClusterMember leader = cluster.awaitLeader();
-        Stream<ClusterMember> cores = cluster.coreMembers().stream().map( identity() );
-        Stream<ClusterMember> readReplicas = cluster.readReplicas().stream().map( identity() );
+        var leader = cluster.awaitLeader();
+        var cores = cluster.coreMembers().stream();
+        var readReplicas = cluster.readReplicas().stream();
 
-        Stream<ClusterMember> members = expectFollowersAsReadEndPoints ? Stream.concat( cores, readReplicas ) : readReplicas;
+        var members = expectFollowersAsReadEndPoints ? Stream.concat( cores, readReplicas ) : readReplicas;
 
         return members.filter( member -> !leader.equals( member ) )
                 .map( ClusterMember::boltAdvertisedAddress )
@@ -120,9 +119,9 @@ class ClusterDiscoveryIT
                 .collect( toSet() );
     }
 
-    private static void verifyServersDiscovery( ReadReplica readReplica ) throws Exception
+    private static void verifyServersDiscovery( ReadReplica readReplica )
     {
-        List<Map<String,Object>> members = getMembers( readReplica.defaultDatabase() );
+        var members = getMembers( readReplica.defaultDatabase() );
 
         assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, READ ) );
         assertEquals( singleton( readReplica.boltAdvertisedAddress() ), addresses( members, ROUTE ) );
@@ -141,16 +140,16 @@ class ClusterDiscoveryIT
     @SuppressWarnings( "unchecked" )
     private static List<Map<String,Object>> getMembers( GraphDatabaseAPI db )
     {
-        try ( Result result = db.execute( "CALL dbms.routing.getRoutingTable({})" ) )
+        try ( var result = db.execute( "CALL dbms.routing.getRoutingTable({})" ) )
         {
-            Map<String,Object> record = Iterators.single( result );
+            var record = Iterators.single( result );
             return (List<Map<String,Object>>) record.get( "servers" );
         }
     }
 
     private Cluster startCluster( boolean allowReadsOnFollowers ) throws Exception
     {
-        Cluster cluster = clusterFactory.createCluster( newClusterConfig( allowReadsOnFollowers ) );
+        var cluster = clusterFactory.createCluster( newClusterConfig( allowReadsOnFollowers ) );
         cluster.start();
         return cluster;
     }
@@ -160,8 +159,37 @@ class ClusterDiscoveryIT
         return clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withDiscoveryServiceType( SHARED )
                 .withSharedCoreParam( cluster_allow_reads_on_followers, Boolean.toString( allowReadsOnFollowers ) )
                 .withSharedReadReplicaParam( cluster_allow_reads_on_followers, Boolean.toString( allowReadsOnFollowers ) );
+    }
+
+    private static class RoutingTableMatcher extends TypeSafeMatcher<List<Map<String,Object>>>
+    {
+        final Set<String> expectedWriteEndpoints;
+        final Set<String> expectedReadEndpoints;
+        final Set<String> expectedRouteEndpoints;
+
+        RoutingTableMatcher( Set<String> expectedWriteEndpoints, Set<String> expectedReadEndpoints, Set<String> expectedRouteEndpoints )
+        {
+            this.expectedWriteEndpoints = expectedWriteEndpoints;
+            this.expectedReadEndpoints = expectedReadEndpoints;
+            this.expectedRouteEndpoints = expectedRouteEndpoints;
+        }
+
+        @Override
+        protected boolean matchesSafely( List<Map<String,Object>> procedureResponse )
+        {
+            return Objects.equals( expectedWriteEndpoints, addresses( procedureResponse, WRITE ) ) &&
+                   Objects.equals( expectedReadEndpoints, addresses( procedureResponse, READ ) ) &&
+                   Objects.equals( expectedRouteEndpoints, addresses( procedureResponse, ROUTE ) );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "write endpoints: " ).appendValue( expectedWriteEndpoints )
+                    .appendText( "read endpoints: " ).appendValue( expectedReadEndpoints )
+                    .appendText( "route endpoints: " ).appendValue( expectedRouteEndpoints );
+        }
     }
 }

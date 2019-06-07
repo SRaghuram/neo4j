@@ -37,7 +37,7 @@ public class ClusterRule extends ExternalResource
 
     private int noCoreMembers = 3;
     private int noReadReplicas = 3;
-    private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.Reliable.SHARED;
+    private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.AKKA;
     private Map<String,String> coreParams = stringMap();
     private Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
     private Map<String,String> readReplicaParams = stringMap();
@@ -108,7 +108,7 @@ public class ClusterRule extends ExternalResource
     {
         if ( cluster == null )
         {
-            cluster = new Cluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
+            cluster = new Cluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.factory(), coreParams,
                     instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
         }
 

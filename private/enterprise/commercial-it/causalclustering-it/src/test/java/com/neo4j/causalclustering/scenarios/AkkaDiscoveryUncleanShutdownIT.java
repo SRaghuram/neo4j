@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -30,6 +29,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.logging.Level;
 import org.neo4j.test.Race;
 
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA_UNCLEAN_SHUTDOWN;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
@@ -58,7 +58,7 @@ public class AkkaDiscoveryUncleanShutdownIT
     @Rule
     public ClusterRule clusterRule = new ClusterRule()
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
-            .withDiscoveryServiceType( DiscoveryServiceType.Unreliable.AKKA_UNCLEAN_SHUTDOWN )
+            .withDiscoveryServiceType( AKKA_UNCLEAN_SHUTDOWN )
             .withNumberOfCoreMembers( coreMembers )
             .withNumberOfReadReplicas( 0 );
 

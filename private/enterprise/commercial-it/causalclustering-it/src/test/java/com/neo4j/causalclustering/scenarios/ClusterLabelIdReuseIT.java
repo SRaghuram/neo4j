@@ -6,22 +6,18 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.removeCheckPointFromDefaultDatabaseTxLog;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.time.Duration.ofMinutes;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
 @ClusterExtension
@@ -37,8 +33,7 @@ class ClusterLabelIdReuseIT
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 0 )
-                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 2 ? TRUE : FALSE );
+                .withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -79,7 +74,7 @@ class ClusterLabelIdReuseIT
     private CoreClusterMember createLabelWithTimeout( String name )
     {
         // use timeout to make the test fail even if a transaction gets stuck, for example because of database panic
-        return assertTimeoutPreemptively( Duration.ofSeconds( 30 ), () -> createLabel( name ) );
+        return assertTimeoutPreemptively( ofMinutes( 3 ), () -> createLabel( name ) );
     }
 
     private CoreClusterMember createLabel( String name ) throws Exception

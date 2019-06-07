@@ -14,7 +14,7 @@ import com.neo4j.backup.stores.NoStore;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -77,11 +77,11 @@ public class ClusterSeedingIT
     {
         this.fileCopyDetector = new FileCopyDetector();
         backupCluster = new Cluster( testDir.directory( "cluster-for-backup" ), 3, 0,
-                new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard
+                new AkkaDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard
                 .LATEST_NAME, IpFamily.IPV4, false );
 
         cluster = new Cluster( testDir.directory( "cluster-b" ), 3, 0,
-                new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME,
+                new AkkaDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME,
                 IpFamily.IPV4, false );
 
         baseBackupDir = testDir.directory( "backups" );

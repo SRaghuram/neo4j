@@ -9,15 +9,13 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -36,16 +34,19 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
+@TestInstance( PER_METHOD )
 class RestartIT
 {
     @Inject
@@ -53,13 +54,6 @@ class RestartIT
 
     private Cluster cluster;
     private ExecutorService executor;
-
-    @BeforeAll
-    void startCluster() throws ExecutionException, InterruptedException
-    {
-        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ) );
-        cluster.start();
-    }
 
     @AfterEach
     void tearDown() throws Exception
@@ -72,16 +66,22 @@ class RestartIT
     }
 
     @Test
-    void restartFirstServer()
+    void restartFirstServer() throws Exception
     {
+        // given
+        cluster = startCluster( 3, 0 );
+
         // when
         cluster.removeCoreMemberWithServerId( 0 );
         cluster.addCoreMemberWithId( 0 ).start();
     }
 
     @Test
-    void restartSecondServer()
+    void restartSecondServer() throws Exception
     {
+        // given
+        cluster = startCluster( 3, 0 );
+
         // when
         cluster.removeCoreMemberWithServerId( 1 );
         cluster.addCoreMemberWithId( 1 ).start();
@@ -91,6 +91,8 @@ class RestartIT
     void restartWhileDoingTransactions() throws Exception
     {
         // given
+        cluster = startCluster( 3, 0 );
+
         executor = Executors.newSingleThreadExecutor();
         CountDownLatch someTransactionsCommitted = new CountDownLatch( 5 );
         AtomicBoolean done = new AtomicBoolean( false );
@@ -128,6 +130,7 @@ class RestartIT
     void shouldHaveWritableClusterAfterCompleteRestart() throws Exception
     {
         // given
+        cluster = startCluster( 3, 0 );
         cluster.shutdown();
 
         // when
@@ -143,8 +146,7 @@ class RestartIT
     void readReplicaTest() throws Exception
     {
         // given
-        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
-        cluster.start();
+        cluster = startCluster( 2, 1 );
 
         // when
         CoreClusterMember last = cluster.coreTx( this::createNode );
@@ -182,5 +184,13 @@ class RestartIT
         Node node = db.createNode( label( "boo" ) );
         node.setProperty( "foobar", "baz_bat" );
         tx.success();
+    }
+
+    private Cluster startCluster( int coreCount, int readReplicaCount ) throws Exception
+    {
+        var clusterConfig = clusterConfig().withNumberOfCoreMembers( coreCount ).withNumberOfReadReplicas( readReplicaCount );
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        return cluster;
     }
 }

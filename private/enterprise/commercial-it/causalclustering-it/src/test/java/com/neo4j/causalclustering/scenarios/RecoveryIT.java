@@ -7,44 +7,57 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.graphdb.Node;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class RecoveryIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class RecoveryIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    private static final int CORE_COUNT = 3;
+    private static final int READ_REPLICA_COUNT = 0;
+
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private Cluster cluster;
+
+    @BeforeEach
+    void beforeEach() throws Exception
+    {
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( CORE_COUNT ).withNumberOfReadReplicas( READ_REPLICA_COUNT ) );
+        cluster.start();
+    }
 
     @Test
-    public void shouldBeConsistentAfterShutdown() throws Exception
+    void shouldBeConsistentAfterShutdown() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
-
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<DatabaseLayout> databaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
+        var coreDatabaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         assertEventually( "All cores have the same data",
                 () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
@@ -54,22 +67,19 @@ public class RecoveryIT
         cluster.shutdown();
 
         // then
-        databaseLayouts.forEach( RecoveryIT::assertConsistent );
+        coreDatabaseLayouts.forEach( RecoveryIT::assertConsistent );
     }
 
     @Test
-    public void singleServerWithinClusterShouldBeConsistentAfterRestart() throws Exception
+    void singleServerWithinClusterShouldBeConsistentAfterRestart() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
-        int clusterSize = cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME );
-
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<DatabaseLayout> layouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
+        var coreDatabaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         // when
-        for ( int i = 0; i < clusterSize; i++ )
+        for ( var i = 0; i < CORE_COUNT; i++ )
         {
             cluster.removeCoreMemberWithServerId( i );
             fireSomeLoadAtTheCluster( cluster );
@@ -83,7 +93,7 @@ public class RecoveryIT
 
         cluster.shutdown();
 
-        layouts.forEach( RecoveryIT::assertConsistent );
+        coreDatabaseLayouts.forEach( RecoveryIT::assertConsistent );
     }
 
     private static DbRepresentation dbRepresentation( CoreClusterMember member )
@@ -93,28 +103,27 @@ public class RecoveryIT
 
     private static void assertConsistent( DatabaseLayout databaseLayout )
     {
-        ConsistencyCheckService.Result result;
         try
         {
-            result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(),
+            var consistencyCheckResult = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(),
                     ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true );
+
+            assertTrue( consistencyCheckResult.isSuccessful() );
         }
-        catch ( Exception e )
+        catch ( ConsistencyCheckIncompleteException e )
         {
             throw new RuntimeException( e );
         }
-
-        assertTrue( result.isSuccessful() );
     }
 
     private static void fireSomeLoadAtTheCluster( Cluster cluster ) throws Exception
     {
-        for ( int i = 0; i < cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ); i++ )
+        for ( var i = 0; i < CORE_COUNT; i++ )
         {
-            final String prop = "val" + i;
+            var prop = "val" + i;
             cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode( label( "demo" ) );
+                var node = db.createNode( label( "demo" ) );
                 node.setProperty( "server", prop );
                 tx.success();
             } );

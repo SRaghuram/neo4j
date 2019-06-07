@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -67,7 +66,6 @@ class TokenReplicationStressIT
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withDiscoveryServiceType( DiscoveryServiceType.Reliable.SHARED )
                 .withSharedCoreParam( leader_election_timeout, "2s" ) );
 
         cluster.start();

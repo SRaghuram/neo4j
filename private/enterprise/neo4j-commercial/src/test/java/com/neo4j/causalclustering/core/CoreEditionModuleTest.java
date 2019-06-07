@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -53,7 +53,7 @@ class CoreEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        CoreEditionModule editionModule = new CoreEditionModule( globalModule, new SharedDiscoveryServiceFactory() );
+        CoreEditionModule editionModule = new CoreEditionModule( globalModule, new AkkaDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

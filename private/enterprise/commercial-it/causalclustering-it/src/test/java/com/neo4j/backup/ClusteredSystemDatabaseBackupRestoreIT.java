@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreDatabaseManager;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
@@ -165,7 +165,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private static Cluster createCluster( File clusterLocation, Map<String,String> configMap )
     {
         return new Cluster( clusterLocation, 3, 0,
-                new SharedDiscoveryServiceFactory(), configMap, Collections.emptyMap(), configMap,
+                new AkkaDiscoveryServiceFactory(), configMap, Collections.emptyMap(), configMap,
                 Collections.emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 

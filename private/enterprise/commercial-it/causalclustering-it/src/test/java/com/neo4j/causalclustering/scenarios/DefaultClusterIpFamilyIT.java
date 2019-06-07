@@ -7,31 +7,12 @@ package com.neo4j.causalclustering.scenarios;
 
 import org.junit.jupiter.api.Nested;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.AKKA;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.AKKA;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV6;
 
 class DefaultClusterIpFamilyIT
 {
-    @Nested
-    class SharedIpv4NoWildcard extends BaseClusterIpFamilyIT
-    {
-        SharedIpv4NoWildcard()
-        {
-            super( SHARED, IPV4, false );
-        }
-    }
-
-    @Nested
-    class SharedIpv6Wildcard extends BaseClusterIpFamilyIT
-    {
-        SharedIpv6Wildcard()
-        {
-            super( SHARED, IPV6, true );
-        }
-    }
-
     @Nested
     class AkkaIpv4NoWildcard extends BaseClusterIpFamilyIT
     {

@@ -26,7 +26,6 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertEventualOverview;
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRole;
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.AKKA;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -64,7 +63,6 @@ class CausalClusteringProceduresIT
     void setup() throws Exception
     {
         var clusterConfig = clusterConfig()
-                .withDiscoveryServiceType( AKKA )
                 .withNumberOfCoreMembers( 2 )
                 .withNumberOfReadReplicas( 1 );
 

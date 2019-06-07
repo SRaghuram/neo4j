@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ class ReadReplicaEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        ReadReplicaEditionModule editionModule = new ReadReplicaEditionModule( globalModule, new SharedDiscoveryServiceFactory(),
+        ReadReplicaEditionModule editionModule = new ReadReplicaEditionModule( globalModule, new AkkaDiscoveryServiceFactory(),
                 new MemberId( UUID.randomUUID() ) );
         editionModule.createDatabases( manager, config );
 

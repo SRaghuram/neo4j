@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,7 +26,7 @@ import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.Reliable.SHARED;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -46,7 +45,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @BeforeAll
     static void startCluster() throws Exception
     {
-        cluster = clusterFactory.createCluster( clusterConfig() );
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfReadReplicas( 2 ) );
         cluster.start();
     }
 
@@ -186,12 +185,5 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     private AdvertisedSocketAddress boltAddress( ClusterMember member )
     {
         return socketAddress( member.boltAdvertisedAddress(), AdvertisedSocketAddress::new );
-    }
-
-    private static ClusterConfig clusterConfig()
-    {
-        return ClusterConfig.clusterConfig()
-                .withNumberOfReadReplicas( 2 )
-                .withDiscoveryServiceType( SHARED );
     }
 }

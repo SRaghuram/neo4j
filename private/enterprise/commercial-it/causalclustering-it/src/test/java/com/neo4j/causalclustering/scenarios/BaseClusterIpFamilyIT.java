@@ -24,9 +24,9 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 
 @ClusterExtension
-public abstract class BaseClusterIpFamilyIT
+abstract class BaseClusterIpFamilyIT
 {
-    protected BaseClusterIpFamilyIT( DiscoveryServiceType discoveryServiceType, IpFamily ipFamily, boolean useWildcard )
+    BaseClusterIpFamilyIT( DiscoveryServiceType discoveryServiceType, IpFamily ipFamily, boolean useWildcard )
     {
         clusterConfig.withDiscoveryServiceType( discoveryServiceType );
         clusterConfig.withIpFamily( ipFamily ).useWildcard( useWildcard );

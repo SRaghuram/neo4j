@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -228,10 +227,10 @@ class BoltCausalClusteringIT
 
         int clusterSize = cluster.readReplicas().size() + cluster.coreMembers().size();
 
-        try ( Driver driver = makeDriver( leader.routingURI() ); Session session = driver.session() )
+        try ( Driver driver = makeDriver( leader.routingURI() );
+              Session session = driver.session() )
         {
-            StatementResult overview = session.run( "CALL dbms.cluster.overview" );
-            MatcherAssert.assertThat( overview.list(), hasSize( clusterSize ) );
+            assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), hasSize( clusterSize ), 60, SECONDS );
         }
     }
 
