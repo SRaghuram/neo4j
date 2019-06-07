@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.openjdk.jmh.annotations.Benchmark;

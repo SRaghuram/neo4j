@@ -5,14 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.DiscreteGenerator;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.profile.ProfileDescriptor;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -188,6 +187,6 @@ public class Fulltext extends AbstractKernelBenchmark
 
     public static void main( String... methods )
     {
-        run( Fulltext.class, ProfileDescriptor.noProfile(), methods );
+        run( Fulltext.class, methods );
     }
 }

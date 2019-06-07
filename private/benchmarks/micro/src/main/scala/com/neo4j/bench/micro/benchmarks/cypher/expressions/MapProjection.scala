@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
@@ -80,7 +80,8 @@ object MapProjection {
   val ROWS: Int = 10000
   val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(Values.intValue).toArray: _*)
   val MAP: MapValue = VirtualValues.map((1 to 100).map(i => s"k$i").toArray,
-                                        (1 to 100).map(i => Values.stringValue(s"v$i")).toArray)
+    (1 to 100).map(i => Values.stringValue(s"v$i")).toArray)
+
   def main(args: Array[String]): Unit = {
     Main.run(classOf[MapProjection], args: _*)
   }
@@ -99,9 +100,9 @@ class MapProjectionThreadState {
     executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("map", "list"),
-                               Array(
-                                 MapProjection.MAP,
-                                 MapProjection.VALUES))
+      Array(
+        MapProjection.MAP,
+        MapProjection.VALUES))
   }
 
   @TearDown

@@ -28,7 +28,7 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
     public String storesDir;
 
     @Override
-    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Exception
+    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Throwable
     {
         Stores stores = new Stores( Paths.get( storesDir ) );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
@@ -38,7 +38,7 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
     }
 
     @Override
-    protected final void onTearDown() throws Exception
+    protected final void onTearDown() throws Throwable
     {
         benchmarkTearDown();
     }

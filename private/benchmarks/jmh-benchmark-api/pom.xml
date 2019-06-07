@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmarks</artifactId>
-        <version>3.4.15-SNAPSHOT</version>
+        <version>3.5.7-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -31,6 +31,13 @@
     </licenses>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <!-- Overwriting necessary for dependency to be included in jar, because artifact scope is set to 'test' in parent pom.
+                 Jar is built with maven shade plugin, which only includes runtime scope dependencies -->
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
