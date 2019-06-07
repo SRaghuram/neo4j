@@ -25,6 +25,7 @@ import org.neo4j.driver.v1.Logging;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import static java.lang.ProcessBuilder.Redirect;
@@ -104,20 +105,31 @@ public class ServerDatabase implements Database
     }
 
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean inTx )
+    public int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback )
     {
-        StatementResult result = session.run( query, parameters );
-        int rowCount = 0;
-        while ( result.hasNext() )
+        try ( Transaction tx = session.beginTransaction() )
         {
-            Record record = result.next();
-            // Use record to avoid JIT dead code elimination
-            if ( record != null )
+            StatementResult result = tx.run( query, parameters );
+            if ( shouldRollback )
             {
-                rowCount++;
+                tx.failure();
             }
+            else
+            {
+                tx.success();
+            }
+            int rowCount = 0;
+            while ( result.hasNext() )
+            {
+                Record record = result.next();
+                // Use record to avoid JIT dead code elimination
+                if ( record != null )
+                {
+                    rowCount++;
+                }
+            }
+            return rowCount;
         }
-        return rowCount;
     }
 
     @Override
