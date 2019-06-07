@@ -161,19 +161,26 @@ public class EmbeddedDatabase implements Database
     }
 
     @Override
-    public int execute( String query, Map<String,Object> parameters, boolean inTx )
+    public int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback )
     {
         return inTx
-               ? executeInTx( query, parameters )
+               ? executeInTx( query, parameters, shouldRollback )
                : execute( query, parameters );
     }
 
-    private int executeInTx( String query, Map<String,Object> parameters )
+    private int executeInTx( String query, Map<String,Object> parameters, boolean shouldRollback )
     {
         try ( Transaction tx = db.beginTx() )
         {
             int rowCount = execute( query, parameters );
-            tx.success();
+            if ( shouldRollback )
+            {
+                tx.failure();
+            }
+            else
+            {
+                tx.success();
+            }
             return rowCount;
         }
     }
