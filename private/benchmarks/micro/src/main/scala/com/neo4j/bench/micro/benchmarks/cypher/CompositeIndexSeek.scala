@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.cypher.internal.v3_5.logical.plans._
 import org.neo4j.cypher.internal.v3_5.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.v3_5.logical.plans.IndexedProperty
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -88,7 +89,7 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
     // TODO assuming this property key id mapping only works when properties are written in ORDERED order, not SHUFFLED
     // TODO if store was available at this point it would be possible to retrieve this info from the store
     val keyTokens = Seq.range(0, CompositeIndexSeek_propertyCount)
-                    .map(i => astPropertyKeyToken(properties(i).key(), planContext))
+                    .map(i => IndexedProperty(astPropertyKeyToken(properties(i).key(), planContext), DoNotGetValue))
     val seekExpressions = Seq.range(0, CompositeIndexSeek_propertyCount)
                           .map(_ => SingleQueryExpression(astLiteralFor(buckets(0), CompositeIndexSeek_type)))
     val indexSeek = plans.NodeIndexSeek(

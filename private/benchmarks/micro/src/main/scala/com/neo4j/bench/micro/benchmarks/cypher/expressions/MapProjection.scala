@@ -5,20 +5,19 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
-import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, TypeParamValues}
+import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
 import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.cypher.internal.v3_5.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
-import org.neo4j.values.storable.Values.doubleValue
 import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
