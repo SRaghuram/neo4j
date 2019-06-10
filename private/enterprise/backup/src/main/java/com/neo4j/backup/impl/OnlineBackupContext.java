@@ -96,9 +96,9 @@ public class OnlineBackupContext
         private boolean fallbackToFullBackup = true;
         private Config config;
         private boolean consistencyCheck = true;
-        private boolean consistencyCheckGraph;
-        private boolean consistencyCheckIndexes;
-        private boolean consistencyCheckLabelScanStore;
+        private boolean consistencyCheckGraph = true;
+        private boolean consistencyCheckIndexes = true;
+        private boolean consistencyCheckLabelScanStore = true;
         private boolean consistencyCheckPropertyOwners;
 
         private Builder()
