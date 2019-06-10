@@ -17,29 +17,29 @@ class ResourcePrivilegeTest
     @Test
     void shouldConstructValidPrivileges() throws InvalidArgumentsException
     {
-        new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL );
+        new ResourcePrivilege( Action.READ, new Resource.GraphResource(), LabelSegment.ALL );
 
-        new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
+        new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
 
-        new ResourcePrivilege( Action.EXECUTE, new Resource.ProcedureResource( "", "" ), Segment.ALL );
+        new ResourcePrivilege( Action.EXECUTE, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL );
     }
 
     @Test
     void shouldNotAcceptInvalidPrivileges()
     {
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.TokenResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SchemaResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SystemResource(), Segment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.TokenResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SchemaResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SystemResource(), LabelSegment.ALL ) );
         assertThrows( InvalidArgumentsException.class,
-                () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
+                () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL ) );
         assertThrows( InvalidArgumentsException.class,
-                () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.GraphResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.TokenResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SchemaResource(), Segment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SystemResource(), Segment.ALL ) );
+                () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.GraphResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.TokenResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SchemaResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SystemResource(), LabelSegment.ALL ) );
     }
 }

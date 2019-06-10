@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
@@ -39,9 +38,6 @@ import org.neo4j.server.security.systemgraph.QueryExecutor;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.logging.AssertableLogProvider.inLog;

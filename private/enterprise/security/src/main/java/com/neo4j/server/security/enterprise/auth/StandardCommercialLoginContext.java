@@ -330,19 +330,40 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
             {
                 Resource resource = privilege.getResource();
+                Segment segment = privilege.getSegment();
                 switch ( privilege.getAction() )
                 {
                 case FIND:
                     read = true;
-                    if ( privilege.getSegment().equals( Segment.ALL ) )
+                    if ( segment instanceof LabelSegment )
                     {
-                        allowsTraverseAllLabels = true;
+                        if ( segment.equals( LabelSegment.ALL ) )
+                        {
+                            allowsTraverseAllLabels = true;
+                        }
+                        else
+                        {
+                            int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
+                            whitelistTraverseLabels.add( labelId );
+                        }
+                    }
+                    else if ( segment instanceof RelTypeSegment )
+                    {
+                        if ( segment.equals( RelTypeSegment.ALL ) )
+                        {
+//                            allowsTraverseAllRelationships = true;
+                        }
+                        else
+                        {
+                            int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
+//                            whitelistTraverseRelType.add( relTypeId );
+                        }
                     }
                     else
                     {
-                        int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                        whitelistTraverseLabels.add( labelId );
+                        // not good
                     }
+
                     break;
                 case READ:
                     switch ( resource.type() )
@@ -354,28 +375,34 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case PROPERTY:
                         read = true;
                         int propertyId = resolvePropertyId( resource.getArg1() );
-                        if ( privilege.getSegment() == Segment.ALL )
+                        if ( segment instanceof LabelSegment )
                         {
-                            whitelistNodeProperties.add( propertyId );
-                        }
-                        else
-                        {
-                            MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
-                                    .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
-                            int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                            allowedNodesWithLabels.add( labelId );
+                            if ( segment.equals( LabelSegment.ALL ) )
+                            {
+                                whitelistNodeProperties.add( propertyId );
+                            }
+                            else
+                            {
+                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
+                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
+                                allowedNodesWithLabels.add( labelId );
+                            }
                         }
                         break;
                     case ALL_PROPERTIES:
                         read = true;
-                        if ( privilege.getSegment() == Segment.ALL )
+                        if ( segment instanceof LabelSegment )
                         {
-                            whitelistAllPropertiesInWholeGraph = true;
-                        }
-                        else
-                        {
-                            int labelId = resolveLabelId( privilege.getSegment().getLabel() );
-                            allowedSegmentForAllProperties.add( labelId );
+                            if ( segment.equals( LabelSegment.ALL ) )
+                            {
+                                whitelistAllPropertiesInWholeGraph = true;
+                            }
+                            else
+                            {
+                                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
+                                allowedSegmentForAllProperties.add( labelId );
+                            }
                         }
                         break;
                     default:
@@ -418,6 +445,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 assert !label.isEmpty();
                 return resolver.getOrCreateLabelId( label );
+            }
+
+            private int resolveRelTypeId( String relType ) throws KernelException
+            {
+                assert !relType.isEmpty();
+                return resolver.getOrCreateLabelId( relType );
             }
 
             private int resolvePropertyId( String property ) throws KernelException

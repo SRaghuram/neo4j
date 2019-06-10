@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
@@ -226,14 +227,14 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
                 "arg2", resource.getArg2(),
-                "label", resourcePrivilege.getSegment().getLabel()
+                "label", ((LabelSegment) resourcePrivilege.getSegment()).getLabel()
         );
     }
 
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
         Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
-        boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
+        boolean fullSegment = resourcePrivilege.getSegment().equals( LabelSegment.ALL );
         String databaseMatch = resourcePrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
         String qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}" : "q:LabelQualifier {label: $label}";
 

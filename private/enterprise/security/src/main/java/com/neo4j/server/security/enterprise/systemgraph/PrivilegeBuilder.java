@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.LabelSegment;
+import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
@@ -17,7 +19,7 @@ import org.neo4j.values.virtual.NodeValue;
 class PrivilegeBuilder
 {
     private final boolean allowed;
-    private String label;
+    private Segment segment;
     private ResourcePrivilege.Action action;
     private Resource resource;
     private String dbName = "";
@@ -46,25 +48,33 @@ class PrivilegeBuilder
         return this;
     }
 
-    PrivilegeBuilder withinScope( NodeValue qualifier )
+    PrivilegeBuilder withinScope( NodeValue qualifierNode )
     {
-        if ( qualifier.labels().length() != 1 )
+        if ( qualifierNode.labels().length() != 1 )
         {
             throw new IllegalStateException(
-                    "Privilege segments require qualifier nodes with exactly one label, but this qualifier has: " + qualifier.labels().prettyPrint() );
+                    "Privilege segments require qualifier nodes with exactly one label, but this qualifier has: " + qualifierNode.labels().prettyPrint() );
         }
-        qualifier.labels().forEach( label ->
+        qualifierNode.labels().forEach( qualifierType ->
         {
-            switch ( ((StringValue)label).stringValue() )
+            switch ( ((StringValue) qualifierType).stringValue() )
             {
             case "LabelQualifier":
-                this.label = ((TextValue) qualifier.properties().get( "label" )).stringValue();
+                String label = ((TextValue) qualifierNode.properties().get( "label" )).stringValue();
+                this.segment = new LabelSegment( label );
                 break;
             case "LabelQualifierAll":
-                this.label = null;
+                this.segment = LabelSegment.ALL;
+                break;
+            case "RelTypeQualifier":
+                String relType = ((TextValue) qualifierNode.properties().get( "reltype" )).stringValue();
+                this.segment = new RelTypeSegment( relType );
+                break;
+            case "RelTypeQualifierAll":
+                this.segment = RelTypeSegment.ALL;
                 break;
             default:
-                throw new IllegalArgumentException( "Unknown privilege qualifier type: " + label.getTypeName() );
+                throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.getTypeName() );
             }
         } );
         return this;
@@ -119,7 +129,6 @@ class PrivilegeBuilder
 
     ResourcePrivilege build() throws InvalidArgumentsException
     {
-        Segment segment = label == null ? Segment.ALL : new Segment( label );
         if ( allDatabases )
         {
             return new ResourcePrivilege( action, resource, segment );
