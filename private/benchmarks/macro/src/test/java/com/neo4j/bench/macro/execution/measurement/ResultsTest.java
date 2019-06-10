@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.results.BenchmarkDirectory;
@@ -110,33 +109,27 @@ public class ResultsTest
                                        () -> Results.loadFromFile( invalidResultFile.toPath() ) );
     }
 
-    // TODO make it work, somehow
-//    @Test
-//    public void shouldWriteAndRead() throws Exception
-//    {
-//        Path existingForkDirPath = createForkDirPath();
-//        ForkDirectory forkDirectory = ForkDirectory.openAt( existingForkDirPath );
-//        try ( Results.ResultsWriter resultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, MILLISECONDS ) )
-//        {
-//            resultsWriter.write( 1, 2, 3, 5 );
-//            resultsWriter.write( 2, 2, 5, 4 );
-//            resultsWriter.write( 2, 2, 7, 3 );
-//        }
-//
-//        Results results = Results.loadFrom( forkDirectory, Phase.MEASUREMENT );
-//        List<Result> resultsList = results.results();
-//        assertThat( resultsList.size(), equalTo( 3 ) );
-//        assertThat( resultsList.get( 0 ), equalTo( new Result( 1, 2, 3, 5 ) ) );
-//        assertThat( resultsList.get( 1 ), equalTo( new Result( 2, 2, 5, 4 ) ) );
-//        assertThat( resultsList.get( 2 ), equalTo( new Result( 2, 2, 7, 3 ) ) );
-//        assertThat( results.duration().mean(), equalTo( 5D ) );
-//        assertThat( results.rows().mean(), equalTo( 4D ) );
-//    }
+    @Test
+    public void shouldWriteAndRead() throws Exception
+    {
+        Path existingForkDirPath = createForkDirPath();
+        ForkDirectory forkDirectory = ForkDirectory.openAt( existingForkDirPath );
+        try ( Results.ResultsWriter resultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, MILLISECONDS ) )
+        {
+            resultsWriter.write( 1, 2, 3, 5 );
+            resultsWriter.write( 2, 2, 5, 4 );
+            resultsWriter.write( 2, 2, 7, 3 );
+        }
+
+        Results results = Results.loadFrom( forkDirectory, Phase.MEASUREMENT );
+        assertThat( results.duration().mean(), equalTo( 5D ) );
+        assertThat( results.rows().mean(), equalTo( 4D ) );
+    }
 
     @Test
     public void shouldCalculateAggregate()
     {
-        ArrayList<Long> measurements = Lists.newArrayList( 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L );
+        long[] measurements = new long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L };
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
@@ -160,7 +153,7 @@ public class ResultsTest
     @Test
     public void shouldCalculateSingleResultAggregate()
     {
-        ArrayList<Long> measurements = Lists.newArrayList( 1L );
+        long[] measurements = new long[] { 1L };
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );

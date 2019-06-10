@@ -5,17 +5,15 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
-import static java.util.stream.Collectors.toList;
+import java.util.stream.LongStream;
 
 public class AggregateMeasurement
 {
-    public static AggregateMeasurement calculateFrom( List<Long> measurements )
+    public static AggregateMeasurement calculateFrom( long[] measurements )
     {
-        if ( measurements.isEmpty() )
+        if ( measurements.length == 0 )
         {
             throw new RuntimeException( "No measurements provided" );
         }
@@ -24,17 +22,17 @@ public class AggregateMeasurement
 
     public static AggregateMeasurement createEmpty()
     {
-        return new AggregateMeasurement( new ArrayList<>() );
+        return new AggregateMeasurement( new long[] {} );
     }
 
-    private final List<Long> measurements;
+    private final long[] measurements;
     private final double mean;
 
-    private AggregateMeasurement( List<Long> measurements )
+    private AggregateMeasurement( long[] measurements )
     {
         this.measurements = measurements;
-        this.measurements.sort( Long::compareTo );
-        this.mean = this.measurements.stream().mapToLong( Long::longValue ).average().orElse( 0 );
+        Arrays.sort( measurements );
+        this.mean = LongStream.of( measurements ).average().orElse( 0 );
     }
 
     public long min()
@@ -59,18 +57,18 @@ public class AggregateMeasurement
 
     public long count()
     {
-        return measurements.size();
+        return measurements.length;
     }
 
     public long percentile( double percentile )
     {
         assertPercentileInRange( percentile );
-        int index = (int) (percentile * measurements.size());
-        if ( measurements.size() == index )
+        int index = (int) (percentile * measurements.length);
+        if ( measurements.length == index )
         {
             index = index - 1;
         }
-        return measurements.get( index );
+        return measurements[ index ];
     }
 
     @Override
@@ -104,9 +102,9 @@ public class AggregateMeasurement
     public AggregateMeasurement convertUnit( TimeUnit fromTimeUnit, TimeUnit toTimeUnit )
     {
         return new AggregateMeasurement(
-                measurements.stream()
+                LongStream.of( measurements )
                 .map( m -> toTimeUnit.convert( m, fromTimeUnit ) )
-                .collect( toList() ) );
+                .toArray() );
     }
 
 }

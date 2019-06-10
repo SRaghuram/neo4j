@@ -14,6 +14,7 @@ import com.neo4j.bench.client.results.ForkDirectory;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.neo4j.bench.client.Units.toAbbreviation;
@@ -83,12 +85,13 @@ public class Results
         benchmarkDirectory.measurementForks()
                                  .stream()
                                  .flatMap( f -> streamResults( f, Results.Phase.MEASUREMENT) )
-                                 .forEach( result -> {
+                                 .forEach( result ->
+                                 {
                                      durations.add( result.duration(smallestTimeUnit) );
                                      rows.add( result.rows() );
                                  });
-        return new Results( AggregateMeasurement.calculateFrom( durations ),
-                            AggregateMeasurement.calculateFrom( rows ),
+        return new Results( AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
+                            AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
                             smallestTimeUnit );
     }
 
@@ -103,13 +106,14 @@ public class Results
         TimeUnit timeUnit = extractUnit( resultsFile );
         List<Long> durations = new ArrayList<>();
         List<Long> rows = new ArrayList<>();
-        streamResults( resultsFile, timeUnit ).forEach( result -> {
+        streamResults( resultsFile, timeUnit ).forEach( result ->
+        {
             durations.add( result.duration() );
             rows.add( result.rows() );
         });
         return new Results(
-                AggregateMeasurement.calculateFrom( durations ),
-                AggregateMeasurement.calculateFrom( rows ),
+                AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
+                AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
                 timeUnit );
     }
     public static Results empty()
@@ -181,11 +185,12 @@ public class Results
                 assertValidHeader( firstLine );
             }
 
-            return Files.newBufferedReader( resultsFile )
-                .lines()
+            LineNumberReader reader = new LineNumberReader( Files.newBufferedReader( resultsFile ) );
+            return reader.lines()
                 .skip( 1 ) // skip header
                 .map( line -> line.split( SEPARATOR ))
-                .map( row -> {
+                .map( row ->
+                {
                     if ( row.length != 4 )
                     {
                         throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
@@ -195,8 +200,8 @@ public class Results
                                 "Row    : %s",
                                 row.length,
                                 resultsFile.toAbsolutePath(),
-                                /*results.size() + 1*/1,
-                                /*null*/null,
+                                reader.getLineNumber(),
+                                Arrays.stream( row ).collect( Collectors.joining( SEPARATOR ) ),
                                 Arrays.toString( row ) ) );
                     }
                     long scheduledStartUtc = Long.parseLong( row[0] );
