@@ -24,7 +24,7 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
 
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(EnterpriseInterpreted.NAME))
+    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var StandAloneProcedureCall_runtime: String = _
 
@@ -46,14 +46,8 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val plan = plans.StandAloneProcedureCall(
-      procedureSignature,
-      resolvedCall.callArguments,
-      resolvedCall.callResultTypes,
-      resolvedCall.callResultIndices
-      )(IdGen)
-
-    (plan, semanticTable, columns.toList)
+    val call = plans.ProcedureCall(plans.Argument()(IdGen), resolvedCall)(IdGen)
+    (plans.ProduceResult(call, columns)(IdGen),semanticTable, columns.toList)
   }
 
   @Benchmark
