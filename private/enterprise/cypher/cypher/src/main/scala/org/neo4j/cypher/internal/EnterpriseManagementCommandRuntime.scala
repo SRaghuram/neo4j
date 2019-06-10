@@ -154,6 +154,36 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case AlterUser(_, _, Some(_), _, _) =>
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
+    case SetOwnPassword(initialPassword) => (_, _, currentUser) =>
+      val query =
+        """MATCH (user:User {name: $name})
+          |WITH user, user.credentials AS oldCredentials
+          |SET user.credentials = $credentials
+          |SET user.passwordChangeRequired = false
+          |RETURN oldCredentials""".stripMargin
+      val password = UTF8.encode(initialPassword)
+
+      UpdatingSystemCommandExecutionPlan("SetOwnPassword", normalExecutionEngine,
+        query,
+        VirtualValues.map(Array("name", "credentials"),
+          Array(Values.stringValue(currentUser),
+            Values.stringValue(authManager.createCredentialForPassword(validatePassword(password)).serialize()))),
+        QueryHandler
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$currentUser' does not exist."))) // TODO should be current user so can this even happen?
+          .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to change its own password.", e))
+          .handleResult((_, value) => {
+            val maybeThrowable = {
+              val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
+              if (oldCredentials.matchesPassword(password))
+                Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
+              else
+                None
+            }
+            clearCacheForUser(currentUser)
+            maybeThrowable
+          })
+      )
+
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _, _) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,

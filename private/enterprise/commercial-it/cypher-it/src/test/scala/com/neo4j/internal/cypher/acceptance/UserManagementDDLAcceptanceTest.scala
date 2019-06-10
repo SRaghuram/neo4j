@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher._
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
@@ -758,6 +759,97 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message
       "This is a DDL command and it should be executed against the system database: ALTER USER"
+  }
+
+  // Tests for changing own password
+
+  test("should change own password") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    // WHEN
+    executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'baz'")
+
+    // THEN
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should change own password to password with mixed upper- and lowercase letters and characters") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    // WHEN
+    executeOnSystem("foo", "bar", "SET MY PASSWORD TO '!bAr%'")
+
+    // THEN
+    testUserLogin("foo", "!bAr%", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "!bar%", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  ignore("should change own password when user has no role") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", passwordChangeRequired = false))
+
+    // WHEN
+    executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'baz'")
+
+    // THEN
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail to change own password to invalid password") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      executeOnSystem("foo", "bar", "SET MY PASSWORD TO ''")
+      // THEN
+    } should have message "A password cannot be empty."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+
+    the[QueryExecutionException] thrownBy {// the InvalidArgumentsException gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'bar'")
+      // THEN
+    } should have message "Old password and new password cannot be the same."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+  }
+
+  test("should fail when changing own password when not on system database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+     the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
+      // WHEN
+      executeOnDefault("neo4j", "neo", "SET MY PASSWORD TO 'baz'")
+      // THEN
+    } should have message "This is a DDL command and it should be executed against the system database: SET OWN PASSWORD"
   }
 
   // Tests for user management with restricted privileges
