@@ -566,9 +566,11 @@ public class ProcedureIT
         // run in tx to avoid having to wait for tx rollback on shutdown
         try ( Transaction ignore = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.indexOutOfBounds" ) );
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class,
+                    () -> db.execute( "CALL org.neo4j.procedure.indexOutOfBounds" ).next() );
             assertThat( exception.getMessage(),
-                    startsWith( "Failed to invoke procedure `org.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang.ArrayIndexOutOfBoundsException" ) );
+                    startsWith(
+                            "Failed to invoke procedure `org.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang.ArrayIndexOutOfBoundsException" ) );
         }
     }
 
@@ -1169,7 +1171,7 @@ public class ProcedureIT
                         {
                             try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
                             {
-                                db.execute( "CALL org.neo4j.procedure.integrationTestMe()" );
+                                db.execute( "CALL org.neo4j.procedure.integrationTestMe()" ).next();
                                 tx.success();
                             }
                         } );
@@ -1350,7 +1352,7 @@ public class ProcedureIT
     @Test
     void shouldUseGuardToDetectTransactionTermination()
     {
-        QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.guardMe" ) );
+        QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL org.neo4j.procedure.guardMe" ).next() );
         assertThat( exception.getMessage(), equalTo( "The transaction has been terminated. Retry your operation in a new " +
                 "transaction, and you should see a successful result. Explicitly terminated by the user. " ) );
     }
