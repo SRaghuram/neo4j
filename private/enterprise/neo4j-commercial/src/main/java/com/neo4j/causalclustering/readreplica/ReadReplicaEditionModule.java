@@ -32,6 +32,8 @@ import com.neo4j.dbms.ReconcilingDatabaseOperator;
 import com.neo4j.dbms.SystemOperator;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
+import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.util.LinkedHashMap;
@@ -63,8 +65,6 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
-import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
-import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 

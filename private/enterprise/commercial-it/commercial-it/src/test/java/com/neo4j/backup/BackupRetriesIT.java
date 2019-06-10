@@ -5,6 +5,9 @@
  */
 package com.neo4j.backup;
 
+import com.neo4j.backup.impl.BackupSupportingClassesFactory;
+import com.neo4j.backup.impl.OnlineBackupContext;
+import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -32,9 +35,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import org.neo4j.backup.impl.BackupSupportingClassesFactory;
-import org.neo4j.backup.impl.OnlineBackupContext;
-import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;

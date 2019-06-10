@@ -5,12 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
-
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
 
 public class PluginAuthorizationInfo extends SimpleAuthorizationInfo
 {

@@ -5,17 +5,17 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthorizationExpiredException;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthorizationExpiredException;
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 
 public class TestCombinedAuthPlugin extends AuthenticationPlugin.Adapter implements AuthorizationPlugin
 {

@@ -5,13 +5,13 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 
 public class TestCustomParametersAuthenticationPlugin extends AuthenticationPlugin.Adapter
 {

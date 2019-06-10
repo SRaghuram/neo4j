@@ -39,16 +39,16 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class SystemGraphSecurityReplicationIT

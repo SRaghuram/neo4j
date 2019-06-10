@@ -7,12 +7,12 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util.Collection
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
 

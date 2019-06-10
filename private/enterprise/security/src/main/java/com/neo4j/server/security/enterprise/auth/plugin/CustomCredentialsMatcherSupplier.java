@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
 
 public interface CustomCredentialsMatcherSupplier
 {

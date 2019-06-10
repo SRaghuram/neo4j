@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import org.neo4j.server.security.auth.SecureHasher;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.Test;
 
@@ -13,7 +13,7 @@ import java.time.Clock;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
+import org.neo4j.server.security.auth.SecureHasher;
 
 import static java.lang.String.format;
 import static org.mockito.Mockito.mock;

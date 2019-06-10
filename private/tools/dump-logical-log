@@ -6,4 +6,4 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
-java -cp "target/dependency/*:target/classes"  org.neo4j.tools.dump.DumpLogicalLog $*
+java -cp "target/dependency/*:target/classes"  com.neo4j.tools.dump.DumpLogicalLog $*

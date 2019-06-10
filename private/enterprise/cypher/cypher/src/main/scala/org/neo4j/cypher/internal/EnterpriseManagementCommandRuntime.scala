@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal
 
-import java.lang.String.format
 import java.util
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.server.security.enterprise.auth._
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.DatabaseManagementException
@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._

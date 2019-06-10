@@ -3,4 +3,4 @@
 
 mvn -nsu dependency:copy-dependencies
 
-java -cp "target/dependency/*:target/classes" org.neo4j.tools.rawstorereader.RsdrMain $*
+java -cp "target/dependency/*:target/classes" com.neo4j.tools.rawstorereader.RsdrMain $*

@@ -5,11 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import java.util.Arrays;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
+import java.util.Arrays;
 
 public class TestAuthenticationPlugin extends AuthenticationPlugin.Adapter
 {

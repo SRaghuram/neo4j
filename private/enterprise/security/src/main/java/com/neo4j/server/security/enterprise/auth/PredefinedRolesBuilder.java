@@ -13,11 +13,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
 
 public class PredefinedRolesBuilder implements RolesBuilder

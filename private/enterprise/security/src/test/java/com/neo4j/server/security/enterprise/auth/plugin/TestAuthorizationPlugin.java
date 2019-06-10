@@ -5,12 +5,12 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
+
 import java.util.Collection;
 import java.util.Collections;
-
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 
 public class TestAuthorizationPlugin extends AuthorizationPlugin.Adapter
 {

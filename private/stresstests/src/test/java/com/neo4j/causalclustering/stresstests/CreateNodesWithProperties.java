@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.helper.Workload;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -14,7 +15,6 @@ import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.helper.Workload;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.values.storable.RandomValues;

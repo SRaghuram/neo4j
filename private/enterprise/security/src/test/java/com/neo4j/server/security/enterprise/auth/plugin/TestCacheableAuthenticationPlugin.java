@@ -5,13 +5,13 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthenticationInfo;
+
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthenticationInfo;
 
 public class TestCacheableAuthenticationPlugin extends AuthenticationPlugin.CachingEnabledAdapter
 {

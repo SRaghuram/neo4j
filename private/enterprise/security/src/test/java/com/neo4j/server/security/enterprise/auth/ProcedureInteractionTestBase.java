@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.commons.lang.StringUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -57,7 +58,6 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.TerminationGuard;
 import org.neo4j.procedure.UserFunction;
-import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -70,6 +70,11 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.counting;
@@ -92,11 +97,6 @@ import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTime
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
 @ExtendWith( {TestDirectoryExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>

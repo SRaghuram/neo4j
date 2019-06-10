@@ -6,9 +6,15 @@
 package com.neo4j.server.security.enterprise.auth.plugin;
 
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
-import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
+import com.neo4j.server.security.enterprise.auth.plugin.api.AuthorizationExpiredException;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
@@ -32,14 +38,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.Version;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthToken;
-import org.neo4j.server.security.enterprise.auth.plugin.api.AuthorizationExpiredException;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 
 public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider
 {
@@ -131,7 +131,7 @@ public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, Shi
     {
         if ( authorizationPlugin != null )
         {
-            org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo authorizationInfo;
+            com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationInfo authorizationInfo;
             try
             {
                  authorizationInfo = authorizationPlugin.authorize( getPrincipalAndProviderCollection( principals ) );
@@ -184,7 +184,7 @@ public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, Shi
                     }
                     else if ( authenticationPlugin != null )
                     {
-                        org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo authenticationInfo =
+                        com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo authenticationInfo =
                                 authenticationPlugin.authenticate( pluginAuthToken );
                         if ( authenticationInfo != null )
                         {
@@ -198,7 +198,7 @@ public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, Shi
                     pluginAuthToken.clearCredentials();
                 }
             }
-            catch ( org.neo4j.server.security.enterprise.auth.plugin.api.AuthenticationException |
+            catch ( com.neo4j.server.security.enterprise.auth.plugin.api.AuthenticationException |
                     InvalidAuthTokenException e )
             {
                 throw new AuthenticationException( e.getMessage(), e.getCause() );

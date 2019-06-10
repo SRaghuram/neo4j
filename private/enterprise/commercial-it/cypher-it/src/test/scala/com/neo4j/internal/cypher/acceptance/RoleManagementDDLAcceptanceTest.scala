@@ -5,10 +5,10 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val defaultRoles = Set(

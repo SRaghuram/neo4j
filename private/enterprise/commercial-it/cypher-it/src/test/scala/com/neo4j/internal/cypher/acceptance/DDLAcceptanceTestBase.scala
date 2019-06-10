@@ -9,6 +9,7 @@ import java.util.Optional
 
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
@@ -18,7 +19,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 
 import scala.collection.Map
 

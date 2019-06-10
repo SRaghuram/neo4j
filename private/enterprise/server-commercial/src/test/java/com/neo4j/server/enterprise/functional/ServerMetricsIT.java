@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.enterprise.functional;
 
+import com.neo4j.metrics.MetricsSettings;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +19,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.extension.Inject;
@@ -26,6 +26,8 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -33,8 +35,6 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )

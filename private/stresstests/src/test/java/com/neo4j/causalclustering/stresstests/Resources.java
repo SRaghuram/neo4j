@@ -23,8 +23,8 @@ import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 
+import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static java.util.Collections.emptyMap;
-import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 
 class Resources
 {

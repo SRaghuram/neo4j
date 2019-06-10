@@ -2,4 +2,4 @@
 
 call mvn dependency:copy-dependencies
 
-call java -cp "target\dependency\*;target\classes" org.neo4j.tools.txlog.CheckTxLogs %*
+call java -cp "target\dependency\*;target\classes" com.neo4j.tools.txlog.CheckTxLogs %*

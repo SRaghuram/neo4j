@@ -5,6 +5,10 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.backup.impl.BackupExecutionException;
+import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
+import com.neo4j.backup.impl.OnlineBackupContext;
+import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusterMember;
@@ -19,10 +23,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.backup.impl.BackupExecutionException;
-import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
-import org.neo4j.backup.impl.OnlineBackupContext;
-import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;

@@ -6,6 +6,8 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.metrics.source.server.ServerThreadView;
+import com.neo4j.metrics.source.server.ServerThreadViewSetter;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
@@ -23,8 +25,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.logging.Log;
-import org.neo4j.metrics.source.server.ServerThreadView;
-import org.neo4j.metrics.source.server.ServerThreadViewSetter;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.GraphFactory;
 import org.neo4j.server.modules.AuthorizationModule;
@@ -98,7 +98,6 @@ public class CommercialNeoServer extends CommunityNeoServer
         return new DBMSModule( webServer, getConfig(), discoverableURIs );
     }
 
-    @SuppressWarnings( "unchecked" )
     @Override
     protected Iterable<ServerModule> createServerModules()
     {
@@ -120,6 +119,6 @@ public class CommercialNeoServer extends CommunityNeoServer
             uriWhitelist.add( Pattern.compile( "/db/manage/server/causalclustering.*" ) );
         }
 
-        return uriWhitelist.toArray( new Pattern[uriWhitelist.size()] );
+        return uriWhitelist.toArray( new Pattern[0] );
     }
 }

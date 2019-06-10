@@ -18,6 +18,8 @@ import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.util.Optional;
@@ -59,8 +61,6 @@ import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
-import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenHolders;

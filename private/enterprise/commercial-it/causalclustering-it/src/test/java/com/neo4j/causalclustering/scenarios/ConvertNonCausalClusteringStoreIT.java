@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.restore.RestoreDatabaseCommand;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,7 +29,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;

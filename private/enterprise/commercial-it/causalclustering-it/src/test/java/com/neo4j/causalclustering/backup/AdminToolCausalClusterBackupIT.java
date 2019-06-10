@@ -31,12 +31,12 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
+import static com.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
-import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 
 @ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
 @ClusterExtension

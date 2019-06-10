@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise.helpers;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.metrics.MetricsSettings;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 
 import java.io.File;
@@ -19,7 +20,6 @@ import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 

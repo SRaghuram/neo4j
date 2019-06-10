@@ -5,15 +5,15 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
 import org.apache.shiro.crypto.hash.SimpleHash;
 import org.apache.shiro.util.ByteSource;
 
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthenticationInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 class PluginAuthenticationInfo extends ShiroAuthenticationInfo implements CustomCredentialsMatcherSupplier
 {

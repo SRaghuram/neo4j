@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
+import com.neo4j.helper.Workload;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -15,7 +16,6 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.helper.Workload;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;

@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.procedure.commercial.builtin.QueryId;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
@@ -46,12 +48,11 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
-import org.neo4j.procedure.commercial.builtin.QueryId;
-import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static java.lang.String.format;
 import static java.time.OffsetDateTime.from;
 import static java.time.OffsetDateTime.now;
@@ -77,7 +78,6 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
-import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
 import static org.neo4j.util.concurrent.Runnables.EMPTY_RUNNABLE;

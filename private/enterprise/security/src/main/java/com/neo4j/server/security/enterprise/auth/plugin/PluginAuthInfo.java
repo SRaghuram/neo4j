@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthInfo;
+import com.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthInfo;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.crypto.hash.SimpleHash;
@@ -18,8 +18,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthInfo;
-import org.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthInfo;
+import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 public class PluginAuthInfo extends ShiroAuthenticationInfo implements AuthorizationInfo
 {

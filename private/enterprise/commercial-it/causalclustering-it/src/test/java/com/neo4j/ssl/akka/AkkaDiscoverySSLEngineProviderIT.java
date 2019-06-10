@@ -52,15 +52,15 @@ import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
+import static com.neo4j.ssl.HostnameVerificationHelper.SSL_POLICY_CONFIG;
+import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
+import static com.neo4j.ssl.HostnameVerificationHelper.trust;
+import static com.neo4j.ssl.SslContextFactory.SslParameters.protocols;
+import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
-import static org.neo4j.ssl.HostnameVerificationHelper.SSL_POLICY_CONFIG;
-import static org.neo4j.ssl.HostnameVerificationHelper.aConfig;
-import static org.neo4j.ssl.HostnameVerificationHelper.trust;
-import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
-import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 

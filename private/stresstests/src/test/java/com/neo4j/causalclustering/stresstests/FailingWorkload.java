@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import org.neo4j.helper.Workload;
+import com.neo4j.helper.Workload;
 
 public class FailingWorkload extends Workload
 {

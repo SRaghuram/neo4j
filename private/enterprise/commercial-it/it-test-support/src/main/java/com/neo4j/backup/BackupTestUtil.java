@@ -8,6 +8,7 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.restore.RestoreDatabaseCommand;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
 

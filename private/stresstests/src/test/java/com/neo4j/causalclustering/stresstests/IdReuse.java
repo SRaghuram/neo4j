@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.helper.Workload;
 
 import java.io.File;
 import java.security.SecureRandom;
@@ -21,7 +22,6 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
-import org.neo4j.helper.Workload;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.IdContainer;
 import org.neo4j.io.fs.FileSystemAbstraction;

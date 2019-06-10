@@ -193,7 +193,7 @@ public class KubernetesResolverIT
         String keyStorePass = "key store pass";
         String privateKeyPass = "private key pass";
         SslResource server1 = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "k8s" ) );
-        SslPolicy sslPolicy = org.neo4j.ssl.SslContextFactory.makeSslPolicy( server1 );
+        SslPolicy sslPolicy = com.neo4j.ssl.SslContextFactory.makeSslPolicy( server1 );
         KeyStore keyStore = sslPolicy.getKeyStore( keyStorePass.toCharArray(), privateKeyPass.toCharArray() );
 
         SslContextFactory sslContextFactory = new SslContextFactory();

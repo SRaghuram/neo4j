@@ -7,11 +7,11 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
+import com.neo4j.harness.PortAuthorityPortPickingStrategy;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -21,7 +21,6 @@ import java.util.Map;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4j;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;

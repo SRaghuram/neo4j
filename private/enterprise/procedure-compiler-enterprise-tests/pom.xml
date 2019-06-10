@@ -67,7 +67,7 @@
             <testResource>
                 <directory>src/test/java</directory>
                 <includes>
-                    <include>org/neo4j/tooling/procedure/procedures/**/*.java</include>
+                    <include>com/neo4j/tooling/procedure/procedures/**/*.java</include>
                 </includes>
             </testResource>
         </testResources>
