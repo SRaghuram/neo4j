@@ -751,6 +751,17 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
+  test("should fail when altering user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD 'bar'")
+      // THEN
+    } should have message
+      "This is a DDL command and it should be executed against the system database: ALTER USER"
+  }
+
+  // Tests for user management with restricted privileges
+
   test("should fail create user for when password change required") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -892,15 +903,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
         row.get("name").equals(DEFAULT_DATABASE_NAME)
         row.get("status").equals(Online.stringValue())
       })
-  }
-
-  test("should fail when altering user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("ALTER USER foo SET PASSWORD 'bar'")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: ALTER USER"
   }
 
   // helper methods
