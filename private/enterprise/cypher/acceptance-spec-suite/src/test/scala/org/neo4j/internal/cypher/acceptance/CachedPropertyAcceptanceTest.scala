@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.{Node, Relationship}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 
 class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -17,11 +17,15 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNode(Map("foo" -> 112))
     createNode(Map("foo" -> 113))
     createNode(Map("foo" -> 114))
-    val res = executeWith(Configs.InterpretedAndSlotted,"MATCH (n) WHERE n.foo > 10 RETURN n.foo")
-
-    res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{n.foo : cache[n.foo]}").onTopOf(
-      aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
+    val res = executeWith(Configs.InterpretedAndSlotted,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{n.foo : cache[n.foo]}")
+        .withDBHits(0)
+        .onTopOf(
+          aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
+        )
+      )
     )
     res.toList should equal(List(Map("n.foo" -> 111), Map("n.foo" -> 112), Map("n.foo" -> 113), Map("n.foo" -> 114)))
   }
@@ -30,20 +34,61 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     relate(createNode(), createNode(), "foo" -> 1)
     relate(createNode(), createNode(), "foo" -> 20)
     relate(createNode(), createNode(), "foo" -> 30)
-    val res = executeWith(Configs.InterpretedAndSlotted,"MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo")
-
-    res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{r.foo : cache[r.foo]}").onTopOf(
-      aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
+    val res = executeWith(Configs.InterpretedAndSlotted,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{r.foo : cache[r.foo]}")
+        .withDBHits(0)
+        .onTopOf(
+          aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
+        )
+      )
     )
     res.toList should equal(List(Map("r.foo" -> 20), Map("r.foo" -> 30)))
   }
 
   test("should cache properties in the presence of byzantine renamings") {
-    val n = createNode(Map("prop" -> 1))
-    val m = createNode(Map("prop" -> 1))
-    val q ="MATCH (n), (m) WHERE n.prop = m.prop WITH n AS m, m AS x RETURN m.prop, x.prop"
-    val res = executeWith(Configs.InterpretedAndSlotted, q, params = Map("n" -> n, "m" -> m))
+    createLabeledNode(Map("prop" -> 1), "N")
+    createLabeledNode(Map("prop" -> 2), "N")
+    createLabeledNode(Map("prop" -> 3), "M")
+    createLabeledNode(Map("prop" -> 4), "M")
+    val q ="PROFILE MATCH (n:N), (m:M) WHERE n.prop <> m.prop WITH n AS m, m AS x RETURN m.prop, x.prop"
+    val res = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, q,
+      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")
+        .withDBHits(0),
+        expectPlansToFail = Configs.Compiled // compiled does not cache properties and will therefore have DB hits
+      )
+    )
+
+    res.toList should contain theSameElementsAs List(
+      Map("m.prop" -> 1, "x.prop" -> 3),
+      Map("m.prop" -> 1, "x.prop" -> 4),
+      Map("m.prop" -> 2, "x.prop" -> 3),
+      Map("m.prop" -> 2, "x.prop" -> 4))
+  }
+
+  test("should cache properties in the presence of renamings and aggregations") {
+    createLabeledNode(Map("prop" -> 1), "N")
+    createLabeledNode(Map("prop" -> 2), "N")
+    createLabeledNode(Map("prop" -> 3), "M")
+    createLabeledNode(Map("prop" -> 4), "M")
+    val q ="PROFILE MATCH (n:N), (m:M) WHERE n.prop <> m.prop WITH n AS m, m AS x, sum(m.prop) AS whoCares RETURN m.prop, x.prop"
+    val res = executeWith(Configs.InterpretedAndSlotted, q,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")
+        // As long as aggregation deleted all cached properties, we cannot assert on getting 0 DB hits here)
+      )
+    )
+
+    res.toList should contain theSameElementsAs List(
+      Map("m.prop" -> 1, "x.prop" -> 3),
+      Map("m.prop" -> 1, "x.prop" -> 4),
+      Map("m.prop" -> 2, "x.prop" -> 3),
+      Map("m.prop" -> 2, "x.prop" -> 4))
+  }
 
     res.executionPlanDescription() should includeSomewhere.
       aPlan("Projection").containingArgument("{m.prop : cache[n.prop], x.prop : cache[m.prop]}")

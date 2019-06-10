@@ -30,8 +30,8 @@ case object removeCachedProperties {
 
       case indexLeafPlan: IndexLeafPlan if indexLeafPlan.cachedProperties.nonEmpty =>
         val projections: Map[String, Property] = indexLeafPlan.cachedProperties.map { cachedProperty =>
-          cachedProperty.cacheKey -> Property(
-            Variable(cachedProperty.variableName)(InputPosition.NONE),
+          cachedProperty.propertyAccessString -> Property(
+            Variable(cachedProperty.entityName)(InputPosition.NONE),
             cachedProperty.propertyKey
           )(InputPosition.NONE)
         }.toMap

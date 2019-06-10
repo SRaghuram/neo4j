@@ -60,8 +60,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     other.cachedProperties.foreach {
       case (prop:CachedProperty, _) =>
         newCachedProperty(prop)
-        renames.get(prop.variableName).foreach(newName =>
-          addAlias(prop.variableName, newName)
+        renames.get(prop.entityName).foreach(newName =>
+          addAlias(prop.entityName, newName)
         )
     }
     other.applyPlans.foreach { case (id, slotOffset) => applyPlans.put(id, slotOffset) }

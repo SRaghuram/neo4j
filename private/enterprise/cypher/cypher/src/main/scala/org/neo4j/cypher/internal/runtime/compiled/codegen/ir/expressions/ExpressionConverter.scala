@@ -192,8 +192,6 @@ object ExpressionConverter {
 
       case x: ast.LogicalVariable => LoadVariable(context.getVariable(x.name))
 
-      case x: CachedProperty => LoadVariable(context.getVariable(x.cacheKey))
-
       case other => throw new CantCompileQueryException(s"Expression of $other not yet supported")
     }
   }

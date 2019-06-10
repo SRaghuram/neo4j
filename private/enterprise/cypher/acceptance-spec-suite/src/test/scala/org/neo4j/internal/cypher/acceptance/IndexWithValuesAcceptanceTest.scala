@@ -281,7 +281,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Projection")
         .withDBHits(0)
-        .containingArgument("{n.prop1 : cache[a.prop1], m.prop1 : cache[n.prop1]}")
+        .containingArgument("{n.prop1 : cache[n.prop1], m.prop1 : cache[m.prop1]}")
 
     result.toList should equal(
       List(
@@ -409,7 +409,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-        .containingArgument("{m.prop1 : cache[n.prop1]}")
+        .containingArgument("{m.prop1 : cache[m.prop1]}")
         .withDBHits(0)
         .withLHS(includeSomewhere
         .aPlan("NodeIndexSeek")

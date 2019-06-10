@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.physicalplanning.ast
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, EntityType, PropertyKeyName}
 
-case class SlottedCachedProperty(variableName: String,
+case class SlottedCachedProperty(entityName: String,
                                  propertyKey: PropertyKeyName,
                                  offset: Int,
                                  propToken: Int,
@@ -17,7 +17,7 @@ case class SlottedCachedProperty(variableName: String,
                                 ) extends ASTCachedProperty with RuntimeExpression
 
 // Token did not exist at plan time, so we'll need to look it up at runtime
-case class SlottedCachedPropertyLate(variableName: String,
+case class SlottedCachedPropertyLate(entityName: String,
                                      propertyKey: PropertyKeyName,
                                      offset: Int,
                                      propKey: String,

@@ -119,7 +119,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   override def invalidateCachedNodeProperties(node: Long): Unit = {
     slots.foreachCachedSlot {
       case (cnp, refSlot) =>
-        val slot = slots.getLongSlotFor(cnp.variableName)
+        val slot = slots.getLongSlotFor(cnp.entityName)
         if (slot.typ == CTNode && getLongAt(slot.offset) == node) {
           setCachedPropertyAt(refSlot.offset, null)
         }
@@ -128,7 +128,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
     slots.foreachCachedSlot {
       case (crp, refSlot) =>
-        val slot = slots.getLongSlotFor(crp.variableName)
+        val slot = slots.getLongSlotFor(crp.entityName)
         if (slot.typ == CTRelationship && getLongAt(slot.offset) == rel) {
           setCachedPropertyAt(refSlot.offset, null)
         }

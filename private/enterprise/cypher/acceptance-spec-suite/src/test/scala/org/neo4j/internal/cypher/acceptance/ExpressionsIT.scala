@@ -3284,7 +3284,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val pkn = PropertyKeyName("prop")(pos)
     val nodeProperty = expressions.CachedProperty("n", Variable("n")(pos), pkn, NODE_TYPE)(pos)
-    val relProperty = expressions.CachedProperty("r", Variable("n")(pos), pkn, RELATIONSHIP_TYPE)(pos)
+    val relProperty = expressions.CachedProperty("r", Variable("r")(pos), pkn, RELATIONSHIP_TYPE)(pos)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode).newLong("r", nullable = true, symbols.CTRelationship)
     val cachedNodePropertyOffset = slots.newCachedProperty(nodeProperty).getCachedPropertyOffsetFor(nodeProperty)
     val cachedRelPropertyOffset = slots.newCachedProperty(relProperty).getCachedPropertyOffsetFor(relProperty)
