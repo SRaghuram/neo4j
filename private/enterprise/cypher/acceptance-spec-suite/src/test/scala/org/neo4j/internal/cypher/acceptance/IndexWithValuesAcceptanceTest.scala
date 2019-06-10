@@ -56,24 +56,28 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is projected") {
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeek")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))
   }
 
   test("should plan projection and index seek with GetValue when two properties are projected") {
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection")
+        .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : n.prop2}")
+        // just for n.prop2, not for n.prop1
+        .withDBHits(2)
+        .onTopOf(aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
-      .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : n.prop2}")
-      // just for n.prop2, not for n.prop1
-      .withDBHits(2)
-      .onTopOf(aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3)))
   }
 
@@ -113,24 +117,29 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with GetValue when the property is projected inside of a expression") {
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection")
+        .containingArgument("{n.prop1 * 2 : cache[n.prop1] * $`  AUTOINT1`}")
+        .withDBHits(0)
+        .onTopOf(aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
+        expectPlansToFail = Configs.Compiled
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
-      .containingArgument("{n.prop1 * 2 : cache[n.prop1] * $`  AUTOINT1`}")
-      .withDBHits(0)
-      .onTopOf(aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1 * 2" -> 84), Map("n.prop1 * 2" -> 84)))
   }
 
   test("should plan projection and index seek with GetValue when the property is used in another predicate") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 <= 42 AND n.prop1 % 2 = 0 RETURN n.prop2",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Filter")
+        .withDBHits(0)
+        .onTopOf(aPlan("NodeIndexSeekByRange")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("Filter")
-      .withDBHits(0)
-      .onTopOf(aPlan("NodeIndexSeekByRange")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(
       Map("n.prop2" -> 5), Map("n.prop2" -> 5),
       Map("n.prop2" -> 3), Map("n.prop2" -> 3)
@@ -139,14 +148,16 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN n.prop2 ORDER BY n.prop1",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (includeSomewhere.aPlan("Projection")
+        .containingArgument("{n.prop2 : n.prop2}")
+        // just for n.prop2, not for n.prop1
+        .withDBHits(6)
+        .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
+        and not(includeSomewhere.aPlan("Sort")))
+      )
+    )
 
-    result.executionPlanDescription() should (includeSomewhere.aPlan("Projection")
-      .containingArgument("{n.prop2 : n.prop2}")
-      // just for n.prop2, not for n.prop1
-      .withDBHits(6)
-      .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
-      and not(includeSomewhere.aPlan("Sort")))
     result.toList should equal(List(
       Map("n.prop2" -> 3), Map("n.prop2" -> 3),
       Map("n.prop2" -> 1), Map("n.prop2" -> 1),
@@ -174,36 +185,42 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is part of an aggregating column") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop1), n.prop2 AS nums", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop1), n.prop2 AS nums", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("EagerAggregation")
+        // just for n.prop2, not for n.prop1
+        .withDBHits(6)
+        .onTopOf(aPlan("NodeIndexSeekByRange")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation")
-      // just for n.prop2, not for n.prop1
-      .withDBHits(6)
-      .onTopOf(aPlan("NodeIndexSeekByRange")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList.toSet should equal(Set(
       Map("sum(n.prop1)" -> 43 * 2, "nums" -> 1), Map("sum(n.prop1)" -> (42 * 2 + 44 * 2), "nums" -> 3)))
   }
 
   test("should plan projection and index seek with GetValue when the property is used in key column of an aggregation") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN sum(n.prop2), n.prop1 AS nums", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedAggregation")
+        // just for n.prop2, not for n.prop1
+        .withDBHits(6)
+        .onTopOf(aPlan("NodeIndexSeekByRange")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("OrderedAggregation")
-      // just for n.prop2, not for n.prop1
-      .withDBHits(6)
-      .onTopOf(aPlan("NodeIndexSeekByRange")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList.toSet should equal(Set(
       Map("sum(n.prop2)" -> 3 * 2, "nums" -> 42), Map("sum(n.prop2)" -> 1 * 2, "nums" -> 43), Map("sum(n.prop2)" -> 3 * 2, "nums" -> 44)))
   }
 
   test("should plan index seek with GetValue when the property is part of a distinct column") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedDistinct")
+        .withDBHits(0)
+        .onTopOf(aPlan("NodeIndexSeekByRange")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      )
+    )
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("OrderedDistinct")
-      .withDBHits(0)
-      .onTopOf(aPlan("NodeIndexSeekByRange")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 43)))
   }
 
@@ -211,32 +228,32 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     for (i <- 41 to 100) createLabeledNode(Map("prop1" -> i), "Super")
     graph.createIndex("Super", "prop1")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes)
-    result.executionPlanDescription() should {
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeekByRange") and
-        includeSomewhere.aPlan("NodeIndexSeek")
-    }
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should {
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeekByRange") and
+          includeSomewhere.aPlan("NodeIndexSeek")
+      }))
     result.toList should equal(List(Map("n.prop1" -> 41)))
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - node and property") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection")
+          .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection")
-        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 40)))
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - single node") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection")
+          .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection")
-      .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 40)))
   }
 
@@ -245,24 +262,24 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection")
+          .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection")
-        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 40)))
   }
 
   test("should pass cached property through distinct with renaming of node") {
     val config = Configs.InterpretedAndSlotted + Configs.Compiled
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
-    val result = executeWith(config, query, executeBefore = createSomeNodes)
-
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection")
-        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+    val result = executeWith(config, query, executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection")
+          .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
+        expectPlansToFail = Configs.Compiled))
 
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
   }
@@ -276,12 +293,12 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |WITH DISTINCT a as n, n as m
         |RETURN n.prop1, m.prop1
       """.stripMargin
-    val result = executeWith(config, query, executeBefore = createSomeNodes)
-
-    result.executionPlanDescription() should
-      includeSomewhere.aPlan("Projection")
-        .withDBHits(0)
-        .containingArgument("{n.prop1 : cache[n.prop1], m.prop1 : cache[m.prop1]}")
+    val result = executeWith(config, query, executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
+        includeSomewhere.aPlan("Projection")
+          .withDBHits(0)
+          .containingArgument("{n.prop1 : cache[n.prop1], m.prop1 : cache[m.prop1]}"),
+        expectPlansToFail = Configs.Compiled))
 
     result.toList should equal(
       List(
@@ -340,80 +357,81 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("should plan exists with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE exists(n.prop3) RETURN n.prop3",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexScan")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexScan")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))
     result.toList.toSet should equal(Set(Map("n.prop3" -> "footurama"), Map("n.prop3" -> "fooism"), Map("n.prop3" -> "ismfama")))
   }
 
   test("should plan starts with seek with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo' RETURN n.prop3",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeekByRange")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeekByRange")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))
     result.toList.toSet should equal(Set(Map("n.prop3" -> "footurama"), Map("n.prop3" -> "fooism")))
   }
 
   test("should plan ends with seek with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'ama' RETURN n.prop3",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexEndsWithScan")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexEndsWithScan")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))
     result.toList.toSet should equal(Set(Map("n.prop3" -> "footurama"), Map("n.prop3" -> "ismfama")))
   }
 
   test("should plan contains seek with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'ism' RETURN n.prop3",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexContainsScan")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexContainsScan")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r))
     result.toList.toSet should equal(Set(Map("n.prop3" -> "fooism"), Map("n.prop3" -> "ismfama")))
   }
 
   test("should plan index seek with GetValue when the property is projected (composite index)") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 AND n.prop2 = 3 RETURN n.prop1, n.prop2",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\], cache\\[n.prop2\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
-      .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\], cache\\[n.prop2\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3)))
   }
 
   test("should plan index seek with GetValue and DoNotGetValue when only one property is projected (composite index)") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 AND n.prop2 = 3 RETURN n.prop1",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
 
-    result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))
   }
 
   test("should plan index seek with GetValue when the property is projected after a renaming projection") {
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes)
-
-    result.executionPlanDescription() should includeSomewhere
-      .aPlan("Projection")
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH n as m MATCH (m)-[r]-(o) RETURN m.prop1", executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
+        .aPlan("Projection")
         .containingArgument("{m.prop1 : cache[m.prop1]}")
         .withDBHits(0)
         .withLHS(includeSomewhere
-        .aPlan("NodeIndexSeek")
-        .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+          .aPlan("NodeIndexSeek")
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
+        expectPlansToFail = Configs.Compiled))
+
     result.toList should equal(List(Map("m.prop1" -> 42), Map("m.prop1" -> 42)))
   }
 
@@ -422,13 +440,15 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 42 OR n.prop1 > 43 RETURN n.prop1"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
-    result.executionPlanDescription() should includeSomewhere
-      .aPlan("Projection")
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
+        .aPlan("Projection")
         .containingArgument("{n.prop1 : cache[n.prop1]}")
-        .withDBHits(0).onTopOf(includeSomewhere
+        .withDBHits(0)
+        .onTopOf(includeSomewhere
           .aPlan("NodeIndexSeekByRange")
-            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+      ))
 
     result.size should be(6L)
     result.toList.toSet should equal(Set(
@@ -450,15 +470,15 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 41 OR n.prop2 < 2 RETURN n.prop1, n.prop2"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
-    result.executionPlanDescription() should includeSomewhere
-      .aPlan("Projection")
-      .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : cache[n.prop2]}")
-      .withDBHits()
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
+        .aPlan("Projection")
+        .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : cache[n.prop2]}")
+        .withDBHits()
         .onTopOf(includeSomewhere.aPlan("Union")
           .withLHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
           .withRHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
-        )
+        )))
 
     result.size should be(4L)
     result.toList.toSet should equal(Set(
