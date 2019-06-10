@@ -64,7 +64,7 @@ public final class CompiledHelpers
                 propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
                 if ( propertyOrNull == null )
                 {
-                    propertyOrNull = dbAccess.nodeProperty( nodeId, propertyKey, nodeCursor, propertyCursor );
+                    propertyOrNull = dbAccess.nodeProperty( nodeId, propertyKey, nodeCursor, propertyCursor, true );
                     // Re-cache the value
                     ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
                 }
@@ -95,7 +95,7 @@ public final class CompiledHelpers
                 propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
                 if ( propertyOrNull == null )
                 {
-                    propertyOrNull = dbAccess.relationshipProperty( relId, propertyKey, relCursor, propertyCursor );
+                    propertyOrNull = dbAccess.relationshipProperty( relId, propertyKey, relCursor, propertyCursor, true );
                     // Re-cache the value
                     ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
                 }
@@ -131,7 +131,10 @@ public final class CompiledHelpers
                 if ( propertyOrNull == null )
                 {
                     // the cached node property has been invalidated
-                    return Values.booleanValue( dbAccess.nodeHasProperty( nodeId, propertyKey, nodeCursor, propertyCursor ) );
+                    propertyOrNull = dbAccess.nodeProperty( nodeId, propertyKey, nodeCursor, propertyCursor, false );
+                    // Re-cache the value
+                    ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
+                    return Values.booleanValue( propertyOrNull != NO_VALUE );
                 }
                 else if ( propertyOrNull == NO_VALUE )
                 {
@@ -176,7 +179,10 @@ public final class CompiledHelpers
                 if ( propertyOrNull == null )
                 {
                     // the cached rel property has been invalidated
-                    return Values.booleanValue( dbAccess.relationshipHasProperty( relId, propertyKey, relCursor, propertyCursor ) );
+                    propertyOrNull = dbAccess.relationshipProperty( relId, propertyKey, relCursor, propertyCursor, false );
+                    // Re-cache the value
+                    ctx.setCachedPropertyAt( propertyOffset, propertyOrNull );
+                    return Values.booleanValue( propertyOrNull != NO_VALUE );
                 }
                 else if ( propertyOrNull == NO_VALUE )
                 {

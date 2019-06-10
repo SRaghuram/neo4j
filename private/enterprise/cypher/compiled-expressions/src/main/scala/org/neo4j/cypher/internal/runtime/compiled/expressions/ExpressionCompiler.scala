@@ -1242,8 +1242,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     case NodeProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-               getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR)))
+        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty"),
+               getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR, constant(true))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1274,8 +1274,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,  block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-                 getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))))
+          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty"),
+                 getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR, constant(true)))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1325,8 +1325,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     case RelationshipProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-          getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))
+        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty"),
+          getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1338,8 +1338,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-                 getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
+          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty"),
+                 getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true)))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))

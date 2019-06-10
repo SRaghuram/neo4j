@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
+import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values._
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
@@ -172,7 +173,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getLongAt(nodeOffset)).thenReturn(nodeId)
     when(access.getTxStateNodePropertyOrNull(nodeId, property)).thenReturn(null)
     when(context.getCachedPropertyAt(propertyOffset)).thenReturn(null)
-    when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor)).thenReturn(PI)
+    when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor, true)).thenReturn(PI)
 
     //then
     cachedNodeProperty(context, access,
@@ -199,7 +200,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getLongAt(relationshipOffset)).thenReturn(relationshipId)
     when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(null)
     when(context.getCachedPropertyAt(propertyOffset)).thenReturn(null)
-    when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor)).thenReturn(PI)
+    when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor, true)).thenReturn(PI)
 
     //then
     cachedRelationshipProperty(context, access,
@@ -207,6 +208,60 @@ class CompiledHelpersTest extends CypherFunSuite {
                    property, propertyOffset,
       relationshipCursor,
                    propertyCursor) should equal(PI)
+
+    verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
+  }
+
+  test("cachedNodePropertyExists should get from store if not in tx state nor in cache, and re-cache") {
+    //given
+    val nodeOffset = 42
+    val context = mock[ExecutionContext]
+    val nodeId = 1
+    val access = mock[DbAccess]
+    val property = 11
+    val propertyOffset = 11
+    val nodeCursor = mock[NodeCursor]
+    val propertyCursor = mock[PropertyCursor]
+
+    //when
+    when(context.getLongAt(nodeOffset)).thenReturn(nodeId)
+    when(access.getTxStateNodePropertyOrNull(nodeId, property)).thenReturn(null)
+    when(context.getCachedPropertyAt(propertyOffset)).thenReturn(null)
+    when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor, false)).thenReturn(PI)
+
+    //then
+    cachedNodePropertyExists(context, access,
+                   nodeOffset,
+                   property, propertyOffset,
+                   nodeCursor,
+                   propertyCursor) should equal(Values.TRUE)
+
+    verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
+  }
+
+  test("cachedRelationshipPropertyExists should get from store if not in tx state nor in cache, and re-cache") {
+    //given
+    val relationshipOffset = 42
+    val context = mock[ExecutionContext]
+    val relationshipId = 1
+    val access = mock[DbAccess]
+    val property = 11
+    val propertyOffset = 11
+    val relationshipCursor = mock[RelationshipScanCursor]
+    val propertyCursor = mock[PropertyCursor]
+
+    //when
+    when(context.getLongAt(relationshipOffset)).thenReturn(relationshipId)
+    when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(null)
+    when(context.getCachedPropertyAt(propertyOffset)).thenReturn(null)
+    when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor, false)).thenReturn(PI)
+
+    //then
+    cachedRelationshipPropertyExists(context, access,
+      relationshipOffset,
+                   property, propertyOffset,
+      relationshipCursor,
+                   propertyCursor) should equal(Values.TRUE)
 
     verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
   }

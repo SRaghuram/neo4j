@@ -90,14 +90,52 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       Map("m.prop" -> 2, "x.prop" -> 4))
   }
 
-    res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{m.prop : cache[n.prop], x.prop : cache[m.prop]}")
+  test("should cache a node property on existence check - if it exists") {
+    var n1: Node = null
+    var n2: Node = null
+    graph.inTx {
+      n1 = createNode()
+      n2 = createNode(Map("foo" -> 2))
+    }
+
+    val res = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{n.foo : cache[n.foo]}")
+        .withDBHits(0)
+        .onTopOf(
+          aPlan("Filter").containingArgument("EXISTS(cache[n.foo])")
+        )
+      )
+    )
 
     res.toList should equal(List(
-      Map("m.prop" -> 1, "x.prop" -> 1),
-      Map("m.prop" -> 1, "x.prop" -> 1),
-      Map("m.prop" -> 1, "x.prop" -> 1),
-      Map("m.prop" -> 1, "x.prop" -> 1)))
+      Map("n.foo" -> 2)
+    ))
+  }
+
+  test("should cache a relationship property on existence check - if it exists") {
+    var r1: Relationship = null
+    var r2: Relationship = null
+    graph.inTx {
+      r1 = relate(createNode(), createNode())
+      r2 = relate(createNode(), createNode(), "foo" -> 1)
+    }
+
+    val res = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+        aPlan("Projection")
+        .containingArgument("{r.foo : cache[r.foo]}")
+        .withDBHits(0)
+        .onTopOf(
+          aPlan("Filter").containingArgument("EXISTS(cache[r.foo])")
+        )
+      )
+    )
+
+    res.toList should equal(List(
+      Map("r.foo" -> 1)
+    ))
   }
 
   test("cached property existence - nodes") {
