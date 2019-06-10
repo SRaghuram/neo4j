@@ -40,7 +40,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     relate(d1, neo, "PART_OF", "Hallo")
 
     // When
-    val result = executeWith(Configs.All, "CALL db.schema.visualization()", expectedDifferentResults = Configs.All).toList
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.schema.visualization()", expectedDifferentResults = Configs.All).toList
 
     // Then
     result.size should equal(1)
@@ -199,7 +199,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
   test("db.labels work on an empty database") {
     // Given an empty database
     //When
-    val result = executeWith(Configs.All, "CALL db.labels")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels")
 
     // Then
     result.toList shouldBe empty
@@ -211,7 +211,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (a:A) REMOVE a:A")
 
     //When
-    val result = executeWith(Configs.All, "CALL db.labels")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels")
 
     // Then
     result shouldBe empty
@@ -223,7 +223,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (a) DETACH DELETE a")
 
     //When
-    val result = executeWith(Configs.All, "CALL db.labels")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels")
 
     // Then
     result shouldBe empty
@@ -237,7 +237,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     relate(createNode(), createNode(), "C")
 
     // When
-    val result = executeWith(Configs.All, "CALL db.relationshipTypes")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.relationshipTypes")
 
     // Then
     result.toList should equal(
@@ -298,7 +298,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
   test("db.relationshipType work on an empty database") {
     // Given an empty database
     //When
-    val result = executeWith(Configs.All, "CALL db.relationshipTypes")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.relationshipTypes")
 
     // Then
     result shouldBe empty
@@ -312,7 +312,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (a) DETACH DELETE a")
 
     //When
-    val result = executeWith(Configs.All, "CALL db.relationshipTypes")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.relationshipTypes")
 
     // Then
     result shouldBe empty
@@ -323,7 +323,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createNode("A" -> 1, "B" -> 2, "C" -> 3)
 
     // When
-    val result = executeWith(Configs.All, "CALL db.propertyKeys")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -337,7 +337,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Given an empty database
 
     // When
-    val result = executeWith(Configs.All, "CALL db.propertyKeys")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.propertyKeys")
 
     // Then
     result shouldBe empty
@@ -349,7 +349,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (a)-[r]-(b) REMOVE a.A, r.R, b.B")
 
     // When
-    val result = executeWith(Configs.All, "CALL db.propertyKeys")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -365,7 +365,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (a) DETACH DELETE a")
 
     // When
-    val result = executeWith(Configs.All, "CALL db.propertyKeys")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.propertyKeys")
 
     // Then
     result.toList should equal(
@@ -380,7 +380,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val index = graph.createIndex("A", "prop")
 
     //When
-    val result = executeWith(Configs.All, "CALL db.indexes")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes")
 
     // Then
     result.toList should equal(
@@ -399,14 +399,14 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
   }
 
   test("yield from void procedure should return correct error msg") {
-    failWithError(Configs.All,
+    failWithError(Configs.InterpretedAndSlotted,
                   "CALL db.createLabel('Label') yield node",
                   List("Cannot yield value from void procedure."))
   }
 
   test("should create index from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createIndex(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.createIndex(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
@@ -420,7 +420,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val index = graph.getIndex("Person", Seq("name"))
 
     // when
-    val listResult = executeWith(Configs.All, "CALL db.indexes()")
+    val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
 
     // Then
     listResult.toList should equal(
@@ -440,7 +440,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create unique property constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createUniquePropertyConstraint(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.createUniquePropertyConstraint(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
@@ -453,7 +453,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     graph.execute("CALL db.awaitIndexes(10)")
 
     // when
-    val mapResult = executeWith(Configs.All, "CALL db.indexes()").toList.loneElement
+    val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement
 
     // then
     mapResult should have size 10
@@ -473,7 +473,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create node key constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.All, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
@@ -486,7 +486,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     graph.execute("CALL db.awaitIndexes(10)")
 
     // when
-    val mapResult = executeWith(Configs.All, "CALL db.indexes()").toList.loneElement
+    val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement
 
     // then
     mapResult should have size 10

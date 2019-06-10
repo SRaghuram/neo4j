@@ -2,6 +2,7 @@ Feature "AggregationAcceptance": Scenario "Distinct should work with multiple eq
 Feature "AggregationAcceptance": Scenario "Multiple aggregations should work"
 Feature "AggregationAcceptance": Scenario "Using a optional match after aggregation and before an aggregation"
 Feature "AggregationAcceptance": Scenario "percentileDisc on empty data should return null"
+Feature "BuiltInProcedureAcceptance": Scenario "Getting all labels"
 Feature "CaseExpression": Scenario "Returning a CASE expression into integer"
 Feature "CaseExpression": Scenario "Returning a CASE expression into pattern expression"
 Feature "CaseExpression": Scenario "Returning a CASE expression with a pattern expression alternative"

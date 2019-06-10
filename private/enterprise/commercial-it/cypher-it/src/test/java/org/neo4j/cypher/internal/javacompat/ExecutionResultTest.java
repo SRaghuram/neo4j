@@ -273,10 +273,10 @@ class ExecutionResultTest
 
         // Then
         assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+        assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
+        assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
     }
 
     @Test
@@ -291,10 +291,10 @@ class ExecutionResultTest
 
         // Then
         assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+        assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
+        assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
     }
 
     @Test
