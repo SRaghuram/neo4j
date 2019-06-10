@@ -127,4 +127,15 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     // When & then
     intercept[QueryExecutionException](graph.execute("CALL my.first.proc({p})", map("p", value)).next())
   }
+
+  test("procedure calls and pattern comprehensions with simple query") {
+    relate(createNode(), createNode(Map("age" -> 18L)))
+
+    registerDummyInOutProcedure(Neo4jTypes.NTAny)
+
+    // Using graph execute to get a Java value
+    graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)])").stream().toArray.toList should equal(List(
+      java.util.Collections.singletonMap("out0", java.util.Collections.singletonList(18L))
+      ))
+  }
 }
