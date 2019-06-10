@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -36,9 +37,17 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.IndexReference;
+import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings;
+import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.Arabic;
+import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.UrlOrEmail;
+import org.neo4j.kernel.impl.api.index.IndexProxy;
+import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
@@ -46,11 +55,15 @@ import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE_WITH_CONFIG;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE_WITH_CONFIG;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
 
 public class FulltextIndexCausalClusterIT
 {
@@ -163,8 +176,56 @@ public class FulltextIndexCausalClusterIT
         verifyIndexContents( REL_INDEX_EC, "relate", false, relId1 );
     }
 
-    // TODO analyzer setting must be replicates to all cluster members
-    // TODO eventually_consistent setting must be replicated to all cluster members.
+    @Test
+    public void fulltextSettingsMustBeReplicatedToAllClusterMembers() throws Exception
+    {
+        Map<String,Value> nodeIndexConfig = asConfigMap( new UrlOrEmail().getName(), true );
+        Map<String,Value> relIndexConfig = asConfigMap( new Arabic().getName(), false );
+        cluster.coreTx( ( db, tx ) ->
+        {
+            String nodeString = asConfigString( nodeIndexConfig );
+            String relString = asConfigString( relIndexConfig );
+            db.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
+            tx.success();
+        } );
+
+        awaitCatchup();
+
+        verifyIndexConfig( NODE_INDEX, nodeIndexConfig );
+        verifyIndexConfig( REL_INDEX, relIndexConfig );
+    }
+
+    private void verifyIndexConfig( String indexName, Map<String,Value> expectedIndexConfig ) throws IndexNotFoundKernelException
+    {
+        for ( CoreClusterMember member : cluster.coreMembers() )
+        {
+            verifyIndexConfig( member.defaultDatabase(), indexName, expectedIndexConfig );
+        }
+        for ( ReadReplica member : cluster.readReplicas() )
+        {
+            verifyIndexConfig( member.defaultDatabase(), indexName, expectedIndexConfig );
+        }
+    }
+
+    private void verifyIndexConfig( GraphDatabaseFacade db, String indexName, Map<String,Value> expectedIndexConfig )
+            throws IndexNotFoundKernelException
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Map<String,Value> actualIndexConfig = getIndexConfig( db, indexName );
+            assertEquals( expectedIndexConfig, actualIndexConfig );
+            tx.success();
+        }
+    }
+
+    private Map<String,Value> getIndexConfig( GraphDatabaseFacade db, String indexName ) throws IndexNotFoundKernelException
+    {
+        IndexReference indexReference = db.kernelTransaction().schemaRead().indexGetForName( indexName );
+        IndexingService indexingService = db.getDependencyResolver().resolveDependency( IndexingService.class );
+        IndexProxy indexProxy = indexingService.getIndexProxy( indexReference.schema() );
+        return indexProxy.indexConfig();
+    }
 
     private void awaitCatchup() throws InterruptedException
     {
