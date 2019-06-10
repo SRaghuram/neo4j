@@ -10,6 +10,7 @@ import java.util.Map;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.impl.security.Credential;
 
 public interface CommercialAuthManager extends AuthManager
 {
@@ -60,6 +61,18 @@ public interface CommercialAuthManager extends AuthManager
         @Override
         public void clearCacheForRole( String role )
         {
+        }
+
+        @Override
+        public Credential createCredentialForPassword( byte[] password )
+        {
+            return Credential.INACCESSIBLE;
+        }
+
+        @Override
+        public Credential deserialize( String part ) throws Throwable
+        {
+            return Credential.INACCESSIBLE;
         }
     };
 }

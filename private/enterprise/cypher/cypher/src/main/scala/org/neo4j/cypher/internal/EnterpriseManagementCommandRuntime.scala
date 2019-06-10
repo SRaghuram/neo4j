@@ -23,9 +23,7 @@ import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
-import org.neo4j.server.security.systemgraph.SystemGraphCredential
 import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
@@ -35,8 +33,7 @@ import org.neo4j.values.virtual.VirtualValues
   * This runtime takes on queries that require no planning, such as multidatabase management commands
   */
 case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
-  val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine)
-  val secureHasher = new SecureHasher()
+  val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine, resolver)
 
   override def name: String = "enterprise management-commands"
 
@@ -83,7 +80,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
               Values.stringValue(userName),
-              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
+              Values.stringValue(authManager.createCredentialForPassword(initialPassword).serialize()),
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
@@ -95,14 +92,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         // Clear password
         if (initialPassword != null) util.Arrays.fill(initialPassword, 0.toByte)
       }
-
-    // CREATE USER foo WITH PASSWORD $password
-    case CreateUser(_, _, Some(_), _, _) =>
-      throw new IllegalStateException("Did not resolve parameters correctly.")
-
-    // CREATE USER foo WITH PASSWORD
-    case CreateUser(_, _, _, _, _) =>
-      throw new IllegalStateException("Password not correctly supplied.")
 
     // DROP USER foo
     case DropUser(userName) => (_, _, currentUser) =>
@@ -128,7 +117,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           case None => Seq.empty
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
           case Some(value: String) =>
-            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(UTF8.encode(value)), secureHasher).serialize())))
+            Seq((param._2, Values.stringValue(authManager.createCredentialForPassword(validatePassword(UTF8.encode(value))).serialize())))
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected string or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
@@ -145,10 +134,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           .handleResult((_, value) => {
             val maybeThrowable = initialStringPassword match {
               case Some(password) =>
-                val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
-                if (oldCredentials.matchesPassword(UTF8.encode(password))) Some(
-                  new InvalidArgumentsException("Old password and new password cannot be the same."))
-                else None
+                val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
+                if (oldCredentials.matchesPassword(UTF8.encode(password)))
+                  Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
+                else
+                  None
               case None => None
             }
             clearCacheForUser(userName)
@@ -461,11 +451,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     authManager.clearCacheForRole(role)
     // Ultimately this should go to the trigger handling done in the reconciler
     None
-  }
-
-  private def validatePassword(password: Array[Byte]): Array[Byte] = {
-    if (password == null || password.length == 0) throw new InvalidArgumentsException("A password cannot be empty.")
-    password
   }
 
   private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String, source: Option[ExecutionPlan]) = {
