@@ -35,12 +35,12 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getLongAt(nodeOffset)).thenReturn(1)
 
     //then
-    cachedNodeProperty(context, mock[DbAccess],
+    cachedNodePropertyWithLongSlot(context, mock[DbAccess],
                    noNodeOffset,
                    1337, 11,
                    mock[NodeCursor],
                    mock[PropertyCursor]) should equal(NO_VALUE)
-    cachedNodeProperty(context, mock[DbAccess],
+    cachedNodePropertyWithLongSlot(context, mock[DbAccess],
                    nodeOffset,
                    -1, 11,
                    mock[NodeCursor],
@@ -58,12 +58,12 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getLongAt(relationshipOffset)).thenReturn(1)
 
     //then
-    cachedRelationshipProperty(context, mock[DbAccess],
+    cachedRelationshipPropertyWithLongSlot(context, mock[DbAccess],
       noRelationshipOffset,
                    1337, 11,
                    mock[RelationshipScanCursor],
                    mock[PropertyCursor]) should equal(NO_VALUE)
-    cachedRelationshipProperty(context, mock[DbAccess],
+    cachedRelationshipPropertyWithLongSlot(context, mock[DbAccess],
       relationshipOffset,
                    -1, 11,
                    mock[RelationshipScanCursor],
@@ -83,7 +83,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.getTxStateNodePropertyOrNull(nodeId, property)).thenReturn(PI)
 
     //then
-    cachedNodeProperty(context, access,
+    cachedNodePropertyWithLongSlot(context, access,
                    nodeOffset,
                    property, 11,
                    mock[NodeCursor],
@@ -104,7 +104,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.getTxStateRelationshipPropertyOrNull(relationshipId, property)).thenReturn(PI)
 
     //then
-    cachedRelationshipProperty(context, access,
+    cachedRelationshipPropertyWithLongSlot(context, access,
       relationshipOffset,
                    property, 11,
                    mock[RelationshipScanCursor],
@@ -127,7 +127,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getCachedPropertyAt(propertyOffset)).thenReturn(PI)
 
     //then
-    cachedNodeProperty(context, access,
+    cachedNodePropertyWithLongSlot(context, access,
                    nodeOffset,
                    property, propertyOffset,
                    mock[NodeCursor],
@@ -150,7 +150,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(context.getCachedPropertyAt(propertyOffset)).thenReturn(PI)
 
     //then
-    cachedRelationshipProperty(context, access,
+    cachedRelationshipPropertyWithLongSlot(context, access,
       relationshipOffset,
                    property, propertyOffset,
                    mock[RelationshipScanCursor],
@@ -176,7 +176,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor, true)).thenReturn(PI)
 
     //then
-    cachedNodeProperty(context, access,
+    cachedNodePropertyWithLongSlot(context, access,
                    nodeOffset,
                    property, propertyOffset,
                    nodeCursor,
@@ -203,7 +203,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor, true)).thenReturn(PI)
 
     //then
-    cachedRelationshipProperty(context, access,
+    cachedRelationshipPropertyWithLongSlot(context, access,
       relationshipOffset,
                    property, propertyOffset,
       relationshipCursor,
@@ -230,7 +230,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.nodeProperty(nodeId, property, nodeCursor, propertyCursor, false)).thenReturn(PI)
 
     //then
-    cachedNodePropertyExists(context, access,
+    cachedNodePropertyExistsWithLongSlot(context, access,
                    nodeOffset,
                    property, propertyOffset,
                    nodeCursor,
@@ -257,7 +257,7 @@ class CompiledHelpersTest extends CypherFunSuite {
     when(access.relationshipProperty(relationshipId, property, relationshipCursor, propertyCursor, false)).thenReturn(PI)
 
     //then
-    cachedRelationshipPropertyExists(context, access,
+    cachedRelationshipPropertyExistsWithLongSlot(context, access,
       relationshipOffset,
                    property, propertyOffset,
       relationshipCursor,

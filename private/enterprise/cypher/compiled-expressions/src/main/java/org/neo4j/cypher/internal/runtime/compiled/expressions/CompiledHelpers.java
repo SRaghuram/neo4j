@@ -18,6 +18,8 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.VirtualNodeValue;
+import org.neo4j.values.virtual.VirtualRelationshipValue;
 
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
@@ -42,16 +44,15 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
-    public static Value cachedNodeProperty(
+    private static Value cachedNodeProperty(
+            long nodeId,
             ExecutionContext ctx,
             DbAccess dbAccess,
-            int nodeOffset,
             int propertyKey,
             int propertyOffset,
             NodeCursor nodeCursor,
             PropertyCursor propertyCursor )
     {
-        long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
         {
             return NO_VALUE;
@@ -73,16 +74,41 @@ public final class CompiledHelpers
         }
     }
 
-    public static Value cachedRelationshipProperty(
+    public static Value cachedNodePropertyWithLongSlot(
             ExecutionContext ctx,
             DbAccess dbAccess,
-            int relOffset,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
+    {
+        long nodeId = ctx.getLongAt( nodeOffset );
+        return cachedNodeProperty( nodeId, ctx, dbAccess, propertyKey, propertyOffset, nodeCursor, propertyCursor );
+    }
+
+    public static Value cachedNodePropertyWithRefSlot(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
+    {
+        long nodeId = ((VirtualNodeValue) ctx.getRefAt( nodeOffset )).id();
+        return cachedNodeProperty( nodeId, ctx, dbAccess, propertyKey, propertyOffset, nodeCursor, propertyCursor );
+    }
+
+    private static Value cachedRelationshipProperty(
+            long relId,
+            ExecutionContext ctx,
+            DbAccess dbAccess,
             int propertyKey,
             int propertyOffset,
             RelationshipScanCursor relCursor,
             PropertyCursor propertyCursor )
     {
-        long relId = ctx.getLongAt( relOffset );
         if ( relId == StatementConstants.NO_SUCH_RELATIONSHIP || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
         {
             return NO_VALUE;
@@ -104,16 +130,41 @@ public final class CompiledHelpers
         }
     }
 
-    public static Value cachedNodePropertyExists(
+    public static Value cachedRelationshipPropertyWithLongSlot(
             ExecutionContext ctx,
             DbAccess dbAccess,
-            int nodeOffset,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
+    {
+        long relId = ctx.getLongAt( relOffset );
+        return cachedRelationshipProperty( relId, ctx, dbAccess, propertyKey, propertyOffset, relCursor, propertyCursor );
+    }
+
+    public static Value cachedRelationshipPropertyWithRefSlot(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
+    {
+        long relId = ((VirtualRelationshipValue) ctx.getRefAt( relOffset )).id();
+        return cachedRelationshipProperty( relId, ctx, dbAccess, propertyKey, propertyOffset, relCursor, propertyCursor );
+    }
+
+    private static Value cachedNodePropertyExists(
+            long nodeId,
+            ExecutionContext ctx,
+            DbAccess dbAccess,
             int propertyKey,
             int propertyOffset,
             NodeCursor nodeCursor,
             PropertyCursor propertyCursor )
     {
-        long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE )
         {
             return NO_VALUE;
@@ -152,16 +203,41 @@ public final class CompiledHelpers
         }
     }
 
-    public static Value cachedRelationshipPropertyExists(
+    public static Value cachedNodePropertyExistsWithLongSlot(
             ExecutionContext ctx,
             DbAccess dbAccess,
-            int relOffset,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
+    {
+        long nodeId = ctx.getLongAt( nodeOffset );
+        return cachedNodePropertyExists( nodeId, ctx, dbAccess, propertyKey, propertyOffset, nodeCursor, propertyCursor );
+    }
+
+    public static Value cachedNodePropertyExistsWithRefSlot(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int nodeOffset,
+            int propertyKey,
+            int propertyOffset,
+            NodeCursor nodeCursor,
+            PropertyCursor propertyCursor )
+    {
+        long nodeId = ((VirtualNodeValue) ctx.getRefAt( nodeOffset )).id();
+        return cachedNodePropertyExists( nodeId, ctx, dbAccess, propertyKey, propertyOffset, nodeCursor, propertyCursor );
+    }
+
+    private static Value cachedRelationshipPropertyExists(
+            long relId,
+            ExecutionContext ctx,
+            DbAccess dbAccess,
             int propertyKey,
             int propertyOffset,
             RelationshipScanCursor relCursor,
             PropertyCursor propertyCursor )
     {
-        long relId = ctx.getLongAt( relOffset );
         if ( relId == StatementConstants.NO_SUCH_RELATIONSHIP )
         {
             return NO_VALUE;
@@ -198,6 +274,32 @@ public final class CompiledHelpers
                 return Values.booleanValue( hasTxChanges.get() );
             }
         }
+    }
+
+    public static Value cachedRelationshipPropertyExistsWithLongSlot(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
+    {
+        long relId = ctx.getLongAt( relOffset );
+        return cachedRelationshipPropertyExists(relId, ctx, dbAccess, propertyKey, propertyOffset, relCursor, propertyCursor);
+    }
+
+    public static Value cachedRelationshipPropertyExistsWithRefSlot(
+            ExecutionContext ctx,
+            DbAccess dbAccess,
+            int relOffset,
+            int propertyKey,
+            int propertyOffset,
+            RelationshipScanCursor relCursor,
+            PropertyCursor propertyCursor )
+    {
+        long relId = ((VirtualRelationshipValue) ctx.getRefAt( relOffset )).id();
+        return cachedRelationshipPropertyExists(relId, ctx, dbAccess, propertyKey, propertyOffset, relCursor, propertyCursor);
     }
 
     public static AnyValue nodeOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )

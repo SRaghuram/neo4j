@@ -11,12 +11,18 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedNodeProperty
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.Value
+import org.neo4j.values.virtual.VirtualNodeValue
 
 case class SlottedCachedNodeProperty(nodeOffset: Int,
+                                     offsetIsForLongSlot: Boolean,
                                      propertyKey: Int,
                                      cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
+  override def getId(ctx: ExecutionContext): Long =
+    if (offsetIsForLongSlot)
+      ctx.getLongAt(nodeOffset)
+    else
+      ctx.getRefAt(nodeOffset).asInstanceOf[VirtualNodeValue].id()
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
@@ -28,10 +34,15 @@ case class SlottedCachedNodeProperty(nodeOffset: Int,
 }
 
 case class SlottedCachedNodePropertyLate(nodeOffset: Int,
+                                         offsetIsForLongSlot: Boolean,
                                          propertyKey: String,
                                          cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(nodeOffset)
+  override def getId(ctx: ExecutionContext): Long =
+    if (offsetIsForLongSlot)
+    ctx.getLongAt(nodeOffset)
+  else
+    ctx.getRefAt(nodeOffset).asInstanceOf[VirtualNodeValue].id()
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 

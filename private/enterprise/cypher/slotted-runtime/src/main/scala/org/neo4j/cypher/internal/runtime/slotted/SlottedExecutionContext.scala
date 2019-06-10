@@ -118,19 +118,33 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def invalidateCachedNodeProperties(node: Long): Unit = {
     slots.foreachCachedSlot {
-      case (cnp, refSlot) =>
-        val slot = slots.getLongSlotFor(cnp.entityName)
-        if (slot.typ == CTNode && getLongAt(slot.offset) == node) {
-          setCachedPropertyAt(refSlot.offset, null)
+      case (cnp, propertyRefSLot) =>
+        slots.get(cnp.entityName) match {
+          case Some(longSlot: LongSlot) =>
+            if (longSlot.typ == CTNode && getLongAt(longSlot.offset) == node) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case Some(refSlot: RefSlot) =>
+            if (refSlot.typ == CTNode && getRefAt(refSlot.offset).asInstanceOf[VirtualNodeValue].id == node) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case None =>
         }
     }
   }
   override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
     slots.foreachCachedSlot {
-      case (crp, refSlot) =>
-        val slot = slots.getLongSlotFor(crp.entityName)
-        if (slot.typ == CTRelationship && getLongAt(slot.offset) == rel) {
-          setCachedPropertyAt(refSlot.offset, null)
+      case (crp, propertyRefSLot) =>
+        slots.get(crp.entityName) match {
+          case Some(longSlot: LongSlot) =>
+            if (longSlot.typ == CTRelationship && getLongAt(longSlot.offset) == rel) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case Some(refSlot: RefSlot) =>
+            if (refSlot.typ == CTRelationship && getRefAt(refSlot.offset).asInstanceOf[VirtualRelationshipValue].id == rel) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case None =>
         }
     }
   }

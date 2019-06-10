@@ -1249,15 +1249,17 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedProperty(_, _, offset, token, cachedPropertyOffset, entityType) =>
+    case SlottedCachedProperty(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, entityType) =>
       val variableName = namer.nextVariableName()
       val (cachedPropertyMethodInvocation, cursor) = entityType match {
         case NODE_TYPE =>
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
+          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyWithLongSlot" else "cachedNodePropertyWithRefSlot"
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
         case RELATIONSHIP_TYPE =>
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
+          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyWithLongSlot" else "cachedRelationshipPropertyWithRefSlot"
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
       }
@@ -1281,16 +1283,18 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedPropertyLate(_, _, offset, propKey, cachedPropertyOffset, entityType) =>
+    case SlottedCachedPropertyLate(_, _, offset, offsetIsForLongSlot, propKey, cachedPropertyOffset, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val (cachedPropertyMethodInvocation, cursor) = entityType match {
         case NODE_TYPE =>
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodeProperty"),
+          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyWithLongSlot" else "cachedNodePropertyWithRefSlot"
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
         case RELATIONSHIP_TYPE =>
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipProperty"),
+          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyWithLongSlot" else "cachedRelationshipPropertyWithRefSlot"
+          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
       }
@@ -2617,17 +2621,19 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
-    case SlottedCachedProperty(_, _, entityOffset, prop, propertyOffset, entityType) =>
+    case SlottedCachedProperty(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
       val (cachedPropertyMethodInvocation, cursor) = entityType match {
         case NODE_TYPE =>
+          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyExistsWithLongSlot" else "cachedNodePropertyExistsWithRefSlot"
           (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodePropertyExists"),
+            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), constant(prop), constant(propertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
 
         case RELATIONSHIP_TYPE =>
+          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyExistsWithLongSlot" else "cachedRelationshipPropertyExistsWithRefSlot"
           (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipPropertyExists"),
+            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), constant(prop), constant(propertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
       }
@@ -2638,19 +2644,21 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case SlottedCachedPropertyLate(_, _, entityOffset, prop, propertyOffset, entityType) =>
+    case SlottedCachedPropertyLate(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val (cachedPropertyMethodInvocation, cursor) = entityType match {
         case NODE_TYPE =>
+          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyExistsWithLongSlot" else "cachedNodePropertyExistsWithRefSlot"
           (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedNodePropertyExists"),
+            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), loadField(f), constant(propertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
             vNODE_CURSOR)
 
         case RELATIONSHIP_TYPE =>
+          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyExistsWithLongSlot" else "cachedRelationshipPropertyExistsWithRefSlot"
           (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor]("cachedRelationshipPropertyExists"),
+            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
             LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), loadField(f), constant(propertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             vRELATIONSHIP_CURSOR)
       }

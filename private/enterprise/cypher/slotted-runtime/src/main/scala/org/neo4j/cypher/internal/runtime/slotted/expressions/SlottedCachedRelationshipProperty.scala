@@ -11,12 +11,18 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedRelationshipProperty
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.storable.Value
+import org.neo4j.values.virtual.VirtualRelationshipValue
 
 case class SlottedCachedRelationshipProperty(relationshipOffset: Int,
+                                             offsetIsForLongSlot: Boolean,
                                              propertyKey: Int,
                                              cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(relationshipOffset)
+  override def getId(ctx: ExecutionContext): Long =
+    if (offsetIsForLongSlot)
+      ctx.getLongAt(relationshipOffset)
+    else
+      ctx.getRefAt(relationshipOffset).asInstanceOf[VirtualRelationshipValue].id()
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
@@ -28,10 +34,15 @@ case class SlottedCachedRelationshipProperty(relationshipOffset: Int,
 }
 
 case class SlottedCachedRelationshipPropertyLate(relationshipOffset: Int,
+                                                 offsetIsForLongSlot: Boolean,
                                                  propertyKey: String,
                                                  cachedPropertyOffset: Int) extends AbstractCachedRelationshipProperty with SlottedExpression {
 
-  override def getId(ctx: ExecutionContext): Long = ctx.getLongAt(relationshipOffset)
+  override def getId(ctx: ExecutionContext): Long =
+    if (offsetIsForLongSlot)
+      ctx.getLongAt(relationshipOffset)
+    else
+      ctx.getRefAt(relationshipOffset).asInstanceOf[VirtualRelationshipValue].id()
 
   override def getCachedProperty(ctx: ExecutionContext): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
