@@ -251,25 +251,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
     }
 
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
-    {
-        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
-        boolean fullSegment = resourcePrivilege.getSegment().equals( Segment.ALL );
-        String databasePattern = resourcePrivilege.isAllDatabases() ? "db:DatabaseAll" : "db:Database {name: $dbName}";
-        String qualifierPattern = fullSegment ? "q:LabelQualifierAll" : "q:LabelQualifier {label: label}";
-
-        String query = String.format(
-                "MATCH (role:Role)-[g:GRANTED]->(action:Action)-[:APPLIES_TO]->(res:Resource), " +
-                "(action)-[:SCOPE]->(segment:Segment), " +
-                "(segment)-[:FOR]->(%s), " +
-                "(segment)-[:QUALIFIED]->(%s) " +
-                "WHERE role.name = $roleName AND action.action = $action AND res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
-                "DELETE g RETURN 0",
-                databasePattern, qualifierPattern
-        );
-        assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
-    }
-
     private void assertPrivilegeSuccess( String roleName, String query, Map<String,Object> params, ResourcePrivilege resourcePrivilege )
             throws InvalidArgumentsException
     {
@@ -281,13 +262,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 assertDbExists( resourcePrivilege.getDbName() );
             }
         }
-    }
-
-    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
-    {
-        getUser( username, false );
-        Set<String> roles = getRoleNamesForUser( username );
-        return getPrivilegeForRoles( roles );
     }
 
     Set<ResourcePrivilege> getPrivilegeForRoles( Set<String> roles )

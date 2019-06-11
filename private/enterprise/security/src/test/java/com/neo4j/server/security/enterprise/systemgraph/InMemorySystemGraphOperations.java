@@ -163,21 +163,6 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
-    {
-        assertRoleExists( roleName );
-        Set<ResourcePrivilege> privilegesForRole = rolePrivileges.getOrDefault( roleName, Collections.emptySet() );
-        privilegesForRole.remove( resourcePrivilege );
-    }
-
-    @Override
-    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
-    {
-        getUser( username, false );
-        return getPrivilegeForRoles( getRoleNamesForUser( username ) );
-    }
-
-    @Override
     Set<ResourcePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
         Set<ResourcePrivilege> privileges = new HashSet<>();
