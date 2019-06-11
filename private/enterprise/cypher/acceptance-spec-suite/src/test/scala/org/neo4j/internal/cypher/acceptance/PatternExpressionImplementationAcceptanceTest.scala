@@ -384,6 +384,34 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
+  test("use getDegree for pattern expression predicate on var-length pattern") {
+    // given
+    graph.createIndex("MYNODE", "name")
+    graph.execute("CREATE (:MYNODE {name:'a'})-[:CONNECTED]->(:MYNODE {name:'b'})-[:CONNECTED]->(cut:MYNODE {name:'c'})-[:CONNECTED]->(:MYNODE {name:'d'})-[:CONNECTED]->(:MYNODE {name:'e'})-[:CONNECTED]->(:MYNODE {name:'z0'})")
+
+    graph.execute("MATCH (cut:MYNODE {name:'c'}) CREATE (cut)<-[:HAS_CUT]-(:CUT)")
+
+    graph.execute("""WITH range (1, 40) AS myrange
+                    |UNWIND myrange as i
+                    |WITH "z"+i AS name
+                    |CREATE (:MYNODE {name:name})""".stripMargin)
+
+    graph.execute("""WITH range (1, 40) AS myrange
+                    |UNWIND myrange as i WITH "z"+(i-1) AS name1, "z"+i AS name2
+                    |MATCH (n1:MYNODE {name:name1})
+                    |MATCH (n2:MYNODE {name:name2})
+                    |CREATE (n1) -[:CONNECTED]-> (n2)""".stripMargin)
+
+    // when
+    val query = """MATCH (mystart:MYNODE {name:'a'})
+                  |MATCH path = ( (mystart) -[:CONNECTED*0..]- (other:MYNODE) )
+                  |WHERE ALL(n in nodes(path) WHERE NOT (n)<-[:HAS_CUT]-() )
+                  |RETURN other""".stripMargin
+
+    val result = executeSingle(query)
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("RollUpApply")
+  }
+
   test("solve pattern expressions in set node properties") {
     setup()
 
