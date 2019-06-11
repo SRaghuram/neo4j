@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.Units;
 import com.neo4j.bench.client.model.Metrics;
@@ -38,13 +37,16 @@ public class Results
 {
     public enum Phase
     {
+
         WARMUP( "warmup-results.csv" ),
         MEASUREMENT( "measurement-results.csv" );
+
         private final String filename;
 
         Phase( String filename )
         {
             this.filename = filename;
+
         }
     }
 
@@ -53,7 +55,8 @@ public class Results
     private static final String START = "start";
     private static final String DURATION = "duration";
     private static final String ROWS = "rows";
-    private static final List<TimeUnit> VALID_UNITS = Lists.newArrayList( NANOSECONDS, MICROSECONDS, MILLISECONDS, SECONDS );
+    private static final List<TimeUnit> VALID_UNITS =
+            Lists.newArrayList( NANOSECONDS, MICROSECONDS, MILLISECONDS, SECONDS );
 
     public static ResultsWriter newWriter( ForkDirectory forkDirectory, Phase phase, TimeUnit unit )
     {
@@ -78,17 +81,16 @@ public class Results
 
     public static Results loadFrom( BenchmarkDirectory benchmarkDirectory )
     {
-
         TimeUnit smallestTimeUnit = smallestTimeUnit( benchmarkDirectory );
-
         List<Long> durations = new ArrayList<>();
         List<Long> rows = new ArrayList<>();
         benchmarkDirectory.measurementForks()
-                                 .stream()
-                                 .forEach( f -> visitResults( f, Results.Phase.MEASUREMENT, aggregateMeasurements( durations, rows ) ) );
-        return new Results( AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
-                            AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
-                            smallestTimeUnit );
+            .stream()
+            .forEach( f -> visitResults( f, Results.Phase.MEASUREMENT, aggregateMeasurements( durations, rows ) ) );
+        return new Results(
+                AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
+                AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
+                smallestTimeUnit );
     }
 
     public static Results loadFrom( ForkDirectory forkDirectory, Phase phase )
@@ -105,26 +107,22 @@ public class Results
         visitResults( resultsFile, timeUnit, aggregateMeasurements( durations, rows ) );
         return new Results(
                 AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
-                AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
-                timeUnit );
+                AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ), timeUnit );
     }
+
     public static Results empty()
     {
-        return new Results( AggregateMeasurement.createEmpty(),
-                AggregateMeasurement.createEmpty(),
-                MICROSECONDS );
+        return new Results( AggregateMeasurement.createEmpty(), AggregateMeasurement.createEmpty(), MICROSECONDS );
     }
 
     /* -- time unit manipulation -- */
-
     private static TimeUnit smallestTimeUnit( BenchmarkDirectory benchmarkDirectory )
     {
-        return benchmarkDirectory.measurementForks()
-            .stream()
-            .map( forkDirectory -> forkDirectory.findOrFail( Phase.MEASUREMENT.filename ) )
-            .map( Results::extractUnit )
-            .min(Results::compareTimeUnits)
-            .get();
+        return benchmarkDirectory.measurementForks().stream()
+                .map( forkDirectory -> forkDirectory.findOrFail( Phase.MEASUREMENT.filename ) )
+                .map( Results::extractUnit )
+                .min( Results::compareTimeUnits )
+                .get();
     }
 
     private static int compareTimeUnits( TimeUnit tu1, TimeUnit tu2 )
@@ -136,10 +134,11 @@ public class Results
 
     private static int indexOfValidTimeUnit( TimeUnit timeUnit )
     {
-        int indexOf = VALID_UNITS.indexOf( timeUnit);
+        int indexOf = VALID_UNITS.indexOf( timeUnit );
         if ( indexOf < 0 )
         {
-            throw new IllegalArgumentException( format( "invalid time unit %s, expected one of %s", timeUnit, VALID_UNITS ) );
+            throw new IllegalArgumentException(
+                    format( "invalid time unit %s, expected one of %s", timeUnit, VALID_UNITS ) );
         }
         return indexOf;
     }
@@ -159,12 +158,11 @@ public class Results
     }
 
     /* -- results visitor -- */
-
     private static void visitResults( ForkDirectory forkDirectory, Phase phase, ResultsRowVisitor resultsVisitor )
     {
         Path resultsFile = forkDirectory.findOrFail( phase.filename );
         TimeUnit fromTimeUnit = extractUnit( resultsFile );
-        visitResults( resultsFile , fromTimeUnit, resultsVisitor );
+        visitResults( resultsFile, fromTimeUnit, resultsVisitor );
     }
 
     private static void visitResults( Path resultsFile, TimeUnit timeUnit, ResultsRowVisitor resultsVisitor )
@@ -176,15 +174,14 @@ public class Results
                 String firstLine = reader.readLine();
                 assertValidHeader( firstLine );
             }
-
             LineNumberReader reader = new LineNumberReader( Files.newBufferedReader( resultsFile ) );
             reader.lines()
                 .skip( 1 ) // skip header
-                .map( line -> line.split( SEPARATOR ))
+                .map( line -> line.split( SEPARATOR ) )
                 .forEach( row ->
                 {
-                        resultsVisitor.visitResultsRow( resultsFile, reader::getLineNumber, row );
-                });
+                    resultsVisitor.visitResultsRow( resultsFile, reader::getLineNumber, row );
+                 } );
         }
         catch ( IOException e )
         {
@@ -192,15 +189,14 @@ public class Results
         }
     }
 
-    private static ResultsRowVisitor aggregateMeasurements(
-            List<Long> durations,
-            List<Long> rows )
+    private static ResultsRowVisitor aggregateMeasurements( List<Long> durations, List<Long> rows )
     {
-        return ( resultsFile,lineNumber, row ) ->
+        return ( resultsFile, lineNumber, row ) ->
         {
             if ( row.length != 4 )
             {
-                throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
+                throw new RuntimeException( format(
+                        "Expected 4 columns but found %s\n" +
                         "File   : %s\n" +
                         "Line # : %s\n" +
                         "Line   : %s\n" +
@@ -215,14 +211,14 @@ public class Results
             long rowCount = Long.parseLong( row[3] );
             durations.add( duration );
             rows.add( rowCount );
-       };
+        };
     }
 
     /* -- results headers --*/
-
     private static String makeHeader( TimeUnit unit )
     {
-        return SCHEDULED_START + SEPARATOR + START + SEPARATOR + DURATION + "_" + toAbbreviation( unit ) + SEPARATOR + ROWS;
+        return SCHEDULED_START + SEPARATOR + START + SEPARATOR + DURATION + "_" + toAbbreviation( unit ) + SEPARATOR
+                + ROWS;
     }
 
     private static void assertValidHeader( String header )
@@ -341,6 +337,6 @@ public class Results
 
     public Results convertUnit( TimeUnit toTimeUnit )
     {
-        return new Results( duration.convertUnit(unit, toTimeUnit), rows, toTimeUnit );
+        return new Results( duration.convertUnit( unit, toTimeUnit ), rows, toTimeUnit );
     }
 }
