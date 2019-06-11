@@ -676,7 +676,8 @@ object SlottedPipeMapper {
   //we have a reference slot in the output but a long slot on one of the inputs,
   //e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot {
+    val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot(
+      onVariable = {
       case (k, inSlot: LongSlot) =>
         out.get(k) match {
           // The output does not have a slot for this, so we don't need to copy
@@ -698,7 +699,17 @@ object SlottedPipeMapper {
           case Some(r: RefSlot) =>
             (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
         }
-    }
+    }, onCachedProperty = {
+      case (cachedProp, inRefSlot) =>
+        out.getCachedPropertySlot(cachedProp) match {
+          case Some(outRefSlot) =>
+            // Copy the cached property if the output has it as well
+          (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
+          case None =>
+            // Otherwise do nothing
+            (_, _, _) => ()
+        }
+    })
     //Apply all transformations
     (incoming: ExecutionContext, outgoing: ExecutionContext, state: QueryState) => {
       mapSlots.foreach(f => f(incoming, outgoing, state))

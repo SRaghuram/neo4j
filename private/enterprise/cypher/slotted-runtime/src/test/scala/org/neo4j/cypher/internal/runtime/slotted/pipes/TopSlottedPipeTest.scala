@@ -243,7 +243,7 @@ object TopSlottedPipeTestSupport {
 
     val slot = slots("a")
 
-    val source = FakeSlottedPipe(data.map(v => Map("a" -> v)), slots)
+    val source = FakeSlottedPipe(data.map(v => Map[Any, Any]("a" -> v)), slots)
 
     val topOrderBy = orderBy match {
       case AscendingOrder => List(Ascending(slot))
@@ -271,7 +271,7 @@ object TopSlottedPipeTestSupport {
 
     val slots = Seq(slotConfiguration("a"), slotConfiguration("b"))
 
-    val source = FakeSlottedPipe(data.map { case (v1, v2) => Map("a" -> v1, "b" -> v2) }, slotConfiguration)
+    val source = FakeSlottedPipe(data.map { case (v1, v2) => Map[Any, Any]("a" -> v1, "b" -> v2) }, slotConfiguration)
 
     val topOrderBy = orderBy.zip(slots).map {
       case (AscendingOrder, slot) => Ascending(slot)

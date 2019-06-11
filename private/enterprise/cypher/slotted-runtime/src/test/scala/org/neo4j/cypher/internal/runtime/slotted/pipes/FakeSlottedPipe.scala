@@ -10,10 +10,16 @@ import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.ValueConversion.asValue
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.values.storable.Value
 import org.scalatest.mock.MockitoSugar
 
-case class FakeSlottedPipe(data: Iterable[Map[String, Any]], slots: SlotConfiguration)
+/**
+  * @param data The keys must be either a String or an ASTCachedProperty. Using Any for convenience in the test classes.
+  */
+case class FakeSlottedPipe(data: Iterable[Map[Any, Any]],
+                           slots: SlotConfiguration)
   extends Pipe with MockitoSugar {
 
   def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
@@ -21,7 +27,7 @@ case class FakeSlottedPipe(data: Iterable[Map[String, Any]], slots: SlotConfigur
       val result = SlottedExecutionContext(slots)
 
       values foreach {
-        case (key, value) =>
+        case (key: String, value) =>
           slots(key) match {
             case LongSlot(offset, _, _) if value == null =>
               result.setLongAt(offset, -1)
@@ -32,6 +38,8 @@ case class FakeSlottedPipe(data: Iterable[Map[String, Any]], slots: SlotConfigur
             case RefSlot(offset, _, _) =>
               result.setRefAt(offset, asValue(value))
           }
+        case (cachedProp: ASTCachedProperty, value) =>
+          slots.getCachedPropertySlot(cachedProp).foreach(refSlot =>result.setCachedPropertyAt(refSlot.offset, asValue(value).asInstanceOf[Value]))
       }
       result
     }

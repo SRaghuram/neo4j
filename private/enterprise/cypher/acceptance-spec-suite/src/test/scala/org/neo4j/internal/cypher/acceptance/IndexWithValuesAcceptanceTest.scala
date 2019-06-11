@@ -462,7 +462,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
    * This behavior makes it safe to make the Union of cached properties available after a union
    * instead of the intersection.
    *
-   * Depending on the overlap of rows in the Distinct, this could potentially cache a lot properties of properties
+   * Depending on the overlap of rows in the Distinct, this could potentially cache a lot of properties
    * that will be thrown away, but it will also improve any property read of cached properties after the union.
    */
   test("should allow cached property after OR when different properties used on each side") {

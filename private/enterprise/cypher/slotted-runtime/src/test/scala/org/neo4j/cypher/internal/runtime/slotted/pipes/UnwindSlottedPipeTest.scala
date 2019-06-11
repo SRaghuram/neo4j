@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
 
 class UnwindSlottedPipeTest extends CypherFunSuite {
 
-  private def unwindWithInput(data: Iterable[Map[String, Any]]) = {
+  private def unwindWithInput(data: Iterable[Map[Any, Any]]) = {
     val inputPipeline = SlotConfiguration
       .empty
       .newReference("x", nullable = false, CTAny)

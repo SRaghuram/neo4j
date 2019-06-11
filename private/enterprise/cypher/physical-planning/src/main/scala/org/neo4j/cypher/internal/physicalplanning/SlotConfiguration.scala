@@ -293,7 +293,11 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   }
 
   // NOTE: This will give duplicate slots when we have aliases
-  def mapSlot[U](f: ((String,Slot)) => U): Iterable[U] = slots.map(f)
+  def mapSlot[U](onVariable: ((String,Slot)) => U,
+                 onCachedProperty: ((ASTCachedProperty, RefSlot)) => U
+                ): Iterable[U] = {
+    slots.map(onVariable) ++ cachedProperties.map(onCachedProperty)
+  }
 
   def partitionSlots(p: (String, Slot) => Boolean): (Seq[(String, Slot)], Seq[(String, Slot)]) = {
     slots.toSeq.partition {
@@ -345,6 +349,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     }.sorted(SlotWithAliasesOrdering)
 
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = cachedProperties.contains(key)
+
+  def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = cachedProperties.get(key)
 
   object SlotWithAliasesOrdering extends Ordering[SlotWithAliases] {
     def compare(x: SlotWithAliases, y: SlotWithAliases): Int = (x, y) match {

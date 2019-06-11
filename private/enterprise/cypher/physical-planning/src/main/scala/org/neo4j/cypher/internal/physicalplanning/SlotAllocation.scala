@@ -594,6 +594,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                 result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
             }
         }, {
+          // Cached properties that exist on both sides are retained
           case (key, _) if rhs.hasCachedPropertySlot(key) =>
             result.newCachedProperty(key)
           case _ => //do nothing
