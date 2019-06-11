@@ -110,14 +110,6 @@ public class ServerDatabase implements Database
         try ( Transaction tx = session.beginTransaction() )
         {
             StatementResult result = tx.run( query, parameters );
-            if ( shouldRollback )
-            {
-                tx.failure();
-            }
-            else
-            {
-                tx.success();
-            }
             int rowCount = 0;
             while ( result.hasNext() )
             {
@@ -127,6 +119,15 @@ public class ServerDatabase implements Database
                 {
                     rowCount++;
                 }
+            }
+
+            if ( shouldRollback )
+            {
+                tx.failure();
+            }
+            else
+            {
+                tx.success();
             }
             return rowCount;
         }
