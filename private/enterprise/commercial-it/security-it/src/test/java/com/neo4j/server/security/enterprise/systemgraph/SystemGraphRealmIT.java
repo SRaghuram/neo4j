@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.impl.security.User;
@@ -35,18 +36,14 @@ import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.SIMULATED_INITIA
 import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.testAuthenticationToken;
-import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
@@ -380,164 +377,6 @@ class SystemGraphRealmIT
     }
 
     @Test
-    void shouldSetPrivilegesForCustomRoles() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateRole( PredefinedRoles.ADMIN )
-                .migrateRole( "custom" )
-                .migrateRole( "role" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        // When
-        ResourcePrivilege customPriv1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege customPriv2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-
-        ResourcePrivilege rolePriv1 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege rolePriv2 = new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege rolePriv3 = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-
-        realm.grantPrivilegeToRole( "custom", customPriv1 );
-        realm.grantPrivilegeToRole( "custom", customPriv2 );
-        realm.grantPrivilegeToRole( "role", rolePriv1 );
-        realm.grantPrivilegeToRole( "role", rolePriv2 );
-        realm.grantPrivilegeToRole( "role", rolePriv3 );
-
-        // Then
-        assertThat( realm.getPrivilegesForRoles( singleton( "custom" ) ), containsInAnyOrder( customPriv1, customPriv2 ) );
-        assertThat( realm.getPrivilegesForRoles( singleton( "role" ) ), containsInAnyOrder( rolePriv1, rolePriv2, rolePriv3 ) );
-    }
-
-    @Test
-    void shouldSetAdminForCustomRole() throws Throwable
-    {
-        // TODO
-        // If PredefinedRoles.ADMIN does not exist and no users exist, it tries to create neo4j and assign it admin role which fails
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice" )
-                .migrateRole( PredefinedRoles.ADMIN )
-                .migrateRole( "CustomAdmin" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        // When
-        ResourcePrivilege privilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
-        realm.grantPrivilegeToRole( "CustomAdmin", privilege );
-
-        // Then
-        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), contains( privilege ) );
-
-        // When
-        realm.revokePrivilegeFromRole( "CustomAdmin", privilege );
-
-        // Then
-        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), empty() );
-    }
-
-    @Test
-    void shouldFailSetPrivilegesForNonExistingRole() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        try
-        {
-            // When
-            realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-            fail( "Should not allow setting privilege on non existing role." );
-        }
-        catch ( InvalidArgumentsException e )
-        {
-            // Then
-            assertThat( e.getMessage(), equalTo( "Role 'custom' does not exist." ) );
-        }
-    }
-
-    @Test
-    void shouldGetCorrectPrivilegesForMultipleDatabases() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        ResourcePrivilege sysPrivilege1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
-        ResourcePrivilege sysPrivilege2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
-        ResourcePrivilege sysPrivilege3 = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
-
-        ResourcePrivilege privilege1 = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege privilege2 = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-
-        realm.grantPrivilegeToRole( "custom", sysPrivilege1 );
-        realm.grantPrivilegeToRole( "custom", sysPrivilege2 );
-        realm.grantPrivilegeToRole( "custom", sysPrivilege3 );
-        realm.grantPrivilegeToRole( "custom", privilege1 );
-        realm.grantPrivilegeToRole( "custom", privilege2 );
-
-        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
-
-        assertThat( privileges, containsInAnyOrder( sysPrivilege1, sysPrivilege2, sysPrivilege3, privilege1, privilege2 ) );
-    }
-
-    @Test
-    void shouldShowPrivilegesForUser() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
-        assertTrue( privileges.isEmpty() );
-
-        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) );
-
-        privileges = realm.showPrivilegesForUser( "bob" );
-        assertThat( privileges, containsInAnyOrder( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL ) ) );
-    }
-
-    @Test
-    void shouldShowAdminPrivileges() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .migrateRole( "custom", "bob" )
-                .build(), securityLog, dbManager, defaultConfig );
-
-        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
-        assertTrue( privileges.isEmpty() );
-
-        ResourcePrivilege privilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), Segment.ALL );
-        realm.grantPrivilegeToRole( "custom", privilege );
-
-        // Then
-        privileges = realm.showPrivilegesForUser( "bob" );
-        assertThat( privileges, containsInAnyOrder( privilege ) );
-
-        // When
-        realm.revokePrivilegeFromRole( "custom", privilege );
-
-        // Then
-        privileges = realm.showPrivilegesForUser( "bob" );
-        assertTrue( privileges.isEmpty() );
-    }
-
-    @Test
     void shouldHandleCustomDefaultDatabase() throws Throwable
     {
         dbManager.getManagementService().createDatabase( "foo" );
@@ -568,13 +407,15 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        // Give Alice read privileges in 'neo4j'
-        ResourcePrivilege privilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
-        realm.grantPrivilegeToRole( "custom", privilege );
+        // Give Alice match privileges in 'neo4j'
+        ResourcePrivilege readPrivilege = new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
+        systemDB.execute( String.format( "GRANT MATCH(*) ON GRAPH %s TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
 
         assertAuthenticationSucceeds( realm, "alice" );
-        Set<ResourcePrivilege> privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( privilege ) );
+        Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
         realm.stop();
 
@@ -588,11 +429,12 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realm, "alice" );
 
         // Alice should still have read privileges in 'neo4j'
-        privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( privilege ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
         // Alice should NOT have read privileges in 'foo'
-        assertFalse( privileges.contains( new ResourcePrivilege( Action.READ, new Resource.GraphResource(), Segment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), Segment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), Segment.ALL, "foo" ) ) );
 
         realm.stop();
 
@@ -605,8 +447,8 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realm, "alice" );
 
         // Alice should still have read privileges in 'neo4j'
-        privileges = realm.showPrivilegesForUser( "alice" );
-        assertThat( privileges, containsInAnyOrder( privilege ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
+        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
     }
 
     private void prePopulateUsers( String... usernames ) throws Throwable

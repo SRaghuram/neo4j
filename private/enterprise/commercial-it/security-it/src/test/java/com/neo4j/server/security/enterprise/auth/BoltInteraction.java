@@ -54,6 +54,7 @@ import static io.netty.channel.local.LocalAddress.ANY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.AuthToken.BASIC_SCHEME;
 import static org.neo4j.kernel.api.security.AuthToken.CREDENTIALS;
@@ -110,6 +111,12 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     public GraphDatabaseFacade getLocalGraph()
     {
         return (GraphDatabaseFacade) server.graphDatabaseService();
+    }
+
+    @Override
+    public GraphDatabaseFacade getSystemGraph()
+    {
+        return (GraphDatabaseFacade) server.getManagementService().database( SYSTEM_DATABASE_NAME );
     }
 
     @Override

@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
-import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
@@ -35,7 +34,7 @@ class PersonalUserManager implements EnterpriseUserManager
 
     @Override
     public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+            throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -45,7 +44,7 @@ class PersonalUserManager implements EnterpriseUserManager
                     requirePasswordChange ? ", with password change required" : "" );
             return user;
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to create user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -53,8 +52,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void suspendUser( String username )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void suspendUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -67,7 +65,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.suspendUser( username );
             securityLog.info( subject, "suspended user `%s`", username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to suspend user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -75,8 +73,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public boolean deleteUser( String username )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public boolean deleteUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -89,7 +86,7 @@ class PersonalUserManager implements EnterpriseUserManager
             securityLog.info( subject, "deleted user `%s`", username );
             return wasDeleted;
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to delete user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -97,8 +94,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void activateUser( String username, boolean requirePasswordChange )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -110,7 +106,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.activateUser( username, requirePasswordChange );
             securityLog.info( subject, "activated user `%s`", username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to activate user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -130,8 +126,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void newRole( String roleName, String... usernames )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -139,7 +134,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.newRole( roleName, usernames );
             securityLog.info( subject, "created role `%s`", roleName );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to create role `%s`: %s", roleName, e.getMessage() );
             throw e;
@@ -147,8 +142,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void newCopyOfRole( String roleName, String from )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -156,7 +150,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.newCopyOfRole( roleName, from );
             securityLog.info( subject, "created role `%s` from role `%s`", roleName, from );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to create role `%s` from role `%s`: %s", roleName, from, e.getMessage() );
             throw e;
@@ -164,8 +158,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public boolean deleteRole( String roleName )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public boolean deleteRole( String roleName ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -174,7 +167,7 @@ class PersonalUserManager implements EnterpriseUserManager
             securityLog.info( subject, "deleted role `%s`", roleName );
             return wasDeleted;
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to delete role `%s`: %s", roleName, e.getMessage() );
             throw e;
@@ -183,7 +176,7 @@ class PersonalUserManager implements EnterpriseUserManager
 
     @Override
     public void setUserPassword( String username, byte[] password, boolean requirePasswordChange )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+            throws InvalidArgumentsException, AuthorizationViolationException
     {
         if ( subject.hasUsername( username ) )
         {
@@ -193,7 +186,7 @@ class PersonalUserManager implements EnterpriseUserManager
                 securityLog.info( subject, "changed password%s",
                         requirePasswordChange ? ", with password change required" : "" );
             }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            catch ( AuthorizationViolationException | InvalidArgumentsException e )
             {
                 securityLog.error( subject, "tried to change password: %s", e.getMessage() );
                 throw e;
@@ -208,7 +201,7 @@ class PersonalUserManager implements EnterpriseUserManager
                 securityLog.info( subject, "changed password for user `%s`%s", username,
                         requirePasswordChange ? ", with password change required" : "" );
             }
-            catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+            catch ( AuthorizationViolationException | InvalidArgumentsException e )
             {
                 securityLog.error( subject, "tried to change password for user `%s`: %s", username,
                         e.getMessage() );
@@ -218,7 +211,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, IOException
+    public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
         try
         {
@@ -226,7 +219,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.setUserRequirePasswordChange( username, requirePasswordChange );
             securityLog.info( subject, "changed 'password change required' for user `%s`", username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to change 'password change required' for user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -234,7 +227,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException, IOException
+    public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
     {
         try
         {
@@ -242,7 +235,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.setUserRequirePasswordChange( username, isSuspended );
             securityLog.info( subject, "changed user status for user `%s`", username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to change user status for user `%s`: %s", username, e.getMessage() );
             throw e;
@@ -271,8 +264,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void addRoleToUser( String roleName, String username )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -280,7 +272,7 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.addRoleToUser( roleName, username );
             securityLog.info( subject, "added role `%s` to user `%s`", roleName, username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to add role `%s` to user `%s`: %s", roleName, username,
                     e.getMessage() );
@@ -289,8 +281,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void removeRoleFromUser( String roleName, String username )
-            throws IOException, InvalidArgumentsException, AuthorizationViolationException
+    public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -303,67 +294,10 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.removeRoleFromUser( roleName, username );
             securityLog.info( subject, "removed role `%s` from user `%s`", roleName, username );
         }
-        catch ( AuthorizationViolationException | IOException | InvalidArgumentsException e )
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to remove role `%s` from user `%s`: %s", roleName, username, e
                     .getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege )
-            throws InvalidArgumentsException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.grantPrivilegeToRole( roleName, privilege );
-            securityLog.info( subject, "granted `%s` privilege on `%s` for %s to role `%s`",
-                    privilege.getAction(), privilege.getResource().toString(),
-                    privilege.isAllDatabases() ? "all databases" : "database `" + privilege.getDbName() + "`", roleName );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to grant `%s` privilege on `%s` for %s to role `%s`: %s",
-                    privilege.getAction(), privilege.getResource().toString(),
-                    privilege.isAllDatabases() ? "all databases" : "database `" + privilege.getDbName() + "`", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege )
-            throws InvalidArgumentsException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.revokePrivilegeFromRole( roleName, privilege );
-            securityLog.info( subject, "revoked `%s` privilege on `%s` for %s from role `%s`",
-                    privilege.getAction(), privilege.getResource().toString(),
-                    privilege.isAllDatabases() ? "all databases" : "database `" + privilege.getDbName() + "`", roleName );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for %s from role `%s`: %s",
-                    privilege.getAction(), privilege.getResource().toString(),
-                    privilege.isAllDatabases() ? "all databases" : "database `" + privilege.getDbName() + "`", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
-    {
-        try
-        {
-            assertSelfOrUserManager( username );
-            return userManager.showPrivilegesForUser( username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to show privileges for user `%s`: %s", username, e.getMessage() );
             throw e;
         }
     }
@@ -397,8 +331,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public Set<String> getRoleNamesForUser( String username )
-            throws InvalidArgumentsException, AuthorizationViolationException
+    public Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {
@@ -419,8 +352,7 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public Set<String> getUsernamesForRole( String roleName )
-            throws InvalidArgumentsException, AuthorizationViolationException
+    public Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
         {

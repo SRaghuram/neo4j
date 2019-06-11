@@ -140,26 +140,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.grantPrivilegeToRole( roleName, privilege );
-        clearCacheForRole( roleName );
-    }
-
-    @Override
-    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.revokePrivilegeFromRole( roleName, privilege );
-        clearCacheForRole( roleName );
-    }
-
-    @Override
-    public Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
-    {
-        return systemGraphOperations.showPrivilegesForUser( username );
-    }
-
-    @Override
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );

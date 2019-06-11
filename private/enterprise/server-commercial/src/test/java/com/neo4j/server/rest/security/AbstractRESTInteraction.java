@@ -111,6 +111,12 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
+    public GraphDatabaseFacade getSystemGraph()
+    {
+        return server.getDatabaseService().getSystemDatabase();
+    }
+
+    @Override
     public void shutdown()
     {
         server.stop();
