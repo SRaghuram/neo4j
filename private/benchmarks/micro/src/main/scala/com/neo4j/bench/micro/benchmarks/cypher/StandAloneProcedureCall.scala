@@ -53,9 +53,10 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: StandAloneProcedureCallThreadState, bh: Blackhole): Long = {
-    val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
-    assertExpectedRowCount(StandAloneProcedureCall_labels, visitor)
+    val subscriber = new CountSubscriber(bh)
+    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    result.consumeAll()
+    assertExpectedRowCount(StandAloneProcedureCall_labels, subscriber)
   }
 
   override protected def procedureName: QualifiedName = QualifiedName(Seq("db"), "labels")
