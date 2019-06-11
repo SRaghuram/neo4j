@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
+import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}

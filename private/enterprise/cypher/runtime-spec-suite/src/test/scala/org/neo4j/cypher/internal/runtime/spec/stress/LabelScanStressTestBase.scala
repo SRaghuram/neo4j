@@ -3,17 +3,17 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class AllNodeScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class LabelScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime)
     with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
-      _.allNodeScan(variable),
+      _.nodeByLabelScan(variable, "Label"),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator

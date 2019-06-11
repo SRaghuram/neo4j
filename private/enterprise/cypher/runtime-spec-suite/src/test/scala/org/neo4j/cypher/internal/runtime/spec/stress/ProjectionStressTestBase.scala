@@ -3,22 +3,21 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class UnwindStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class ProjectionStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(runtime)
     with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
-      _.unwind(s"[$propVariable, 2 * $propVariable] AS i"),
+      _.projection("prop * 2 AS j"),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator
-          f <- 1 to 2
-        } yield Array(x.getId * f),
-      Seq("i")
+        } yield Array(x, x.getId * 2),
+      Seq("x", "j")
     )
 }

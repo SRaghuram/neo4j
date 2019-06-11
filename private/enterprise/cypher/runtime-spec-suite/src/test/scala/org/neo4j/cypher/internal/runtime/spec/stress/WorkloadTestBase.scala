@@ -3,15 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.stress
 
 import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 import org.neo4j.values.AnyValue
-
-import scala.collection.mutable.ArrayBuffer
 
 abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
                                                            runtime: CypherRuntime[CONTEXT],
