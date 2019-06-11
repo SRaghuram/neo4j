@@ -917,7 +917,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'imAString'+$password", params = parameter)
     }
     // THEN
-    println(exception.getMessage)
     exception.getMessage should include("Invalid input '+': expected whitespace, ';' or end of input")
 
     // THEN

@@ -26,7 +26,6 @@ import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
@@ -69,9 +68,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // CREATE USER foo WITH PASSWORD password
-    case CreateUser(userName, Some(initialStringPassword), None, requirePasswordChange, suspendedOptional) => (_, _, _) =>
-      // TODO: Move the conversion to byte[] earlier in the stack (during or after parsing)
-      val initialPassword = UTF8.encode(initialStringPassword)
+    case CreateUser(userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional) => (_, _, _) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
@@ -111,18 +108,18 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       )
 
     // ALTER USER foo
-    case AlterUser(userName, initialStringPassword, None, requirePasswordChange, suspended) => (_, _, _) =>
+    case AlterUser(userName, initialPassword, None, requirePasswordChange, suspended) => (_, _, _) =>
       val params = Seq(
-        initialStringPassword -> "credentials",
+        initialPassword -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
         suspended -> "suspended"
       ).flatMap { param =>
         param._1 match {
           case None => Seq.empty
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
-          case Some(value: String) =>
-            Seq((param._2, Values.stringValue(authManager.createCredentialForPassword(validatePassword(UTF8.encode(value))).serialize())))
-          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected string or boolean but got: ${p.getClass.getSimpleName}")
+          case Some(value: Array[Byte]) =>
+            Seq((param._2, Values.stringValue(authManager.createCredentialForPassword(validatePassword(value)).serialize())))
+          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
       val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
@@ -136,10 +133,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$userName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
           .handleResult((_, value) => {
-            val maybeThrowable = initialStringPassword match {
+            val maybeThrowable = initialPassword match {
               case Some(password) =>
                 val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
-                if (oldCredentials.matchesPassword(UTF8.encode(password)))
+                if (oldCredentials.matchesPassword(password))
                   Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
                 else
                   None
@@ -155,14 +152,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
     // SET MY PASSWORD TO 'password'
-    case SetOwnPassword(Some(initialStringPassword), None) => (_, _, currentUser) =>
+    case SetOwnPassword(Some(password), None) => (_, _, securityContext) =>
       val query =
         """MATCH (user:User {name: $name})
           |WITH user, user.credentials AS oldCredentials
           |SET user.credentials = $credentials
           |SET user.passwordChangeRequired = false
           |RETURN oldCredentials""".stripMargin
-      val password = UTF8.encode(initialStringPassword)
+      val currentUser = securityContext.subject().username()
 
       UpdatingSystemCommandExecutionPlan("SetOwnPassword", normalExecutionEngine,
         query,
