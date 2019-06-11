@@ -1136,18 +1136,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    the [InvalidArgumentsException] thrownBy {
+    val error1 = the [InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
-    } should have message "The role 'wrongRole' does not exist."
-    // should accept both above message and "The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *."
+    }
+
+    // THEN
+    error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
+      be("The role 'wrongRole' does not exist."))
 
     // WHEN
-    val e = the [InvalidArgumentsException] thrownBy {
+    val error2 = the [InvalidArgumentsException] thrownBy {
       execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
     }
     // THEN
-    e.getMessage should include("The role 'wrongRole' does not exist.")
-    // should accept both above message and "The role 'wrongRole' does not have the specified privilege"
+    error2.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
+      be("The role 'wrongRole' does not exist."))
   }
 
   test("should fail revoke privilege not granted to role") {
