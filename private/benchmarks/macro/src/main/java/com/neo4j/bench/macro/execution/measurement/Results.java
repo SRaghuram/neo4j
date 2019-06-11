@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.neo4j.bench.client.Units.toAbbreviation;
 
@@ -157,7 +158,7 @@ public class Results
         }
     }
 
-    /* -- results as streams -- */
+    /* -- results visitor -- */
 
     private static void visitResults( ForkDirectory forkDirectory, Phase phase, ResultsRowVisitor resultsVisitor )
     {
@@ -182,7 +183,7 @@ public class Results
                 .map( line -> line.split( SEPARATOR ))
                 .forEach( row ->
                 {
-                        resultsVisitor.visitResultsRow( resultsFile, reader, row );
+                        resultsVisitor.visitResultsRow( resultsFile, reader::getLineNumber, row );
                 });
         }
         catch ( IOException e )
@@ -193,9 +194,9 @@ public class Results
 
     private static ResultsRowVisitor aggregateMeasurements(
             List<Long> durations,
-            List<Long> rowz )
+            List<Long> rows )
     {
-        return ( resultsFile,reader, row ) ->
+        return ( resultsFile,lineNumber, row ) ->
         {
             if ( row.length != 4 )
             {
@@ -206,14 +207,14 @@ public class Results
                         "Row    : %s",
                         row.length,
                         resultsFile.toAbsolutePath(),
-                        reader.getLineNumber(),
+                        lineNumber.get(),
                         Arrays.stream( row ).collect( joining( SEPARATOR ) ),
                         Arrays.toString( row ) ) );
             }
             long duration = Long.parseLong( row[2] );
-            long rows = Long.parseLong( row[3] );
+            long rowCount = Long.parseLong( row[3] );
             durations.add( duration );
-            rowz.add( rows );
+            rows.add( rowCount );
        };
     }
 
@@ -335,7 +336,7 @@ public class Results
     @FunctionalInterface
     private interface ResultsRowVisitor
     {
-        void visitResultsRow( Path resultsFile, LineNumberReader reader, String[] row );
+        void visitResultsRow( Path resultsFile, Supplier<Integer> lineNumber, String[] row );
     }
 
     public Results convertUnit( TimeUnit toTimeUnit )
