@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.results.BenchmarkDirectory;
@@ -24,7 +23,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -67,7 +65,6 @@ public class ResultsTest
     public void shouldBeAbleToCreateEmptyResults()
     {
         Results empty = Results.empty();
-        assertThat( empty.results().isEmpty(), equalTo( true ) );
         assertThat( empty.rows().count(), equalTo( 0L ) );
         assertThat( empty.duration().count(), equalTo( 0L ) );
     }
@@ -131,11 +128,6 @@ public class ResultsTest
         }
 
         Results results = Results.loadFrom( forkDirectory, Phase.MEASUREMENT );
-        List<Result> resultsList = results.results();
-        assertThat( resultsList.size(), equalTo( 3 ) );
-        assertThat( resultsList.get( 0 ), equalTo( new Result( 1, 2, 3, 5 ) ) );
-        assertThat( resultsList.get( 1 ), equalTo( new Result( 2, 2, 5, 4 ) ) );
-        assertThat( resultsList.get( 2 ), equalTo( new Result( 2, 2, 7, 3 ) ) );
         assertThat( results.duration().mean(), equalTo( 5D ) );
         assertThat( results.rows().mean(), equalTo( 4D ) );
     }
@@ -143,7 +135,7 @@ public class ResultsTest
     @Test
     public void shouldCalculateAggregate()
     {
-        ArrayList<Long> measurements = Lists.newArrayList( 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L );
+        long[] measurements = new long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L };
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
@@ -167,7 +159,7 @@ public class ResultsTest
     @Test
     public void shouldCalculateSingleResultAggregate()
     {
-        ArrayList<Long> measurements = Lists.newArrayList( 1L );
+        long[] measurements = new long[] { 1L };
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
