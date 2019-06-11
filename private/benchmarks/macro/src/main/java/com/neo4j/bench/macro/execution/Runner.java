@@ -63,7 +63,7 @@ public class Runner
             try ( Results.ResultsWriter warmupResultsWriter = Results.newWriter( forkDirectory, Phase.WARMUP, NANOSECONDS ) )
             {
                 System.out.println( format( "Performing warmup (%s). Policy: %s", warmupQueryString.executionMode(), warmupControl.description() ) );
-                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, false );
+                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, true );
             }
 
             /*
