@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
+
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.Units;
 import com.neo4j.bench.client.model.Metrics;
@@ -22,8 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.neo4j.bench.client.Units.toAbbreviation;
 
@@ -32,6 +31,7 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.joining;
 
 public class Results
 {
@@ -84,12 +84,7 @@ public class Results
         List<Long> rows = new ArrayList<>();
         benchmarkDirectory.measurementForks()
                                  .stream()
-                                 .flatMap( f -> streamResults( f, Results.Phase.MEASUREMENT) )
-                                 .forEach( result ->
-                                 {
-                                     durations.add( result.duration(smallestTimeUnit) );
-                                     rows.add( result.rows() );
-                                 });
+                                 .forEach( f -> visitResults( f, Results.Phase.MEASUREMENT, aggregateMeasurements( durations, rows ) ) );
         return new Results( AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
                             AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
                             smallestTimeUnit );
@@ -106,11 +101,7 @@ public class Results
         TimeUnit timeUnit = extractUnit( resultsFile );
         List<Long> durations = new ArrayList<>();
         List<Long> rows = new ArrayList<>();
-        streamResults( resultsFile, timeUnit ).forEach( result ->
-        {
-            durations.add( result.duration() );
-            rows.add( result.rows() );
-        });
+        visitResults( resultsFile, timeUnit, aggregateMeasurements( durations, rows ) );
         return new Results(
                 AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
                 AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
@@ -168,14 +159,14 @@ public class Results
 
     /* -- results as streams -- */
 
-    private static Stream<Result> streamResults( ForkDirectory forkDirectory, Phase phase )
+    private static void visitResults( ForkDirectory forkDirectory, Phase phase, ResultsRowVisitor resultsVisitor )
     {
         Path resultsFile = forkDirectory.findOrFail( phase.filename );
         TimeUnit fromTimeUnit = extractUnit( resultsFile );
-        return streamResults( resultsFile , fromTimeUnit );
+        visitResults( resultsFile , fromTimeUnit, resultsVisitor );
     }
 
-    private static Stream<Result> streamResults( Path resultsFile, TimeUnit timeUnit )
+    private static void visitResults( Path resultsFile, TimeUnit timeUnit, ResultsRowVisitor resultsVisitor )
     {
         try
         {
@@ -186,35 +177,44 @@ public class Results
             }
 
             LineNumberReader reader = new LineNumberReader( Files.newBufferedReader( resultsFile ) );
-            return reader.lines()
+            reader.lines()
                 .skip( 1 ) // skip header
                 .map( line -> line.split( SEPARATOR ))
-                .map( row ->
+                .forEach( row ->
                 {
-                    if ( row.length != 4 )
-                    {
-                        throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
-                                "File   : %s\n" +
-                                "Line # : %s\n" +
-                                "Line   : %s\n" +
-                                "Row    : %s",
-                                row.length,
-                                resultsFile.toAbsolutePath(),
-                                reader.getLineNumber(),
-                                Arrays.stream( row ).collect( Collectors.joining( SEPARATOR ) ),
-                                Arrays.toString( row ) ) );
-                    }
-                    long scheduledStartUtc = Long.parseLong( row[0] );
-                    long startUtc = Long.parseLong( row[1] );
-                    long stopUtc = Long.parseLong( row[2] );
-                    long rows = Long.parseLong( row[3] );
-                    return new Result( scheduledStartUtc, startUtc, stopUtc, timeUnit, rows );
+                        resultsVisitor.visitResultsRow( resultsFile, reader, row );
                 });
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( "Error reading results from " + resultsFile.toAbsolutePath(), e );
         }
+    }
+
+    private static ResultsRowVisitor aggregateMeasurements(
+            List<Long> durations,
+            List<Long> rowz )
+    {
+        return ( resultsFile,reader, row ) ->
+        {
+            if ( row.length != 4 )
+            {
+                throw new RuntimeException( format( "Expected 4 columns but found %s\n" +
+                        "File   : %s\n" +
+                        "Line # : %s\n" +
+                        "Line   : %s\n" +
+                        "Row    : %s",
+                        row.length,
+                        resultsFile.toAbsolutePath(),
+                        reader.getLineNumber(),
+                        Arrays.stream( row ).collect( joining( SEPARATOR ) ),
+                        Arrays.toString( row ) ) );
+            }
+            long duration = Long.parseLong( row[2] );
+            long rows = Long.parseLong( row[3] );
+            durations.add( duration );
+            rowz.add( rows );
+       };
     }
 
     /* -- results headers --*/
@@ -330,6 +330,12 @@ public class Results
         {
             writer.close();
         }
+    }
+
+    @FunctionalInterface
+    private interface ResultsRowVisitor
+    {
+        void visitResultsRow( Path resultsFile, LineNumberReader reader, String[] row );
     }
 
     public Results convertUnit( TimeUnit toTimeUnit )
