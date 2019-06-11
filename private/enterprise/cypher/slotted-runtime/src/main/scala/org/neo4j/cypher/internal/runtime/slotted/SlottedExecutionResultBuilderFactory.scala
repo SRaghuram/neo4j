@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
 import org.neo4j.cypher.internal.runtime.{createParameterArray, _}
 import org.neo4j.cypher.result.QueryResult
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -32,13 +33,17 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
 
     val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
     queryContext.resources.trace(cursors)
-    override protected def createQueryState(params: MapValue, prePopulateResults: Boolean, input: InputDataStream): SlottedQueryState = {
+    override protected def createQueryState(params: MapValue,
+                                            prePopulateResults: Boolean,
+                                            input: InputDataStream,
+                                            subscriber: QuerySubscriber): SlottedQueryState = {
       new SlottedQueryState(queryContext,
                             externalResource,
                             createParameterArray(params, parameterMapping),
                             cursors,
                             queryIndexes.indexes.map(index => queryContext.transactionalContext.dataRead.indexReadSession(index)),
                             new Array[AnyValue](nExpressionSlots),
+                            subscriber,
                             pipeDecorator,
                             lenientCreateRelationship = lenientCreateRelationship,
                             prePopulateResults = prePopulateResults,

@@ -8,10 +8,10 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{TextValue, Values}
@@ -52,7 +52,8 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots),
+                                         state.subscriber)
 
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       val value = valueExpr(initExecutionContext, queryState)

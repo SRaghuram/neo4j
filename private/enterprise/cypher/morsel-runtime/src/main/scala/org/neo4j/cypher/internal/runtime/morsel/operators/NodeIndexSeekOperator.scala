@@ -77,7 +77,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots),
+                                         state.subscriber)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       nodeCursors = indexQueries(queryState, initExecutionContext)
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()

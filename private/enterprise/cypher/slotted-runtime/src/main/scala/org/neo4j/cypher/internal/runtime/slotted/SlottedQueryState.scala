@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InChec
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, MutableMaps, QueryContext, _}
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -20,25 +21,26 @@ class SlottedQueryState(query: QueryContext,
                         cursors: ExpressionCursors,
                         queryIndexes: Array[IndexReadSession],
                         expressionVariables: Array[AnyValue],
+                        subscriber: QuerySubscriber,
                         decorator: PipeDecorator = NullPipeDecorator,
                         initialContext: Option[ExecutionContext] = None,
                         cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                         lenientCreateRelationship: Boolean = false,
                         prePopulateResults: Boolean = false,
                         input: InputDataStream = NoInput)
-  extends QueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input) {
-
+  extends QueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, decorator,
+                     initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
   override def withDecorator(decorator: PipeDecorator) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, decorator,
                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withInitialContext(initialContext: ExecutionContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, decorator,
                           Some(initialContext), cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withQueryContext(query: QueryContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, decorator,
                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 }
 

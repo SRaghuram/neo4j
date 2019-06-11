@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
@@ -36,7 +36,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                        params = state.params,
                                        resources.expressionCursors,
                                        Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots))
+                                       resources.expressionVariables(state.nExpressionSlots),
+                                       state.subscriber)
 
     val count = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
 

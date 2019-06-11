@@ -82,7 +82,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                              params = state.params,
                                              resources.expressionCursors,
                                              Array.empty[IndexReadSession],
-                                             resources.expressionVariables(state.nExpressionSlots))
+                                             resources.expressionVariables(state.nExpressionSlots),
+                                             state.subscriber)
 
           val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
                                                morsel,

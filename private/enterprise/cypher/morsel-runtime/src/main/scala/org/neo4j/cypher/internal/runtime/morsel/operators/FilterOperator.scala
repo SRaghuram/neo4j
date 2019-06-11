@@ -16,6 +16,8 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperT
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.Values
 
@@ -32,11 +34,12 @@ class FilterOperator(val workIdentity: WorkIdentity,
 
     val writingRow = readingRow.shallowCopy()
     val queryState = new OldQueryState(context,
-      resources = null,
-      params = state.params,
-      resources.expressionCursors,
-      Array.empty[IndexReadSession],
-      resources.expressionVariables(state.nExpressionSlots))
+                                       resources = null,
+                                       params = state.params,
+                                       resources.expressionCursors,
+                                       Array.empty[IndexReadSession],
+                                       resources.expressionVariables(state.nExpressionSlots),
+                                       state.subscriber)
 
     while (readingRow.isValidRow) {
       val matches = predicate(readingRow, queryState) == Values.TRUE

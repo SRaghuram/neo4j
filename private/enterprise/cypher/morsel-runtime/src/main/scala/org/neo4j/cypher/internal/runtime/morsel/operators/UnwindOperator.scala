@@ -43,7 +43,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  params = state.params,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession],
-                                                 resources.expressionVariables(state.nExpressionSlots))
+                                                 resources.expressionVariables(state.nExpressionSlots),
+                                                 state.subscriber)
 
       initExecutionContext.copyFrom(inputMorsel, inputMorsel.getLongsPerRow, inputMorsel.getRefsPerRow)
       val value = collection(initExecutionContext, queryState)
