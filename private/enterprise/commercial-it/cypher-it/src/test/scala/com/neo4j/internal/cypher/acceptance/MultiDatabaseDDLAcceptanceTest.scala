@@ -17,7 +17,6 @@ import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.impl.transaction.events.GlobalTransactionEventListeners
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
@@ -716,11 +715,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
     val systemGraphInitializer = new CommercialSystemGraphInitializer(databaseManager, databaseIdRepository, config)
     val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(systemGraphInitializer, queryExecutor, mock[Log], systemGraphOperations, importOptions, secureHasher)
-    val transactionEventListeners = graph.getDependencyResolver.resolveDependency(classOf[GlobalTransactionEventListeners])
-    val systemListeners = transactionEventListeners.getDatabaseTransactionEventListeners(SYSTEM_DATABASE_NAME)
-    systemListeners.forEach(l => transactionEventListeners.unregisterTransactionEventListener(SYSTEM_DATABASE_NAME, l))
     securityGraphInitializer.initializeSecurityGraph()
-    systemListeners.forEach(l => transactionEventListeners.registerTransactionEventListener(SYSTEM_DATABASE_NAME, l))
     selectDatabase(SYSTEM_DATABASE_NAME)
   }
 
