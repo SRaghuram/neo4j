@@ -38,6 +38,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContext}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
@@ -3773,11 +3774,12 @@ class InterpretedExpressionIT extends ExpressionsIT {
 
   private def state(dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors, expressionVariables: Array[AnyValue]) =
     new SlottedQueryState(dbAccess.asInstanceOf[QueryContext],
-                   null,
-                   params,
-                   cursors,
-                   Array.empty,
-                   expressionVariables)
+                          null,
+                          params,
+                          cursors,
+                          Array.empty,
+                          expressionVariables,
+                          DO_NOTHING_SUBSCRIBER)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null,
