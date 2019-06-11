@@ -55,11 +55,13 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def increment(): Long = {
     count += 1
+    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName}. New count: $count")
     count
   }
 
   override def decrement(): Long = {
     count -= 1
+    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $count")
     if (count < 0) {
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }

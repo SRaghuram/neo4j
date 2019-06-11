@@ -16,6 +16,7 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 object MorselExecutionContext {
   def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int) = new MorselExecutionContext(morsel,
@@ -166,6 +167,47 @@ class MorselExecutionContext(private val morsel: Morsel,
   def prettyCurrentRow: String =
     s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
      s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
+
+  def prettyString: Seq[String] = {
+    val longStrings = morsel.longs.slice(firstRow*longsPerRow, validRows*longsPerRow).map(String.valueOf)
+    val refStrings = morsel.refs.slice(firstRow*refsPerRow, validRows*refsPerRow).map(String.valueOf)
+
+    def widths(strings: Array[String], nCols: Int): Array[Int] = {
+      val widths = new Array[Int](nCols)
+      for {
+        row <- 0 until (validRows-firstRow)
+        col <- 0 until nCols
+      } {
+        widths(col) = math.max(widths(col), strings(row * nCols + col).length)
+      }
+      widths
+    }
+
+    val longWidths = widths(longStrings, longsPerRow)
+    val refWidths = widths(refStrings, refsPerRow)
+
+    val rows = new ArrayBuffer[String]
+    val sb = new mutable.StringBuilder()
+    for (row <- 0 until (validRows-firstRow)) {
+      sb ++= (if ((firstRow + row) == currentRow) " * " else "   ")
+
+      for (col <- 0 until longsPerRow) {
+        val width = longWidths(col)
+        sb ++= ("%" + width + "s").format(longStrings(row * longsPerRow + col))
+        sb += ' '
+      }
+      sb += ' '
+      sb += ' '
+      for (col <- 0 until refsPerRow) {
+        val width = refWidths(col)
+        sb ++= ("%" + width + "s").format(refStrings(row * refsPerRow + col))
+        sb += ' '
+      }
+      rows += sb.result()
+      sb.clear()
+    }
+    rows
+  }
 
   /**
     * Copies the whole row from input to this.

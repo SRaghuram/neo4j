@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -51,16 +52,23 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   private def executeOperators(resources: QueryResources,
                                queryProfiler: QueryProfiler): Unit = {
+    DebugSupport.logPipelines(MorselDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
     startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
     _output.resetToFirstRow()
-    for (op <- middleTasks) {
+    DebugSupport.logPipelines(MorselDebugSupport.prettyPostStartTask(startTask))
+    var i = 0
+    while (i < middleTasks.length) {
+      val op = middleTasks(i)
+      DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.middleOperators(i).workIdentity))
       op.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
       _output.resetToFirstRow()
+      i += 1
     }
   }
 
   private def executeOutputOperator(resources: QueryResources,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
+    DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
     val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources, queryProfiler)
     if (!outputOperatorState.canContinue) {
       // There is no continuation on the output operator,
