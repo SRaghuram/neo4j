@@ -751,23 +751,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "User 'foo' does not exist."
   }
 
-  ignore("should allow create user for user with only admin privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED")
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE customAdmin")
-    execute("GRANT ROLE customAdmin TO alice")
-    // TODO currently only way to grant admin privilege, should be replaced by proper DDL command when available
-    executeOnDefault("neo4j", "neo4j", "CALL dbms.security.grantPrivilegeToRole('customAdmin', 'write', 'system')")
-
-    // WHEN
-    executeOnSystem("alice", "abc", "CREATE USER bob SET PASSWORD 'builder'")
-
-    // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("customAdmin"), passwordChangeRequired = false), user("bob")))
-  }
-
   test("should fail create user for when password change required") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

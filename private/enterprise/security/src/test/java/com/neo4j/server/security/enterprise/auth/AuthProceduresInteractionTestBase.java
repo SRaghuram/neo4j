@@ -63,7 +63,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 }
                 return false;
             } );
-            assertThat( securityProcedures.count(), equalTo( 17L ) );
+            assertThat( securityProcedures.count(), equalTo( 15L ) );
         } );
     }
 

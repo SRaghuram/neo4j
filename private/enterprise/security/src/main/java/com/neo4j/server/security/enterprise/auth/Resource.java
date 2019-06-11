@@ -11,38 +11,6 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 public interface Resource
 {
-    // TODO Only used by procedures, should be removed as soon as the DDL is in place
-    static Resource parse( String type, String arg1, String arg2 ) throws InvalidArgumentsException
-    {
-        try
-        {
-            Resource.Type resource = Type.valueOf( type.toUpperCase() );
-            switch ( resource )
-            {
-            case GRAPH:
-                return new GraphResource();
-            case PROPERTY:
-                return new PropertyResource( arg1 );
-            case ALL_PROPERTIES:
-                return new AllPropertiesResource();
-            case TOKEN:
-                return new TokenResource();
-            case SCHEMA:
-                return new SchemaResource();
-            case SYSTEM:
-                return new SystemResource();
-            case PROCEDURE:
-                return new ProcedureResource( arg1, arg2 );
-            default:
-                throw new InvalidArgumentsException( String.format( "'%s' is not a supported resource", type ) );
-            }
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new InvalidArgumentsException( String.format( "'%s' is not a valid resource", type ) );
-        }
-    }
-
     void assertValidCombination( Action action ) throws InvalidArgumentsException;
 
     default String getArg1()
