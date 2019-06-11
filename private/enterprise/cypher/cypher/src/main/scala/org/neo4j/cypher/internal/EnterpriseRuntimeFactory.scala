@@ -13,9 +13,10 @@ object EnterpriseRuntimeFactory {
   val slotted = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, SlottedRuntime), CypherRuntimeOption.slotted)
   val compiledWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, CompiledRuntime), CypherRuntimeOption.compiled)
   val compiled = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, CompiledRuntime, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.compiled)
-  val morselWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime), CypherRuntimeOption.morsel)
-  val morsel = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime, CompiledRuntime, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.morsel)
-  val default = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, CompiledRuntime, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.default)
+  val morselWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime.MORSEL), CypherRuntimeOption.morsel)
+  val morsel = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime.MORSEL, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.morsel)
+  val parallelWithoutFallback = new FallbackRuntime[EnterpriseRuntimeContext](List(MorselRuntime.PARALLEL), CypherRuntimeOption.parallel)
+  val default = new FallbackRuntime[EnterpriseRuntimeContext](List(ProcedureCallOrSchemaCommandRuntime, MorselRuntime.MORSEL, SlottedRuntime, InterpretedRuntime), CypherRuntimeOption.default)
 
   def getRuntime(cypherRuntime: CypherRuntimeOption, disallowFallback: Boolean): CypherRuntime[EnterpriseRuntimeContext] =
     cypherRuntime match {
@@ -32,5 +33,7 @@ object EnterpriseRuntimeFactory {
       case CypherRuntimeOption.morsel => morsel
 
       case CypherRuntimeOption.default => default
+
+      case CypherRuntimeOption.parallel => parallelWithoutFallback
     }
 }

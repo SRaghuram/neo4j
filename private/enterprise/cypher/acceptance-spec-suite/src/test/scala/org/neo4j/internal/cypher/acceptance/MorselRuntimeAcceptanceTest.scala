@@ -34,40 +34,18 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
       case _ => assert(false)
     }
 
-  test("should not use morsel by default") {
-    //Given
-    val result = graph.execute("MATCH (n) RETURN n")
-
-    // When (exhaust result)
-    result.resultAsString()
-
-    //Then
-    result.getExecutionPlanDescription.getArguments.get("runtime") should not equal "MORSEL"
-  }
-
-  test("should be able to ask for morsel") {
-    //Given
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n")
-
-    // When (exhaust result)
-    result.resultAsString()
-
-    //Then
-    result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
-  }
-
-  test("should warn that morsels are experimental") {
+  test("should warn that runtime=parallel is experimental") {
     //Given
     import scala.collection.JavaConverters._
 
-    val result = graph.execute("CYPHER runtime=morsel EXPLAIN MATCH (n) RETURN n")
+    val result = graph.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n")
 
     // When (exhaust result)
     val notifications = result.getNotifications.asScala.toSet
 
     //Then
-    notifications.head.getDescription should equal("You are using an experimental feature (use the morsel runtime at " +
-                                                     "your own peril, not recommended to be run on production systems)")
+    notifications.head.getDescription should equal("You are using an experimental feature (The parallel runtime is " +
+                                                   "experimental and might suffer from stability and potentially correctness issues.)")
 
   }
 
@@ -88,7 +66,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val switch = new AtomicBoolean(false)
 
     // When executing a query that has multiple ProduceResult tasks
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
+    val result = graph.execute("CYPHER runtime=parallel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
 
     // Then these tasks should be executed non-concurrently
     result.accept(new ResultVisitor[Exception]() {
@@ -122,7 +100,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
       }
     }
 
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n1:N)--(m1)--(n2)--(m2) RETURN id(m2)")
+    val result = graph.execute("CYPHER runtime=parallel MATCH (n1:N)--(m1)--(n2)--(m2) RETURN id(m2)")
 
     var count = 0L
     while (result.hasNext) {
@@ -141,7 +119,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
     // When
     val result =
-      graph.execute( """ CYPHER runtime=morsel
+      graph.execute( """ CYPHER runtime=parallel
                        | MATCH (n)
                        | RETURN CASE
                        |          WHEN id(n) >= 0 THEN (n)-->()
@@ -171,27 +149,4 @@ class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceT
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> "1"
   )
-}
-
-/**
-  * These tests can only be run with cypher_hints_error = false
-  * since they test with queries that are not supported.
-  */
-class MorselRuntimeNotSupportedAcceptanceTest extends ExecutionEngineFunSuite {
-  override def databaseConfig(): Map[Setting[_], String] = Map(
-    GraphDatabaseSettings.cypher_hints_error -> "false",
-    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> "0"
-  )
-
-  test("should fallback if morsel doesn't support query") {
-    //Given
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n)-[*]->(m) RETURN n SKIP 1")
-
-    // When (exhaust result)
-    result.resultAsString()
-
-    //Then
-    result.getExecutionPlanDescription.getArguments.get("runtime") should not equal "MORSEL"
-  }
 }

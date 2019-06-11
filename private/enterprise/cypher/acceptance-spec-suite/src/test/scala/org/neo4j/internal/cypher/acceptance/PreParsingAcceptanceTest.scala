@@ -63,6 +63,28 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite {
     execute(query).executionPlanDescription() should havePlanner(DPPlannerName)
   }
 
+  test("runtime=morsel is default") {
+    val query = "RETURN 1"
+    execute(query).executionPlanDescription() should haveRuntime("MORSEL")
+  }
+
+  test("should fallback if morsel doesn't support query") {
+    val query = "MATCH (n)-[*]->(m) RETURN n SKIP 1"
+    execute(query).executionPlanDescription() should not equal "MORSEL"
+  }
+
+  for (runtime <- Seq("interpreted", "slotted", "morsel", "compiled", "parallel")) {
+
+    test(s"runtime=$runtime is selectable") {
+      val query = s"CYPHER runtime=$runtime RETURN 1"
+
+      execute(query).executionPlanDescription() should haveRuntime(runtime.toUpperCase())
+    }
+  }
+
   private def havePlanner(expected: PlannerName): Matcher[InternalPlanDescription] =
     haveAsRoot.aPlan.containingArgument(expected.name)
+
+  private def haveRuntime(expected: String): Matcher[InternalPlanDescription] =
+    haveAsRoot.aPlan.containingArgument(expected)
 }

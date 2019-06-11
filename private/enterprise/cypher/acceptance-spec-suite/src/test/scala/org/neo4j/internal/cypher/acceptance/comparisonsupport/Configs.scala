@@ -5,14 +5,14 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, MorselSingleThreaded, Slotted, SlottedWithCompiledExpressions}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, Slotted, SlottedWithCompiledExpressions}
 
 object Configs {
 
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
+  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
 
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
 
@@ -30,7 +30,7 @@ object Configs {
   def All: TestConfiguration = {
     val all = TestConfiguration(Planners.all, Runtimes.all)
     if (runOnlySafeScenarios) {
-      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel, Runtimes.MorselSingleThreaded))
+      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
     } else {
       all
     }

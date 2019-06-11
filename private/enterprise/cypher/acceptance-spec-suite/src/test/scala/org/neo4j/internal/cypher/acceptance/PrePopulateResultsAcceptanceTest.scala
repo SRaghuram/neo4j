@@ -109,17 +109,11 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   private def assertOnOnlyReturnValue(query: String, prePopulateResults: Boolean, f: AnyValue => Unit): Unit = {
     val prefixes =
       List(
-        // If we wanted to change tx-handling in bolt-server we would need to support 2.3, 3.1 and rule as well.
-        // However, if the goal is only to get rid of NodeProxy and RelationshipProxy in the runtime, we can
-        // get away with only populating in the current version. As we move to 4.0 there will only be the current
-        // runtime anyway.
-//        "CYPHER 2.3",
-//        "CYPHER 3.1",
-//        "CYPHER planner=rule",
         "CYPHER runtime=interpreted",
         "CYPHER runtime=slotted",
         "CYPHER runtime=compiled",
         "CYPHER runtime=morsel",
+        "CYPHER runtime=parallel",
         ""
       )
 

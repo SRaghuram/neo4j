@@ -74,8 +74,8 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory) {
 
-  def getQueryExecutor(debugOptions: Set[String]): QueryExecutor =
-    if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)
+  def getQueryExecutor(parallelExecution: Boolean, debugOptions: Set[String]): QueryExecutor =
+    if ((!parallelExecution || MorselOptions.singleThreaded(debugOptions)) && !isAlreadySingleThreaded)
       new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
     else
       queryExecutor

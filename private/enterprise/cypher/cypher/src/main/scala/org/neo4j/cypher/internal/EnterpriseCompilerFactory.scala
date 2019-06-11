@@ -120,6 +120,6 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                              compileExpressions)
 
   override def assertAllReleased(): Unit = {
-    runtimeEnvironment.getQueryExecutor(Set.empty).assertAllReleased()
+    runtimeEnvironment.getQueryExecutor(parallelExecution = true, Set.empty).assertAllReleased()
   }
 }

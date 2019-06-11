@@ -25,8 +25,15 @@ import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
-object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
-  override def name: String = "morsel"
+object MorselRuntime {
+  val MORSEL = new MorselRuntime(false, "morsel")
+  val PARALLEL = new MorselRuntime(true, "parallel")
+}
+
+class MorselRuntime(parallelExecution: Boolean,
+                    override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] {
+
+  private val runtimeName = RuntimeName(name)
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
@@ -67,7 +74,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     DebugLog.logDiff("FuseOperators")
     //=======================================================
 
-    val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
+    val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution, context.debugOptions)
 
     MorselExecutionPlan(executablePipelines,
       executionGraphDefinition,
@@ -115,12 +122,15 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               doProfile)
     }
 
-    override def runtimeName: RuntimeName = MorselRuntimeName
+    override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
 
     override def metadata: Seq[Argument] = Nil
 
-    override def notifications: Set[InternalNotification] = Set(ExperimentalFeatureNotification("use the morsel runtime at your own peril, " +
-      "not recommended to be run on production systems"))
+    override def notifications: Set[InternalNotification] =
+      if (parallelExecution)
+        Set(ExperimentalFeatureNotification(
+          "The parallel runtime is experimental and might suffer from stability and potentially correctness issues."))
+      else Set.empty
   }
 
   class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],

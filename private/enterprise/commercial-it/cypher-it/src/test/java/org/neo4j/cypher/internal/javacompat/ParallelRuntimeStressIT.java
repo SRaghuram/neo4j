@@ -28,16 +28,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class MorselRuntimeStressIT
+public class ParallelRuntimeStressIT
 {
     private static final int N_THREADS = 10;
     private static final int ITERATIONS = 10;
     private static final int N_NODES = 100;
     private static final Label LABEL = Label.label( "LABEL" );
-    private static final String EXPAND_QUERY = "CYPHER runtime=morsel MATCH (:LABEL)-->(n:LABEL) RETURN n";
-    private static final String MATCH_NODE_QUERY = "CYPHER runtime=morsel MATCH (n:LABEL) RETURN n";
-    private static final String SYNTAX_ERROR_QUERY = "CYPHER runtime=morsel MATHC (n) RETURN n";
-    private static final String RUNTIME_ERROR_QUERY = "CYPHER runtime=morsel MATCH (n) RETURN size($a)";
+    private static final String EXPAND_QUERY = "CYPHER runtime=parallel MATCH (:LABEL)-->(n:LABEL) RETURN n";
+    private static final String MATCH_NODE_QUERY = "CYPHER runtime=parallel MATCH (n:LABEL) RETURN n";
+    private static final String SYNTAX_ERROR_QUERY = "CYPHER runtime=parallel MATHC (n) RETURN n";
+    private static final String RUNTIME_ERROR_QUERY = "CYPHER runtime=parallel MATCH (n) RETURN size($a)";
     private static final Map<String,Object> PARAMS = new HashMap<>();
 
     static
