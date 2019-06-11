@@ -14,7 +14,6 @@ import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -539,7 +538,6 @@ class SystemGraphRealmIT
     }
 
     @Test
-    @Disabled
     void shouldHandleCustomDefaultDatabase() throws Throwable
     {
         dbManager.getManagementService().createDatabase( "foo" );

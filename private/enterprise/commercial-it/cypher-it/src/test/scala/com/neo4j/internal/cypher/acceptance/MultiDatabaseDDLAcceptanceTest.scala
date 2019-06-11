@@ -61,6 +61,59 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result2.toList should be(empty)
   }
 
+  test("should show database for switch of default database") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+    execute("CREATE database foo")
+
+    // WHEN
+    val neoResult = execute("SHOW DATABASE neo4j")
+    val fooResult = execute("SHOW DATABASE foo")
+
+    // THEN
+    neoResult.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
+    fooResult.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+
+    // GIVEN
+    config.augment(default_database, "foo")
+    initSystemGraph(config)
+
+    // WHEN
+    val neoResult2 = execute("SHOW DATABASE neo4j")
+    val fooResult2 = execute("SHOW DATABASE foo")
+
+    // THEN
+    neoResult2.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> false)))
+    fooResult2.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+  }
+
+  test("should start a stopped database when it becomes default") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+
+    managementService.createDatabase("foo")
+    managementService.shutdownDatabase("foo")
+
+    // WHEN
+    val result = execute("SHOW DATABASE foo")
+
+    // THEN
+    result.toSet should be(Set(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+
+    // GIVEN
+    config.augment(default_database, "foo")
+    initSystemGraph(config)
+
+    // WHEN
+    val result2 = execute("SHOW DATABASE foo")
+
+    // THEN
+    // The new default database should be started when the system is restarted
+    result2.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+  }
+
   test("should show database using mixed case name") {
     // GIVEN
     setup(defaultConfig)
@@ -130,6 +183,36 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
+  test("should show databases for switch of default database") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+    execute("CREATE database foo")
+
+    // WHEN
+    val result = execute("SHOW DATABASES")
+
+    // THEN
+    result.toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+    // GIVEN
+    config.augment(default_database, "foo")
+    initSystemGraph(config)
+
+    // WHEN
+    val result2 = execute("SHOW DATABASES")
+
+    // THEN
+    result2.toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+  }
+
   test("should fail when showing databases when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -168,6 +251,29 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     result2.toList should be(empty)
+  }
+
+  test("should show correct default database for switch of default database") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DATABASE")
+
+    // THEN
+    result.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus)))
+
+    // GIVEN
+    execute("CREATE database foo")
+    config.augment(default_database, "foo")
+    initSystemGraph(config)
+
+    // WHEN
+    val result2 = execute("SHOW DEFAULT DATABASE")
+
+    // THEN
+    result2.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus)))
   }
 
   test("should fail when showing default database when not on system database") {
@@ -704,11 +810,15 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
 
-  protected def setup(config: Config) {
+  private def setup(config: Config): Unit = {
     managementService = graphDatabaseFactory(new File("test")).impermanent().setConfigRaw(config.getRaw).setInternalLogProvider(logProvider).build()
     graphOps = managementService.database(SYSTEM_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
 
+    initSystemGraph(config)
+  }
+
+  private def initSystemGraph(config: Config): Unit = {
     val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge(), databaseIdRepository)
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
