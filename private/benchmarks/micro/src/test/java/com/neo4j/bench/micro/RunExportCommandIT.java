@@ -8,11 +8,13 @@ package com.neo4j.bench.micro;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.model.BenchmarkTool;
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.Project;
 import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
+import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
@@ -143,7 +145,13 @@ public class RunExportCommandIT
         BenchmarkTool expectedBenchmarkTool =
                 new BenchmarkTool( Repository.MICRO_BENCH, "2", "Trinity", "master" );
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
-        assertThat( report.baseNeo4jConfig().toMap().size(), equalTo( 6 ) );
+
+        int expectedConfigSize = Neo4jConfig.withDefaults()
+                                            .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+                                            .toMap()
+                                            .size();
+
+        assertThat( BenchmarkUtil.prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +
