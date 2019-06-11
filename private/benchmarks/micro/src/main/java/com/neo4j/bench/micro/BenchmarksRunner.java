@@ -139,11 +139,6 @@ class BenchmarksRunner extends Runner
                                                        Path workDir,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
-        if ( extendedAnnotationSupport )
-        {
-            Class<?> benchmarkClass = BenchmarkDiscoveryUtils.benchmarkClassForName( benchmark.className() );
-            optionsBuilder = JmhOptionsUtil.applyAnnotations( benchmarkClass, optionsBuilder );
-        }
         return augmentOptions( optionsBuilder, workDir, benchmark );
     }
 
@@ -158,7 +153,7 @@ class BenchmarksRunner extends Runner
                                                           Path workDir,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, workDir, benchmark );
+        return augmentOptions( optionsBuilder, workDir, benchmark ).forks( forkCount );
     }
 
     @Override
@@ -183,7 +178,6 @@ class BenchmarksRunner extends Runner
         return optionsBuilder
                 .param( PARAM_STORES_DIR, workDir.toAbsolutePath().toString() )
                 .param( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() )
-                .forks( forkCount )
                 .warmupIterations( iterations )
                 .warmupTime( duration )
                 .measurementIterations( iterations )
