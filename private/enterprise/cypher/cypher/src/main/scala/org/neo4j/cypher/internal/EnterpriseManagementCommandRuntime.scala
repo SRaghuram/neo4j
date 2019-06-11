@@ -10,6 +10,7 @@ import java.util
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.auth._
+import org.apache.shiro.authc.AuthenticationException
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
@@ -151,8 +152,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case AlterUser(_, _, Some(_), _, _) =>
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
-    // SET MY PASSWORD TO 'password'
-    case SetOwnPassword(Some(password), None) => (_, _, securityContext) =>
+    // SET MY PASSWORD FROM 'currentPassword' TO 'newPassword'
+    case SetOwnPassword(Some(newPassword), None, Some(currentPassword), None) => (_, _, securityContext) =>
       val query =
         """MATCH (user:User {name: $name})
           |WITH user, user.credentials AS oldCredentials
@@ -165,14 +166,16 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         query,
         VirtualValues.map(Array("name", "credentials"),
           Array(Values.stringValue(currentUser),
-            Values.stringValue(authManager.createCredentialForPassword(validatePassword(password)).serialize()))),
+            Values.stringValue(authManager.createCredentialForPassword(validatePassword(newPassword)).serialize()))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$currentUser' does not exist."))) // TODO should be current user so can this even happen?
           .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to change its own password.", e))
           .handleResult((_, value) => {
             val maybeThrowable = {
               val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
-              if (oldCredentials.matchesPassword(password))
+              if (!oldCredentials.matchesPassword(currentPassword))
+                Some(new AuthenticationException("Invalid principal or credentials."))
+              else if (oldCredentials.matchesPassword(newPassword))
                 Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
               else
                 None
@@ -182,12 +185,16 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           })
       )
 
-    // SET MY PASSWORD TO $password
-    case SetOwnPassword(_, Some(_)) =>
+    // SET MY PASSWORD FROM currentPassword TO $newPassword
+    case SetOwnPassword(_, Some(_), _, _) =>
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
-    // SET MY PASSWORD TO password
-    case SetOwnPassword(_, _) =>
+    // SET MY PASSWORD FROM $currentPassword TO newPassword
+    case SetOwnPassword(_, _, _, Some(_)) =>
+      throw new IllegalStateException("Did not resolve parameters correctly.")
+
+    // SET MY PASSWORD FROM currentPassword TO newPassword
+    case SetOwnPassword(_, _, _, _) =>
       throw new IllegalStateException("Password not correctly supplied.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
