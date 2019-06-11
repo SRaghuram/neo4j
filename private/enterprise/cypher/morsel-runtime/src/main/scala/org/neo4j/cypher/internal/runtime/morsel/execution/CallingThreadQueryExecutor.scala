@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryProfile
-import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
+import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 /**
@@ -21,7 +21,9 @@ import org.neo4j.values.AnyValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor with WorkerWaker {
+class CallingThreadQueryExecutor(morselSize: Int,
+                                 transactionBinder: TransactionBinder,
+                                 cursors: CursorFactory) extends QueryExecutor with WorkerWaker {
 
   override def wakeOne(): Unit = ()
 
@@ -43,7 +45,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
-    val resources = new QueryResources(queryContext.transactionalContext.cursors)
+    val resources = new QueryResources(cursors)
     val tracer = schedulerTracer.traceQuery()
     val tracker = StandardStateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,

@@ -11,7 +11,7 @@ import java.nio.file.{Files, Path}
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -36,8 +36,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     Files.delete(tempCSVPath)
   }
 
-  // fixed in follow up PR
-  ignore("should trace big expand query correctly") {
+  test("should trace big expand query correctly") {
 
     // GIVEN
     val SIZE = 10
@@ -93,7 +92,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     queryIds.size should be(1)
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be <= WORKER_COUNT
-    if (!isWindows) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
+    if (!isWindows && runtime == MorselRuntime.PARALLEL) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
                       // omit this assumption to avoid getting a flaky test.
       executionThreadIds.size should be > 1
     }

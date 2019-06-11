@@ -81,35 +81,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
       }
     })
   }
-
-  // this is fixed in the follow up PR
-  ignore("should big expand query without crashing") {
-    // Given a big network
-    val SIZE = 30
-    val ns = new ArrayBuffer[Node]()
-    val ms = new ArrayBuffer[Node]()
-
-    graph.inTx {
-      for (_ <- 1 to SIZE) ns += createLabeledNode("N")
-      for (_ <- 1 to SIZE) ms += createLabeledNode("M")
-    }
-
-    graph.inTx {
-      for {n <- ns; m <- ms} {
-        relate(n, m, "R")
-      }
-    }
-
-    val result = graph.execute("CYPHER runtime=parallel MATCH (n1:N)--(m1)--(n2)--(m2) RETURN id(m2)")
-
-    var count = 0L
-    result.accept((_: Result.ResultRow) => {
-      count += 1L
-      true
-    })
-    count should be(756900)
-  }
-
+  
   ignore("don't stall for nested plan expressions") {
     // Given
     graph.execute( """CREATE (a:A)
@@ -136,7 +108,8 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   override def databaseConfig(): Map[Setting[_], String] = Map(
     GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> "0"
+    GraphDatabaseSettings.cypher_worker_count -> "0",
+    GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false"
   )
 }
 
@@ -145,6 +118,7 @@ class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceT
   override def databaseConfig(): Map[Setting[_], String] = Map(
     GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> "1"
+    GraphDatabaseSettings.cypher_worker_count -> "1",
+    GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false"
   )
 }

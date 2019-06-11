@@ -101,8 +101,10 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   override def close(): Unit = {
-    if (cached != null)
+    if (cached != null) {
       cached.close()
+      cached = null.asInstanceOf[CURSOR]
+    }
   }
 
   def getLiveCount: Long = liveCount

@@ -38,7 +38,7 @@ object RuntimeEnvironment {
                           lifeSupport: LifeSupport): QueryExecutor =
     config.scheduler match {
       case SingleThreaded =>
-        new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
+        new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER, cursors)
       case Simple | LockFree =>
         val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
@@ -76,7 +76,7 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
 
   def getQueryExecutor(parallelExecution: Boolean, debugOptions: Set[String]): QueryExecutor =
     if ((!parallelExecution || MorselOptions.singleThreaded(debugOptions)) && !isAlreadySingleThreaded)
-      new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
+      new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER, cursors)
     else
       queryExecutor
 
