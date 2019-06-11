@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.morsel.execution.QueryExecutor
+import org.neo4j.cypher.internal.runtime.morsel.execution.{ProfiledQuerySubscription, QueryExecutor}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
@@ -155,17 +155,18 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def request(numberOfRecords: Long): Unit = {
       if (querySubscription == null) {
         resultRequested = true
-        val (sub, prof) = queryExecutor.execute(executablePipelines,
-                                                executionGraphDefinition,
-                                                inputDataStream,
-                                                queryContext,
-                                                params,
-                                                schedulerTracer,
-                                                queryIndexes,
-                                                nExpressionSlots,
-                                                prePopulateResults,
-                                                subscriber,
-                                                doProfile)
+        val ProfiledQuerySubscription(sub, prof) = queryExecutor.execute(
+          executablePipelines,
+          executionGraphDefinition,
+          inputDataStream,
+          queryContext,
+          params,
+          schedulerTracer,
+          queryIndexes,
+          nExpressionSlots,
+          prePopulateResults,
+          subscriber,
+          doProfile)
 
         querySubscription = sub
         _queryProfile = prof

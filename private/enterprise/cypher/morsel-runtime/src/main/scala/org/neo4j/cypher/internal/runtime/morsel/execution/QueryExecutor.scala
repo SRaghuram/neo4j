@@ -32,7 +32,7 @@ trait QueryExecutor {
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber,
-                              doProfile: Boolean): (QuerySubscription, QueryProfile)
+                              doProfile: Boolean): ProfiledQuerySubscription
 
   /**
     * Assert that all resources that have been acquired for query execution by any query have also been released
@@ -40,3 +40,5 @@ trait QueryExecutor {
     */
   def assertAllReleased(): Unit
 }
+
+case class ProfiledQuerySubscription(subscription: QuerySubscription, profile: QueryProfile)

@@ -39,7 +39,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
-                                       doProfile: Boolean): (QuerySubscription, QueryProfile) = {
+                                       doProfile: Boolean): ProfiledQuerySubscription = {
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
@@ -81,6 +81,6 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                                          tracer,
                                                          profiler,
                                                          worker)
-    (executingQuery, profiler)
+    ProfiledQuerySubscription(executingQuery, profiler)
   }
 }

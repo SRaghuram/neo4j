@@ -82,7 +82,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
-                                       doProfile: Boolean): (QuerySubscription, QueryProfile) = {
+                                       doProfile: Boolean): ProfiledQuerySubscription = {
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
@@ -129,6 +129,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
     queryManager.addQuery(executingQuery)
     executionState.initializeState()
-    (tracker, profiler)
+    ProfiledQuerySubscription(tracker, profiler)
   }
 }
