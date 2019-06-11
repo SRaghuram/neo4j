@@ -5,6 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.util
+
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher._
 import org.neo4j.graphdb.QueryExecutionException
@@ -811,7 +813,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
-  test("should fail to change own password to invalid password") {
+  test("should fail when changing own password to invalid password") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -833,6 +835,90 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'bar'")
       // THEN
     } should have message "Old password and new password cannot be the same."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+  }
+
+  test("should change own password as parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("password", "baz")
+
+    // WHEN
+    executeOnSystem("foo", "bar", "SET MY PASSWORD TO $password", params = parameter)
+
+    // THEN
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail when changing own password to list parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    val passwordList = new util.ArrayList[String]()
+    passwordList.add("baz")
+    passwordList.add("boo")
+    parameter.put("password", passwordList)
+
+    the[QueryExecutionException] thrownBy { // the ParameterWrongTypeException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "SET MY PASSWORD TO $password", params = parameter)
+      // THEN
+    } should have message "Only string values are accepted as password, got: List"
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+  }
+
+  test("should fail when changing own password to missing parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "SET MY PASSWORD TO $password")
+      // THEN
+    } should have message "Expected parameter(s): password"
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+  }
+
+  test("should fail when changing own password to string and parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("password", "imAParameter")
+
+    // WHEN
+    val exception = the[QueryExecutionException] thrownBy { // the Syntax exception gets wrapped
+      executeOnSystem("foo", "bar", "SET MY PASSWORD TO 'imAString'+$password", params = parameter)
+    }
+    // THEN
+    println(exception.getMessage)
+    exception.getMessage should include("Invalid input '+': expected whitespace, ';' or end of input")
 
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)

@@ -154,14 +154,15 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case AlterUser(_, _, Some(_), _, _) =>
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
-    case SetOwnPassword(initialPassword) => (_, _, currentUser) =>
+    // SET MY PASSWORD TO 'password'
+    case SetOwnPassword(Some(initialStringPassword), None) => (_, _, currentUser) =>
       val query =
         """MATCH (user:User {name: $name})
           |WITH user, user.credentials AS oldCredentials
           |SET user.credentials = $credentials
           |SET user.passwordChangeRequired = false
           |RETURN oldCredentials""".stripMargin
-      val password = UTF8.encode(initialPassword)
+      val password = UTF8.encode(initialStringPassword)
 
       UpdatingSystemCommandExecutionPlan("SetOwnPassword", normalExecutionEngine,
         query,
@@ -183,6 +184,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             maybeThrowable
           })
       )
+
+    // SET MY PASSWORD TO $password
+    case SetOwnPassword(_, Some(_)) =>
+      throw new IllegalStateException("Did not resolve parameters correctly.")
+
+    // SET MY PASSWORD TO password
+    case SetOwnPassword(_, _) =>
+      throw new IllegalStateException("Password not correctly supplied.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _, _) =>
