@@ -137,7 +137,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.aNodeWithLabel", params = Map("label" -> "Cat"))
 
     result.size should equal(1)
@@ -146,11 +146,11 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call procedure with internal types") {
     registerTestProcedures()
 
-    executeWith(Configs.All,
+    executeWith(Configs.InterpretedAndSlotted,
                 "CALL org.neo4j.internalTypes()").toList should equal(List(Map("textValue" -> "Dog", "mapValue" -> Map("key" -> 1337))))
-    executeWith(Configs.All,
+    executeWith(Configs.InterpretedAndSlotted,
                 "CALL org.neo4j.internalTypes('Cat')").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 1337))))
-    executeWith(Configs.All,
+    executeWith(Configs.InterpretedAndSlotted,
                 "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
   }
 

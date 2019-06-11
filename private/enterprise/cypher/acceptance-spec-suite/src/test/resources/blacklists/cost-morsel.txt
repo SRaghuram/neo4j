@@ -35,6 +35,7 @@ Feature "ConstraintAcceptance": Scenario "Works with property repeated in litera
 Feature "Create": Scenario "Dependencies in creating multiple nodes"
 Feature "Create": Scenario "Dependencies in creating multiple rels"
 Feature "DeleteAcceptance": Scenario "Return properties from deleted node"
+Feature "ExplainAcceptance": Scenario "Explanation of standalone procedure call"
 Feature "ExplainAcceptance": Scenario "Explanation of in-query procedure call"
 Feature "ForeachAcceptance": Scenario "Add labels inside FOREACH"
 Feature "ForeachAcceptance": Scenario "Inside nested FOREACH"
