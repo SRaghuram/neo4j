@@ -43,7 +43,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.neo4j.commandline.admin.AdminTool;
+import org.neo4j.cli.AdminTool;
 import org.neo4j.test.proc.ProcessUtil;
 
 import static com.neo4j.bench.client.model.Repository.IMPORT_BENCH;
@@ -211,7 +211,6 @@ public class Main
         Benchmark benchmark = Benchmark.benchmarkFor( "import benchmark", size, size + "import", Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
         String[] importArgs = {
                 "import",
-                "--mode", "csv",
                 "--database", databaseName,
                 "--nodes", CSV_LOCATION + size + "/nodes.csv",
                 "--relationships", CSV_LOCATION + size + "/relationships.csv",

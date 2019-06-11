@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -54,7 +53,6 @@ class BackupStrategyWrapperTest
     private TestDirectory testDirectory;
 
     private final BackupStrategy backupStrategyImplementation = mock( BackupStrategy.class );
-    private final OutsideWorld outsideWorld = mock( OutsideWorld.class );
     private final BackupCopyService backupCopyService = mock( BackupCopyService.class );
 
     private BackupStrategyWrapper backupWrapper;
@@ -81,7 +79,6 @@ class BackupStrategyWrapperTest
         availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" ).toPath();
 
         when( pageCache.map( any(), anyInt(), any() ) ).thenReturn( mock( PagedFile.class, RETURNS_MOCKS ) );
-        when( outsideWorld.fileSystem() ).thenReturn( fileSystemAbstraction );
         when( backupCopyService.findAnAvailableLocationForNewFullBackup( any() ) ).thenReturn( availableFreshBackupLocation );
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
         when( logProvider.getLog( (Class<?>) any() ) ).thenReturn( log );
