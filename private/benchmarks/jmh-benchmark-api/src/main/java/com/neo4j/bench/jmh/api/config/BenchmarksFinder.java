@@ -55,6 +55,8 @@ public class BenchmarksFinder
                             .filter( classInfo -> !classInfo.getName().contains( ".generated." ) )
                             .map( ClassPath.ClassInfo::load )
                             .filter( clazz -> !Modifier.isAbstract( clazz.getModifiers() ) )
+                            // ignore anonymous benchmark classes (awkwardly, they are sometimes created for testing purposes)
+                            .filter( clazz -> !clazz.isAnonymousClass() )
                             // has benchmark method
                             .filter( BenchmarksFinder::isMaybeBenchmark )
                             .collect( toList() );
