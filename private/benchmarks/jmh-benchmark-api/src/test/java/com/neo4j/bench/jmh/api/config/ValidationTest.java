@@ -19,9 +19,9 @@ import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.UNRECOGN
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ValidationTest
 {
@@ -29,7 +29,7 @@ public class ValidationTest
     public void shouldReportIfValid()
     {
         Validation validation = new Validation();
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         assertThat( validation.report(), equalTo( "Validation Passed" ) );
     }
 
@@ -37,72 +37,71 @@ public class ValidationTest
     public void shouldReportAllValidationErrors()
     {
         Validation validation = new Validation();
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         validation.paramConfiguredWithoutEnablingDisablingBenchmark( "b0", "p0a" );
 
-        assertEquals( validation.report(), validation.errors(), singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
+        assertEquals( validation.errors(), singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ), validation.report() );
 
         validation.paramConfiguredWithoutEnablingDisablingBenchmark( "b0", "p0b" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
+        assertEquals( validation.errors(),
+                      singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ),
+                      validation.report() );
 
         validation.paramOfEnabledBenchmarkConfiguredWithNoValues( "b1", "p1" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
-                              PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
+                              PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ),
+                      validation.report() );
 
         validation.configuredBenchmarkDoesNotExist( "b3" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
-                              CONFIGURED_BENCHMARK_DOES_NOT_EXIST ) );
+                              CONFIGURED_BENCHMARK_DOES_NOT_EXIST ),
+                      validation.report() );
 
         validation.configuredParameterDoesNotExist( "b4", "b4" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
                               CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
-                              CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
+                              CONFIGURED_PARAMETER_DOES_NOT_EXIST ),
+                      validation.report() );
 
         validation.configuredValueIsNotAllowed( "b5", "p5", newHashSet( "a", "b" ), "-1" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
                               CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
                               CONFIGURED_PARAMETER_DOES_NOT_EXIST,
-                              CONFIGURED_VALUE_IS_NOT_ALLOWED ) );
+                              CONFIGURED_VALUE_IS_NOT_ALLOWED ),
+                      validation.report() );
 
         validation.duplicateAllowedValue( "b6", "p6", new String[]{"a", "a"} );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
                               CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
                               CONFIGURED_PARAMETER_DOES_NOT_EXIST,
                               CONFIGURED_VALUE_IS_NOT_ALLOWED,
-                              DUPLICATE_ALLOWED_VALUE ) );
+                              DUPLICATE_ALLOWED_VALUE ),
+                      validation.report() );
 
         validation.duplicateBaseValue( "b7", "p7", new String[]{"b", "b"} );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
@@ -110,12 +109,12 @@ public class ValidationTest
                               CONFIGURED_PARAMETER_DOES_NOT_EXIST,
                               CONFIGURED_VALUE_IS_NOT_ALLOWED,
                               DUPLICATE_ALLOWED_VALUE,
-                              DUPLICATE_BASE_VALUE ) );
+                              DUPLICATE_BASE_VALUE ),
+                      validation.report() );
 
         validation.unrecognizedConfigFileEntry( "p8" );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
+        assertEquals( validation.errors(),
                       newHashSet(
                               PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK,
                               PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES,
@@ -124,7 +123,8 @@ public class ValidationTest
                               CONFIGURED_VALUE_IS_NOT_ALLOWED,
                               DUPLICATE_ALLOWED_VALUE,
                               DUPLICATE_BASE_VALUE,
-                              UNRECOGNIZED_CONFIG_FILE_ENTRY ) );
+                              UNRECOGNIZED_CONFIG_FILE_ENTRY ),
+                      validation.report() );
 
         assertFalse( validation.isValid() );
 
