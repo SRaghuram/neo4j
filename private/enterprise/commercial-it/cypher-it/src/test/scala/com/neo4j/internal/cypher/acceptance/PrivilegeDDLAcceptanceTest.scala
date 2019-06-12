@@ -1953,12 +1953,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // helper variable, methods and class
 
-  private val neo4jUser = user("neo4j", Seq("admin"))
-
-  private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
-    Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
-  }
-
   private def setupMultilabelData = {
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {foo:1, bar:2})")

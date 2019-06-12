@@ -16,8 +16,6 @@ import org.neo4j.server.security.auth.SecurityTestUtils
 import scala.collection.Map
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
-  private val neo4jUser = user("neo4j", Seq("admin"))
-
   // Tests for showing users
 
   test("should show default user") {
@@ -331,7 +329,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -340,7 +338,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "Deleting yourself (user 'neo4j') is not allowed."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
   }
 
   test("should fail when dropping non-existing user") {
@@ -890,10 +888,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   // helper methods
-
-  private def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true) = {
-    Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
-  }
 
   private def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
     val login = authManager.login(SecurityTestUtils.authToken(username, password))

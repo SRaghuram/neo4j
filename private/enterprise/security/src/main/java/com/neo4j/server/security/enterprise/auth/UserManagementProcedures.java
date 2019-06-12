@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -22,13 +23,15 @@ public class UserManagementProcedures extends AuthProceduresBase
 {
 
     @Admin
+    @SystemProcedure
     @Description( "Create a new user." )
     @Procedure( name = "dbms.security.createUser", mode = DBMS )
     public void createUser( @Name( "username" ) String username, @Name( "password" ) String password,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException
     {
-        userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
+        graph.execute( String.format( "CREATE USER `%s` SET PASSWORD '%s' %s", username, password,
+                requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" ) );
     }
 
     @Description( "Change the current user's password." )

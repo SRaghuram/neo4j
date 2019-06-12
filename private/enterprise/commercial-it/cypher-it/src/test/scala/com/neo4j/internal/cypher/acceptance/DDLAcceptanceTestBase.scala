@@ -23,6 +23,9 @@ import org.neo4j.server.security.auth.SecurityTestUtils
 import scala.collection.Map
 
 abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
+  val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
+  val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
+
   val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
@@ -71,6 +74,10 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)
     eengine = ExecutionEngineHelper.createEngine(graph)
+  }
+
+  def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
+    Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {

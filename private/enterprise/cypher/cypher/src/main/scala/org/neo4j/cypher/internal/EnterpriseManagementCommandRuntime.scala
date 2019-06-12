@@ -45,8 +45,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     val (withSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
-    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable)
-      .applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
+    if (logicalToExecutable.isDefinedAt(withSlottedParameters) || communityCommandRuntime.logicalToExecutable.isDefinedAt(withSlottedParameters)) {
+      (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
+    } else {
+      ProcedureCallOrSchemaCommandRuntime.logicalToExecutable.applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
+    }
   }
 
   private lazy val authManager = {
