@@ -114,7 +114,7 @@ echo "Neo4j Directory                                                : ${deploym
 
 function runExport {
     #shellcheck disable=SC2068
-    ${jvm}  -XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
+    ${jvm}  -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
             -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
             -jar "${jar_path}" run-workload  \
             --workload "${workload}" \
