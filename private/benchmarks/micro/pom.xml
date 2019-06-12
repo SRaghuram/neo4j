@@ -34,6 +34,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <!-- overwriting scope so maven shade plugin includes includes artifact in final jar -->
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>jmh-benchmark-api</artifactId>
             <version>${project.version}</version>
