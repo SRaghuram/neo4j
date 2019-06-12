@@ -112,7 +112,7 @@ public class ForkRunner
 
     private static void printForkInfo( String forkName, Query query, RunnableFork fork )
     {
-        System.out.println( format( "Fork (%s) for query %s: %s", fork.getClass().getSimpleName(), query.name(), forkName ) );
+        System.out.println( format( "Fork (%s): %s, Query: %s", fork.getClass().getSimpleName(), forkName, query.name() ) );
     }
 
     private static void runFork( Query query,
