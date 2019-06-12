@@ -325,7 +325,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute(s"DROP ROLE ${PredefinedRoles.READER}")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(Map("role" -> PredefinedRoles.READER, "is_built_in" -> true)))
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true)))
   }
 
   test("should fail when dropping non-existing role") {
