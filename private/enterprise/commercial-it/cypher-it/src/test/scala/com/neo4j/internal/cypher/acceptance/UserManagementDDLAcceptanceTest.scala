@@ -798,6 +798,23 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
+  test("should change own password when password change is required") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor")))
+
+    // WHEN
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("foo", Seq("editor"), passwordChangeRequired = false))
+    testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
   ignore("should change own password when user has no role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1170,15 +1187,24 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
   }
 
-  ignore("should allow alter own user password without admin") {
+  test("should allow alter own user password without admin only through 'ALTER CURRENT USER SET PASSWORD' command") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc'")
     execute("GRANT ROLE editor TO alice")
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
 
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "ALTER USER alice SET PASSWORD 'xyz' CHANGE NOT REQUIRED")
+      // THEN
+    } should have message PERMISSION_DENIED
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
+
     // WHEN
-    executeOnSystem("alice", "abc", "ALTER USER alice SET PASSWORD 'xyz' CHANGE NOT REQUIRED")
+    executeOnSystem("alice", "abc", "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO 'xyz'")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
