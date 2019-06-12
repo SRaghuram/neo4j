@@ -12,7 +12,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYS
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.database.TestDatabaseIdRepository
@@ -330,46 +330,45 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Empty name
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE ``")
       // THEN
     } should have message "The provided database name is empty."
 
     // Starting on invalid character
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE _default")
       // THEN
     } should have message "Database name '_default' is not starting with an ASCII alphabetic character."
 
     // Has prefix 'system'
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE `system-mine`")
       // THEN
     } should have message "Database name 'system-mine' is invalid, due to the prefix 'system'."
 
     // Contains invalid characters
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE `myDbWith_and%`")
       // THEN
     } should have message
-      """Database name 'mydbwith_and%' contains illegal characters.
-        |Use simple ascii characters, numbers, dots and dashes.""".stripMargin
+      "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes."
 
     // Too short name
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
       execute("CREATE DATABASE me")
       // THEN
     } should have message "The provided database name must have a length between 3 and 63 characters."
 
     // Too long name
-    the[InvalidArgumentException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
+      val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
       execute(s"CREATE DATABASE `$name`")
       // THEN
     } should have message "The provided database name must have a length between 3 and 63 characters."
