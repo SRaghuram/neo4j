@@ -18,8 +18,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   private val usesExpandInto = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(Into)"))
   private val usesAntiSemiApply = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiSemiApply"))
   private val noTriadic = ComparePlansWithAssertion(_ should not(includeSomewhere.aPlan("TriadicSelection")))
-
-  ignore("find friends of others") {
+  test("find friends of others") {
     // given
     execute( """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c"}), (d:Person{name:"d"})
                |CREATE (a)-[:FRIEND]->(c), (b)-[:FRIEND]->(c), (c)-[:FRIEND]->(d)""".stripMargin)
@@ -37,7 +36,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       Map("l" -> "d", "r" -> "b")))
   }
 
-  ignore("find friendly people") {
+  test("find friendly people") {
     // given
     execute( """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c"}), (d:Person{name:"d"}), (e:Person{name:"e"})
                |CREATE (a)-[:FRIEND]->(c), (b)-[:FRIEND]->(d), (c)-[:FRIEND]->(e), (d)-[:FRIEND]->(e)""".stripMargin)
@@ -55,7 +54,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       Map("l" -> "e", "r" -> "b")))
   }
 
-  ignore("should not find my friends") {
+  test("should not find my friends") {
     // given
     execute(
       """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c"})
@@ -89,7 +88,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     result.toSet should equal(Set(Map("l" -> "a", "m" -> "c", "r" -> "d")))
   }
 
-  ignore("Triadic should support StackOverflow example") {
+  test("Triadic should support StackOverflow example") {
     // GIVEN
     val create_contraints =
       """
