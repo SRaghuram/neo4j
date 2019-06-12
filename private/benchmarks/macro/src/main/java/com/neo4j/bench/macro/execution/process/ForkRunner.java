@@ -68,8 +68,8 @@ public class ForkRunner
                                                   doFork,
                                                   jvmArgs,
                                                   resources );
-
-                runFork( query, unit, metricsPrinter, forkName, profilerFork );
+                printForkInfo( forkName, query, profilerFork );
+                runFork( query, unit, metricsPrinter, profilerFork );
             }
 
             // always run at least one fork. value 0 means run 1 in-process 'fork'
@@ -79,15 +79,6 @@ public class ForkRunner
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, emptyList() );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 neo4jConfig.writeToFile( neo4jConfigFile );
-
-                // Export logical plan -- only necessary to do so once, every fork should produce the same plan
-                // NOTE: this will use main process to create and export plans, if it becomes a problem an "export plan" command can be created
-                if ( forkNumber == 0 )
-                {
-                    System.out.println( "Generating plan for : " + query.name() );
-                    Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile, query );
-                    System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
-                }
 
                 RunnableFork measurementFork = fork( launcher,
                                                      query,
@@ -99,8 +90,16 @@ public class ForkRunner
                                                      doFork,
                                                      jvmArgs,
                                                      resources );
-
-                runFork( query, unit, metricsPrinter, forkName, measurementFork );
+                // Export logical plan -- only necessary to do so once, every fork should produce the same plan
+                // NOTE: this will use main process to create and export plans, if it becomes a problem an "export plan" command can be created
+                if ( forkNumber == 0 )
+                {
+                    System.out.println( "Generating plan for : " + query.name() );
+                    Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile, query );
+                    System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+                }
+                printForkInfo( forkName, query, measurementFork );
+                runFork( query, unit, metricsPrinter, measurementFork );
             }
 
             return benchmarkDir;
@@ -111,13 +110,16 @@ public class ForkRunner
         }
     }
 
+    private static void printForkInfo( String forkName, Query query, RunnableFork fork )
+    {
+        System.out.println( format( "Fork (%s): %s, Query: %s", fork.getClass().getSimpleName(), forkName, query.name() ) );
+    }
+
     private static void runFork( Query query,
                                  TimeUnit unit,
                                  BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
-                                 String forkName,
                                  RunnableFork fork )
     {
-        System.out.println( format( "Fork (%s): %s", fork.getClass().getSimpleName(), forkName ) );
         Results results = fork.run().convertUnit( unit );
         BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
         justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), NO_NEO4J_CONFIG );
