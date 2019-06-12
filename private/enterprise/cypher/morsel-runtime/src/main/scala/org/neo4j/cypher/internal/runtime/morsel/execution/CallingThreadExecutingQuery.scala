@@ -27,6 +27,14 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   }
 
   override def cancel(): Unit = {
+    if (executionState.isCompleted) {
+      try {
+        worker.assertAllReleased()
+      } finally {
+        worker.close()
+      }
+    }
+
     flowControl.cancel()
   }
 
