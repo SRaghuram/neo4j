@@ -443,7 +443,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val refOffset = lhsSlots.numberOfReferences
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
-        // This assumption enables us to use array copy within CartesianProductSlottedPipe.
+        // This assumption enables us to use array copy within ValueHashJoin.
         ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
         ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
@@ -591,13 +591,22 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
     val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_._2.isLongSlot)
 
-    val longSlotsOk = sharedLongSlots.forall {
-      case (key, slot) => slot.offset < argumentSize.nLongs
-    } && sharedLongSlots.size == argumentSize.nLongs
+    def checkSharedSlots(slots: Seq[(String, Slot)], expectedSlots: Int): Boolean = {
+      val sorted = slots.map(_._2).sortBy(_.offset)
+      var prevOffset = -1
+      for (slot <- sorted) {
+        if (slot.offset == prevOffset ||      // if we have aliases for the same slot, we will get it again
+            slot.offset == prevOffset + 1) {  // otherwise we expect the next shared slot to sit at the next offset
+          prevOffset = slot.offset
+        } else {
+          return false
+        }
+      }
+      prevOffset + 1 == expectedSlots
+    }
 
-    val refSlotsOk = sharedRefSlots.forall {
-      case (key, slot) => slot.offset < argumentSize.nReferences
-    } && sharedRefSlots.size == argumentSize.nReferences
+    val longSlotsOk = checkSharedSlots(sharedLongSlots, argumentSize.nLongs)
+    val refSlotsOk = checkSharedSlots(sharedRefSlots, argumentSize.nReferences)
 
     if (!longSlotsOk || !refSlotsOk) {
       val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} shared long slots: $sharedLongSlots "
