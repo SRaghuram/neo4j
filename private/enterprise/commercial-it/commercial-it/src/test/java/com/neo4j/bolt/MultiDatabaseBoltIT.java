@@ -64,7 +64,7 @@ class MultiDatabaseBoltIT
                 session.run( "CREATE (n)" ).consume();
             }
         } );
-        assertThat( transientException.getMessage(), equalTo( "Database `testdatabase` is unavailable." ) );
+        assertThat( transientException.getMessage(), equalTo( "Database `testDatabase` is unavailable." ) );
     }
 
     private DatabaseLayout prepareEmptyDatabase( String databaseName )

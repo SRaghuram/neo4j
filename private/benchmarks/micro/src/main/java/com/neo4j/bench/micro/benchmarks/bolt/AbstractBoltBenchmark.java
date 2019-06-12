@@ -27,6 +27,8 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 import org.neo4j.bolt.BoltChannel;
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
+import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.BoltResult;
 import org.neo4j.bolt.runtime.BoltStateMachineFactory;
@@ -45,6 +47,7 @@ import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.time.Clocks;
+import org.neo4j.time.SystemNanoClock;
 import org.neo4j.values.AnyValue;
 
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
@@ -60,10 +63,11 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
 
-        return new BoltStateMachineFactoryImpl(
-                managementService,
+        SystemNanoClock clock = Clocks.nanoClock();
+        BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService, clock );
+        return new BoltStateMachineFactoryImpl( databaseManagementService,
                 authentication,
-                Clocks.nanoClock(),
+                clock,
                 config,
                 NullLogService.getInstance()
         );
