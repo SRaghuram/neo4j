@@ -113,22 +113,25 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                initResources,
                                                tracker)
 
-    val profiler =
-      if (doProfile)
-        new FixedWorkersQueryProfiler(numberOfWorkers, executionGraphDefinition.applyRhsPlans)
-      else
-        WorkersQueryProfiler.NONE
+    val (workersProfiler, queryProfile) =
+      if (doProfile) {
+        val profiler = new FixedWorkersQueryProfiler(numberOfWorkers, executionGraphDefinition.applyRhsPlans)
+        (profiler, profiler.Profile)
+      } else {
+        (WorkersQueryProfiler.NONE, QueryProfile.NONE)
+      }
+
 
     val executingQuery = new ExecutingQuery(executionState,
                                             queryContext,
                                             queryState,
                                             tracer,
-                                            profiler)
+                                            workersProfiler)
 
     queryContext.transactionalContext.transaction.freezeLocks()
 
     queryManager.addQuery(executingQuery)
     executionState.initializeState()
-    ProfiledQuerySubscription(tracker, profiler)
+    ProfiledQuerySubscription(tracker, queryProfile)
   }
 }

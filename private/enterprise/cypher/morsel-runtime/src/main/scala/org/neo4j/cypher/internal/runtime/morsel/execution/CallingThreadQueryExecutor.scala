@@ -68,19 +68,21 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
 
     executionState.initializeState()
 
-    val profiler =
-      if (doProfile)
-        new FixedWorkersQueryProfiler(1, executionGraphDefinition.applyRhsPlans)
-      else
-        WorkersQueryProfiler.NONE
+    val (workersProfiler, queryProfile) =
+      if (doProfile) {
+        val profiler = new FixedWorkersQueryProfiler(1, executionGraphDefinition.applyRhsPlans)
+        (profiler, profiler.Profile)
+      } else {
+        (WorkersQueryProfiler.NONE, QueryProfile.NONE)
+      }
 
     val worker = new Worker(0, null, LazyScheduling, resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
                                                          queryContext,
                                                          queryState,
                                                          tracer,
-                                                         profiler,
+                                                         workersProfiler,
                                                          worker)
-    ProfiledQuerySubscription(executingQuery, profiler)
+    ProfiledQuerySubscription(executingQuery, queryProfile)
   }
 }
