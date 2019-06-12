@@ -283,8 +283,8 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, raftId, coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( coreInfo1.getCatchupServer(), state.retrieveCatchupServerAddress( coreId1 ) );
-        assertEquals( coreInfo2.getCatchupServer(), state.retrieveCatchupServerAddress( coreId2 ) );
+        assertEquals( coreInfo1.catchupServer(), state.retrieveCatchupServerAddress( coreId1 ) );
+        assertEquals( coreInfo2.catchupServer(), state.retrieveCatchupServerAddress( coreId2 ) );
     }
 
     @Test
@@ -294,8 +294,8 @@ class GlobalTopologyStateTest
         var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
-        assertEquals( readReplicaInfo1.getCatchupServer(), state.retrieveCatchupServerAddress( readReplicaId1 ) );
-        assertEquals( readReplicaInfo2.getCatchupServer(), state.retrieveCatchupServerAddress( readReplicaId2 ) );
+        assertEquals( readReplicaInfo1.catchupServer(), state.retrieveCatchupServerAddress( readReplicaId1 ) );
+        assertEquals( readReplicaInfo2.catchupServer(), state.retrieveCatchupServerAddress( readReplicaId2 ) );
     }
 
     @Test

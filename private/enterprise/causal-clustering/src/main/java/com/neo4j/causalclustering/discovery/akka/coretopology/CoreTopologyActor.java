@@ -15,6 +15,8 @@ import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 
 import java.util.Collection;
 import java.util.Set;
@@ -52,6 +54,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private Set<DatabaseId> knownDatabaseIds = emptySet();
 
+    private final ActorRef metadataActor;
     private final ActorRef raftIdActor;
     private final ActorRef readReplicaTopologyActor;
 
@@ -82,7 +85,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.config = config;
 
         // Children, who will be sending messages to us
-        ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
+        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, metadataActor, logProvider ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, config, logProvider ) );
         raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), logProvider ) );
@@ -96,6 +99,8 @@ public class CoreTopologyActor extends AbstractActorWithTimers
                 .match( MetadataMessage.class,           this::handleMetadataMessage )
                 .match( RaftIdDirectoryMessage.class,    this::handleRaftIdDirectoryMessage )
                 .match( RaftIdSettingMessage.class,      this::handleRaftIdSettingMessage )
+                .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
+                .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
                 .build();
     }
 
@@ -120,6 +125,16 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private void handleRaftIdSettingMessage( RaftIdSettingMessage message )
     {
         raftIdActor.forward( message, context() );
+    }
+
+    private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
+    {
+        metadataActor.forward( message, context() );
+    }
+
+    private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
+    {
+        metadataActor.forward( message, context() );
     }
 
     private void buildTopologies()

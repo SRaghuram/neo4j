@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -39,9 +38,10 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Monitors monitors;
     private final StoreFiles storeFiles;
     private final LogFiles logFiles;
+    private final Throwable failure;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory, LifeSupport life )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory, Throwable failure )
     {
         this.database = database;
         this.facade = facade;
@@ -52,6 +52,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = new Monitors();
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
+        this.failure = failure;
     }
 
     @Override
@@ -122,19 +123,18 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     @Override
     public void fail( Throwable t )
     {
-
     }
 
     @Override
     public boolean isFailed()
     {
-        return false;
+        return failure != null;
     }
 
     @Override
     public Throwable failureCause()
     {
-        return null;
+        return failure;
     }
 
     @Override

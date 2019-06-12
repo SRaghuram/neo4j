@@ -14,7 +14,7 @@ public class BoundState
     private final RaftId raftId;
     private final CoreSnapshot coreSnapshot;
 
-    BoundState( RaftId raftId )
+    public BoundState( RaftId raftId )
     {
         this( raftId, null );
     }

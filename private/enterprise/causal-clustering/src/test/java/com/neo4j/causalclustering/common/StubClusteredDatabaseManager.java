@@ -108,9 +108,10 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
         when( db.getDatabaseHealth() ).thenReturn( config.health );
+        when( db.isStarted() ).thenReturn( config.databaseStarted );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
-                config.logProvider, config.catchupComponentsFactory, null );
+                config.logProvider, config.catchupComponentsFactory, config.failure );
 
         if ( config.storeId != null )
         {
@@ -137,6 +138,8 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         private Health health;
+        private Throwable failure;
+        private boolean databaseStarted = true;
 
         private DatabaseContextConfig()
         {
@@ -205,6 +208,18 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         public DatabaseContextConfig withDatabaseHealth( Health health )
         {
             this.health = health;
+            return this;
+        }
+
+        public DatabaseContextConfig withFailure( Throwable failure )
+        {
+            this.failure = failure;
+            return this;
+        }
+
+        public DatabaseContextConfig withStoppedDatabase()
+        {
+            this.databaseStarted = false;
             return this;
         }
 

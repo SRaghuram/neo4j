@@ -21,18 +21,20 @@ import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
-import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 
 import java.time.Clock;
 import java.util.Map;
@@ -208,6 +210,18 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             userLog.warn( "Failed to restart discovery system", t );
             return false;
         }
+    }
+
+    @Override
+    public void onDatabaseStart( DatabaseId databaseId )
+    {
+        coreTopologyActorRef.ifPresent( actor -> actor.tell( new DatabaseStartedMessage( databaseId ), noSender() ) );
+    }
+
+    @Override
+    public void onDatabaseStop( DatabaseId databaseId )
+    {
+        coreTopologyActorRef.ifPresent( actor -> actor.tell( new DatabaseStoppedMessage( databaseId ), noSender() ) );
     }
 
     @Override

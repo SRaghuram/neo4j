@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
@@ -52,7 +51,6 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
@@ -238,11 +236,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
     }
 
-    private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem, DatabaseManager<?> databaseManager )
-    {
-        return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
-    }
-
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
@@ -273,7 +266,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new DefaultNetworkConnectionTracker();
     }
 
-    private TopologyService createTopologyService( DatabaseManager<?> databaseManager, LogService logService )
+    private TopologyService createTopologyService( ClusteredDatabaseManager databaseManager, LogService logService )
     {
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myIdentity, databaseManager );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );

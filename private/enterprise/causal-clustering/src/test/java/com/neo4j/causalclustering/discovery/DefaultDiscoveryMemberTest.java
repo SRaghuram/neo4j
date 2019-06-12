@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,7 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DefaultDiscoveryMemberTest
 {
-    DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+
+    private final DatabaseId databaseId1 = databaseIdRepository.get( "one" );
+    private final DatabaseId databaseId2 = databaseIdRepository.get( "two" );
+    private final DatabaseId databaseId3 = databaseIdRepository.get( "three" );
 
     @Test
     void shouldReturnMemberId()
@@ -34,20 +39,29 @@ class DefaultDiscoveryMemberTest
     }
 
     @Test
-    void shouldReturnHostedDatabases()
+    void shouldReturnStartedDatabases()
     {
-        DatabaseId databaseId1 = databaseIdRepository.get( "one" );
-        DatabaseId databaseId2 = databaseIdRepository.get( "two" );
-        DatabaseId databaseId3 = databaseIdRepository.get( "three" );
-
         StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).withStoppedDatabase().register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
+
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
+
+        assertEquals( Set.of( databaseId1, databaseId3 ), discoveryMember.startedDatabases() );
+    }
+
+    @Test
+    void shouldReturnNonFailedDatabases()
+    {
+        StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).withFailure( new IOException() ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
 
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
 
-        assertEquals( Set.of( databaseId1, databaseId2, databaseId3 ), discoveryMember.hostedDatabases() );
+        assertEquals( Set.of( databaseId2, databaseId3 ), discoveryMember.startedDatabases() );
     }
 
     @Test
@@ -57,8 +71,8 @@ class DefaultDiscoveryMemberTest
 
         DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
 
-        Set<DatabaseId> databaseIds = discoveryMember.hostedDatabases();
+        Set<DatabaseId> databaseIds = discoveryMember.startedDatabases();
         assertEquals( Set.of(), databaseIds );
-        assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( databaseIdRepository.get( "one" ) ) );
+        assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( databaseId1 ) );
     }
 }

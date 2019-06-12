@@ -274,21 +274,14 @@ public class CoreEditionModule extends ClusteringEditionModule
         return raftMessageLogger;
     }
 
-    private DiscoveryModule createDiscoveryModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreDatabaseManager databaseManager, IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
-    {
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( identityModule.myself(), databaseManager );
-        return new DiscoveryModule( discoveryServiceFactory, discoveryMember, globalModule, sslPolicyLoader );
-    }
-
     private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager )
     {
         final LifeSupport globalLife = globalModule.getGlobalLife();
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         MemberId myIdentity = identityModule.myself();
 
-        DiscoveryModule discoveryModule = createDiscoveryModule( globalModule, discoveryServiceFactory, databaseManager, identityModule,
-                sslPolicyLoader );
+        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myIdentity, databaseManager );
+        DiscoveryModule discoveryModule = new DiscoveryModule( discoveryServiceFactory, discoveryMember, globalModule, sslPolicyLoader );
 
         topologyService = discoveryModule.topologyService();
 

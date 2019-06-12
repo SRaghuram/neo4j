@@ -15,6 +15,7 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
+import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
@@ -106,12 +107,48 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
         val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
+        And("all databases are stated")
+        databaseIds.foreach(id => topologyActorRef ! new DatabaseStartedMessage(id))
+        expectRefreshMsgWithDatabases(databaseIds)
+
         When("Waiting for a multiple of refresh time")
         val repeatSends = 3
         val waitTime = defaultWaitTime + (refresh * repeatSends)
 
         Then("Expect at least one message for each refresh time plus one initial message")
         clusterClientProbe.expectMsgAllOf(waitTime, Array.fill(repeatSends + 1)(send): _*)
+      }
+      "handle database started messages" in new Fixture {
+        Given("database IDs to start")
+        val databaseId1 = databaseIdRepository.get("foo")
+        val databaseId2 = databaseIdRepository.get("bar")
+
+        When("receive both start messages")
+        topologyActorRef ! new DatabaseStartedMessage(databaseId1)
+        topologyActorRef ! new DatabaseStartedMessage(databaseId2)
+
+        Then("read replica database changes received")
+        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
+        expectRefreshMsgWithDatabases(databaseIds + databaseId1 + databaseId2)
+      }
+      "handle database stopped messages" in new Fixture {
+        Given("database IDs to start and stop")
+        val databaseId1 = databaseIdRepository.get("foo")
+        val databaseId2 = databaseIdRepository.get("bar")
+
+        And("both databases started")
+        topologyActorRef ! new DatabaseStartedMessage(databaseId1)
+        topologyActorRef ! new DatabaseStartedMessage(databaseId2)
+        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
+        expectRefreshMsgWithDatabases(databaseIds + databaseId1 + databaseId2)
+
+        When("receive both stop messages")
+        topologyActorRef ! new DatabaseStoppedMessage(databaseId2)
+        topologyActorRef ! new DatabaseStoppedMessage(databaseId1)
+
+        Then("read replica database changes received")
+        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
+        expectRefreshMsgWithDatabases(databaseIds)
       }
     }
   }
@@ -143,9 +180,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     val memberId = new MemberId(UUID.randomUUID())
 
     val databaseIdRepository = new TestDatabaseIdRepository()
-    val databaseIds = Set(databaseIdRepository.get("orders"), databaseIdRepository.get("employees"), databaseIdRepository.get("customers")).asJava
+    val databaseIds = Set(databaseIdRepository.get("orders"), databaseIdRepository.get("employees"), databaseIdRepository.get("customers"))
 
-    val readReplicaInfo = TestTopology.addressesForReadReplica(0, databaseIds)
+    val readReplicaInfo = TestTopology.addressesForReadReplica(0, databaseIds.asJava)
 
     val refresh = Duration(1, TimeUnit.SECONDS)
 
@@ -159,7 +196,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val clusterClientProbe = TestProbe()
     val props = ClientTopologyActor.props(
-      new TestDiscoveryMember(memberId, databaseIds),
+      new TestDiscoveryMember(memberId, databaseIds.asJava),
       coreTopologySink,
       readReplicaTopologySink,
       discoverySink,
@@ -170,9 +207,22 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val topologyActorRef = system.actorOf(props)
 
-    def expectMsg(msg: Any) = {
+    def expectMsg(msg: Any): Unit = {
       val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
       clusterClientProbe.fishForSpecificMessage(){ case `send` => }
+    }
+
+    def expectRefreshMsgWithDatabases(databaseIds: Set[DatabaseId]): Unit = {
+      clusterClientProbe.fishForSpecificMessage(defaultWaitTime) {
+        case publish: ClusterClient.Publish if isRefreshMsgWithDatabases(publish.msg, databaseIds) => ()
+      }
+    }
+
+    def isRefreshMsgWithDatabases(msg: Any, databaseIds: Set[DatabaseId]): Boolean = {
+      msg match {
+        case refreshMsg: ReadReplicaRefreshMessage => refreshMsg.readReplicaInfo().getDatabaseIds.asScala == databaseIds
+        case _ => false
+      }
     }
   }
 }

@@ -51,7 +51,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public AdvertisedSocketAddress getCatchupServer()
+    public AdvertisedSocketAddress catchupServer()
     {
         return catchupServerAddress;
     }

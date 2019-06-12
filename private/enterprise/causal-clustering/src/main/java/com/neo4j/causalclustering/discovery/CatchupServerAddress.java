@@ -9,5 +9,5 @@ import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 public interface CatchupServerAddress
 {
-    AdvertisedSocketAddress getCatchupServer();
+    AdvertisedSocketAddress catchupServer();
 }

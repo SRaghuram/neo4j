@@ -100,6 +100,7 @@ class ReadReplicaDatabaseLife extends SafeLifecycle
 
         databaseContext.database().start();
         catchupProcess.start();
+        topologyService.onDatabaseStart( databaseContext.databaseId() );
     }
 
     private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext )
@@ -184,6 +185,7 @@ class ReadReplicaDatabaseLife extends SafeLifecycle
     @Override
     public void stop0() throws Exception
     {
+        topologyService.onDatabaseStop( databaseContext.databaseId() );
         catchupProcess.stop();
         databaseContext.database().stop();
     }

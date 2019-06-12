@@ -267,6 +267,41 @@ class ReadReplicaDatabaseLifeTest
         assertStoppedNormally( databaseContext.database(), catchupProcess );
     }
 
+    @Test
+    void shouldNotifyTopologyServiceOnStart() throws Exception
+    {
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+
+        readReplicaDatabaseLife.init();
+        readReplicaDatabaseLife.start();
+
+        verify( topologyService ).onDatabaseStart( databaseA );
+    }
+
+    @Test
+    void shouldNotifyTopologyServiceOnStop() throws Exception
+    {
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        readReplicaDatabaseLife.init();
+        readReplicaDatabaseLife.start();
+
+        readReplicaDatabaseLife.stop();
+
+        var inOrder = inOrder( topologyService );
+        inOrder.verify( topologyService ).onDatabaseStart( databaseA );
+        inOrder.verify( topologyService ).onDatabaseStop( databaseA );
+    }
+
     private void assertNeverStarted( Database database, Lifecycle catchupProcess ) throws Exception
     {
         verify( database, never() ).start();
@@ -279,8 +314,6 @@ class ReadReplicaDatabaseLifeTest
 
         inOrder.verify( database ).start();
         inOrder.verify( catchupProcess ).start();
-
-        inOrder.verifyNoMoreInteractions();
     }
 
     private void assertStoppedNormally( Database database, Lifecycle catchupProcess ) throws Exception
@@ -289,8 +322,6 @@ class ReadReplicaDatabaseLifeTest
 
         inOrder.verify( catchupProcess ).stop();
         inOrder.verify( database ).stop();
-
-        inOrder.verifyNoMoreInteractions();
     }
 
     @ServiceProvider

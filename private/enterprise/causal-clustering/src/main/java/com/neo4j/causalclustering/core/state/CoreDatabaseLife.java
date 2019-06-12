@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
+import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
@@ -29,10 +30,12 @@ public class CoreDatabaseLife extends SafeLifecycle
     private final CoreSnapshotService snapshotService;
     private final CoreDownloaderService downloadService;
     private final RecoveryFacade recoveryFacade;
+    private final CoreTopologyService topologyService;
 
     public CoreDatabaseLife( RaftMachine raftMachine, Database kernelDatabase, RaftBinder raftBinder,
             CommandApplicationProcess commandApplicationProcess, LifecycleMessageHandler<?> raftMessageHandler,
-            CoreSnapshotService snapshotService, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade )
+            CoreSnapshotService snapshotService, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
+            CoreTopologyService topologyService )
     {
         this.raftMachine = raftMachine;
         this.kernelDatabase = kernelDatabase;
@@ -42,6 +45,7 @@ public class CoreDatabaseLife extends SafeLifecycle
         this.snapshotService = snapshotService;
         this.downloadService = downloadService;
         this.recoveryFacade = recoveryFacade;
+        this.topologyService = topologyService;
     }
 
     @Override
@@ -55,6 +59,7 @@ public class CoreDatabaseLife extends SafeLifecycle
     {
         ensureRecovered();
 
+        topologyService.onDatabaseStart( kernelDatabase.getDatabaseId() );
         BoundState boundState = raftBinder.bindToRaft();
         raftMessageHandler.start( boundState.raftId() );
 
@@ -91,6 +96,7 @@ public class CoreDatabaseLife extends SafeLifecycle
     @Override
     public void stop0() throws Exception
     {
+        topologyService.onDatabaseStop( kernelDatabase.getDatabaseId() );
         downloadService.stop();
         raftMachine.stopTimers();
         raftMessageHandler.stop();

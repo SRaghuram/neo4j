@@ -17,10 +17,12 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,7 +54,9 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final Config config;
     private final Log log;
 
-    ClientTopologyActor( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
+    private final Set<DatabaseId> startedDatabases = new HashSet<>();
+
+    private ClientTopologyActor( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
             ActorRef clusterClient, Config config, LogProvider logProvider )
     {
@@ -73,7 +77,9 @@ public class ClientTopologyActor extends AbstractActorWithTimers
                 .match( DatabaseCoreTopology.class, coreTopologySink::offer )
                 .match( DatabaseReadReplicaTopology.class, rrTopologySink::offer )
                 .match( LeaderInfoDirectoryMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
-                .match( Refresh.class, ignored -> sendInfo() )
+                .match( Refresh.class, ignored -> sendReadReplicaInfo() )
+                .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
+                .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage )
                 .build();
     }
 
@@ -81,17 +87,32 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void preStart()
     {
         getTimers().startPeriodicTimer( REFRESH, Refresh.instance, refresh );
-        sendInfo();
+        startedDatabases.addAll( myself.startedDatabases() );
+        sendReadReplicaInfo();
     }
 
-    private void sendInfo()
+    private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
     {
-        MemberId memberId = myself.id();
-        Set<DatabaseId> databaseIds = myself.hostedDatabases();
-        ReadReplicaInfo readReplicaInfo = ReadReplicaInfo.from( config, databaseIds );
+        if ( startedDatabases.add( message.databaseId() ) )
+        {
+            sendReadReplicaInfo();
+        }
+    }
 
-        ReadReplicaRefreshMessage msg = new ReadReplicaRefreshMessage( readReplicaInfo, memberId, clusterClient, getSelf() );
-        sendToCore( msg );
+    private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
+    {
+        if ( startedDatabases.remove( message.databaseId() ) )
+        {
+            sendReadReplicaInfo();
+        }
+    }
+
+    private void sendReadReplicaInfo()
+    {
+        var databaseIds = Set.copyOf( startedDatabases );
+        var readReplicaInfo = ReadReplicaInfo.from( config, databaseIds );
+        var refreshMsg = new ReadReplicaRefreshMessage( readReplicaInfo, myself.id(), clusterClient, getSelf() );
+        sendToCore( refreshMsg );
     }
 
     @Override

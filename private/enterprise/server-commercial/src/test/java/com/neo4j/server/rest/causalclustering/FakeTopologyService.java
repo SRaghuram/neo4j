@@ -96,6 +96,16 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
+    public void onDatabaseStart( DatabaseId databaseId )
+    {
+    }
+
+    @Override
+    public void onDatabaseStop( DatabaseId databaseId )
+    {
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return coreMembers;

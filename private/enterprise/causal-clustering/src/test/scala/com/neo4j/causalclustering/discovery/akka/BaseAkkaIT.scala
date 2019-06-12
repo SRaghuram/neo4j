@@ -85,9 +85,9 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     }
   }
 
-  def expectReplicatorUpdates(replicator: TestProbe, key:Key[_]) = {
+  def expectReplicatorUpdates[A <: ReplicatedData](replicator: TestProbe, key: Key[A]): Replicator.Update[A] = {
     replicator.fishForSpecificMessage(defaultWaitTime) {
-      case Replicator.Update(`key`, _, _) => ()
+      case update: Replicator.Update[A] if update.key == key => update
     }
   }
 

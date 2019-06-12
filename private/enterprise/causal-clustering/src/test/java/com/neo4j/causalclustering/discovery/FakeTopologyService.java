@@ -30,6 +30,16 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
+    public void onDatabaseStart( DatabaseId databaseId )
+    {
+    }
+
+    @Override
+    public void onDatabaseStop( DatabaseId databaseId )
+    {
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return coreTopology.members();
@@ -103,12 +113,12 @@ public class FakeTopologyService implements TopologyService
 
         for ( var entry : coreTopology.members().entrySet() )
         {
-            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
+            catchupAddressMap.put( entry.getKey(), entry.getValue().catchupServer() );
         }
 
         for ( var entry : readReplicaTopology.members().entrySet() )
         {
-            catchupAddressMap.put( entry.getKey(), entry.getValue().getCatchupServer() );
+            catchupAddressMap.put( entry.getKey(), entry.getValue().catchupServer() );
         }
 
         return Collections.unmodifiableMap( catchupAddressMap );

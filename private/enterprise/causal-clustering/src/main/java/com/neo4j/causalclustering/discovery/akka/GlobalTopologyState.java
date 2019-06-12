@@ -42,7 +42,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
 
-    public GlobalTopologyState( LogProvider logProvider, Consumer<DatabaseCoreTopology> listener )
+    GlobalTopologyState( LogProvider logProvider, Consumer<DatabaseCoreTopology> listener )
     {
         this.log = logProvider.getLog( getClass() );
         this.coresByMemberId = emptyMap();
@@ -146,14 +146,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );
         if ( coreServerInfo != null )
         {
-            AdvertisedSocketAddress address = coreServerInfo.getCatchupServer();
+            AdvertisedSocketAddress address = coreServerInfo.catchupServer();
             log.debug( "Catchup address for core %s was %s", memberId, address );
-            return coreServerInfo.getCatchupServer();
+            return coreServerInfo.catchupServer();
         }
         ReadReplicaInfo readReplicaInfo = readReplicasByMemberId.get( memberId );
         if ( readReplicaInfo != null )
         {
-            AdvertisedSocketAddress address = readReplicaInfo.getCatchupServer();
+            AdvertisedSocketAddress address = readReplicaInfo.catchupServer();
             log.debug( "Catchup address for read replica %s was %s", memberId, address );
             return address;
         }

@@ -19,6 +19,8 @@ import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -32,6 +34,8 @@ import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static akka.actor.ActorRef.noSender;
+
 public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 {
     private final Config config;
@@ -41,7 +45,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final LogProvider logProvider;
     private final GlobalTopologyState globalTopologyState;
 
-    public AkkaTopologyClient( Config config, LogProvider logProvider, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle )
+    private ActorRef clientTopologyActorRef;
+
+    AkkaTopologyClient( Config config, LogProvider logProvider, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle )
     {
         this.config = config;
         this.myself = myself;
@@ -77,13 +83,26 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 clusterClient,
                 config,
                 logProvider);
-        actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
+        clientTopologyActorRef = actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 
     @Override
     public void stop0() throws Exception
     {
+        clientTopologyActorRef = null;
         actorSystemLifecycle.shutdown();
+    }
+
+    @Override
+    public void onDatabaseStart( DatabaseId databaseId )
+    {
+        clientTopologyActorRef.tell( new DatabaseStartedMessage( databaseId ), noSender() );
+    }
+
+    @Override
+    public void onDatabaseStop( DatabaseId databaseId )
+    {
+        clientTopologyActorRef.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
     }
 
     @Override

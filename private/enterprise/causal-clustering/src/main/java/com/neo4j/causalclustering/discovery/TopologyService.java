@@ -19,6 +19,10 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  */
 public interface TopologyService extends Lifecycle
 {
+    void onDatabaseStart( DatabaseId databaseId );
+
+    void onDatabaseStop( DatabaseId databaseId );
+
     Map<MemberId,CoreServerInfo> allCoreServers();
 
     DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId );

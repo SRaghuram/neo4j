@@ -57,7 +57,7 @@ public class TestTopology
     {
         return Config.builder()
                 .withSetting( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer().toString() )
-                .withSetting( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.getCatchupServer().toString() )
+                .withSetting( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer().toString() )
                 .withSetting( "dbms.connector.bolt.listen_address", coreServerInfo.connectors().boltAddress().toString() )
                 .withSetting( "dbms.connector.bolt.enabled", String.valueOf( true ) )
                 .withSetting( CausalClusteringSettings.server_groups, String.join( ",", coreServerInfo.groups() ) )
@@ -70,7 +70,7 @@ public class TestTopology
         return Config.builder()
                 .withSetting( "dbms.connector.bolt.listen_address", readReplicaInfo.connectors().boltAddress().toString() )
                 .withSetting( "dbms.connector.bolt.enabled", String.valueOf( true ) )
-                .withSetting( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.getCatchupServer().toString() )
+                .withSetting( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer().toString() )
                 .withSetting( CausalClusteringSettings.server_groups, String.join( ",", readReplicaInfo.groups() ) )
                 .build();
     }

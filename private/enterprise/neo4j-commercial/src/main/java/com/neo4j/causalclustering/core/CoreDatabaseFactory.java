@@ -350,7 +350,7 @@ class CoreDatabaseFactory
                 raftGroup, downloadService, commandApplicationProcess );
 
         CoreDatabaseLife coreDatabaseLife = new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess,
-                messageHandler, snapshotService, downloadService, recoveryFacade );
+                messageHandler, snapshotService, downloadService, recoveryFacade, topologyService );
 
         life.add( coreDatabaseLife );
 

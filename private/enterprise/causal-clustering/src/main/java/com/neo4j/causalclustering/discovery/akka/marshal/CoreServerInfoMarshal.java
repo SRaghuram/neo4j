@@ -41,7 +41,7 @@ public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServer
     public void marshal( CoreServerInfo coreServerInfo, WritableChannel channel ) throws IOException
     {
         advertisedSocketAddressMarshal.marshal( coreServerInfo.getRaftServer(), channel );
-        advertisedSocketAddressMarshal.marshal( coreServerInfo.getCatchupServer(), channel );
+        advertisedSocketAddressMarshal.marshal( coreServerInfo.catchupServer(), channel );
         clientConnectorAddressesMarshal.marshal( coreServerInfo.connectors(), channel );
         marshalGroups( coreServerInfo, channel );
         marshalDatabaseIds( coreServerInfo, channel );

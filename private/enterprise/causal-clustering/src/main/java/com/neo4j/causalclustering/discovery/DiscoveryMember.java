@@ -15,5 +15,5 @@ public interface DiscoveryMember
 {
     MemberId id();
 
-    Set<DatabaseId> hostedDatabases();
+    Set<DatabaseId> startedDatabases();
 }

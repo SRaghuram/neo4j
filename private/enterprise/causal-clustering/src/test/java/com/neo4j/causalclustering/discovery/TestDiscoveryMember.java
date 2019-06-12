@@ -46,7 +46,7 @@ public class TestDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> hostedDatabases()
+    public Set<DatabaseId> startedDatabases()
     {
         return hostedDatabases;
     }

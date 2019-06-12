@@ -37,7 +37,7 @@ public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadRepli
     public void marshal( ReadReplicaInfo readReplicaInfo, WritableChannel channel ) throws IOException
     {
         clientConnectorAddressesMarshal.marshal( readReplicaInfo.connectors(), channel );
-        advertisedSocketAddressMarshal.marshal( readReplicaInfo.getCatchupServer(), channel );
+        advertisedSocketAddressMarshal.marshal( readReplicaInfo.catchupServer(), channel );
         marshalGroups( readReplicaInfo, channel );
         marshalDatabaseIds( readReplicaInfo, channel );
     }
