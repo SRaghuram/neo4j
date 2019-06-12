@@ -28,7 +28,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should sort first unaliased and then aliased columns in the right order") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
+    val result = executeWith(Configs.CachedProperty, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
         .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "name")).asc(varFor("bday")))
@@ -44,7 +44,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should sort first aliased and then unaliased columns in the right order") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
+    val result = executeWith(Configs.CachedProperty, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(varFor("bday")).asc(prop("a", "name")))
@@ -140,7 +140,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY previously unprojected column in WITH and return that column") {
-    val result = executeWith(Configs.All, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name, a.age")
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name, a.age")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
@@ -281,7 +281,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY renamed column expression with new name in WITH and project and return that column") {
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
       """
       MATCH (a:A)
       WITH a AS b, a.age AS age
@@ -694,7 +694,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN zfoo ORDER BY zfoo DESC
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.CachedProperty, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort").withOrder(ProvidedOrder.desc(varFor("zfoo")))
     result.toList should be(List(
@@ -719,7 +719,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       """.stripMargin
 
     graph.createIndex("A", "foo")
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.CachedProperty, query)
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Sort")) and
         includeSomewhere.aPlan("NodeIndexSeekByRange")

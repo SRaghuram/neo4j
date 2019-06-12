@@ -39,13 +39,13 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         | )
         |)""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.VarExpand, query)
 
     // then
     assertStats(result, nodesCreated = 110, relationshipsCreated = 110, propertiesWritten = 110, labelsAdded = 110)
     val rows = executeScalar[Number]("MATCH (:Root)-[:PARENT]->(:Child) RETURN count(*)")
     rows should equal(10)
-    val ids = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (:Root)-[:PARENT*]->(c:Child) RETURN c.id AS id ORDER BY c.id").toList
+    val ids = executeWith(Configs.VarExpand, "MATCH (:Root)-[:PARENT*]->(c:Child) RETURN c.id AS id ORDER BY c.id").toList
     ids should equal((1 to 110).map(i => Map("id" -> i)))
   }
 

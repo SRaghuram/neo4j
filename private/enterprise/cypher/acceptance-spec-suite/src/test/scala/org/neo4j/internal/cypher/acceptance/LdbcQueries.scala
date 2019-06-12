@@ -312,7 +312,7 @@ object LdbcQueries {
       Map("personId" -> 2, "messageId" -> 13, "personLastName" -> "last2-ᚠさ丵פش",
         "messageContent" -> "[f2Comment1] content", "messageDate" -> 2, "personFirstName" -> "f2"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.Top
 
   }
 
@@ -979,7 +979,7 @@ object LdbcQueries {
       Map("personId" -> 3, "commentContent" -> "C01", "commentId" -> 10, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"),
       Map("personId" -> 3, "commentContent" -> "C11", "commentId" -> 11, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.All
+    override def expectedToSucceedIn: TestConfiguration = Configs.Top + Configs.Compiled
 
   }
 
@@ -1601,7 +1601,7 @@ object LdbcQueries {
       Map("weight" -> 4.0, "pathNodeIds" -> List(0, 1, 2, 4, 8, 5)),
       Map("weight" -> 3.0, "pathNodeIds" -> List(0, 1, 2, 4, 6, 5)))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
 
   }
 
@@ -1632,7 +1632,7 @@ object LdbcQueries {
       Map("weight" -> 4.0, "pathNodeIds" -> List(0, 1, 2, 4, 8, 5)),
       Map("weight" -> 3.0, "pathNodeIds" -> List(0, 1, 2, 4, 6, 5)))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
 
   }
 

@@ -53,7 +53,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // If we would use Ints for storing the limit, then we would end up with "limit 0"
     // thus, if we actually return the two nodes, then it proves that we used a long
     val query = "MATCH (n) RETURN n LIMIT " + limit
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All, query)
     result.toList should equal(List(Map("n" -> a), Map("n" -> b)))
   }
 
@@ -144,7 +144,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // We actually execute it rather than just EXPLAIN, just to make sure that physical planning also happens in all versions of Neo4j
     val params = Map("param0" -> "", "param1" -> "", "param2" -> "")
 
-    val result = executeWith(Configs.All - Configs.Compiled, query, params = params)
+    val result = executeWith(Configs.OptionalExpand, query, params = params)
 
     result.toList shouldBe empty
 

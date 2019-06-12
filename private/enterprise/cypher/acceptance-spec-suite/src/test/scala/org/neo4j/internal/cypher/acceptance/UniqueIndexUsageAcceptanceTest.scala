@@ -30,7 +30,8 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     given()
 
     // When
-    val result = executeWith(Configs.All, "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
+                             "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
       }))
@@ -114,7 +115,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
         |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.CachedProperty, query)
 
     // Then
     result.toList should equal(List(

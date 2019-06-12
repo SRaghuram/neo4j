@@ -5,21 +5,21 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.cypher.internal.{CompiledRuntimeName, InterpretedRuntimeName, RuntimeName, SlottedRuntimeName}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, DPPlannerName, IDPPlannerName}
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 
-class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
+class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite {
 
-  test("query that does not go through the compiled runtime") {
-    given("MATCH (n) RETURN n, count(*)")
+  test("query that does not go through the morsel runtime") {
+    given("MATCH (n) RETURN n, count(*) SKIP 2")
       .withCypherVersion(CypherVersion.v4_0)
       .shouldHaveCypherVersion(CypherVersion.v4_0)
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
-  test("query that lacks support from the compiled runtime") {
+  test("query that lacks support from the morsel runtime") {
     given("CREATE ()")
       .withCypherVersion(CypherVersion.v4_0)
       .withRuntime(CompiledRuntimeName)
@@ -27,12 +27,12 @@ class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
-  test("query that should go through the compiled runtime") {
+  test("query that should go through the morsel runtime") {
     given("MATCH (a)-->(b) RETURN a")
       .withCypherVersion(CypherVersion.v4_0)
-      .withRuntime(CompiledRuntimeName)
+      .withRuntime(MorselRuntimeName)
       .shouldHaveCypherVersion(CypherVersion.v4_0)
-      .shouldHaveRuntime(CompiledRuntimeName)
+      .shouldHaveRuntime(MorselRuntimeName)
       .shouldHavePlanner(CostBasedPlannerName.default)
   }
 
@@ -46,14 +46,14 @@ class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
     children.get(0).getArguments.get("DbHits") should equal(1) // AllNodesScan has 1 hit
   }
 
-  test("Rows should be properly formatted in compiled runtime") {
+  test("Rows should be properly formatted in morsel runtime") {
     given("match (n) return n")
-      .withRuntime(CompiledRuntimeName)
+      .withRuntime(MorselRuntimeName)
       .planDescription.getArguments.get("Rows") should equal(0)
   }
 
   for(planner <- Seq(IDPPlannerName, DPPlannerName);
-      runtime <- Seq(CompiledRuntimeName, InterpretedRuntimeName)) {
+      runtime <- Seq(MorselRuntimeName, InterpretedRuntimeName)) {
 
     test(s"Should report correct planner and runtime used $planner + $runtime") {
       given("match (n) return n")
@@ -66,35 +66,35 @@ class RootPlanAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   test("should show_java_source") {
-    val res = executeOfficial("CYPHER debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
+    val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
     res.resultAsString()
     shouldContainSourceCode(res.getExecutionPlanDescription)
   }
 
   test("should show_bytecode") {
-    val res = executeOfficial("CYPHER debug=show_bytecode MATCH (n) RETURN n")
+    val res = executeOfficial("CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
     res.resultAsString()
     shouldContainByteCode(res.getExecutionPlanDescription)
   }
 
   test("should show_java_source and show_bytecode") {
-    val res = executeOfficial("CYPHER debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
+    val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
     res.resultAsString()
     shouldContainSourceCode(res.getExecutionPlanDescription)
     shouldContainByteCode(res.getExecutionPlanDescription)
   }
 
-  private def shouldContainSourceCode(planDescription: ExecutionPlanDescription) = {
+  private def shouldContainSourceCode(planDescription: ExecutionPlanDescription): Unit = {
     shouldContain("source", planDescription)
   }
 
-  private def shouldContainByteCode(planDescription: ExecutionPlanDescription) = {
+  private def shouldContainByteCode(planDescription: ExecutionPlanDescription): Unit = {
     shouldContain("bytecode", planDescription)
   }
 
   import scala.collection.JavaConverters._
 
-  private def shouldContain(argument:String, planDescription: ExecutionPlanDescription) = {
+  private def shouldContain(argument:String, planDescription: ExecutionPlanDescription): Unit = {
     if(!planDescription.getArguments.asScala.exists {
       case (name: String, code: String) if name.startsWith(s"$argument:") =>
         !code.isEmpty

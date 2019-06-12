@@ -59,7 +59,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createLabeledNode("Person")
     createNode()
     // CountStore not supported by sloted
-    val result = executeWith(Configs.All, "MATCH (a:Person) WITH count(a) as c RETURN c")
+    val result = executeWith(Configs.FromCountStore, "MATCH (a:Person) WITH count(a) as c RETURN c")
     result.toList should equal(List(Map("c" -> 2L)))
   }
 
@@ -109,7 +109,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("combine simple aggregation with sorting (can use node count store)") {
     createNode()
     createNode()
-    val result = executeWith(Configs.All, "MATCH (a) RETURN count(a) ORDER BY count(a)")
+    val result = executeWith(Configs.FromCountStore, "MATCH (a) RETURN count(a) ORDER BY count(a)")
     result.toList should equal(List(Map("count(a)" -> 2)))
   }
 
@@ -212,7 +212,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
 
   test("Should sum durations") {
     val query = "UNWIND [duration('PT10S'), duration('P1D'), duration('PT30.5S')] as x RETURN sum(x) AS length"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,40,500000000))))
+    executeWith(Configs.UDF, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,40,500000000))))
   }
 
   test("Should sum durations from stored nodes") {
@@ -226,12 +226,12 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
 
   test("Should not sum durations and numbers together") {
     val query = "UNWIND [duration('PT10S'), duration('P1D'), duration('PT30.5S'), 90] as x RETURN sum(x) AS length"
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("cannot mix number and durations"))
+    failWithError(Configs.UDF, query, Seq("cannot mix number and durations"))
   }
 
   test("Should avg durations") {
     val query = "UNWIND [duration('PT10S'), duration('P3D'), duration('PT20.6S')] as x RETURN avg(x) AS length"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
+    executeWith(Configs.UDF, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
   }
 
   test("Should avg durations from stored nodes") {
@@ -245,6 +245,6 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
 
   test("Should not avg durations and numbers together") {
     val query = "UNWIND [duration('PT10S'), duration('P1D'), duration('PT30.5S'), 90] as x RETURN avg(x) AS length"
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("cannot mix number and durations"))
+    failWithError(Configs.UDF, query, Seq("cannot mix number and durations"))
   }
 }

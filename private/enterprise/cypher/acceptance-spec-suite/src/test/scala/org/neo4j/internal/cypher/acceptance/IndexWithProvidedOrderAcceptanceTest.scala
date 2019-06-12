@@ -63,7 +63,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   for (TestOrder(cypherToken, expectedOrder, providedOrder) <- List(ASCENDING, DESCENDING)) {
 
     test(s"$cypherToken: should use index order for range predicate when returning that property") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -80,7 +80,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
            |WITH n AS nnn
            |MATCH (m)<-[r]-(nnn)
@@ -103,7 +103,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an Apply") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.UDF,
         s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken",
         executeBefore = createSomeNodes)
 
@@ -184,7 +184,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken: Order by index backed property should plan with provided order (contains scan)") {
       createStringyNodes()
 
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
         executeBefore = createStringyNodes)
 
@@ -203,7 +203,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken: Order by index backed property should plan with provided order (ends with scan)") {
       createStringyNodes()
 
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.NodeIndexEndsWithScan,
         s"MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'og' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
         executeBefore = createStringyNodes)
 
@@ -336,12 +336,12 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     val varDesc = ProvidedOrder.desc(var1).desc(var2)
 
     Seq(
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc, ProvidedOrder.empty),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc, ProvidedOrder.empty),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc, ProvidedOrder.empty),
+      (Configs.CachedProperty, "n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc, ProvidedOrder.empty),
+      (Configs.CachedProperty, "n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc, ProvidedOrder.empty),
+      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc, ProvidedOrder.empty),
       (Configs.InterpretedAndSlotted, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc, ProvidedOrder.asc(var1).desc(var2)),
       (Configs.InterpretedAndSlotted, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc, ProvidedOrder.desc(var1).asc(var2)),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc, ProvidedOrder.empty)
+      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc, ProvidedOrder.empty)
     ).foreach {
       case (config, orderByString, expected, shouldSort, indexOrder, projectionOrder, sortOrder) =>
         // When
@@ -411,11 +411,11 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     Seq(
       (Configs.InterpretedAndSlotted, "n.prop1 ASC", ProvidedOrder.asc(var1), expectedAscAsc),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
-      (Configs.InterpretedAndSlottedAndMorsel, "n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(var1).desc(var2), expectedDescDesc)
+      (Configs.CachedProperty, "n.prop1 DESC", ProvidedOrder.desc(var1), expectedDescAsc),
+      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", ProvidedOrder.asc(var1).asc(var2), expectedAscAsc),
+      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", ProvidedOrder.asc(var1).desc(var2), expectedAscDesc),
+      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", ProvidedOrder.desc(var1).asc(var2), expectedDescAsc),
+      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", ProvidedOrder.desc(var1).desc(var2), expectedDescDesc)
     ).foreach {
       case (configs, orderByString, sortOrder, expected) =>
         // When
@@ -947,7 +947,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order for prop2 when ORDER BY prop1") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop1, n.prop2 as prop2 ORDER BY prop1 RETURN $functionName(prop2)",
         executeBefore = createSomeNodes)
 
@@ -989,7 +989,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.execute("CREATE (:Awesome {prop3: 'ha'})")
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(n.prop3)) AS agg", executeBefore = createSomeNodes)
 
       val expected = expectedOrder(List(
@@ -1003,7 +1003,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.execute("CREATE (:Awesome {prop3: 'ha'})")
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(trim(replace(n.prop3, 'a', 'aa')))) AS agg",
         executeBefore = createSomeNodes)
 
@@ -1017,7 +1017,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     // The planer doesn't yet support composite range scans, so we can't avoid the aggregation
     // TODO fix so we can avoid the aggregation now that range scans are handled
     test(s"$cypherToken-$functionName: cannot use provided index order from composite index without filter") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop1 = 40 AND n.prop2 < 4 RETURN $functionName(n.prop1), $functionName(n.prop2)",
         executeBefore = createMoreNodes)
 
@@ -1031,7 +1031,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order from composite index with filter") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop1 > 40 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)",
         executeBefore = createMoreNodes)
 
@@ -1045,7 +1045,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with multiple aggregations") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), count(n.prop1)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -1059,7 +1059,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with grouping expression (caused by return n.prop2)") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), n.prop2", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -1086,7 +1086,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should plan aggregation for index scan") {
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       // index scan provide values but not order, since we don't know the property type
@@ -1105,7 +1105,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
       createLabeledNode(Map("foo" -> 2), "B")
 
-      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:B) WHERE n.foo > 0 RETURN $functionName(n.foo)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()

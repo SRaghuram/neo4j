@@ -14,7 +14,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with FakeClock {
 
   test("should get current default datetime") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN datetime() as now")
+    val result = executeWith(Configs.UDF, "RETURN datetime() as now")
 
     val now = single(result.columnAs[ZonedDateTime]("now"))
 
@@ -22,7 +22,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get current 'realtime' datetime") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN datetime.realtime() as now")
+    val result = executeWith(Configs.UDF, "RETURN datetime.realtime() as now")
 
     val now = single(result.columnAs[ZonedDateTime]("now"))
 
@@ -30,7 +30,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get current default localdatetime") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN localdatetime() as now")
+    val result = executeWith(Configs.UDF, "RETURN localdatetime() as now")
 
     val now = single(result.columnAs[LocalDateTime]("now"))
 
@@ -38,7 +38,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get current default date") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN date() as now")
+    val result = executeWith(Configs.UDF, "RETURN date() as now")
 
     val now = single(result.columnAs[LocalDate]("now"))
 
@@ -46,7 +46,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get current default time") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN time() as now")
+    val result = executeWith(Configs.UDF, "RETURN time() as now")
 
     val now = single(result.columnAs[OffsetTime]("now"))
 
@@ -54,7 +54,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get current default localtime") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN localtime() as now")
+    val result = executeWith(Configs.UDF, "RETURN localtime() as now")
 
     val now = single(result.columnAs[LocalTime]("now"))
 
@@ -78,7 +78,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   }
 
   test("should get right precision on duration") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN duration('P0.9Y') AS duration")
+    val result = executeWith(Configs.UDF, "RETURN duration('P0.9Y') AS duration")
     val duration = single(result.columnAs[DurationValue]("duration"))
 
     duration should equal(DurationValue.parse("P10M24DT30196.8S"))

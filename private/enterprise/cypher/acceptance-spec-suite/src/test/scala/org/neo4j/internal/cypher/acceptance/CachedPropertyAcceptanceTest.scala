@@ -17,14 +17,14 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNode(Map("foo" -> 112))
     createNode(Map("foo" -> 113))
     createNode(Map("foo" -> 114))
-    val res = executeWith(Configs.InterpretedAndSlotted,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
+    val res = executeWith(Configs.CachedProperty,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{n.foo : cache[n.foo]}")
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
-        )
+        ), expectPlansToFail = Configs.Morsel // no dbHits yet
       )
     )
     res.toList should equal(List(Map("n.foo" -> 111), Map("n.foo" -> 112), Map("n.foo" -> 113), Map("n.foo" -> 114)))
@@ -34,14 +34,14 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     relate(createNode(), createNode(), "foo" -> 1)
     relate(createNode(), createNode(), "foo" -> 20)
     relate(createNode(), createNode(), "foo" -> 30)
-    val res = executeWith(Configs.InterpretedAndSlotted,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
+    val res = executeWith(Configs.CachedProperty,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{r.foo : cache[r.foo]}")
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
-        )
+        ), expectPlansToFail = Configs.Morsel // no dbHits yet
       )
     )
     res.toList should equal(List(Map("r.foo" -> 20), Map("r.foo" -> 30)))
@@ -98,14 +98,14 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       n2 = createNode(Map("foo" -> 2))
     }
 
-    val res = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
+    val res = executeWith(Configs.CachedProperty, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{n.foo : cache[n.foo]}")
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[n.foo])")
-        )
+        ), expectPlansToFail = Configs.Morsel // no dbHits yet
       )
     )
 
@@ -122,14 +122,14 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       r2 = relate(createNode(), createNode(), "foo" -> 1)
     }
 
-    val res = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
+    val res = executeWith(Configs.CachedProperty, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{r.foo : cache[r.foo]}")
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[r.foo])")
-        )
+        ), expectPlansToFail = Configs.Morsel // no dbHits yet
       )
     )
 
@@ -150,7 +150,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       n4 = createNode(Map("foo" -> 4))
     }
 
-    val res = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
+    val res = executeWith(Configs.CachedProperty, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
       executeBefore = () => {
         n2.setProperty("foo", 2)
         n3.removeProperty("foo")
@@ -181,7 +181,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       r4 = relate(createNode(), createNode(), "foo" -> 4)
     }
 
-    val res = executeWith(Configs.InterpretedAndSlotted, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
+    val res = executeWith(Configs.CachedProperty, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
       executeBefore = () => {
         r2.setProperty("foo", 2)
         r3.removeProperty("foo")

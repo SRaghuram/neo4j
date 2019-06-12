@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{ProfiledQuerySubscription, QueryExecutor}
-import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
+import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselBlacklist
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
@@ -37,6 +37,9 @@ class MorselRuntime(parallelExecution: Boolean,
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
+
+    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan)
+
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
@@ -46,12 +49,10 @@ class MorselRuntime(parallelExecution: Boolean,
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
         new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
-        MorselExpressionConverters,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     } else {
       new ExpressionConverters(
-        MorselExpressionConverters,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     }
@@ -129,7 +130,7 @@ class MorselRuntime(parallelExecution: Boolean,
     override def notifications: Set[InternalNotification] =
       if (parallelExecution)
         Set(ExperimentalFeatureNotification(
-          "The parallel runtime is experimental and might suffer from stability and potentially correctness issues."))
+          "The parallel runtime is experimental and might suffer from instability and potentially correctness issues."))
       else Set.empty
   }
 
@@ -155,7 +156,7 @@ class MorselRuntime(parallelExecution: Boolean,
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
 
     override def consumptionState: RuntimeResult.ConsumptionState =
-      if (!resultRequested) ConsumptionState.NOT_STARTED
+      if (querySubscription == null) ConsumptionState.NOT_STARTED
       else ConsumptionState.EXHAUSTED
 
     override def close(): Unit = {}
@@ -163,6 +164,21 @@ class MorselRuntime(parallelExecution: Boolean,
     override def queryProfile(): QueryProfile = _queryProfile
 
     override def request(numberOfRecords: Long): Unit = {
+      ensureQuerySubscription()
+      querySubscription.request(numberOfRecords)
+    }
+
+    override def cancel(): Unit = {
+      ensureQuerySubscription()
+      querySubscription.cancel()
+    }
+
+    override def await(): Boolean = {
+      ensureQuerySubscription()
+      querySubscription.await()
+    }
+
+    private def ensureQuerySubscription(): Unit = {
       if (querySubscription == null) {
         resultRequested = true
         val ProfiledQuerySubscription(sub, prof) = queryExecutor.execute(
@@ -184,15 +200,6 @@ class MorselRuntime(parallelExecution: Boolean,
         //Only call onResult on first call
         subscriber.onResult(fieldNames.length)
       }
-
-      querySubscription.request(numberOfRecords)
-    }
-
-    override def cancel(): Unit =
-      querySubscription.cancel()
-
-    override def await(): Boolean = {
-      querySubscription.await()
     }
   }
 

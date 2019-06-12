@@ -53,7 +53,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> dateValue))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.All, query, params = Map("param" -> dateValue))
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateValue))
 
     result.toList should equal(List(Map("prop" -> dateValue)))
   }
@@ -67,7 +67,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> javaDateArray))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.All, query, params = Map("param" -> javaDateArray))
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> javaDateArray))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateArray.toList)
@@ -85,7 +85,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createNode(Map("prop" -> javaDateList.toArray(dateArray)))
 
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(Configs.All, query, params = Map("param" -> javaDateList))
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> javaDateList))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateList.asScala)
@@ -102,7 +102,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
 
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
-    val result = executeWith(Configs.All, query, params = Map("param" -> dateMap))
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateMap))
 
     result.toList should equal(List(Map("a" -> dateMap.get("a"), "b" -> dateMap.get("b"))))
   }
@@ -131,7 +131,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -154,7 +154,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -178,7 +178,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -203,7 +203,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -234,7 +234,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     createLabeledNode(Map("date1" -> dateValue1, "date2" -> dateValue2), "Date")
 
     val query = "MATCH (n:Date) WITH [n.date1, n.date2] as dateList MATCH (m:Occasion) WHERE m.timeSpan = dateList RETURN m.timeSpan as timeSpan"
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
 
     // Then
     val dateList = result.columnAs("timeSpan").toList.head.asInstanceOf[Iterable[LocalDate]].toList
@@ -249,7 +249,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val duration = DurationValue.duration(11, 12, 13, 14).asObject()
     createNode(Map("prop" -> duration))
 
-    val config = Configs.All
+    val config = Configs.CachedProperty + Configs.Compiled
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> duration))
 
@@ -336,7 +336,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("should not create date time with conflicting time zones") {
     val query = "WITH datetime('1984-07-07T12:34+03:00[Europe/Stockholm]') as d RETURN d"
     val errorMsg = "Timezone and offset do not match"
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq(errorMsg), Seq("InvalidArgumentException"))
+    failWithError(Configs.UDF, query, Seq(errorMsg), Seq("InvalidArgumentException"))
   }
 
   // Failing when providing wrong values
@@ -412,8 +412,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val query1 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN localdatetime({time:x})"
     val query2 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN datetime({time:x})"
 
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.UDF, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.UDF, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
   }
 
   test("should not select only date for datetime and localdatetime") {
@@ -849,7 +849,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("P1.5Y1M", "P1Y1.5M1D", "P1Y1M1.5DT1H", "P1Y1M1DT1.5H1M", "P1Y1M1DT1H1.5M1S")) {
       val query = s"RETURN duration('$arg')"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Text cannot be parsed to a Duration"))
+        failWithError(Configs.UDF, query, Seq("Text cannot be parsed to a Duration"))
       }
     }
   }
@@ -858,7 +858,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("2018-04-01T12:45:45+45", "2018-04-01T12:45:65+05", "2018-04-01T12:65:45+05", "2018-04-01T65:45:45+05", "2018-04-65T12:45:45+05", "2018-65-01T12:45:45+05")) {
       val query = s"RETURN datetime('$arg') as value"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Invalid value for", "not in valid range"))
+        failWithError(Configs.UDF, query, Seq("Invalid value for", "not in valid range"))
       }
     }
   }
@@ -905,7 +905,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("inMonths", "inDays"); arg1 <- args; arg2 <- args) {
       val query = s"RETURN duration.$func($arg1, $arg2)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq.empty, Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, Seq.empty, Seq("CypherTypeException"))
       }
     }
   }
@@ -916,7 +916,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (op <- Seq("<", "<=", ">", ">=")) {
       val query = s"RETURN duration('P1Y1M') $op duration('P1Y30D') AS x"
       withClue(s"Executing $query") {
-        val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList
+        val res = executeWith(Configs.UDF, query).toList
         res should be(List(Map("x" -> null)))
       }
     }
@@ -946,7 +946,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     )
     for(returnQuery <- returnQueries) {
       withClue("executing " + returnQuery) {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
+        failWithError(Configs.UDF, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
       }
     }
   }
@@ -960,7 +960,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN t
       """.stripMargin
 
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Text cannot be parsed to a Time"))
+    failWithError(Configs.UDF, query, Seq("Text cannot be parsed to a Time"))
   }
 
   test("create time with named time zone should be supported") {
@@ -972,7 +972,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN time({hour: 12, minute: 34, second: 56, timezone:'Europe/Stockholm'}) = currentCorrectTime as comparison
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.UDF, query)
     result.toList should equal(List(Map("comparison" -> true)))
   }
 
@@ -983,7 +983,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN toString(time({time:dt})) as t1, toString(time.truncate('second', dt)) as t2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.UDF, query)
     result.toList should equal(List(Map("t1" -> "12:31:14+02:00", "t2" -> "12:31:14+02:00")))
   }
 
@@ -997,7 +997,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |        time.truncate('second', ld, {timezone: 'Europe/Stockholm'}) = currentCorrectTime as comp2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.UDF, query)
     result.toList should equal(List(Map("comp1" -> true, "comp2" -> true)))
   }
 
@@ -1007,7 +1007,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (receiver <- receivers; arg <- args) {
       val query = s"RETURN $receiver.truncate('$truncationUnit', $arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq(errorMsg), Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, Seq(errorMsg), Seq("CypherTypeException"))
       }
     }
   }
@@ -1026,7 +1026,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- returnFuncs; arg <- args) {
       val query = s"WITH $withX as x RETURN $func($arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq(errorType))
+        failWithError(Configs.UDF, query, validErrorMessages, Seq(errorType))
       }
     }
   }
@@ -1036,7 +1036,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $typ($args).$acc"
       val validErrorMessages = Seq("No such field", "Unsupported field", "Cannot get the offset of", "Cannot get the time zone of", "not supported")
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, validErrorMessages, Seq("CypherTypeException"))
       }
     }
   }
@@ -1046,7 +1046,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $func($arg)"
       val validErrorMessages = Seq("Cannot assign", "cannot be selected together with", "cannot be specified without", "must be specified", "Invalid value")
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
+        failWithError(Configs.UDF, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
       }
     }
   }

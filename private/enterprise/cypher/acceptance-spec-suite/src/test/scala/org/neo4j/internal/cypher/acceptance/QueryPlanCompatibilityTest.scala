@@ -47,7 +47,6 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
-  // Too much has changed from 2.3, only compare plans for newer versions
   test("should produce compatible plans for complex query") {
     val query =
       """
@@ -58,7 +57,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN count(r)
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    executeWith(Configs.OptionalExpand, query,
       planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 

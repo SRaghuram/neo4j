@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
@@ -25,8 +26,10 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
       => true
 
       // 1 child operators
-      case e: Expand if e.mode == ExpandAll
-        => true
+      case e: Expand =>
+        if (e.mode == ExpandAll) true
+        else throw unsupported("ExpandInto")
+
       case _: UnwindCollection |
            _: Sort |
            _: Aggregation
@@ -44,9 +47,12 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
       => true
 
       case plan =>
-        throw new UnsupportedOperationException(s"Morsel does not yet support the planned operator `${plan.getClass.getSimpleName}`, use another runtime.")
+        throw unsupported(plan.getClass.getSimpleName)
     }
   }
 
-  override def onNestedPlanBreak(): Unit = throw new UnsupportedOperationException("not implemented")
+  override def onNestedPlanBreak(): Unit = throw unsupported("NestedPlanExpression")
+
+  private def unsupported(thing: String): CantCompileQueryException =
+    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
 }

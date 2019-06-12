@@ -364,7 +364,8 @@ class ExecutionResultTest
         for ( String version : new String[]{"3.5", "4.0"} )
         {
             // When
-            Result result = db.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );
+            // TODO: remove `runtime=interpeted` once morsel supports dbHits
+            Result result = db.execute( String.format( "PROFILE CYPHER %s runtime=interpreted MATCH (n) RETURN n", version ) );
             result.resultAsString();
             ExecutionPlanDescription.ProfilerStatistics stats =
                     result.getExecutionPlanDescription()//ProduceResult

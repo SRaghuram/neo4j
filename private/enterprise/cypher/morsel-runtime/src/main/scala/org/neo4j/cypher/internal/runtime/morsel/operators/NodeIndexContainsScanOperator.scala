@@ -45,7 +45,6 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                                state: QueryState,
                                                resources: QueryResources): Boolean = {
 
-      cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead
       val queryState = new OldQueryState(context,
                                          resources = null,
@@ -58,6 +57,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       value match {
         case value: TextValue =>
           val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
+          cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 

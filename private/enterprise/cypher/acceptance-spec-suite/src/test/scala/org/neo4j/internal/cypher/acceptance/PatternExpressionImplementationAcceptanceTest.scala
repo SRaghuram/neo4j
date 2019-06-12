@@ -22,7 +22,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+    val result = executeWith(Configs.NestedPlan, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
 
     result.toList.head("p").asInstanceOf[Seq[_]] should have size 2
@@ -35,7 +35,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
 
     val query = "return case when true then (:A)-->() else 42 end as p"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.NestedPlan, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
 
     result.toList.head("p").asInstanceOf[Seq[_]] should have size 2
@@ -46,7 +46,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) < 0 then (n)-->() else 42 end as p",
+    val result = executeWith(Configs.NestedPlan, "match (n) return case when id(n) < 0 then (n)-->() else 42 end as p",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
 
     result.toList.head("p").asInstanceOf[Long] should equal(42)
@@ -62,7 +62,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p")
+    val result = executeWith(Configs.NestedPlan, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p")
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -81,7 +81,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.NestedPlan,
       """match (n)
         |with case
         |       when id(n) >= 0 then (n)-->()
@@ -98,7 +98,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when id(n) < 0 then (n)-->() else 42 end as p, count(n) as c return p, c")
+    val result = executeWith(Configs.NestedPlan, "match (n) with case when id(n) < 0 then (n)-->() else 42 end as p, count(n) as c return p, c")
       .toList.head("p").asInstanceOf[Long]
 
     result should equal(42)
@@ -114,7 +114,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c")
+    val result = executeWith(Configs.NestedPlan, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c")
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -165,7 +165,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (case when id(n) < 0 then length((n)-->(:X)) else 42 end) > 0 return n",
+    val result = executeWith(Configs.NestedPlan, "match (n) where (case when id(n) < 0 then length((n)-->(:X)) else 42 end) > 0 return n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
 
     result should have size 3
@@ -180,7 +180,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val start3 = createNode()
     relate(start3, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (n)-->() AND (case when n:A then length((n)-->(:C)) when n:B then length((n)-->(:D)) else 42 end) > 1 return n",
+    val result = executeWith(Configs.NestedPlan, "match (n) where (n)-->() AND (case when n:A then length((n)-->(:C)) when n:B then length((n)-->(:D)) else 42 end) > 1 return n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
 
     result.toList should equal(List(
@@ -212,7 +212,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(n1, createNode())
     relate(n1, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.NestedPlan,
       """match (a:A)
         |return case
         |         WHEN a.prop = 42 THEN []
@@ -229,7 +229,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+    executeWith(Configs.NestedPlan, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
   }
 
@@ -238,7 +238,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) < 0 then (n)-->() else 42 end as p",
+    executeWith(Configs.NestedPlan, "match (n) return case when id(n) < 0 then (n)-->() else 42 end as p",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
   }
 

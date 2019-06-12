@@ -210,7 +210,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode())
 
-    profile(Configs.InterpretedAndSlotted + Configs.Compiled,
+    profile(Configs.NodeById + Configs.Compiled,
       "MATCH (n) WHERE id(n) = 0 RETURN n",
       _ should includeSomewhere.aPlan("NodeByIdSeek").withRows(1))
   }
@@ -220,7 +220,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // due to the cost model, we need a bunch of nodes for the planner to pick a plan that does lookup by id
     (1 to 100).foreach(_ => createNode("foo" -> "bar"))
 
-    profile(Configs.InterpretedAndSlotted + Configs.Compiled,
+    profile(Configs.NodeById + Configs.Compiled,
       "MATCH (n) WHERE id(n) = 0 RETURN n.foo",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
@@ -256,7 +256,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     // WHEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.OptionalExpand,
       "MATCH (n) OPTIONAL MATCH (n)-->(x) RETURN x",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withDBHits(0) and
@@ -300,13 +300,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should support profiling optional match queries") {
     createLabeledNode(Map("x" -> 1), "Label")
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.OptionalExpand,
       "MATCH (a:Label {x: 1}) OPTIONAL MATCH (a)-[:REL]->(b) RETURN a.x AS A, b.x AS B")
   }
 
   test("should support profiling optional match and with") {
     createLabeledNode(Map("x" -> 1), "Label")
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.OptionalExpand,
       "MATCH (n) OPTIONAL MATCH (n)--(m) WITH n, m WHERE m IS null RETURN n.x AS A")
   }
 
@@ -450,7 +450,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
 
-    profile(Configs.InterpretedAndSlotted + Configs.Compiled,
+    profile(Configs.CartesianProduct + Configs.Compiled,
       "MATCH (n), (m) RETURN n, m",
       _ should includeSomewhere.aPlan("CartesianProduct").withRows(16))
   }
@@ -564,7 +564,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
     // THEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.NestedPlan,
       """MATCH (cat:Category)
         |WITH collect(cat) as categories
         |MATCH (m:Entity)

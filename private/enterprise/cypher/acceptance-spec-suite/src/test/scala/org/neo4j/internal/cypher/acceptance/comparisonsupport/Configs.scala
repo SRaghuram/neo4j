@@ -30,7 +30,7 @@ object Configs {
   def All: TestConfiguration = {
     val all = TestConfiguration(Planners.all, Runtimes.all)
     if (runOnlySafeScenarios) {
-      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
+      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel))
     } else {
       all
     }
@@ -50,4 +50,24 @@ object Configs {
   }
 
   assert((All /\ Experimental) == Empty, s"No experimental scenario should exist in any other test configuration, but these are: ${All /\ Experimental}")
+
+  // The below test-configurations map to operators and constructs that stopped test
+  // from being supported in morsel. When adding support for one of the below in morsel,
+  // adding it here should be a fast way to correct many tests, although some might still
+  // fail for lack of some other operator or construct.
+  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val Top                   : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
 }

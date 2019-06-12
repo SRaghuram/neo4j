@@ -35,7 +35,7 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("should unwind scalar temporal") {
     val query = "UNWIND date('2019-05-07') AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.UDF, query)
 
     result.toList should equal(List(Map("x" -> LocalDate.of(2019, 5, 7))))
   }

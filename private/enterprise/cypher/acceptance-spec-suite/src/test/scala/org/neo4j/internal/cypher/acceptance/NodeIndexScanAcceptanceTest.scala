@@ -22,7 +22,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Person", "name")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Person) WHERE p.name IS NOT NULL RETURN p",
       planComparisonStrategy = ComparePlansWithAssertion( plan => {
         //THEN
@@ -68,7 +68,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("id" -> "139dbf46f0dc8a325e27ffd118331ca2947e34f0", "label" -> "z"), "phone_type", "timed")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.CachedProperty,
       "MATCH (n:phone_type:timed) where n.label =~ 'a.' return count(n)",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -112,7 +112,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN *
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, q)
+    val result = executeWith(Configs.CachedProperty, q)
     result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))
@@ -138,7 +138,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN *
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, q)
+    val result = executeWith(Configs.CachedProperty, q)
     result.executionPlanDescription() should (not(includeSomewhere.aPlan("Union")
       .withLHS(aPlan("NodeIndexScan"))
       .withRHS(aPlan("NodeIndexScan"))

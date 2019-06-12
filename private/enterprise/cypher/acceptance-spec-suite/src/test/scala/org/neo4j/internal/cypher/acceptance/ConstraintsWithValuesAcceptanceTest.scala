@@ -77,7 +77,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // When
     val query = s"MATCH (n:Awesome) RETURN n.prop1, n.prop2, n.prop3"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.CachedProperty, query)
 
     // Then
     result.executionPlanDescription() should (
@@ -203,7 +203,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   private def assertIndexScan(expectedResult: Seq[Map[String, Int]], labels: String*): Unit = {
     val query = s"MATCH (n:${labels.mkString(":")}) RETURN n.prop1"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.CachedProperty, query)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and

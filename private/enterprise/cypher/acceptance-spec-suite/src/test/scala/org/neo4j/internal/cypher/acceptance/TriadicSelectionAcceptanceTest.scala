@@ -182,8 +182,8 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // FOR QUERIES
     val queries = List(
-        Query("non-triadic1", Configs.All, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post)<-[:POSTED]-(u) RETURN u, a"),
-        Query("non-triadic2", Configs.All, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a)<-[:POSTED]-(u) RETURN u, a"),
+        Query("non-triadic1", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post)<-[:POSTED]-(u) RETURN u, a"),
+        Query("non-triadic2", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a)<-[:POSTED]-(u) RETURN u, a"),
         Query("triadic-neg1", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
         Query("triadic-neg2", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
         Query("triadic-neg3", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
