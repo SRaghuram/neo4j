@@ -19,7 +19,8 @@ case class RelationshipProperty(offset: Int, token: Int) extends Expression with
     state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
                                             token,
                                             state.cursors.relationshipScanCursor,
-                                            state.cursors.propertyCursor)
+                                            state.cursors.propertyCursor,
+                                            throwOnDeleted = true)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }
@@ -34,7 +35,8 @@ case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expres
       state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
                                               maybeToken.get,
                                               state.cursors.relationshipScanCursor,
-                                              state.cursors.propertyCursor)
+                                              state.cursors.propertyCursor,
+                                              throwOnDeleted = true)
   }
 
   override def children: Seq[AstNode[_]] = Seq.empty

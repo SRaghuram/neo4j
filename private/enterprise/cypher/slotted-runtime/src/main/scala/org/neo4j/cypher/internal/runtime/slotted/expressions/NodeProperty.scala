@@ -18,7 +18,7 @@ import org.neo4j.values.storable.Values
 case class NodeProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
-    state.query.nodeOps.getProperty(ctx.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor)
+    state.query.nodeOps.getProperty(ctx.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }
@@ -30,7 +30,7 @@ case class NodePropertyLate(offset: Int, propKey: String) extends Expression wit
     if (maybeToken.isEmpty)
       Values.NO_VALUE
     else
-      state.query.nodeOps.getProperty(ctx.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor)
+      state.query.nodeOps.getProperty(ctx.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
   }
 
   override def children: Seq[AstNode[_]] = Seq.empty
