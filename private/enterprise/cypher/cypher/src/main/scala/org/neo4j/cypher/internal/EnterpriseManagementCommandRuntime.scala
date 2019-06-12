@@ -10,7 +10,6 @@ import java.util
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.auth._
-import org.apache.shiro.authc.AuthenticationException
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
@@ -154,6 +153,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // SET MY PASSWORD FROM 'currentPassword' TO 'newPassword'
     case SetOwnPassword(Some(newPassword), None, Some(currentPassword), None) => (_, _, securityContext) =>
+      // Needs to be in both community and enterprise since enterprise needs to clear the user cache
       val query =
         """MATCH (user:User {name: $name})
           |WITH user, user.credentials AS oldCredentials
@@ -174,7 +174,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             val maybeThrowable = {
               val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
               if (!oldCredentials.matchesPassword(currentPassword))
-                Some(new AuthenticationException("Invalid principal or credentials."))
+                Some(new InvalidArgumentsException("Invalid principal or credentials."))
               else if (oldCredentials.matchesPassword(newPassword))
                 Some(new InvalidArgumentsException("Old password and new password cannot be the same."))
               else
@@ -184,18 +184,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
             maybeThrowable
           })
       )
-
-    // SET MY PASSWORD FROM currentPassword TO $newPassword
-    case SetOwnPassword(_, Some(_), _, _) =>
-      throw new IllegalStateException("Did not resolve parameters correctly.")
-
-    // SET MY PASSWORD FROM $currentPassword TO newPassword
-    case SetOwnPassword(_, _, _, Some(_)) =>
-      throw new IllegalStateException("Did not resolve parameters correctly.")
-
-    // SET MY PASSWORD FROM currentPassword TO newPassword
-    case SetOwnPassword(_, _, _, _) =>
-      throw new IllegalStateException("Password not correctly supplied.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _, _) =>

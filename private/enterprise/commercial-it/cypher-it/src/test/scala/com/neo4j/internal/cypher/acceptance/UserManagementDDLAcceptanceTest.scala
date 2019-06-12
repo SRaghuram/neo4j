@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.apache.shiro.authc.AuthenticationException
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher._
 import org.neo4j.graphdb.QueryExecutionException
@@ -992,7 +991,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     parameter.put("wrongPassword", "boo")
 
     // WHEN
-    the[AuthenticationException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
       // THEN
