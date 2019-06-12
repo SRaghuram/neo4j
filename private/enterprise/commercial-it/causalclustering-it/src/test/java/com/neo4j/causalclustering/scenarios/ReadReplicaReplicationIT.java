@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -17,44 +16,36 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.hamcrest.Matchers;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.api.txtracking.TransactionIdTracker;
-import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -66,11 +57,14 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1;
 import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1_PREFIX;
 import static com.neo4j.causalclustering.common.DataCreator.createDataInOneTransaction;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_topology_refresh;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -80,60 +74,57 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class ReadReplicaReplicationIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ReadReplicaReplicationIT
 {
     private static final int NR_CORE_MEMBERS = 3;
     private static final int NR_READ_REPLICAS = 1;
 
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( NR_CORE_MEMBERS )
-            .withNumberOfReadReplicas( NR_READ_REPLICAS )
-            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     @Test
-    public void shouldNotBeAbleToWriteToReadReplica() throws Exception
+    void shouldNotBeAbleToWriteToReadReplica() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = startClusterWithDefaultConfig();
 
-        GraphDatabaseFacade readReplica = cluster.findAnyReadReplica().defaultDatabase();
+        var readReplica = cluster.findAnyReadReplica().defaultDatabase();
 
-        // when
-        try ( Transaction tx = readReplica.beginTx() )
+        // when / then
+        assertThrows( WriteOperationsNotAllowedException.class, () ->
         {
-            Node node = readReplica.createNode();
-            node.setProperty( NODE_PROPERTY_1, "baz_bat" );
-            node.addLabel( DataCreator.LABEL );
-            tx.success();
-            fail( "should have thrown" );
-        }
-        catch ( WriteOperationsNotAllowedException e )
-        {
-            // then all good
-        }
+            try ( var tx = readReplica.beginTx() )
+            {
+                var node = readReplica.createNode();
+                node.setProperty( NODE_PROPERTY_1, "baz_bat" );
+                node.addLabel( DataCreator.LABEL );
+                tx.success();
+            }
+        } );
     }
 
     @Test
-    public void allServersBecomeAvailable() throws Exception
+    void allServersBecomeAvailable() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = startClusterWithDefaultConfig();
 
         // then
-        for ( final ReadReplica readReplica : cluster.readReplicas() )
+        for ( var readReplica : cluster.readReplicas() )
         {
             ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
@@ -141,16 +132,16 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void shouldEventuallyPullTransactionDownToAllReadReplicas() throws Exception
+    void shouldEventuallyPullTransactionDownToAllReadReplicas() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
-        int nodesBeforeReadReplicaStarts = 1;
+        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
+        var nodesBeforeReadReplicaStarts = 1;
 
         DataCreator.createSchema( cluster );
 
         // when
-        for ( int i = 0; i < 100; i++ )
+        for ( var i = 0; i < 100; i++ )
         {
             createDataInOneTransaction( cluster, nodesBeforeReadReplicaStarts );
         }
@@ -158,9 +149,9 @@ public class ReadReplicaReplicationIT
         Set<Path> labelScanStoreFiles = new HashSet<>();
         cluster.coreTx( ( db, tx ) -> gatherLabelScanStoreFiles( db, labelScanStoreFiles ) );
 
-        AtomicBoolean labelScanStoreCorrectlyPlaced = new AtomicBoolean( false );
-        Monitors monitors = new Monitors();
-        ReadReplica rr = cluster.addReadReplicaWithIdAndMonitors( 0, monitors );
+        var labelScanStoreCorrectlyPlaced = new AtomicBoolean( false );
+        var monitors = new Monitors();
+        var readReplica = cluster.addReadReplicaWithIdAndMonitors( 0, monitors );
         monitors.addMonitorListener( (FileCopyMonitor) file ->
         {
             if ( labelScanStoreFiles.contains( file.toPath().getFileName() ) )
@@ -168,24 +159,23 @@ public class ReadReplicaReplicationIT
                 labelScanStoreCorrectlyPlaced.set( true );
             }
         } );
+        readReplica.start();
 
-        rr.start();
-
-        for ( int i = 0; i < 100; i++ )
+        for ( var i = 0; i < 100; i++ )
         {
             createDataInOneTransaction( cluster, nodesBeforeReadReplicaStarts );
         }
 
         // then
-        for ( final ReadReplica server : cluster.readReplicas() )
+        for ( var server : cluster.readReplicas() )
         {
-            GraphDatabaseService readReplica = server.defaultDatabase();
-            try ( Transaction tx = readReplica.beginTx() )
+            var readReplicaDb = server.defaultDatabase();
+            try ( var tx = readReplicaDb.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( readReplica.getAllNodes() );
-                assertEventually( "node to appear on read replica", nodeCount, is( 400L ) , 1, MINUTES );
+                ThrowingSupplier<Long,Exception> nodeCount = () -> count( readReplicaDb.getAllNodes() );
+                assertEventually( "node to appear on read replica", nodeCount, is( 400L ), 1, MINUTES );
 
-                for ( Node node : readReplica.getAllNodes() )
+                for ( var node : readReplicaDb.getAllNodes() )
                 {
                     assertThat( node.getProperty( NODE_PROPERTY_1 ).toString(), startsWith( NODE_PROPERTY_1_PREFIX ) );
                 }
@@ -199,27 +189,27 @@ public class ReadReplicaReplicationIT
 
     private static void gatherLabelScanStoreFiles( GraphDatabaseAPI db, Set<Path> labelScanStoreFiles )
     {
-        Path databaseDirectory = db.databaseLayout().databaseDirectory().toPath();
-        LabelScanStore labelScanStore = db.getDependencyResolver().resolveDependency( LabelScanStore.class );
-        try ( ResourceIterator<File> files = labelScanStore.snapshotStoreFiles() )
+        var databaseDirectory = db.databaseLayout().databaseDirectory().toPath();
+        var labelScanStore = db.getDependencyResolver().resolveDependency( LabelScanStore.class );
+        try ( var files = labelScanStore.snapshotStoreFiles() )
         {
-            Path relativePath = databaseDirectory.relativize( files.next().toPath().toAbsolutePath() );
+            var relativePath = databaseDirectory.relativize( files.next().toPath().toAbsolutePath() );
             labelScanStoreFiles.add( relativePath );
         }
     }
 
     @Test
-    public void shouldShutdownRatherThanPullUpdatesFromCoreMemberWithDifferentStoreIdIfLocalStoreIsNonEmpty()
+    void shouldShutdownRatherThanPullUpdatesFromCoreMemberWithDifferentStoreIdIfLocalStoreIsNonEmpty()
             throws Exception
     {
-        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
 
         createDataInOneTransaction( cluster, 10 );
 
         cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 2, TimeUnit.SECONDS );
 
         // Get a read replica and make sure that it is operational
-        ReadReplica readReplica = cluster.addReadReplicaWithId( 4 );
+        var readReplica = cluster.addReadReplicaWithId( 4 );
         readReplica.start();
         readReplica.defaultDatabase().beginTx().close();
 
@@ -232,10 +222,10 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void aReadReplicShouldBeAbleToRejoinTheCluster() throws Exception
+    void aReadReplicaShouldBeAbleToRejoinTheCluster() throws Exception
     {
-        int readReplicaId = 4;
-        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        var readReplicaId = 4;
+        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ) );
 
         createDataInOneTransaction( cluster, 10 );
 
@@ -254,9 +244,9 @@ public class ReadReplicaReplicationIT
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
-        Function<ClusterMember,DbRepresentation> toRep = db -> DbRepresentation.of( db.defaultDatabase() );
-        Set<DbRepresentation> dbs = cluster.coreMembers().stream().map( toRep ).collect( toSet() );
-        dbs.addAll( cluster.readReplicas().stream().map( toRep ).collect( toSet() ) );
+        var dbs = cluster.allMembers()
+                .map( member -> DbRepresentation.of( member.defaultDatabase() ) )
+                .collect( toSet() );
 
         cluster.shutdown();
 
@@ -264,17 +254,17 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void readReplicasShouldRestartIfTheWholeClusterIsRestarted() throws Exception
+    void readReplicasShouldRestartIfTheWholeClusterIsRestarted() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = startClusterWithDefaultConfig();
 
         // when
         cluster.shutdown();
         cluster.start();
 
         // then
-        for ( final ReadReplica readReplica : cluster.readReplicas() )
+        for ( var readReplica : cluster.readReplicas() )
         {
             ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
@@ -282,21 +272,21 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void shouldBeAbleToDownloadANewStoreAfterPruning() throws Exception
+    void shouldBeAbleToDownloadANewStoreAfterPruning() throws Exception
     {
         // given
-        Map<String,String> params = stringMap( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
+        var params = Map.of( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        var cluster = startCluster( defaultClusterConfig().withSharedCoreParams( params ) );
 
         createDataInOneTransaction( cluster, 10 );
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
-        ReadReplica readReplica = cluster.getReadReplicaById( 0 );
-        long highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
+        var readReplica = cluster.getReadReplicaById( 0 );
+        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
 
         // when
         readReplica.shutdown();
@@ -319,21 +309,21 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void shouldBeAbleToPullTxAfterHavingDownloadedANewStoreAfterPruning() throws Exception
+    void shouldBeAbleToPullTxAfterHavingDownloadedANewStoreAfterPruning() throws Exception
     {
         // given
-        Map<String,String> params = stringMap( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
+        var params = Map.of( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        var cluster = startCluster( defaultClusterConfig().withSharedCoreParams( params ) );
 
         createDataInOneTransaction( cluster, 10 );
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
-        ReadReplica readReplica = cluster.getReadReplicaById( 0 );
-        long highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
+        var readReplica = cluster.getReadReplicaById( 0 );
+        var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
 
         readReplica.shutdown();
 
@@ -358,14 +348,13 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
+    void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = startClusterWithDefaultConfig();
 
-        GraphDatabaseFacade readReplicaGraphDatabase = cluster.findAnyReadReplica().defaultDatabase();
-        CatchupPollingProcess pollingClient = readReplicaGraphDatabase.getDependencyResolver()
-                .resolveDependency( CatchupPollingProcess.class );
+        var readReplicaGraphDatabase = cluster.findAnyReadReplica().defaultDatabase();
+        var pollingClient = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
         pollingClient.stop();
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
@@ -374,19 +363,12 @@ public class ReadReplicaReplicationIT
             transaction.success();
         } );
 
-        GraphDatabaseFacade leaderDatabase = cluster.awaitLeader().defaultDatabase();
-        long transactionVisibleOnLeader = transactionIdTracker( leaderDatabase ).newestEncounteredTxId();
+        var leaderDatabase = cluster.awaitLeader().defaultDatabase();
+        var transactionVisibleOnLeader = transactionIdTracker( leaderDatabase ).newestEncounteredTxId();
 
         // when the poller is paused, transaction doesn't make it to the read replica
-        try
-        {
-            transactionIdTracker( readReplicaGraphDatabase ).awaitUpToDate( transactionVisibleOnLeader, ofSeconds( 15 ) );
-            fail( "should have thrown exception" );
-        }
-        catch ( TransactionFailureException e )
-        {
-            // expected timeout
-        }
+        assertThrows( TransactionFailureException.class,
+                () -> transactionIdTracker( readReplicaGraphDatabase ).awaitUpToDate( transactionVisibleOnLeader, ofSeconds( 15 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
         pollingClient.start();
@@ -395,10 +377,8 @@ public class ReadReplicaReplicationIT
 
     private static TransactionIdTracker transactionIdTracker( GraphDatabaseAPI database )
     {
-        Supplier<TransactionIdStore> transactionIdStore =
-                database.getDependencyResolver().provideDependency( TransactionIdStore.class );
-        AvailabilityGuard databaseAvailabilityGuard =
-                database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
+        var transactionIdStore = database.getDependencyResolver().provideDependency( TransactionIdStore.class );
+        var databaseAvailabilityGuard = database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
         return new TransactionIdTracker( transactionIdStore, databaseAvailabilityGuard, Clocks.nanoClock() );
     }
 
@@ -409,7 +389,7 @@ public class ReadReplicaReplicationIT
 
     private static boolean readReplicasUpToDateAsTheLeader( CoreClusterMember leader, Collection<ReadReplica> readReplicas )
     {
-        long leaderTxId = lastClosedTransactionId( true, leader.defaultDatabase() );
+        var leaderTxId = lastClosedTransactionId( true, leader.defaultDatabase() );
         return readReplicas.stream().map( ReadReplica::defaultDatabase )
                 .map( db -> lastClosedTransactionId( false, db ) )
                 .reduce( true, ( acc, txId ) -> acc && txId == leaderTxId, Boolean::logicalAnd );
@@ -417,8 +397,8 @@ public class ReadReplicaReplicationIT
 
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
-        File neoStoreFile = replica.databaseLayout().metadataStore();
-        PageCache pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
+        var neoStoreFile = replica.databaseLayout().metadataStore();
+        var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
     }
 
@@ -429,7 +409,7 @@ public class ReadReplicaReplicationIT
             return db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
                     .getLastClosedTransactionId();
         }
-        catch ( IllegalStateException  | UnsatisfiedDependencyException /* db is shutdown or not available */ ex )
+        catch ( IllegalStateException | UnsatisfiedDependencyException /* db is shutdown or not available */ ex )
         {
             if ( !fail )
             {
@@ -444,50 +424,55 @@ public class ReadReplicaReplicationIT
     }
 
     @Test
-    public void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat() throws Exception
+    void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ).startCluster();
+        var cluster = startCluster( defaultClusterConfig().withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ) );
 
         // when
         createDataInOneTransaction( cluster, 10 );
 
-        String format = Standard.LATEST_NAME;
-        ReadReplica readReplica = cluster.addReadReplicaWithIdAndRecordFormat( 0, format );
+        var format = Standard.LATEST_NAME;
+        var readReplica = cluster.addReadReplicaWithIdAndRecordFormat( 0, format );
         readReplica.start();
         assertFailedToStart( readReplica, DEFAULT_DATABASE_NAME );
     }
 
     @Test
-    public void shouldBeAbleToCopyStoresFromCoreToReadReplica() throws Exception
+    void shouldBeAbleToCopyStoresFromCoreToReadReplica() throws Exception
     {
         // given
-        Map<String,String> params = stringMap( CausalClusteringSettings.raft_log_rotation_size.name(), "1k",
+        var params = Map.of( CausalClusteringSettings.raft_log_rotation_size.name(), "1k",
                 CausalClusteringSettings.raft_log_pruning_frequency.name(), "500ms",
                 CausalClusteringSettings.state_machine_flush_window_size.name(), "1",
                 CausalClusteringSettings.raft_log_pruning_strategy.name(), "1 entries" );
-        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).withSharedCoreParams( params )
-                .withRecordFormat( HighLimit.NAME ).startCluster();
+
+        var clusterConfig = defaultClusterConfig()
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParams( params )
+                .withRecordFormat( HighLimit.NAME );
+
+        var cluster = startCluster( clusterConfig );
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( Label.label( "L" ) );
-            for ( int i = 0; i < 10; i++ )
+            var node = db.createNode( Label.label( "L" ) );
+            for ( var i = 0; i < 10; i++ )
             {
                 node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );
             }
             tx.success();
         } );
 
-        long baseVersion = versionBy( cluster.awaitLeader().raftLogDirectory(), Math::max );
+        var baseVersion = versionBy( cluster.awaitLeader().raftLogDirectory(), Math::max );
 
         CoreClusterMember coreGraphDatabase = null;
-        for ( int j = 0; j < 2; j++ )
+        for ( var j = 0; j < 2; j++ )
         {
             coreGraphDatabase = cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode( Label.label( "L" ) );
-                for ( int i = 0; i < 10; i++ )
+                var node = db.createNode( Label.label( "L" ) );
+                for ( var i = 0; i < 10; i++ )
                 {
                     node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );
                 }
@@ -495,40 +480,37 @@ public class ReadReplicaReplicationIT
             } );
         }
 
-        File raftLogDir = coreGraphDatabase.raftLogDirectory();
-        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), greaterThan( baseVersion ), 5,
-                SECONDS );
+        var raftLogDir = coreGraphDatabase.raftLogDirectory();
+        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), greaterThan( baseVersion ), 5, SECONDS );
 
         // when
         cluster.addReadReplicaWithIdAndRecordFormat( 4, HighLimit.NAME ).start();
 
         // then
-        for ( final ReadReplica readReplica : cluster.readReplicas() )
+        for ( var readReplica : cluster.readReplicas() )
         {
-            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), is( true ), 10,
-                    SECONDS );
+            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), is( true ), 10, SECONDS );
         }
     }
 
     private static long versionBy( File raftLogDir, BinaryOperator<Long> operator ) throws IOException
     {
-        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
+        try ( var fileSystem = new DefaultFileSystemAbstraction() )
         {
-            SortedMap<Long,File> logs = new FileNames( raftLogDir ).getAllFiles( fileSystem, mock( Log.class ) );
+            var logs = new FileNames( raftLogDir ).getAllFiles( fileSystem, mock( Log.class ) );
             return logs.keySet().stream().reduce( operator ).orElseThrow( IllegalStateException::new );
         }
     }
 
     @Test
-    public void pageFaultsFromReplicationMustCountInMetrics() throws Exception
+    void pageFaultsFromReplicationMustCountInMetrics() throws Exception
     {
         // Given initial pin counts on all members
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = startClusterWithDefaultConfig();
         Function<ReadReplica,PageCacheCounters> getPageCacheCounters =
                 ccm -> ccm.defaultDatabase().getDependencyResolver().resolveDependency( PageCacheCounters.class );
-        List<PageCacheCounters> countersList =
-                cluster.readReplicas().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
-        long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
+        var countersList = cluster.readReplicas().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
+        var initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
 
         // when the leader commits a write transaction,
         DataCreator.createDataInOneTransaction( cluster, 1 );
@@ -537,32 +519,52 @@ public class ReadReplicaReplicationIT
         // However, the commit returns as soon as the transaction has been replicated through the Raft log, which
         // happens before the transaction is applied on the members, and then replicated to read-replicas.
         // Therefor we are racing with the transaction application on the read-replicas, so we have to spin.
-        int minimumUpdatedMembersCount = countersList.size() / 2 + 1;
+        var minimumUpdatedMembersCount = countersList.size() / 2 + 1;
         assertEventually( "Expected followers to eventually increase pin counts", () ->
         {
-            long[] pinsAfterCommit = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
-            int membersWithIncreasedPinCount = 0;
-            for ( int i = 0; i < initialPins.length; i++ )
+            var pinsAfterCommit = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
+            var membersWithIncreasedPinCount = 0;
+            for ( var i = 0; i < initialPins.length; i++ )
             {
-                long before = initialPins[i];
-                long after = pinsAfterCommit[i];
+                var before = initialPins[i];
+                var after = pinsAfterCommit[i];
                 if ( before < after )
                 {
                     membersWithIncreasedPinCount++;
                 }
             }
             return membersWithIncreasedPinCount;
-        }, Matchers.is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
+        }, is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
     }
 
     @SuppressWarnings( "SameParameterValue" )
     private static void assertFailedToStart( ReadReplica readReplica, String databaseName )
     {
-        ClusteredDatabaseContext defaultDatabase = readReplica
+        var defaultDatabase = readReplica
                 .databaseManager()
                 .getDatabaseContext( new TestDatabaseIdRepository().get( databaseName ) )
                 .orElseThrow();
 
         assertTrue( defaultDatabase.isFailed() );
+    }
+
+    private Cluster startClusterWithDefaultConfig() throws Exception
+    {
+        return startCluster( defaultClusterConfig() );
+    }
+
+    private Cluster startCluster( ClusterConfig clusterConfig ) throws Exception
+    {
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        return cluster;
+    }
+
+    private static ClusterConfig defaultClusterConfig()
+    {
+        return clusterConfig()
+                .withNumberOfCoreMembers( NR_CORE_MEMBERS )
+                .withNumberOfReadReplicas( NR_READ_REPLICAS )
+                .withSharedCoreParam( cluster_topology_refresh, "5s" );
     }
 }
