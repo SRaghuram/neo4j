@@ -118,8 +118,6 @@ Feature "PatternPredicates": Scenario "Pattern predicates on missing optionally 
 Feature "PatternPredicates": Scenario "Returning a relationship from a pattern predicate"
 Feature "PatternPredicates": Scenario "Undirected NOOP path predicate 1"
 Feature "PatternPredicates": Scenario "Undirected NOOP path predicate 2"
-Feature "PatternPredicates": Scenario "Using a pattern predicate after aggregation 1"
-Feature "PatternPredicates": Scenario "Using a pattern predicate after aggregation 2"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
 Feature "ShortestPathAcceptance": Scenario "Find a combination of a shortest path and a pattern expression"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all nodes"
