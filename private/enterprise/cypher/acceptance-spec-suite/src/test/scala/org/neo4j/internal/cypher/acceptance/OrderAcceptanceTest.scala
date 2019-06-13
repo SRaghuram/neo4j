@@ -294,7 +294,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("{age : cache[a.age]}")
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : cache\\[a\\.age\\] \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : cache\\[b\\.age\\] \\+ \\$`  AUTOINT\\d+`\\}".r)
           .onTopOf(aPlan("Projection")
             .containingArgument("{b : a}")
           )
