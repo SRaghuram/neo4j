@@ -199,6 +199,13 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def failQuery(throwable: Throwable, resources: QueryResources, failedPipeline: ExecutablePipeline): Unit
 
   /**
+    * Cancel the query.
+    *
+    * @param resources resources where to hand-back any open cursors
+    */
+  def cancelQuery(resources: QueryResources): Unit
+
+  /**
     * Check whether this query has completed. A query is completed if it has
     * produced all results, or an exception has occurred.
     */

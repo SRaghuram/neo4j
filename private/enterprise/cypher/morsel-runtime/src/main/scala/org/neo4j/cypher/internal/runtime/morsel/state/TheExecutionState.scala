@@ -97,11 +97,11 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
-    if (!queryStatus.failed) {
+    if (!queryStatus.cancelled) {
       buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
       workerWaker.wakeOne()
     } else {
-      DebugSupport.logErrorHandling(s"Dropped morsel $output because of query failure")
+      DebugSupport.logErrorHandling(s"Dropped morsel $output because of query cancellation")
     }
   }
 
@@ -159,8 +159,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
-    if (queryStatus.failed) {
-      DebugSupport.logErrorHandling(s"[putContinuation] Closing $task because of query failure")
+    if (queryStatus.cancelled) {
+      DebugSupport.logErrorHandling(s"[putContinuation] Closing $task because of query cancellation")
       task.close(resources)
     } else {
       DebugSupport.logErrorHandling(s"[putContinuation] put $task")
@@ -206,24 +206,39 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   /**
     * Mark this query as failed, and close any outstanding work.
     *
-    * To achieve a clean shut-down in the even of a failure, we
-    *
-    *  - close any new continuations being put into the execution state
-    *  - drop any new data being put into the execution state
-    *  - take and close all continuations and data we find in the execution state
-    *
     * @param throwable the observed exception
-    * @param resources resources where to hand-back any open cursors
-    * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
-    *                       the failure happened pipeline execution
     */
   override def failQuery(throwable: Throwable,
                          resources: QueryResources,
                          failedPipeline: ExecutablePipeline): Unit = {
 
-    queryStatus.failed = true
-
     DebugSupport.logErrorHandling("Starting ExecutionState.failQuery")
+    closeOutstandingWork(resources, failedPipeline)
+    tracker.error(throwable)
+  }
+
+  /**
+    * Cancel this query, and close any outstanding work.
+    */
+  override def cancelQuery(resources: QueryResources): Unit = {
+    closeOutstandingWork(resources, failedPipeline = null)
+  }
+
+  /**
+    * To achieve a clean shut-down, we
+    *
+    *  - close any new continuations being put into the execution state
+    *  - drop any new data being put into the execution state
+    *  - take and close all continuations and data we find in the execution state
+    *
+    * @param resources      resources where to hand-back any open cursors
+    * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
+    *                       the failure happened outside of pipeline execution
+    */
+  private def closeOutstandingWork(resources: QueryResources, failedPipeline: ExecutablePipeline): Unit = {
+
+    queryStatus.cancelled = true
+
     buffers.clearAll()
 
     for (pipeline <- pipelines) {
@@ -237,8 +252,6 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
         }
       }
     }
-
-    tracker.error(throwable)
   }
 
   override def isCompleted: Boolean = tracker.isCompleted
@@ -254,5 +267,5 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 }
 
 class QueryStatus {
-  @volatile var failed = false
+  @volatile var cancelled = false
 }
