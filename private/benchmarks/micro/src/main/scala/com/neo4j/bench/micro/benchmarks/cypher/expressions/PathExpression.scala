@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.{AbstractCypherBenchmark, EnterpriseInterpreted, ExecutablePlan}
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
@@ -51,20 +51,20 @@ class PathExpression extends AbstractCypherBenchmark {
     val exp2 = plans.Expand(exp1, "b", OUTGOING, relTypeNames, "c", "r2", ExpandAll)(IdGen)
     val filter = plans.Selection(Seq(astNot(astEquals(astVariable("r1"), astVariable("r2")))), exp2)(IdGen)
     val expression = astFunctionInvocation("length",
-                                           astPathExpression(
-                                             NodePathStep(astVariable("a"),
-                                                          SingleRelationshipPathStep(astVariable("r1"), OUTGOING,
-                                                                                     SingleRelationshipPathStep(astVariable("r2"), OUTGOING, NilPathStep)))))
+      astPathExpression(
+        NodePathStep(astVariable("a"),
+          SingleRelationshipPathStep(astVariable("r1"), OUTGOING,
+            SingleRelationshipPathStep(astVariable("r2"), OUTGOING, NilPathStep)))))
     val projection = plans.Projection(filter, Map("result" -> expression))(IdGen)
 
     val produceResults = plans.ProduceResult(projection, resultColumns)(IdGen)
 
     val table = SemanticTable().
-      addNode(astVariable("a")).
-      addNode(astVariable("b")).
-      addNode(astVariable("c")).
-      addRelationship(astVariable("r1")).
-      addRelationship(astVariable("r2"))
+                addNode(astVariable("a")).
+                addNode(astVariable("b")).
+                addNode(astVariable("c")).
+                addRelationship(astVariable("r1")).
+                addRelationship(astVariable("r2"))
 
     (produceResults, table, resultColumns)
   }
@@ -80,7 +80,7 @@ class PathExpression extends AbstractCypherBenchmark {
 
 object PathExpression {
   def main(args: Array[String]): Unit = {
-    Main.run(classOf[PathExpression], args:_*)
+    Main.run(classOf[PathExpression], args: _*)
   }
 }
 

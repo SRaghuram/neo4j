@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
@@ -27,10 +27,10 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class BooleanExpression extends AbstractCypherBenchmark {
 
-@ParamValues(
-  allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
-  base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
-@Param(Array[String]())
+  @ParamValues(
+    allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
+    base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
+  @Param(Array[String]())
   var BooleanExpression_engine: String = _
 
   override def description = "UNWIND $list RETURN ($x >= 0.0 OR $x < 0.5) AND ($x >= 0.5 OR $x < 1.0)"
@@ -72,9 +72,10 @@ class BooleanExpression extends AbstractCypherBenchmark {
 
 object BooleanExpression {
   val ROWS: Int = 10000
-  val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(Values.intValue).toArray:_*)
+  val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(Values.intValue).toArray: _*)
+
   def main(args: Array[String]): Unit = {
-    Main.run(classOf[BooleanExpression], args:_*)
+    Main.run(classOf[BooleanExpression], args: _*)
   }
 }
 
@@ -90,9 +91,9 @@ class BooleanExpressionThreadState {
     executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),
-                               Array(
-                                 doubleValue(rngState.rng.nextDouble()),
-                                 BooleanExpression.VALUES))
+      Array(
+        doubleValue(rngState.rng.nextDouble()),
+        BooleanExpression.VALUES))
   }
 
   @TearDown

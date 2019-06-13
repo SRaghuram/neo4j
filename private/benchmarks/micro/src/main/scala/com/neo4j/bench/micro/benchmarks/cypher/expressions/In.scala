@@ -7,10 +7,10 @@ package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
 import java.util.SplittableRandom
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
@@ -83,7 +83,7 @@ class In extends AbstractCypherBenchmark {
     }
 
   private def nextValueToCheck(rnd: SplittableRandom) =
-    longValue(rnd.nextInt((In_size * ( 100.0 / In_hitRatio)).intValue()))
+    longValue(rnd.nextInt((In_size * (100.0 / In_hitRatio)).intValue()))
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
@@ -97,9 +97,10 @@ class In extends AbstractCypherBenchmark {
 
 object In {
   val ROWS: Int = 10000
-  val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(intValue).toArray:_*)
+  val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(intValue).toArray: _*)
+
   def main(args: Array[String]): Unit = {
-    Main.run(classOf[In], args:_*)
+    Main.run(classOf[In], args: _*)
   }
 }
 

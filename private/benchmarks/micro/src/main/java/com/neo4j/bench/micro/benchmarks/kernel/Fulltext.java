@@ -5,14 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.DiscreteGenerator;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.profile.ProfileDescriptor;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -68,15 +67,15 @@ public class Fulltext extends AbstractKernelBenchmark
     public String description()
     {
         return "Tests performance of searching the fulltext schema indexes.\n" +
-                "Method:\n" +
-                "- Every node has exactly one label, same label\n" +
-                "- Every node has exactly one property, same property (key)\n" +
-                "- During store creation, property values are assigned with skewed policy\n" +
-                "- There are three property values, with frequency of 1:10:100\n" +
-                "- When reading, there is one benchmark for each frequency:\n" +
-                "    * High Selectivity: 1\n" +
-                "    * Medium Selectivity: 10\n" +
-                "    * Low Selectivity: 100";
+               "Method:\n" +
+               "- Every node has exactly one label, same label\n" +
+               "- Every node has exactly one property, same property (key)\n" +
+               "- During store creation, property values are assigned with skewed policy\n" +
+               "- There are three property values, with frequency of 1:10:100\n" +
+               "- When reading, there is one benchmark for each frequency:\n" +
+               "    * High Selectivity: 1\n" +
+               "    * Medium Selectivity: 10\n" +
+               "    * Low Selectivity: 100";
     }
 
     @Override
@@ -179,13 +178,13 @@ public class Fulltext extends AbstractKernelBenchmark
         }
         catch ( Exception e )
         {
-            e.addSuppressed( new Exception( "Query failed: '" + lowSelectivityValue.stringValue() + "'."  ) );
+            e.addSuppressed( new Exception( "Query failed: '" + lowSelectivityValue.stringValue() + "'." ) );
             throw e;
         }
     }
 
     public static void main( String... methods )
     {
-        run( Fulltext.class, ProfileDescriptor.noProfile(), methods );
+        run( Fulltext.class, methods );
     }
 }

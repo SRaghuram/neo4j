@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
@@ -49,9 +49,9 @@ class CaseExpression extends AbstractCypherBenchmark {
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val resultColumns = List("result")
     val parameter = Parameter("x", symbols.CTAny)(Pos)
-    val alternatives = (0 until CaseExpression_size).map(i =>  astLiteralFor(i, LNG) -> astLiteralFor(i.toString, STR_SML))
+    val alternatives = (0 until CaseExpression_size).map(i => astLiteralFor(i, LNG) -> astLiteralFor(i.toString, STR_SML))
 
-    val expression = astCase(parameter, alternatives, Some( astLiteralFor("DEFAULT", STR_SML)))
+    val expression = astCase(parameter, alternatives, Some(astLiteralFor("DEFAULT", STR_SML)))
     val listType = symbols.CTList(symbols.CTAny)
     val unwindListParameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")

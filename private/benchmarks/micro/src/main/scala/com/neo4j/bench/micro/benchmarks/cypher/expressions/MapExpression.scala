@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
@@ -92,9 +92,9 @@ class MapExpressionThreadState {
     executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),
-                               Array(
-                                 doubleValue(rngState.rng.nextDouble()),
-                                 MapExpression.VALUES))
+      Array(
+        doubleValue(rngState.rng.nextDouble()),
+        MapExpression.VALUES))
   }
 
   @TearDown

@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
 import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
@@ -87,7 +87,7 @@ class ExtractExpressionThreadState {
     tx = benchmarkState.beginInternalTransaction()
     list = VirtualValues.list((1 to benchmarkState.ExtractExpression_size).map(Values.intValue).toArray: _*)
     params = VirtualValues.map(Array("x", "list"),
-                               Array(list, ExtractExpression.VALUES))
+      Array(list, ExtractExpression.VALUES))
   }
 
   @TearDown
