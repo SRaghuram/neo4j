@@ -5,17 +5,16 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
+import java.io.IOException;
+
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
-
-import java.io.IOException;
 
 public interface ReplicatedContentHandler
 {
@@ -24,8 +23,6 @@ public interface ReplicatedContentHandler
     void handle( TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException;
 
     void handle( MemberIdSet memberIdSet ) throws IOException;
-
-    void handle( ReplicatedIdAllocationRequest replicatedIdAllocationRequest ) throws IOException;
 
     void handle( ReplicatedTokenRequest replicatedTokenRequest ) throws IOException;
 

@@ -5,8 +5,12 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.UUID;
+
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
@@ -23,12 +27,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.UUID;
-
-import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -80,16 +78,6 @@ class CoreReplicatedContentMarshalV2Test
                 new MemberId( UUID.randomUUID() ),
                 new MemberId( UUID.randomUUID() )
         ) );
-
-        assertMarshalingEquality( buffer, message );
-    }
-
-    @Test
-    void shouldMarshalIdRangeRequest() throws Exception
-    {
-        ByteBuf buffer = Unpooled.buffer();
-        ReplicatedContent message = new ReplicatedIdAllocationRequest(
-                new MemberId( UUID.randomUUID() ), IdType.PROPERTY, 100, 200, DATABASE_ID );
 
         assertMarshalingEquality( buffer, message );
     }

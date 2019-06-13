@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Optional;
+
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -96,8 +96,7 @@ public class DumpClusterState
             dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump, nullDatabaseLogProvider() ) );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
-            dumpState( CoreStateFiles.LOCK_TOKEN, storageFactory.createLockTokenStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
-            dumpState( CoreStateFiles.ID_ALLOCATION, storageFactory.createIdAllocationStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.BARRIER_TOKEN, storageFactory.createBarrierTokenStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
             dumpState( CoreStateFiles.SESSION_TRACKER, storageFactory.createSessionTrackerStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
 
             /* raft state */

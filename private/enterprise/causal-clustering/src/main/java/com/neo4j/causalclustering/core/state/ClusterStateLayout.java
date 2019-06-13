@@ -65,14 +65,9 @@ public class ClusterStateLayout
         return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );
     }
 
-    public File idAllocationStateDirectory( DatabaseId databaseId )
+    public File barrierTokenStateDirectory( DatabaseId databaseId )
     {
-        return databaseClusterStateDirectory( CoreStateFiles.ID_ALLOCATION, databaseId );
-    }
-
-    public File lockTokenStateDirectory( DatabaseId databaseId )
-    {
-        return databaseClusterStateDirectory( CoreStateFiles.LOCK_TOKEN, databaseId );
+        return databaseClusterStateDirectory( CoreStateFiles.BARRIER_TOKEN, databaseId );
     }
 
     public File lastFlushedStateDirectory( DatabaseId databaseId )

@@ -5,13 +5,18 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CommercialTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -21,15 +26,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -52,11 +50,8 @@ import static com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedB
 import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -124,7 +119,7 @@ class RaftBootstrapperIT
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig, 0 );
+        verifySnapshot( snapshot, membership, defaultConfig );
     }
 
     @Test
@@ -144,7 +139,7 @@ class RaftBootstrapperIT
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig, 0 );
+        verifySnapshot( snapshot, membership, defaultConfig );
     }
 
     @Test
@@ -169,7 +164,7 @@ class RaftBootstrapperIT
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
+        verifySnapshot( snapshot, membership, defaultConfig );
     }
 
     @Test
@@ -200,7 +195,7 @@ class RaftBootstrapperIT
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
 
         // then
-        verifySnapshot( snapshot, membership, config, nodeCount );
+        verifySnapshot( snapshot, membership, config );
     }
 
     @Test
@@ -292,7 +287,7 @@ class RaftBootstrapperIT
         assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 
-    private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig, int nodeCount ) throws IOException
+    private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig ) throws IOException
     {
         assertNotNull( snapshot );
         assertEquals( 0, snapshot.prevIndex() );
@@ -306,7 +301,7 @@ class RaftBootstrapperIT
 
         for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
-            verifyDatabaseSpecificState( snapshot::get, nodeCount );
+            verifyDatabaseSpecificState( snapshot::get );
             if ( DatabaseId.isSystemDatabase( databaseEntry.getKey() ) )
             {
                 verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
@@ -318,15 +313,11 @@ class RaftBootstrapperIT
         }
     }
 
-    private void verifyDatabaseSpecificState( Function<CoreStateFiles<?>,?> databaseSpecific, int nodeCount )
+    private void verifyDatabaseSpecificState( Function<CoreStateFiles<?>,?> databaseSpecific )
     {
-        ReplicatedBarrierTokenState lockTokenState = (ReplicatedBarrierTokenState) databaseSpecific.apply( CoreStateFiles.LOCK_TOKEN );
-        IdAllocationState idAllocationState =  (IdAllocationState) databaseSpecific.apply( CoreStateFiles.ID_ALLOCATION );
+        ReplicatedBarrierTokenState barrierTokenState = (ReplicatedBarrierTokenState) databaseSpecific.apply( CoreStateFiles.BARRIER_TOKEN );
 
-        assertEquals( INITIAL_BARRIER_TOKEN, lockTokenState );
-
-        assertThat( idAllocationState.firstUnallocated( IdType.NODE ),
-                allOf( greaterThanOrEqualTo( (long) nodeCount ), lessThanOrEqualTo( (long) nodeCount ) ) );
+        assertEquals( INITIAL_BARRIER_TOKEN, barrierTokenState );
     }
 
     private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException

@@ -9,7 +9,6 @@ class ContentCodes
 {
     static final byte TX_CONTENT_TYPE = 0;
     static final byte RAFT_MEMBER_SET_TYPE = 1;
-    static final byte ID_RANGE_REQUEST_TYPE = 2;
     static final byte TOKEN_REQUEST_TYPE = 4;
     static final byte NEW_LEADER_BARRIER_TYPE = 5;
     static final byte LOCK_TOKEN_REQUEST = 6;

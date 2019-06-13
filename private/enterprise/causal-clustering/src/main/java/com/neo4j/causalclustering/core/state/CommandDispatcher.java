@@ -5,19 +5,16 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
+import java.util.function.Consumer;
+
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-
-import java.util.function.Consumer;
 
 public interface CommandDispatcher extends AutoCloseable
 {
     void dispatch( ReplicatedTransaction transaction, long commandIndex, Consumer<Result> callback );
-
-    void dispatch( ReplicatedIdAllocationRequest idAllocation, long commandIndex, Consumer<Result> callback );
 
     void dispatch( ReplicatedTokenRequest tokenRequest, long commandIndex, Consumer<Result> callback );
 

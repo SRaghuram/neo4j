@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;

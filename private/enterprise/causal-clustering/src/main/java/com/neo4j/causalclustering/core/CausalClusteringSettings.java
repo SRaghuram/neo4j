@@ -326,10 +326,6 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Integer> last_flushed_state_size =
             setting( "causal_clustering.last_applied_state_size", INTEGER, "1000" );
 
-    @Description( "The maximum file size before the ID allocation file is rotated (in unit of entries)" )
-    public static final Setting<Integer> id_alloc_state_size =
-            setting( "causal_clustering.id_alloc_state_size", INTEGER, "1000" );
-
     @Description( "The maximum file size before the membership state file is rotated (in unit of entries)" )
     public static final Setting<Integer> raft_membership_state_size =
             setting( "causal_clustering.raft_membership_state_size", INTEGER, "1000" );
@@ -347,7 +343,7 @@ public class CausalClusteringSettings implements LoadableConfig
             setting( "causal_clustering.global_session_tracker_state_size", INTEGER, "1000" );
 
     @Description( "The maximum file size before the replicated lock token state file is rotated (in unit of entries)" )
-    public static final Setting<Integer> replicated_lock_token_state_size =
+    public static final Setting<Integer> replicated_barrier_token_state_size =
             setting( "causal_clustering.replicated_lock_token_state_size", INTEGER, "1000" );
 
     @Description( "The initial timeout until replication is retried. The timeout will increase exponentially." )
@@ -434,96 +430,6 @@ public class CausalClusteringSettings implements LoadableConfig
                   "are available for read-only queries in a typical heterogeneous setup." )
     public static final Setting<Boolean> cluster_allow_reads_on_followers =
             setting( "causal_clustering.cluster_allow_reads_on_followers", BOOLEAN, TRUE );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out of NODE IDs. " +
-            "Larger values mean less frequent requests but also result in more unused IDs (and unused disk space) " +
-            "in the event of a crash." )
-    public static final Setting<Integer> node_id_allocation_size =
-            setting( "causal_clustering.node_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of RELATIONSHIP IDs. Larger values mean less frequent requests but also result in more unused IDs " +
-            "(and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> relationship_id_allocation_size =
-            setting( "causal_clustering.relationship_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of PROPERTY IDs. Larger values mean less frequent requests but also result in more unused IDs " +
-            "(and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> property_id_allocation_size =
-            setting( "causal_clustering.property_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of STRING_BLOCK IDs. Larger values mean less frequent requests but also result in more unused IDs " +
-            "(and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> string_block_id_allocation_size =
-            setting( "causal_clustering.string_block_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of ARRAY_BLOCK IDs. Larger values mean less frequent requests but also result in more unused IDs " +
-            "(and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> array_block_id_allocation_size =
-            setting( "causal_clustering.array_block_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of PROPERTY_KEY_TOKEN IDs. Larger values mean less frequent requests but also result in more unused IDs " +
-            "(and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> property_key_token_id_allocation_size =
-            setting( "causal_clustering.property_key_token_id_allocation_size", INTEGER, "32" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of PROPERTY_KEY_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> property_key_token_name_id_allocation_size =
-            setting( "causal_clustering.property_key_token_name_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of RELATIONSHIP_TYPE_TOKEN IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> relationship_type_token_id_allocation_size =
-            setting( "causal_clustering.relationship_type_token_id_allocation_size", INTEGER, "32" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of RELATIONSHIP_TYPE_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> relationship_type_token_name_id_allocation_size =
-            setting( "causal_clustering.relationship_type_token_name_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of LABEL_TOKEN IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> label_token_id_allocation_size =
-            setting( "causal_clustering.label_token_id_allocation_size", INTEGER, "32" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of LABEL_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> label_token_name_id_allocation_size =
-            setting( "causal_clustering.label_token_name_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of NEOSTORE_BLOCK IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> neostore_block_id_allocation_size =
-            setting( "causal_clustering.neostore_block_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of SCHEMA IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> schema_id_allocation_size =
-            setting( "causal_clustering.schema_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of NODE_LABELS IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> node_labels_id_allocation_size =
-            setting( "causal_clustering.node_labels_id_allocation_size", INTEGER, "1024" );
-
-    @Description( "The size of the ID allocation requests Core servers will make when they run out " +
-            "of RELATIONSHIP_GROUP IDs. Larger values mean less frequent requests but also result in more " +
-            "unused IDs (and unused disk space) in the event of a crash." )
-    public static final Setting<Integer> relationship_group_id_allocation_size =
-            setting( "causal_clustering.relationship_group_id_allocation_size", INTEGER, "1024" );
 
     @Description( "Time between scanning the cluster to refresh current server's view of topology" )
     public static final Setting<Duration> cluster_topology_refresh =

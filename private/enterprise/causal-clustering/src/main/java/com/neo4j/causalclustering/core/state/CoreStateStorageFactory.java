@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.File;
+
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
@@ -18,8 +19,6 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-
-import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -58,14 +57,9 @@ public class CoreStateStorageFactory
         return createSimpleStorage( layout.raftIdStateFile( databaseId ), CoreStateFiles.RAFT_ID, logProvider );
     }
 
-    public StateStorage<IdAllocationState> createIdAllocationStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<ReplicatedBarrierTokenState> createBarrierTokenStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.idAllocationStateDirectory( databaseId ), CoreStateFiles.ID_ALLOCATION, life, logProvider );
-    }
-
-    public StateStorage<ReplicatedBarrierTokenState> createLockTokenStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
-    {
-        return createDurableStorage( layout.lockTokenStateDirectory( databaseId ), CoreStateFiles.LOCK_TOKEN, life, logProvider );
+        return createDurableStorage( layout.barrierTokenStateDirectory( databaseId ), CoreStateFiles.BARRIER_TOKEN, life, logProvider );
     }
 
     public StateStorage<Long> createLastFlushedStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )

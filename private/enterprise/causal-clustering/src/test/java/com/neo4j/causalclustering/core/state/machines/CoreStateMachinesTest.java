@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
+import java.util.function.Consumer;
+
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
@@ -20,8 +20,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import org.junit.Test;
 import org.mockito.InOrder;
-
-import java.util.function.Consumer;
 
 import static java.lang.Math.max;
 import static org.junit.Assert.assertEquals;
@@ -56,42 +54,37 @@ public class CoreStateMachinesTest
             dispatcher.dispatch( replicatedTransaction, 0, callback );
             dispatcher.dispatch( replicatedTransaction, 1, callback );
 
-            dispatcher.dispatch( iAllocationRequest, 2, callback  );
-
+            dispatcher.dispatch( replicatedTransaction, 2, callback );
             dispatcher.dispatch( replicatedTransaction, 3, callback );
-            dispatcher.dispatch( replicatedTransaction, 4, callback );
 
-            dispatcher.dispatch( relationshipTypeTokenRequest, 5, callback  );
+            dispatcher.dispatch( relationshipTypeTokenRequest, 4, callback  );
 
+            dispatcher.dispatch( replicatedTransaction, 5, callback );
             dispatcher.dispatch( replicatedTransaction, 6, callback );
-            dispatcher.dispatch( replicatedTransaction, 7, callback );
 
-            dispatcher.dispatch( lockTokenRequest, 8, callback );
+            dispatcher.dispatch( barrierTokenRequest, 7, callback );
 
+            dispatcher.dispatch( replicatedTransaction, 8, callback );
             dispatcher.dispatch( replicatedTransaction, 9, callback );
-            dispatcher.dispatch( replicatedTransaction, 10, callback );
         }
 
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 0, callback );
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 1, callback );
-        verifier.verify( txSM ).ensuredApplied();
 
-        verifier.verify( idAllocationSM ).applyCommand( iAllocationRequest, 2, callback );
-
+        verifier.verify( txSM ).applyCommand( replicatedTransaction, 2, callback );
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 3, callback );
-        verifier.verify( txSM ).applyCommand( replicatedTransaction, 4, callback );
         verifier.verify( txSM ).ensuredApplied();
 
-        verifier.verify( relationshipTypeTokenSM ).applyCommand( relationshipTypeTokenRequest, 5, callback );
+        verifier.verify( relationshipTypeTokenSM ).applyCommand( relationshipTypeTokenRequest, 4, callback );
 
+        verifier.verify( txSM ).applyCommand( replicatedTransaction, 5, callback );
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 6, callback );
-        verifier.verify( txSM ).applyCommand( replicatedTransaction, 7, callback );
         verifier.verify( txSM ).ensuredApplied();
 
-        verifier.verify( lockTokenSM ).applyCommand( lockTokenRequest, 8, callback );
+        verifier.verify( barrierTokenSM ).applyCommand( barrierTokenRequest, 7, callback );
 
+        verifier.verify( txSM ).applyCommand( replicatedTransaction, 8, callback );
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 9, callback );
-        verifier.verify( txSM ).applyCommand( replicatedTransaction, 10, callback );
         verifier.verify( txSM ).ensuredApplied();
 
         verifier.verifyNoMoreInteractions();
@@ -104,7 +97,7 @@ public class CoreStateMachinesTest
         StateMachine<?>[] txSMs = new StateMachine[]{labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, txSM};
 
         // these have separate storage
-        StateMachine<?>[] otherSMs = new StateMachine[]{idAllocationSM, lockTokenSM};
+        StateMachine<?>[] otherSMs = new StateMachine[]{barrierTokenSM};
 
         int totalDistinctSMs = otherSMs.length + 1; // distinct meaning backed by different storage
         // here we try to order all the distinct state machines in different orders to prove that,
@@ -137,28 +130,25 @@ public class CoreStateMachinesTest
     private final ReplicatedTokenStateMachine labelTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine relationshipTypeTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine propertyKeyTokenSM = mock( ReplicatedTokenStateMachine.class );
-    private final ReplicatedBarrierTokenStateMachine lockTokenSM = mock( ReplicatedBarrierTokenStateMachine.class );
-    private final ReplicatedIdAllocationStateMachine idAllocationSM = mock( ReplicatedIdAllocationStateMachine.class );
+    private final ReplicatedBarrierTokenStateMachine barrierTokenSM = mock( ReplicatedBarrierTokenStateMachine.class );
     private final DummyMachine dummySM = mock( DummyMachine.class );
     private final RecoverConsensusLogIndex recoverConsensusLogIndex = mock( RecoverConsensusLogIndex.class );
 
     private final CoreStateMachines coreStateMachines = new CoreStateMachines( txSM, labelTokenSM,
-            relationshipTypeTokenSM, propertyKeyTokenSM, lockTokenSM, idAllocationSM, dummySM,
-            recoverConsensusLogIndex );
+            relationshipTypeTokenSM, propertyKeyTokenSM, barrierTokenSM, dummySM, recoverConsensusLogIndex );
 
     private final ReplicatedTransaction replicatedTransaction = mock( ReplicatedTransaction.class );
-    private final ReplicatedIdAllocationRequest iAllocationRequest = mock( ReplicatedIdAllocationRequest.class );
     private final ReplicatedTokenRequest relationshipTypeTokenRequest = mock( ReplicatedTokenRequest.class );
     {
         when( relationshipTypeTokenRequest.type() ).thenReturn( TokenType.RELATIONSHIP );
     }
 
     @SuppressWarnings( "unchecked" )
-    private final ReplicatedBarrierTokenRequest lockTokenRequest = mock( ReplicatedBarrierTokenRequest.class );
+    private final ReplicatedBarrierTokenRequest barrierTokenRequest = mock( ReplicatedBarrierTokenRequest.class );
 
     @SuppressWarnings( "unchecked" )
     private final Consumer<Result> callback = mock( Consumer.class );
 
     private final InOrder verifier =
-            inOrder( txSM, labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, lockTokenSM, idAllocationSM );
+            inOrder( txSM, labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, barrierTokenSM );
 }

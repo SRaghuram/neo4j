@@ -5,10 +5,14 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
-import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
@@ -16,18 +20,10 @@ import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-import java.util.function.LongSupplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.internal.id.DefaultIdGeneratorFactory;
-import org.neo4j.internal.id.IdGenerator;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -49,22 +45,6 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
-import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
-import static org.neo4j.internal.id.IdType.ARRAY_BLOCK;
-import static org.neo4j.internal.id.IdType.LABEL_TOKEN;
-import static org.neo4j.internal.id.IdType.LABEL_TOKEN_NAME;
-import static org.neo4j.internal.id.IdType.NEOSTORE_BLOCK;
-import static org.neo4j.internal.id.IdType.NODE;
-import static org.neo4j.internal.id.IdType.NODE_LABELS;
-import static org.neo4j.internal.id.IdType.PROPERTY;
-import static org.neo4j.internal.id.IdType.PROPERTY_KEY_TOKEN;
-import static org.neo4j.internal.id.IdType.PROPERTY_KEY_TOKEN_NAME;
-import static org.neo4j.internal.id.IdType.RELATIONSHIP;
-import static org.neo4j.internal.id.IdType.RELATIONSHIP_GROUP;
-import static org.neo4j.internal.id.IdType.RELATIONSHIP_TYPE_TOKEN;
-import static org.neo4j.internal.id.IdType.RELATIONSHIP_TYPE_TOKEN_NAME;
-import static org.neo4j.internal.id.IdType.SCHEMA;
-import static org.neo4j.internal.id.IdType.STRING_BLOCK;
 
 /**
  * Bootstraps a raft group for a core database. A single instance is chosen as the bootstrapper, by the discovery service.
@@ -184,10 +164,7 @@ public class RaftBootstrapper
         var coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTrackerState );
-
-        var idAllocation = deriveIdAllocationState( bootstrapContext.databaseLayout() );
-        coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocation );
-        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN );
+        coreSnapshot.add( CoreStateFiles.BARRIER_TOKEN, ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN );
         return coreSnapshot;
     }
 
@@ -233,59 +210,5 @@ public class RaftBootstrapper
                         logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
             }
         }
-    }
-
-    /**
-     * In a cluster the ID allocations are based on consensus (rafted). This looks at the store (seed or empty) and
-     * figures out what the initial bootstrapped state is.
-     */
-    private IdAllocationState deriveIdAllocationState( DatabaseLayout layout )
-    {
-        DefaultIdGeneratorFactory factory = new DefaultIdGeneratorFactory( fs, immediate() );
-
-        long[] highIds = new long[]{
-                getHighId( factory, pageCache, NODE, layout.idNodeStore() ),
-                getHighId( factory, pageCache, RELATIONSHIP, layout.idRelationshipStore() ),
-                getHighId( factory, pageCache, PROPERTY, layout.idPropertyStore() ),
-                getHighId( factory, pageCache, STRING_BLOCK, layout.idPropertyStringStore() ),
-                getHighId( factory, pageCache, ARRAY_BLOCK, layout.idPropertyArrayStore() ),
-                getHighId( factory, pageCache, PROPERTY_KEY_TOKEN, layout.idPropertyKeyTokenStore() ),
-                getHighId( factory, pageCache, PROPERTY_KEY_TOKEN_NAME, layout.idPropertyKeyTokenNamesStore() ),
-                getHighId( factory, pageCache, RELATIONSHIP_TYPE_TOKEN, layout.idRelationshipTypeTokenStore() ),
-                getHighId( factory, pageCache, RELATIONSHIP_TYPE_TOKEN_NAME, layout.idRelationshipTypeTokenNamesStore() ),
-                getHighId( factory, pageCache, LABEL_TOKEN, layout.idLabelTokenStore() ),
-                getHighId( factory, pageCache, LABEL_TOKEN_NAME, layout.idLabelTokenNamesStore() ),
-                getHighId( factory, pageCache, NEOSTORE_BLOCK, layout.idMetadataStore() ),
-                getHighId( factory, pageCache, SCHEMA, layout.idSchemaStore() ),
-                getHighId( factory, pageCache, NODE_LABELS, layout.idNodeLabelStore() ),
-                getHighId( factory, pageCache, RELATIONSHIP_GROUP, layout.idRelationshipGroupStore() )};
-
-        return new IdAllocationState( highIds, FIRST_INDEX );
-    }
-
-    private static long getHighId( DefaultIdGeneratorFactory factory, PageCache pageCache, IdType idType, File idFile )
-    {
-        LongSupplier throwingHighIdSupplier = throwIfIdFileDoesNotExist( idType, idFile );
-        try ( IdGenerator idGenerator = factory.open( pageCache, idFile, idType, throwingHighIdSupplier, Long.MAX_VALUE ) )
-        {
-            return idGenerator.getHighId();
-        }
-    }
-
-    /**
-     * ID files should always be available when this bootstrapper tries to read the high ID.
-     * This method returns a high ID supplier that always throws.
-     * The high ID supplier is only used by the {@link DefaultIdGeneratorFactory} when ID file does not exist.
-     *
-     * @param type the type of ID.
-     * @param file the ID file.
-     * @return supplier that always throws.
-     */
-    private static LongSupplier throwIfIdFileDoesNotExist( IdType type, File file )
-    {
-        return () ->
-        {
-            throw new IllegalStateException( "Unable to read high ID of type " + type + " from " + file );
-        };
     }
 }

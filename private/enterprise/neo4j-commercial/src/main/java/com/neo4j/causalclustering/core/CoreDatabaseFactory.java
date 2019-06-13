@@ -39,13 +39,10 @@ import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockMana
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
+import com.neo4j.causalclustering.core.state.machines.id.BarrierAwareIdGeneratorFactory;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
-import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.id.IdReusabilityCondition;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdGeneratorFactory;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdRangeAcquirer;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedRelationshipTypeTokenHolder;
@@ -84,7 +81,6 @@ import com.neo4j.dbms.TransactionEventService;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
@@ -100,11 +96,12 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
+import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -131,25 +128,10 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.TokenHolder;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.array_block_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.label_token_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.label_token_name_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.neostore_block_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.node_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.node_labels_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.property_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.property_key_token_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.property_key_token_name_id_allocation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.relationship_group_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.relationship_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.relationship_type_token_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.relationship_type_token_name_id_allocation_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.schema_id_allocation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_apply_max_batch_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.string_block_id_allocation_size;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
@@ -181,7 +163,6 @@ class CoreDatabaseFactory
     private final RaftMessageLogger<MemberId> raftLogger;
 
     private final PageCursorTracerSupplier cursorTracerSupplier;
-    private final Map<IdType,Integer> allocationSizes;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<AdvertisedSocketAddress,Message> raftSender;
     private final TransactionEventService txEventService;
@@ -216,8 +197,6 @@ class CoreDatabaseFactory
         this.raftLogger = raftLogger;
         this.raftSender = raftSender;
         this.txEventService = txEventService;
-
-        this.allocationSizes = getIdTypeAllocationSizeFromConfig( config );
 
         this.cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
     }
@@ -264,9 +243,10 @@ class CoreDatabaseFactory
         Replicator replicator = raftContext.replicator();
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseId, life, debugLog );
-        DatabaseIdContext idContext = createIdContext( databaseId, raftGroup.raftMachine(), raftContext.commandIndexTracker(), raftContext.replicator(),
-                idAllocationStateMachine, debugLog );
+        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog );
+        BarrierState barrierState = new BarrierState( myIdentity, replicator, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId );
+
+        DatabaseIdContext idContext = createIdContext( databaseId, raftGroup.raftMachine(), raftContext.commandIndexTracker(), barrierState );
 
         Supplier<StorageEngine> storageEngineSupplier = kernelResolvers.storageEngine();
 
@@ -282,8 +262,6 @@ class CoreDatabaseFactory
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( databaseId, labelTokenRegistry, replicator,
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
-        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog );
-
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry, debugLog, databaseManager );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, debugLog, databaseManager );
 
@@ -294,13 +272,12 @@ class CoreDatabaseFactory
                 replicatedBarrierTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, versionContextSupplier,
                 txEventService.getCommitNotifier( databaseId ) );
 
-        Locks lockManager = createLockManager(
-                config, clock, logService, replicator, myIdentity, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId );
+        Locks lockManager = createLockManager( config, clock, logService,barrierState );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
         CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relationshipTypeTokenStateMachine,
-                propertyKeyTokenStateMachine, replicatedBarrierTokenStateMachine, idAllocationStateMachine, new DummyMachine(), consensusLogIndexRecovery );
+                propertyKeyTokenStateMachine, replicatedBarrierTokenStateMachine, new DummyMachine(), consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
@@ -443,66 +420,34 @@ class CoreDatabaseFactory
                 panicService, monitors );
     }
 
-    private DatabaseIdContext createIdContext( DatabaseId databaseId, RaftMachine raftMachine, CommandIndexTracker commandIndexTracker, Replicator replicator,
-            ReplicatedIdAllocationStateMachine idAllocationStateMachine, DatabaseLogProvider debugLog )
+    private DatabaseIdContext createIdContext( DatabaseId databaseId, RaftMachine raftMachine, CommandIndexTracker commandIndexTracker,
+                                               BarrierState barrierTokenState )
     {
-        ReplicatedIdRangeAcquirer idRangeAcquirer = new ReplicatedIdRangeAcquirer( databaseId, replicator, idAllocationStateMachine, allocationSizes,
-                myIdentity, debugLog );
         BooleanSupplier idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myIdentity );
-        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory(
-                fileSystem, debugLog, idRangeAcquirer );
+        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( databaseId, barrierTokenState );
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler ).withIdGenerationFactoryProvider(
                 idGeneratorProvider ).withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
         return idContextFactory.createIdContext( databaseId );
     }
 
-    private ReplicatedIdAllocationStateMachine createIdAllocationStateMachine( DatabaseId databaseId, LifeSupport life,
-            DatabaseLogProvider databaseLogProvider )
+    private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life,
+                                                                               DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseId, life, databaseLogProvider );
-        return new ReplicatedIdAllocationStateMachine( idAllocationStorage );
-    }
-
-    private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
-    {
-        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createLockTokenStorage( databaseId, life, databaseLogProvider );
+        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createBarrierTokenStorage( databaseId, life, databaseLogProvider );
         return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage );
     }
 
-    private Map<IdType,Integer> getIdTypeAllocationSizeFromConfig( Config config )
+    private IdGeneratorFactory createIdGeneratorFactory( DatabaseId databaseId, BarrierState barrierTokenState )
     {
-        Map<IdType,Integer> allocationSizes = new HashMap<>( IdType.values().length );
-        allocationSizes.put( IdType.NODE, config.get( node_id_allocation_size ) );
-        allocationSizes.put( IdType.RELATIONSHIP, config.get( relationship_id_allocation_size ) );
-        allocationSizes.put( IdType.PROPERTY, config.get( property_id_allocation_size ) );
-        allocationSizes.put( IdType.STRING_BLOCK, config.get( string_block_id_allocation_size ) );
-        allocationSizes.put( IdType.ARRAY_BLOCK, config.get( array_block_id_allocation_size ) );
-        allocationSizes.put( IdType.PROPERTY_KEY_TOKEN, config.get( property_key_token_id_allocation_size ) );
-        allocationSizes.put( IdType.PROPERTY_KEY_TOKEN_NAME, config.get( property_key_token_name_id_allocation_size ) );
-        allocationSizes.put( IdType.RELATIONSHIP_TYPE_TOKEN, config.get( relationship_type_token_id_allocation_size ) );
-        allocationSizes.put( IdType.RELATIONSHIP_TYPE_TOKEN_NAME, config.get( relationship_type_token_name_id_allocation_size ) );
-        allocationSizes.put( IdType.LABEL_TOKEN, config.get( label_token_id_allocation_size ) );
-        allocationSizes.put( IdType.LABEL_TOKEN_NAME, config.get( label_token_name_id_allocation_size ) );
-        allocationSizes.put( IdType.NEOSTORE_BLOCK, config.get( neostore_block_id_allocation_size ) );
-        allocationSizes.put( IdType.SCHEMA, config.get( schema_id_allocation_size ) );
-        allocationSizes.put( IdType.NODE_LABELS, config.get( node_labels_id_allocation_size ) );
-        allocationSizes.put( IdType.RELATIONSHIP_GROUP, config.get( relationship_group_id_allocation_size ) );
-        return allocationSizes;
+        DefaultIdGeneratorFactory real = new DefaultIdGeneratorFactory( fileSystem, RecoveryCleanupWorkCollector.immediate() );
+        return new BarrierAwareIdGeneratorFactory( real, databaseId, barrierTokenState );
     }
 
-    private IdGeneratorFactory createIdGeneratorFactory( FileSystemAbstraction fileSystem, final LogProvider logProvider,
-            ReplicatedIdRangeAcquirer idRangeAcquirer )
-    {
-        return new ReplicatedIdGeneratorFactory( fileSystem, idRangeAcquirer, logProvider, panicService );
-    }
-
-    private Locks createLockManager( final Config config, Clock clock, final LogService logging, final Replicator replicator, MemberId myself,
-            LeaderLocator leaderLocator, ReplicatedBarrierTokenStateMachine barrierTokenStateMachine, DatabaseId databaseId )
+    private Locks createLockManager( final Config config, Clock clock, final LogService logging, BarrierState barrierTokenState )
     {
         LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
-        BarrierState barrierState = new BarrierState( myself, replicator, leaderLocator, barrierTokenStateMachine, databaseId );
-        return new LeaderOnlyLockManager( localLocks, barrierState );
+        return new LeaderOnlyLockManager( localLocks, barrierTokenState );
     }
 
     private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life,

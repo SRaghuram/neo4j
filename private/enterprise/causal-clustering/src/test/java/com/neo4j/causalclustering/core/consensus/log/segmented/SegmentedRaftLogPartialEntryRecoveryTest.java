@@ -5,10 +5,13 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
@@ -18,11 +21,6 @@ import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMar
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.UUID;
-
-import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
@@ -85,10 +83,10 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
         // Add a bunch of entries, preferably one of each available kind.
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1, 1024, databaseId ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedIdAllocationRequest( new MemberId( UUID.randomUUID() ),
-                IdType.RELATIONSHIP, 1025, 1024, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedBarrierTokenRequest( new MemberId( UUID.randomUUID() ),
+                1, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedBarrierTokenRequest( new MemberId( UUID.randomUUID() ),
+                1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new ReplicatedBarrierTokenRequest( new MemberId( UUID.randomUUID() ), 1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
         raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );

@@ -5,16 +5,16 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
+import java.io.IOException;
+
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -22,8 +22,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMa
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-
-import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -80,13 +78,6 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
         }
 
         @Override
-        public void handle( ReplicatedIdAllocationRequest replicatedIdAllocationRequest ) throws IOException
-        {
-            writableChannel.put( ContentCodes.ID_RANGE_REQUEST_TYPE );
-            ReplicatedIdAllocationRequestMarshalV2.marshal( replicatedIdAllocationRequest, writableChannel );
-        }
-
-        @Override
         public void handle( ReplicatedTokenRequest replicatedTokenRequest ) throws IOException
         {
             writableChannel.put( ContentCodes.TOKEN_REQUEST_TYPE );
@@ -129,8 +120,6 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
             return ContentBuilder.finished( ReplicatedTransactionMarshalV2.unmarshal( channel ) );
         case ContentCodes.RAFT_MEMBER_SET_TYPE:
             return ContentBuilder.finished( MemberIdSetSerializer.unmarshal( channel ) );
-        case ContentCodes.ID_RANGE_REQUEST_TYPE:
-            return ContentBuilder.finished( ReplicatedIdAllocationRequestMarshalV2.unmarshal( channel ) );
         case ContentCodes.TOKEN_REQUEST_TYPE:
             return ContentBuilder.finished( ReplicatedTokenRequestMarshalV2.unmarshal( channel ) );
         case ContentCodes.NEW_LEADER_BARRIER_TYPE:

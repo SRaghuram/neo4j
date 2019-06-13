@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.File;
+import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.File;
-import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -59,16 +59,9 @@ class ClusterStateLayoutTest
     }
 
     @Test
-    void shouldExposeIdAllocationStateDirectory()
-    {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "id-allocation-state" ), layout.idAllocationStateDirectory( DATABASE_ID ) );
-    }
-
-    @Test
     void shouldExposeLockTokenStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "lock-token-state" ), layout.lockTokenStateDirectory( DATABASE_ID ) );
-
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_ID.name(), "barrier-token-state" ), layout.barrierTokenStateDirectory( DATABASE_ID ) );
     }
 
     @Test

@@ -5,16 +5,17 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -24,9 +25,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentati
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import io.netty.buffer.ByteBuf;
-
-import java.io.IOException;
-import java.util.List;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -71,13 +69,6 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         {
             output.add( ChunkedReplicatedContent.single( ContentCodes.RAFT_MEMBER_SET_TYPE,
                     channel -> MemberIdSetSerializer.marshal( memberIdSet, channel ) ) );
-        }
-
-        @Override
-        public void handle( ReplicatedIdAllocationRequest replicatedIdAllocationRequest )
-        {
-            output.add( ChunkedReplicatedContent.single( ContentCodes.ID_RANGE_REQUEST_TYPE,
-                    channel -> ReplicatedIdAllocationRequestMarshalV2.marshal( replicatedIdAllocationRequest, channel ) ) );
         }
 
         @Override

@@ -15,8 +15,6 @@ import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierT
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
-import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
@@ -26,8 +24,6 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 
-import static java.lang.Math.max;
-
 public class CoreStateMachines
 {
     private final ReplicatedTransactionStateMachine replicatedTxStateMachine;
@@ -36,7 +32,6 @@ public class CoreStateMachines
     private final ReplicatedTokenStateMachine relationshipTypeTokenStateMachine;
     private final ReplicatedTokenStateMachine propertyKeyTokenStateMachine;
     private final ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine;
-    private final ReplicatedIdAllocationStateMachine idAllocationStateMachine;
     private final DummyMachine benchmarkMachine;
 
     private final RecoverConsensusLogIndex consensusLogIndexRecovery;
@@ -49,7 +44,6 @@ public class CoreStateMachines
             ReplicatedTokenStateMachine relationshipTypeTokenStateMachine,
             ReplicatedTokenStateMachine propertyKeyTokenStateMachine,
             ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine,
-            ReplicatedIdAllocationStateMachine idAllocationStateMachine,
             DummyMachine benchmarkMachine,
             RecoverConsensusLogIndex consensusLogIndexRecovery )
     {
@@ -58,7 +52,6 @@ public class CoreStateMachines
         this.relationshipTypeTokenStateMachine = relationshipTypeTokenStateMachine;
         this.propertyKeyTokenStateMachine = propertyKeyTokenStateMachine;
         this.replicatedBarrierTokenStateMachine = replicatedBarrierTokenStateMachine;
-        this.idAllocationStateMachine = idAllocationStateMachine;
         this.benchmarkMachine = benchmarkMachine;
         this.consensusLogIndexRecovery = consensusLogIndexRecovery;
         this.dispatcher = new StateMachineCommandDispatcher();
@@ -71,9 +64,7 @@ public class CoreStateMachines
 
     public long getLastAppliedIndex()
     {
-        long lastAppliedLockTokenIndex = replicatedBarrierTokenStateMachine.lastAppliedIndex();
-        long lastAppliedIdAllocationIndex = idAllocationStateMachine.lastAppliedIndex();
-        return max( lastAppliedLockTokenIndex, lastAppliedIdAllocationIndex );
+        return replicatedBarrierTokenStateMachine.lastAppliedIndex();
     }
 
     public void flush() throws IOException
@@ -85,20 +76,17 @@ public class CoreStateMachines
         propertyKeyTokenStateMachine.flush();
 
         replicatedBarrierTokenStateMachine.flush();
-        idAllocationStateMachine.flush();
     }
 
     public void augmentSnapshot( CoreSnapshot coreSnapshot )
     {
-        coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
-        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, replicatedBarrierTokenStateMachine.snapshot() );
+        coreSnapshot.add( CoreStateFiles.BARRIER_TOKEN, replicatedBarrierTokenStateMachine.snapshot() );
         // transactions and tokens live in the store
     }
 
     public void installSnapshot( CoreSnapshot coreSnapshot )
     {
-        idAllocationStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.ID_ALLOCATION ) );
-        replicatedBarrierTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.LOCK_TOKEN ) );
+        replicatedBarrierTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.BARRIER_TOKEN ) );
         // transactions and tokens live in the store
     }
 
@@ -122,13 +110,6 @@ public class CoreStateMachines
         }
 
         @Override
-        public void dispatch( ReplicatedIdAllocationRequest idRequest, long commandIndex, Consumer<Result> callback )
-        {
-            replicatedTxStateMachine.ensuredApplied();
-            idAllocationStateMachine.applyCommand( idRequest, commandIndex, callback );
-        }
-
-        @Override
         public void dispatch( ReplicatedTokenRequest tokenRequest, long commandIndex, Consumer<Result> callback )
         {
             replicatedTxStateMachine.ensuredApplied();
@@ -149,10 +130,10 @@ public class CoreStateMachines
         }
 
         @Override
-        public void dispatch( ReplicatedBarrierTokenRequest lockRequest, long commandIndex, Consumer<Result> callback )
+        public void dispatch( ReplicatedBarrierTokenRequest barrierTokenRequest, long commandIndex, Consumer<Result> callback )
         {
             replicatedTxStateMachine.ensuredApplied();
-            replicatedBarrierTokenStateMachine.applyCommand( lockRequest, commandIndex, callback );
+            replicatedBarrierTokenStateMachine.applyCommand( barrierTokenRequest, commandIndex, callback );
         }
 
         @Override

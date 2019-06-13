@@ -5,6 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.UUID;
+
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
@@ -13,12 +19,6 @@ import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
@@ -61,7 +61,7 @@ class DumpClusterStateTest
     void shouldDumpClusterState() throws Exception
     {
         // given
-        int numClusterStateItems = 9;
+        int numClusterStateItems = 8;
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
@@ -92,8 +92,7 @@ class DumpClusterStateTest
         StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
 
         // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
-        storageFactory.createLockTokenStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
-        storageFactory.createIdAllocationStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
+        storageFactory.createBarrierTokenStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
         storageFactory.createSessionTrackerStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
         storageFactory.createLastFlushedStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
         storageFactory.createRaftMembershipStorage( DATABASE_ID, life, nullDatabaseLogProvider() );
