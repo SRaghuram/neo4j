@@ -22,7 +22,7 @@ public abstract class BaseBenchmark
     public String workDir;
 
     @Setup
-    public final void setUp( BenchmarkParams params ) throws Exception
+    public final void setUp( BenchmarkParams params ) throws Throwable
     {
         BenchmarkGroup group = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
         Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( params ).parentBenchmark();
@@ -30,7 +30,7 @@ public abstract class BaseBenchmark
     }
 
     @TearDown
-    public final void tearDown() throws Exception
+    public final void tearDown() throws Throwable
     {
         onTearDown();
     }
@@ -40,7 +40,7 @@ public abstract class BaseBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Exception
+    protected void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Throwable
     {
     }
 
@@ -49,7 +49,7 @@ public abstract class BaseBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @TearDown(Level.Trial).
      */
-    protected void onTearDown() throws Exception
+    protected void onTearDown() throws Throwable
     {
     }
 
