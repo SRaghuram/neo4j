@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
-import org.neo4j.cypher.internal.MorselRuntime.PARALLEL
+import org.neo4j.cypher.internal.MorselRuntime.{MORSEL, PARALLEL}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.{ParallelInputTestBase, SchedulerTracerTestBase}
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
@@ -105,6 +105,11 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PAR
 
 // NODE HASH JOIN
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+
+
+// PROVIDED ORDER
+class ItNoWorkTest extends ProvidedOrderTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ItNoWorkNoFuseTest extends ProvidedOrderTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 
 // REACTIVE
 class ParallelRuntimeReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, PARALLEL)

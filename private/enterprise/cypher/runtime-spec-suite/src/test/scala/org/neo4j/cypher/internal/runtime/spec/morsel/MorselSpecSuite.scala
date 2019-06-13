@@ -90,6 +90,10 @@ class MorselSingleThreadedAggregationTest extends AggregationTestBase(SINGLE_THR
 // NODE HASH JOIN
 class MorselNodeHashJoinTest extends NodeHashJoinTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 
+// PROVIDED ORDER
+class MorselSingleThreadedProvidedOrderTest extends ProvidedOrderTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselSingleThreadedNoFusingProvidedOrderTest extends ProvidedOrderTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // REACTIVE
 class MorselReactiveSingleThreadedTest extends ReactiveResultTestBase(SINGLE_THREADED, MORSEL)
 class MorselReactiveSingleThreadedNoFusingTest extends ReactiveResultTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)

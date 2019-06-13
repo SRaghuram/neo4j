@@ -44,3 +44,4 @@ class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.SINGLE_THR
 class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
+class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
