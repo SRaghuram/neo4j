@@ -301,6 +301,30 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo")))
   }
 
+  test("should be able to drop the user that created you") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE admin TO alice")
+
+    // WHEN
+    executeOnSystem("alice", "abc", "CREATE USER bob SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    executeOnSystem("alice", "abc", "GRANT ROLE admin to bob")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(
+      neo4jUser,
+      user("alice", Seq("admin"), passwordChangeRequired = false),
+      user("bob", Seq("admin"), passwordChangeRequired = false)
+    ))
+
+    // WHEN
+    executeOnSystem("bob", "bar",  "DROP USER alice")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("bob", Seq("admin"), passwordChangeRequired = false)))
+  }
+
   test("should fail when dropping current user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
