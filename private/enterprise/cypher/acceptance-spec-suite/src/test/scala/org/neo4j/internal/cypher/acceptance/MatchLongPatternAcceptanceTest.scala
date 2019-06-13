@@ -262,8 +262,8 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   }
 
   private def makeStarPatternQuery(size: Int): String = {
-    val (matchStatement, returnStatement) = (1 to size).foldLeft(("MATCH (c:Center) WITH c LIMIT 1 ", "RETURN c")) {
-      (strings, i) => (strings._1 + s"MATCH (c)-[:REL$i]->(n$i:Label$i) ", strings._2 + s", n$i")
+    val (matchStatement, returnStatement) = (1 to size).foldLeft(("MATCH (c:Center) WITH c LIMIT 1 \n", "RETURN c")) {
+      (strings, i) => (strings._1 + s"MATCH (c)-[r$i:REL$i]->(n$i:Label$i) \n", strings._2 + s", n$i")
     }
     matchStatement + returnStatement
   }
