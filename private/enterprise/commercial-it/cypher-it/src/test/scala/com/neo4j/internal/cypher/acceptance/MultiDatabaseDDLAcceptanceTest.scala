@@ -202,7 +202,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW DATABASE neo4j")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG SHOW DATABASE"
   }
 
   test("should show default databases") {
@@ -270,7 +271,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW DATABASES")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW DATABASES` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG SHOW DATABASES"
   }
 
   test("should show default database") {
@@ -333,7 +335,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW DEFAULT DATABASE")
       // THEN
-    } should have message "Trying to run `CATALOG SHOW DEFAULT DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG SHOW DEFAULT DATABASE"
   }
 
   // Tests for creating databases
@@ -431,7 +434,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
-    } should have message "Trying to run `CATALOG CREATE DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG CREATE DATABASE"
   }
 
   // Tests for dropping databases
@@ -582,7 +586,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
-    } should have message "Trying to run `CATALOG DROP DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG DROP DATABASE"
   }
 
   // Tests for starting databases
@@ -700,7 +705,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("START DATABASE foo")
       // THEN
-    } should have message "Trying to run `CATALOG START DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG START DATABASE"
   }
 
   // Tests for stopping databases
@@ -853,7 +859,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
-    } should have message "Trying to run `CATALOG STOP DATABASE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CATALOG STOP DATABASE"
   }
 
   // Disable normal database creation because we need different settings on each test

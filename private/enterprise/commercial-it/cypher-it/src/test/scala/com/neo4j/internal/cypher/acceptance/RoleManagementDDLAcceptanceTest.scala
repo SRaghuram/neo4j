@@ -132,7 +132,8 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ROLES")
       // THEN
-    } should have message "Trying to run `SHOW ALL ROLES` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: SHOW ALL ROLES"
   }
 
   // Tests for creating roles
@@ -299,7 +300,8 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
-    } should have message "Trying to run `CREATE ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CREATE ROLE"
   }
 
   // Tests for dropping roles
@@ -353,6 +355,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
-    } should have message "Trying to run `DROP ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: DROP ROLE"
   }
 }

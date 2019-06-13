@@ -41,7 +41,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
       // THEN
-    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   test("should show privileges for specific role") {
@@ -84,7 +85,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
       // THEN
-    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   test("should show privileges for specific user") {
@@ -130,7 +132,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW USER neo4j PRIVILEGES")
       // THEN
-    } should have message "Trying to run `SHOW PRIVILEGE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   // Tests for granting traverse privileges
@@ -268,7 +271,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
       // THEN
-    } should have message "Trying to run `GRANT TRAVERSE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT TRAVERSE"
   }
 
   // Tests for granting read privileges
@@ -490,7 +494,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
       // THEN
-    } should have message "Trying to run `GRANT READ` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT READ"
   }
 
   // Tests for GRANT MATCH privileges
@@ -730,7 +735,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
       // THEN
-    } should have message "Trying to run `GRANT MATCH` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT MATCH"
   }
 
   // Tests for REVOKE READ, TRAVERSE and MATCH
@@ -1217,7 +1223,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
       // THEN
-    } should have message "Trying to run `REVOKE TRAVERSE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE TRAVERSE"
   }
 
   test("should fail when revoking read privilege to custom role when not on system database") {
@@ -1225,7 +1232,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
       // THEN
-    } should have message "Trying to run `REVOKE READ` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE READ"
   }
 
   test("should fail when revoking MATCH privilege to custom role when not on system database") {
@@ -1233,7 +1241,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE MATCH (*) ON GRAPH * NODES * (*) FROM custom")
       // THEN
-    } should have message "Trying to run `REVOKE MATCH` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE MATCH"
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
@@ -1727,7 +1736,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Trying to run `GRANT ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT ROLE"
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1739,7 +1749,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Trying to run `GRANT ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT ROLE"
   }
 
   // Tests for revoking roles from users
@@ -1922,7 +1933,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
-    } should have message "Trying to run `REVOKE ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE ROLE"
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1935,7 +1947,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
-    } should have message "Trying to run `REVOKE ROLE` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE ROLE"
   }
 
   // helper variable, methods and class

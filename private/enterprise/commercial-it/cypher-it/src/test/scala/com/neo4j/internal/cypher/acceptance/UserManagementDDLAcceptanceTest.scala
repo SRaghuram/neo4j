@@ -55,7 +55,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("SHOW USERS")
       // THEN
-    } should have message "Trying to run `SHOW USERS` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: SHOW USERS"
   }
 
   // Tests for creating users
@@ -270,7 +271,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
       // THEN
-    } should have message "Trying to run `CREATE USER` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: CREATE USER"
   }
 
   // Tests for dropping users
@@ -371,7 +373,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP USER foo")
       // THEN
-    } should have message "Trying to run `DROP USER` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: DROP USER"
   }
 
   // Tests for altering users
@@ -882,7 +885,8 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN
-    } should have message "Trying to run `ALTER USER` against non-system database."
+    } should have message
+      "This is a DDL command and it should be executed against the system database: ALTER USER"
   }
 
   // helper methods
