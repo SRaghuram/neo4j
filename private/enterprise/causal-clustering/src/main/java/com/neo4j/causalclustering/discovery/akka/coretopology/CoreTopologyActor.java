@@ -14,9 +14,9 @@ import akka.cluster.Member;
 import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.Collection;
 import java.util.Set;

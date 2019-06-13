@@ -20,9 +20,9 @@ import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.discovery.DefaultDiscoveryMember;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
@@ -280,8 +280,8 @@ public class CoreEditionModule extends ClusteringEditionModule
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         MemberId myIdentity = identityModule.myself();
 
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myIdentity, databaseManager );
-        DiscoveryModule discoveryModule = new DiscoveryModule( discoveryServiceFactory, discoveryMember, globalModule, sslPolicyLoader );
+        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
+        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule, sslPolicyLoader );
 
         topologyService = discoveryModule.topologyService();
 

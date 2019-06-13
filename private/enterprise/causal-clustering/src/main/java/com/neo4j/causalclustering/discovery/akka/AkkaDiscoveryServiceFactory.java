@@ -8,13 +8,14 @@ package com.neo4j.causalclustering.discovery.akka;
 import akka.remote.artery.tcp.SSLEngineProvider;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -34,9 +35,9 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     private static final long RESTART_RETRIES = 10L;
 
     @Override
-    public final AkkaCoreTopologyService coreTopologyService( Config config, DiscoveryMember myself, JobScheduler jobScheduler, LogProvider logProvider,
+    public final AkkaCoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
-            SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
+            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
     {
         Executor executor = executorService( config, jobScheduler );
         RetryStrategy restartRetryStrategy = new RetryStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRIES );
@@ -49,19 +50,22 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 userLogProvider,
                 catchupAddressRetryStrategy,
                 restartRetryStrategy,
+                discoveryMemberFactory,
                 executor,
                 clock );
     }
 
     @Override
-    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, DiscoveryMember myself,
-            RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
+    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
+            MemberId myself, RemoteMembersResolver remoteMembersResolver,
+            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory )
     {
         return new AkkaTopologyClient(
                 config,
                 logProvider,
                 myself,
-                actorSystemLifecycle( config, executorService( config, jobScheduler ), logProvider, remoteMembersResolver, sslPolicyLoader )
+                actorSystemLifecycle( config, executorService( config, jobScheduler ), logProvider, remoteMembersResolver, sslPolicyLoader ),
+                discoveryMemberFactory
         );
     }
 

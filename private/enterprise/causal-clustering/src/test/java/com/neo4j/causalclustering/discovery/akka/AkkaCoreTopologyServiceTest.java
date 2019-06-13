@@ -5,12 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import akka.actor.Address;
-import akka.remote.ThisActorSystemQuarantinedEvent;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -55,10 +52,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
-public class AkkaCoreTopologyServiceTest
+class AkkaCoreTopologyServiceTest
 {
     private Config config = Config.defaults();
-    private DiscoveryMember myself = new TestDiscoveryMember();
+    private MemberId myself = new MemberId( UUID.randomUUID() );
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
@@ -78,12 +75,10 @@ public class AkkaCoreTopologyServiceTest
             userLogProvider,
             catchupAddressretryStrategy,
             restartRetryStrategy,
+            TestDiscoveryMember::new,
             executor,
             clock );
 
-    private ThisActorSystemQuarantinedEvent event = ThisActorSystemQuarantinedEvent.apply(
-            new Address( "protocol", "system", "host1", 1 ),
-            new Address( "protocol", "system", "host2",2 ) );
     @Test
     void shouldLifecycle() throws Throwable
     {

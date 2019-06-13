@@ -7,10 +7,11 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -33,8 +34,8 @@ public class DiscoveryModule
     private final LogProvider debugLog;
     private final CoreTopologyService topologyService;
 
-    public DiscoveryModule( DiscoveryServiceFactory discoveryServiceFactory, DiscoveryMember discoveryMember, GlobalModule globalModule,
-            SslPolicyLoader sslPolicyLoader )
+    public DiscoveryModule( MemberId myself, DiscoveryServiceFactory discoveryServiceFactory, DiscoveryMemberFactory discoveryMemberFactory,
+            GlobalModule globalModule, SslPolicyLoader sslPolicyLoader )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         Config globalConfig = globalModule.getGlobalConfig();
@@ -49,16 +50,17 @@ public class DiscoveryModule
         this.debugLog = logService.getInternalLogProvider();
         this.userLog = logService.getUserLogProvider();
 
-        this.topologyService = createDiscoveryService( discoveryServiceFactory, discoveryMember, sslPolicyLoader, globalLife, globalConfig, logService,
-                globalMonitors, globalDependencies );
+        this.topologyService = createDiscoveryService( myself, discoveryServiceFactory, discoveryMemberFactory, sslPolicyLoader,
+                globalLife, globalConfig, logService, globalMonitors, globalDependencies );
     }
 
-    private CoreTopologyService createDiscoveryService( DiscoveryServiceFactory discoveryServiceFactory, DiscoveryMember myself,
-            SslPolicyLoader sslPolicyLoader, LifeSupport life, Config config, LogService logService, Monitors monitors, Dependencies dependencies )
+    private CoreTopologyService createDiscoveryService( MemberId myself, DiscoveryServiceFactory discoveryServiceFactory,
+            DiscoveryMemberFactory discoveryMemberFactory, SslPolicyLoader sslPolicyLoader, LifeSupport life, Config config,
+            LogService logService, Monitors monitors, Dependencies dependencies )
     {
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, logService );
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, myself, jobScheduler, debugLog, userLog,
-                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, monitors, clock );
+                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, discoveryMemberFactory, monitors, clock );
         life.add( topologyService );
         dependencies.satisfyDependency( topologyService ); // for tests
         return topologyService;

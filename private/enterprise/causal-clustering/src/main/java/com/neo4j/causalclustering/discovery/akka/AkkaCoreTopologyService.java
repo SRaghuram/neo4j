@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -33,6 +32,8 @@ import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
@@ -60,19 +61,21 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final RetryStrategy restartRetryStrategy;
+    private final DiscoveryMemberFactory discoveryMemberFactory;
     private final GlobalTopologyState globalTopologyState;
     private final Executor executor;
     private final Clock clock;
 
-    public AkkaCoreTopologyService( Config config, DiscoveryMember myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
-            Executor executor, Clock clock )
+            DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.restartRetryStrategy = restartRetryStrategy;
+        this.discoveryMemberFactory = discoveryMemberFactory;
         this.executor = executor;
         this.clock = clock;
         this.globalTopologyState = new GlobalTopologyState( logProvider, listenerService::notifyListeners );
@@ -102,9 +105,10 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
+        DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
         TopologyBuilder topologyBuilder = new TopologyBuilder( cluster.selfUniqueAddress(), logProvider );
         Props coreTopologyProps = CoreTopologyActor.props(
-                myself,
+                discoveryMember,
                 topologySink,
                 bootstrapStateSink,
                 rrTopologyActor,

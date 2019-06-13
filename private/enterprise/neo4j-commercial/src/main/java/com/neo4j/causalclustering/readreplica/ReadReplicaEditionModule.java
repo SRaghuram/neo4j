@@ -11,14 +11,12 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DefaultDiscoveryMember;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
-import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
@@ -268,27 +266,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
     private TopologyService createTopologyService( ClusteredDatabaseManager databaseManager, LogService logService )
     {
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( myIdentity, databaseManager );
+        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
-        RetryStrategy retryStrategy = resolveStrategy( globalConfig );
-        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, discoveryMember, hostnameResolver, retryStrategy,
-                sslPolicyLoader );
+        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, myIdentity, hostnameResolver,
+                sslPolicyLoader, discoveryMemberFactory );
     }
 
     @Override
     public DatabaseIdRepository databaseIdRepository()
     {
         return databaseIdRepository;
-    }
-
-    private static RetryStrategy resolveStrategy( Config config )
-    {
-        long refreshPeriodMillis = config.get( CausalClusteringSettings.cluster_topology_refresh ).toMillis();
-        int pollingFrequencyWithinRefreshWindow = 2;
-        // we want to have more retries at the given frequency than there is time in a refresh period
-        int numberOfRetries = pollingFrequencyWithinRefreshWindow + 1;
-        long delayInMillis = refreshPeriodMillis / pollingFrequencyWithinRefreshWindow;
-        return new RetryStrategy( delayInMillis, (long) numberOfRetries );
     }
 
     ReadReplicaDatabaseFactory readReplicaDatabaseFactory()

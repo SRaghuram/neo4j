@@ -7,17 +7,16 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +34,7 @@ import static org.mockito.Mockito.when;
 class CoreTopologyChangeListenerTest
 {
     private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_db" );
-    private final DiscoveryMember myself = new TestDiscoveryMember( Set.of( databaseId ) );
+    private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -50,6 +49,7 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
             discoveryRestartRetryStrategy,
+            TestDiscoveryMember::new,
             executor,
             Clocks.systemClock() );
 

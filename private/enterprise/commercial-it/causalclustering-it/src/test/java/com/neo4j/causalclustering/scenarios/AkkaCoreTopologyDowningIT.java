@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -237,12 +239,13 @@ public class AkkaCoreTopologyDowningIT
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                new TestDiscoveryMember(),
+                new MemberId( UUID.randomUUID() ),
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 new RetryStrategy( 0L, 10L ),
+                TestDiscoveryMember::new,
                 pool,
                 Clocks.systemClock()
         );

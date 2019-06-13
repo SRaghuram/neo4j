@@ -22,13 +22,13 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
 {
     protected final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
     protected final Config config;
-    protected final DiscoveryMember myself;
+    protected final MemberId myself;
     protected final Log log;
     protected final Log userLog;
 
     private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
 
-    protected AbstractCoreTopologyService( Config config, DiscoveryMember myself, LogProvider logProvider, LogProvider userLogProvider )
+    protected AbstractCoreTopologyService( Config config, MemberId myself, LogProvider logProvider, LogProvider userLogProvider )
     {
         this.config = config;
         this.myself = myself;
@@ -100,7 +100,7 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
     @Override
     public MemberId memberId()
     {
-        return myself.id();
+        return myself;
     }
 
     private LeaderInfo getLeader( DatabaseId databaseId )

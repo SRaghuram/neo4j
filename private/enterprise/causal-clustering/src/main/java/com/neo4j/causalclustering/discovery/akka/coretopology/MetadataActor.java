@@ -13,10 +13,10 @@ import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.HashSet;
 import java.util.Set;

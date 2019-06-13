@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery;
+package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -14,25 +14,23 @@ import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
-public class DefaultDiscoveryMember implements DiscoveryMember
+public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
 {
-    private final MemberId id;
     private final DatabaseManager<?> databaseManager;
 
-    public DefaultDiscoveryMember( MemberId id, DatabaseManager<?> databaseManager )
+    public DefaultDiscoveryMemberFactory( DatabaseManager<?> databaseManager )
     {
-        this.id = id;
         this.databaseManager = databaseManager;
     }
 
     @Override
-    public MemberId id()
+    public DiscoveryMember create( MemberId id )
     {
-        return id;
+        var startedDatabases = startedDatabases();
+        return new DefaultDiscoveryMember( id, startedDatabases );
     }
 
-    @Override
-    public Set<DatabaseId> startedDatabases()
+    private Set<DatabaseId> startedDatabases()
     {
         return databaseManager.registeredDatabases()
                 .values()
@@ -40,14 +38,5 @@ public class DefaultDiscoveryMember implements DiscoveryMember
                 .filter( ctx -> !ctx.isFailed() && ctx.database().isStarted() )
                 .map( ctx -> ctx.database().getDatabaseId() )
                 .collect( toUnmodifiableSet() );
-    }
-
-    @Override
-    public String toString()
-    {
-        return "DefaultDiscoveryMember{" +
-               "id=" + id +
-               ", startedDatabases=" + startedDatabases() +
-               '}';
     }
 }

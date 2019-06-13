@@ -12,11 +12,13 @@ import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
@@ -44,15 +46,16 @@ class AkkaCoreTopologyServiceIT
         config.augment( initial_discovery_members, initialHosts );
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
-        var discoveryMember = new TestDiscoveryMember();
+        var id = new MemberId( UUID.randomUUID() );
 
         var logProvider = NullLogProvider.getInstance();
         jobScheduler = createInitialisedScheduler();
         var initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
-        service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, discoveryMember, jobScheduler, logProvider, logProvider,
-                initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, new Monitors(), Clocks.systemClock() );
+        service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, id, jobScheduler, logProvider, logProvider,
+                initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, TestDiscoveryMember::new,
+                new Monitors(), Clocks.systemClock() );
     }
 
     @AfterEach

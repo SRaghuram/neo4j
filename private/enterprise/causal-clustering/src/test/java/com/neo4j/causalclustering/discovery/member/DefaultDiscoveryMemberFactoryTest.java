@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery;
+package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -17,62 +17,64 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class DefaultDiscoveryMemberTest
+class DefaultDiscoveryMemberFactoryTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+    private final DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
+
+    private final MemberId id = new MemberId( UUID.randomUUID() );
 
     private final DatabaseId databaseId1 = databaseIdRepository.get( "one" );
     private final DatabaseId databaseId2 = databaseIdRepository.get( "two" );
     private final DatabaseId databaseId3 = databaseIdRepository.get( "three" );
 
     @Test
-    void shouldReturnMemberId()
+    void shouldCreateDiscoveryMemberWithId()
     {
-        MemberId memberId = new MemberId( UUID.randomUUID() );
+        var discoveryMember = discoveryMemberFactory.create( id );
 
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( memberId, new StubClusteredDatabaseManager() );
-
-        assertEquals( memberId, discoveryMember.id() );
+        assertEquals( id, discoveryMember.id() );
     }
 
     @Test
-    void shouldReturnStartedDatabases()
+    void shouldCreateDiscoveryMemberWithStartedDatabases()
     {
-        StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).withStoppedDatabase().register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
 
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
+        var discoveryMember = discoveryMemberFactory.create( id );
 
         assertEquals( Set.of( databaseId1, databaseId3 ), discoveryMember.startedDatabases() );
     }
 
     @Test
-    void shouldReturnNonFailedDatabases()
+    void shouldCreateDiscoveryMemberWithNonFailedDatabases()
     {
-        StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).withFailure( new IOException() ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
 
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
+        var discoveryMember = discoveryMemberFactory.create( id );
 
         assertEquals( Set.of( databaseId2, databaseId3 ), discoveryMember.startedDatabases() );
     }
 
     @Test
-    void shouldReturnUnmodifiableHostedDatabases()
+    void shouldCreateDiscoveryMemberWithUnmodifiableDatabases()
     {
-        StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+        var discoveryMember = discoveryMemberFactory.create( id );
 
-        DiscoveryMember discoveryMember = new DefaultDiscoveryMember( new MemberId( UUID.randomUUID() ), databaseManager );
-
-        Set<DatabaseId> databaseIds = discoveryMember.startedDatabases();
-        assertEquals( Set.of(), databaseIds );
-        assertThrows( UnsupportedOperationException.class, () -> databaseIds.add( databaseId1 ) );
+        assertSame( discoveryMember.startedDatabases(), discoveryMember.startedDatabases() );
+        assertThat( discoveryMember.startedDatabases(), is( empty() ) );
+        assertThrows( UnsupportedOperationException.class, () -> discoveryMember.startedDatabases().add( databaseId1 ) );
     }
 }
