@@ -93,8 +93,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val config = Config.defaults()
     setup(config)
 
-    managementService.createDatabase("foo")
-    managementService.shutdownDatabase("foo")
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
 
     // WHEN
     val result = execute("SHOW DATABASE foo")
