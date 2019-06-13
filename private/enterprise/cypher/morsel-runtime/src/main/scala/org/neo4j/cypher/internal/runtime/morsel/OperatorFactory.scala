@@ -27,7 +27,8 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
-                      val queryIndexes: QueryIndexes) {
+                      val queryIndexes: QueryIndexes,
+                      semanticTable: SemanticTable) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -54,7 +55,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         queryIndexes.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
                               slots.getLongOffsetFor(column),
-                              LazyLabel(label)(SemanticTable()),
+                              LazyLabel(label)(semanticTable),
                               argumentSize)
 
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
@@ -108,11 +109,18 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                  converters.toCommandSeekArgs(id, nodeIds),
                                  physicalPlan.argumentSizes(id))
 
+      case plans.NodeCountFromCountStore(idName, labelNames, _) =>
+        val labels = labelNames.map(label => label.map(LazyLabel(_)(semanticTable)))
+        new NodeCountFromCountStoreOperator(WorkIdentity.fromPlan(plan),
+                                            slots.getReferenceOffsetFor(idName),
+                                            labels,
+                                            physicalPlan.argumentSizes(id))
+
       case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        val lazyTypes = RelationshipTypes(types.toArray)(SemanticTable())
+        val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
                               fromOffset,
                               relOffset,

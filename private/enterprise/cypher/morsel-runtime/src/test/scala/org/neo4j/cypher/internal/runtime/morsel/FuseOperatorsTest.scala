@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, SameId}
 import org.neo4j.cypher.internal.v4_0.util.symbols
@@ -194,7 +195,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     extends OperatorFactory(executionGraphDefinition,
                             converters,
                             readOnly = true,
-                            queryIndexes = mock[QueryIndexes]) {
+                            queryIndexes = mock[QueryIndexes],
+                            semanticTable = mock[SemanticTable]) {
 
     override def create(plan: LogicalPlan,
                         inputBuffer: BufferDefinition): Operator =

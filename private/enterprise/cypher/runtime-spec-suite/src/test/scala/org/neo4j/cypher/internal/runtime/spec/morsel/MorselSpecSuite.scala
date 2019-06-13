@@ -27,6 +27,12 @@ class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(SINGLE_THREADED_
 class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// NODE COUNT FROM COUNT STORE
+class MorselNodeCountFromCountStoreSingleThreadedTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.SINGLE_THREADED, MorselRuntime, SIZE_HINT)
+class MorselNodeCountFromCountStoreSingleThreadedNoFusingTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.SINGLE_THREADED_NO_FUSING, MorselRuntime, SIZE_HINT)
+class MorselNodeCountFromCountStoreParallelTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselNodeCountFromCountStoreParallelNoFusingTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MorselRuntime, SIZE_HINT)
+
 // LABEL SCAN
 class MorselLabelScanTest extends LabelScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselLabelScanNoFusingTest extends LabelScanTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)

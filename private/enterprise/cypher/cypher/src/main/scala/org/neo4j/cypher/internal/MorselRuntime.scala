@@ -61,7 +61,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
-    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexes)
+    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexes, query.semanticTable)
 
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
