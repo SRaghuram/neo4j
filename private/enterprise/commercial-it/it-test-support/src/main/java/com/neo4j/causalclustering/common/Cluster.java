@@ -74,6 +74,7 @@ import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -86,7 +87,7 @@ import static org.neo4j.util.concurrent.Futures.combine;
 
 public class Cluster
 {
-    private static final int DEFAULT_TIMEOUT_MS = 120_000;
+    private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
     private static final int DEFAULT_CLUSTER_SIZE = 3;
 
     private final File parentDir;
