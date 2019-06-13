@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTab
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
@@ -25,15 +26,17 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
     private final TopologyService topologyService;
     private final LeaderService leaderService;
     private final DatabaseIdRepository databaseIdRepository;
+    private final DatabaseManager<?> databaseManager;
     private final Config config;
     private final LogProvider logProvider;
 
     public CoreRoutingProcedureInstaller( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
-            Config config, LogProvider logProvider )
+            DatabaseManager<?> databaseManager, Config config, LogProvider logProvider )
     {
         this.topologyService = topologyService;
         this.leaderService = leaderService;
         this.databaseIdRepository = databaseIdRepository;
+        this.databaseManager = databaseManager;
         this.config = config;
         this.logProvider = logProvider;
     }
@@ -43,12 +46,13 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
     {
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
-            LoadBalancingProcessor loadBalancingProcessor = loadLoadBalancingProcessor( databaseIdRepository );
-            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, databaseIdRepository, config );
+            var loadBalancingProcessor = loadLoadBalancingProcessor( databaseIdRepository );
+            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, databaseIdRepository, databaseManager, config );
         }
         else
         {
-            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderService, databaseIdRepository, config, logProvider );
+            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderService, databaseIdRepository,
+                    databaseManager, config, logProvider );
         }
     }
 

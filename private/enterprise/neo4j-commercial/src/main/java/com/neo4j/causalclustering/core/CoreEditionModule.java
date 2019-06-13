@@ -246,7 +246,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseIdRepository, config, logProvider );
+        return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseIdRepository, databaseManager, config, logProvider );
     }
 
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService )

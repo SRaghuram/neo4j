@@ -16,6 +16,7 @@ import org.eclipse.collections.impl.factory.Sets;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -57,6 +59,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 
 @ExtendWith( TestDirectoryExtension.class )
 class ServerPoliciesLoadBalancingIT
@@ -269,6 +272,14 @@ class ServerPoliciesLoadBalancingIT
                     lbResult = RoutingResultFormat.parse( builder.build() );
                 }
             }
+            catch ( QueryExecutionException e )
+            {
+                // ignore database not found errors because this cluster member might have not yet started the default database
+                if ( !DatabaseNotFound.code().serialize().equals( e.getStatusCode() ) )
+                {
+                    throw e;
+                }
+            }
         }
         return lbResult;
     }
@@ -279,7 +290,7 @@ class ServerPoliciesLoadBalancingIT
         org.neo4j.test.assertion.Assert.assertEventually( "", actual, matcher, 120, SECONDS );
     }
 
-    class CountsMatcher extends BaseMatcher<RoutingResult>
+    class CountsMatcher extends TypeSafeMatcher<RoutingResult>
     {
         private final int nRouters;
         private final int nWriters;
@@ -295,10 +306,8 @@ class ServerPoliciesLoadBalancingIT
         }
 
         @Override
-        public boolean matches( Object item )
+        public boolean matchesSafely( RoutingResult result )
         {
-            RoutingResult result = (RoutingResult) item;
-
             if ( result.routeEndpoints().size() != nRouters ||
                  result.writeEndpoints().size() != nWriters )
             {

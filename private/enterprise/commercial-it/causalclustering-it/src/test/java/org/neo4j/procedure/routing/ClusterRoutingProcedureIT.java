@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -78,8 +77,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     }
 
     @Test
-    @Disabled( "For now, cores do not filter the addresses received from discovery service by database name" )
-    void shouldCallRoutingProcedureWithInvalidDatabaseNameOnCores()
+    void shouldCallRoutingProcedureWithNonExistingDatabaseNameOnCores()
     {
         String unknownDatabaseName = "non_existing_core_database";
 
@@ -88,12 +86,30 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     }
 
     @Test
-    void shouldCallRoutingProcedureWithInvalidDatabaseNameOnReadReplicas()
+    void shouldCallRoutingProcedureWithNonExistingDatabaseNameOnReadReplicas()
     {
         String unknownDatabaseName = "non_existing_replica_database";
 
         assertAll( cluster.readReplicas().stream().map( readReplica ->
                 () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, readReplica.defaultDatabase() ) ) );
+    }
+
+    @Test
+    void shouldNotAllowDriverToUseNonExistingDatabaseOnCores()
+    {
+        String unknownDatabaseName = "non_existing_core_database";
+
+        assertAll( cluster.coreMembers().stream().map( core ->
+                () -> assertRoutingDriverFailsForUnknownDatabase( core.boltAdvertisedAddress(), unknownDatabaseName ) ) );
+    }
+
+    @Test
+    void shouldNotAllowDriverToUseNonExistingDatabaseOnReadReplicas()
+    {
+        String unknownDatabaseName = "non_existing_replica_database";
+
+        assertAll( cluster.readReplicas().stream().map( readReplica ->
+                () -> assertRoutingDriverFailsForUnknownDatabase( readReplica.boltAdvertisedAddress(), unknownDatabaseName ) ) );
     }
 
     @Test

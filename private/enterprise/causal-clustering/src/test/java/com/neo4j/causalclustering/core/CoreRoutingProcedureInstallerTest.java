@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
@@ -23,7 +24,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static java.util.stream.Collectors.toSet;
-import static org.eclipse.collections.impl.set.mutable.UnifiedSet.newSetWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -36,8 +36,8 @@ class CoreRoutingProcedureInstallerTest
     @Test
     void shouldRegisterSingleDCProcedures() throws Exception
     {
-        Config config = newConfig( false );
-        GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
+        var config = newConfig( false );
+        var procedures = spy( new GlobalProceduresRegistry() );
 
         installRoutingProcedures( config, procedures );
 
@@ -48,8 +48,8 @@ class CoreRoutingProcedureInstallerTest
     @Test
     void shouldRegisterMultiDCProcedures() throws Exception
     {
-        Config config = newConfig( true );
-        GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
+        var config = newConfig( true );
+        var procedures = spy( new GlobalProceduresRegistry() );
 
         installRoutingProcedures( config, procedures );
 
@@ -59,28 +59,28 @@ class CoreRoutingProcedureInstallerTest
 
     private static Config newConfig( boolean multiDC )
     {
-        Config config = Config.defaults();
+        var config = Config.defaults();
         config.augment( CausalClusteringSettings.multi_dc_license, Boolean.toString( multiDC ) );
         return config;
     }
 
     private static void installRoutingProcedures( Config config, GlobalProcedures procedures ) throws ProcedureException
     {
-        TopologyService topologyService = mock( TopologyService.class );
-        LeaderService leaderService = mock( LeaderService.class );
+        var topologyService = mock( TopologyService.class );
+        var leaderService = mock( LeaderService.class );
 
-        CoreRoutingProcedureInstaller installer =
-                new CoreRoutingProcedureInstaller( topologyService, leaderService, new TestDatabaseIdRepository(), config, NullLogProvider.getInstance() );
+        var installer = new CoreRoutingProcedureInstaller( topologyService, leaderService, new TestDatabaseIdRepository(),
+                new StubClusteredDatabaseManager(), config, NullLogProvider.getInstance() );
         installer.install( procedures );
     }
 
     private static void verifyRegisteredProcedureNames( GlobalProcedures procedures )
     {
-        Set<QualifiedName> expectedNames = newSetWith(
+        var expectedNames = Set.of(
                 new QualifiedName( new String[]{"dbms", "routing"}, "getRoutingTable" ),
                 new QualifiedName( new String[]{"dbms", "cluster", "routing"}, "getRoutingTable" ) );
 
-        Set<QualifiedName> actualNames = procedures.getAllProcedures()
+        var actualNames = procedures.getAllProcedures()
                 .stream()
                 .map( ProcedureSignature::name )
                 .collect( toSet() );

@@ -5,6 +5,9 @@
  */
 package org.neo4j.procedure.routing;
 
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
+
 import java.util.List;
 import java.util.Map;
 
@@ -15,10 +18,10 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.collection.Iterators;
@@ -26,17 +29,22 @@ import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.collections.impl.bag.immutable.ImmutableHashBag.newBag;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
-class BaseRoutingProcedureIT
+abstract class BaseRoutingProcedureIT
 {
     private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT = "CALL dbms.routing.getRoutingTable($context)";
     private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE = "CALL dbms.routing.getRoutingTable($context, $database)";
@@ -72,6 +80,15 @@ class BaseRoutingProcedureIT
         }
     }
 
+    static void assertRoutingDriverFailsForUnknownDatabase( String boltHostnamePort, String databaseName )
+    {
+        try ( Driver driver = createDriver( boltHostnamePort ) )
+        {
+            var error = assertThrows( ClientException.class, () -> performRead( driver, databaseName ) );
+            assertThat( error.getMessage(), containsString( "Database does not exist" ) );
+        }
+    }
+
     static void assertRoutingProceduresAvailable( GraphDatabaseService db, RoutingResult expectedResult )
     {
         Map<String,Object> params = paramsWithContext( Map.of() );
@@ -104,7 +121,12 @@ class BaseRoutingProcedureIT
 
     private static void performRead( Driver driver )
     {
-        try ( Session session = driver.session( t -> t.withDefaultAccessMode( AccessMode.READ ) ) )
+        performRead( driver, DEFAULT_DATABASE_NAME );
+    }
+
+    private static void performRead( Driver driver, String databaseName )
+    {
+        try ( Session session = driver.session( t -> t.withDefaultAccessMode( AccessMode.READ ).withDatabase( databaseName ) ) )
         {
             Record record = session.readTransaction( tx -> tx.run( "RETURN 42 AS id" ).single() );
             assertEquals( 42, record.get( "id" ).asInt() );
@@ -121,19 +143,9 @@ class BaseRoutingProcedureIT
     }
 
     private static void assertRoutingProcedureAvailable( String query, Map<String,Object> params, GraphDatabaseService db, RoutingResult expectedResult )
+            throws InterruptedException
     {
-        try ( Transaction tx = db.beginTx();
-              Result result = db.execute( query, params ) )
-        {
-            Map<String,Object> record = Iterators.single( result );
-            RoutingResult actualResult = asRoutingResult( record );
-            // compare addresses regardless of the order because procedure implementations are allowed to randomly shuffle the returned addresses
-            assertEquals( newBag( expectedResult.readEndpoints() ), newBag( actualResult.readEndpoints() ), "Readers are different" );
-            assertEquals( newBag( expectedResult.writeEndpoints() ), newBag( actualResult.writeEndpoints() ), "Writers are different" );
-            assertEquals( newBag( expectedResult.routeEndpoints() ), newBag( actualResult.routeEndpoints() ), "Routers are different" );
-            assertEquals( expectedResult.ttlMillis(), actualResult.ttlMillis() );
-            tx.success();
-        }
+        assertEventually( () -> invokeRoutingProcedure( query, params, db ), new RoutingResultMatcher( expectedResult ), 2, MINUTES );
     }
 
     private static void assertRoutingProcedureFailsForUnknownDatabase( String query, Map<String,Object> params, GraphDatabaseService db )
@@ -142,6 +154,16 @@ class BaseRoutingProcedureIT
         {
             QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( query, params ) );
             assertEquals( DatabaseNotFound.code().serialize(), error.getStatusCode() );
+        }
+    }
+
+    private static RoutingResult invokeRoutingProcedure( String query, Map<String,Object> params, GraphDatabaseService db )
+    {
+        try ( var ignore = db.beginTx();
+              var result = db.execute( query, params ) )
+        {
+            var record = Iterators.single( result );
+            return asRoutingResult( record );
         }
     }
 
@@ -197,5 +219,35 @@ class BaseRoutingProcedureIT
     private static Map<String,Object> paramsWithContextAndDatabase( Map<String,Object> context, String database )
     {
         return Map.of( "context", context, "database", database );
+    }
+
+    private static class RoutingResultMatcher extends TypeSafeMatcher<RoutingResult>
+    {
+        final RoutingResult expected;
+
+        RoutingResultMatcher( RoutingResult expected )
+        {
+            this.expected = expected;
+        }
+
+        @Override
+        protected boolean matchesSafely( RoutingResult actual )
+        {
+            // compare addresses regardless of the order because procedure implementations are allowed to randomly shuffle the returned addresses
+            return newBag( expected.readEndpoints() ).equals( newBag( actual.readEndpoints() ) ) &&
+                   newBag( expected.writeEndpoints() ).equals( newBag( actual.writeEndpoints() ) ) &&
+                   newBag( expected.routeEndpoints() ).equals( newBag( actual.routeEndpoints() ) ) &&
+                   expected.ttlMillis() == actual.ttlMillis();
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "routing result with" )
+                    .appendText( " readers: " ).appendValue( expected.readEndpoints() )
+                    .appendText( " writers: " ).appendValue( expected.writeEndpoints() )
+                    .appendText( " routers: " ).appendValue( expected.routeEndpoints() )
+                    .appendText( " ttl: " ).appendValue( expected.ttlMillis() );
+        }
     }
 }

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -46,9 +47,9 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
     private final Log log;
 
     public GetRoutingTableProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderService leaderService,
-            DatabaseIdRepository databaseIdRepository, Config config, LogProvider logProvider )
+            DatabaseIdRepository databaseIdRepository, DatabaseManager<?> databaseManager, Config config, LogProvider logProvider )
     {
-        super( namespace, databaseIdRepository, config );
+        super( namespace, databaseIdRepository, databaseManager, config );
         this.topologyService = topologyService;
         this.leaderService = leaderService;
         this.log = logProvider.getLog( getClass() );

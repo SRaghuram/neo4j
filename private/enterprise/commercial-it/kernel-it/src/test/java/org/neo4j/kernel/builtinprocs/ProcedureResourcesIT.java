@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -27,12 +28,16 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
 
-@CommercialDbmsExtension
+@CommercialDbmsExtension( configurationCallback = "enableBolt" )
 class ProcedureResourcesIT
 {
     @Inject
@@ -42,6 +47,16 @@ class ProcedureResourcesIT
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    @ExtensionCallback
+    static void enableBolt( TestDatabaseManagementServiceBuilder builder )
+    {
+        var connector = new BoltConnector( "bolt" );
+
+        builder.setConfig( connector.type, BOLT.toString() )
+                .setConfig( connector.enabled, TRUE )
+                .setConfig( connector.listen_address, "localhost:0" );
+    }
 
     @AfterAll
     void tearDown() throws InterruptedException

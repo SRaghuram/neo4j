@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -30,10 +31,10 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor, DatabaseIdRepository databaseIdRepository,
-            Config config )
+    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor,
+            DatabaseIdRepository databaseIdRepository, DatabaseManager<?> databaseManager, Config config )
     {
-        super( namespace, databaseIdRepository, config );
+        super( namespace, databaseIdRepository, databaseManager, config );
         this.loadBalancingProcessor = loadBalancingProcessor;
     }
 
