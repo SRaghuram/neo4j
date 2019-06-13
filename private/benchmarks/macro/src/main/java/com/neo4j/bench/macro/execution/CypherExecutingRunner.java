@@ -54,7 +54,8 @@ public class CypherExecutingRunner extends QueryRunner
                             query.parameters().create(),
                             forkDirectory,
                             warmupControl,
-                            query.isSingleShot() ? single() : measurementControl );
+                            query.isSingleShot() ? single() : measurementControl,
+                            !isSafeToWarmup( query ) );
             }
         }
         catch ( Exception e )

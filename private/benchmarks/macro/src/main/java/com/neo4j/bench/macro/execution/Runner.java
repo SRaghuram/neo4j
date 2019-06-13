@@ -38,7 +38,8 @@ public class Runner
                             ParametersReader parametersReader,
                             ForkDirectory forkDirectory,
                             MeasurementControl warmupControl,
-                            MeasurementControl measurementControl ) throws Exception
+                            MeasurementControl measurementControl,
+                            boolean warmupShouldFallback ) throws Exception
     {
         // completely skip profiling and execution logic if there is no warmup for this query
         warmupControl.reset();
@@ -63,7 +64,7 @@ public class Runner
             try ( Results.ResultsWriter warmupResultsWriter = Results.newWriter( forkDirectory, Phase.WARMUP, NANOSECONDS ) )
             {
                 System.out.println( format( "Performing warmup (%s). Policy: %s", warmupQueryString.executionMode(), warmupControl.description() ) );
-                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, true );
+                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, warmupShouldFallback );
             }
 
             /*
