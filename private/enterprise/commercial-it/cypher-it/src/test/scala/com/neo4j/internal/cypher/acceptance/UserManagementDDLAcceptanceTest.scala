@@ -875,7 +875,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE editor TO alice")
 
     // WHEN / THEN
-    executeOnSystem("alice", "abc", "SHOW DATABASE neo4j", (row, _) => row.get("name").equals("neo4j"))
+    executeOnSystem("alice", "abc", "SHOW DATABASE neo4j", resultHandler = (row, _) => row.get("name").equals("neo4j"))
   }
 
   test("should fail when altering user when not on system database") {
@@ -888,12 +888,6 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   // helper methods
-
-  private def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
-    val login = authManager.login(SecurityTestUtils.authToken(username, password))
-    val result = login.subject().getAuthenticationResult
-    result should be(expected)
-  }
 
   private def prepareUser(username: String, password: String): Unit = {
     execute(s"CREATE USER $username SET PASSWORD '$password'")

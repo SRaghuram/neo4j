@@ -1263,7 +1263,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", (row, _) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", resultHandler = (row, _) => {
       row.get("labels(n)").asInstanceOf[Collection[String]] should contain("A")
     }) should be(1)
   }
@@ -1278,7 +1278,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
 
@@ -1286,7 +1286,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
   }
@@ -1312,7 +1312,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
 
@@ -1321,7 +1321,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", (row, _) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
   }
@@ -1378,7 +1378,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
@@ -1393,7 +1394,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
@@ -1406,7 +1408,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
     }) should be(2)
   }
@@ -1445,7 +1448,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
@@ -1460,7 +1464,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
@@ -1473,7 +1478,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
     }) should be(2)
   }
@@ -1506,7 +1512,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
@@ -1520,7 +1527,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
@@ -1532,7 +1540,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar", (row, index) => {
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+      resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
     }) should be(2)
   }
