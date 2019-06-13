@@ -16,10 +16,10 @@ class MorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
 
   // If you want to only run a specific feature or scenario, go to the BaseTCKTests
 
-//  @TestFactory
-//  def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
-//    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
-//  }
+  @TestFactory
+  def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
+    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+  }
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {

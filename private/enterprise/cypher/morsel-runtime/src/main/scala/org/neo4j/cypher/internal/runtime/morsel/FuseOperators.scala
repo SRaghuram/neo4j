@@ -11,9 +11,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generat
 import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, PipelineDefinition, ProduceResultOutput}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{SingleThreadedAllNodeScanTaskTemplate, _}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -22,9 +24,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
   private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
 
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
+    // Fused operators do not support Cached properties for now
+    val cannotFuse = p.treeExists { case _:ASTCachedProperty => true }
+
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
-      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
+      if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
