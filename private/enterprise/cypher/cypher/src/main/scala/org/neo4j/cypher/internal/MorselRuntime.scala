@@ -85,7 +85,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
-                                 parameterMapping: Map[String, Int],
+                                 parameterMapping: Map[String, (Option[AnyValue],Int)],
                                  fieldNames: Array[String],
                                  queryExecutor: QueryExecutor,
                                  schedulerTracer: SchedulerTracer) extends ExecutionPlan {

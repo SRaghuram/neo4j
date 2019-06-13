@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.{AvailableExpressionVariables, Result}
 import org.neo4j.cypher.internal.runtime.{expressionVariableAllocation, slottedParameters}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.values.AnyValue
 
 object PhysicalPlanner {
 
@@ -42,4 +43,4 @@ case class PhysicalPlan(logicalPlan: LogicalPlan,
                         applyPlans: ApplyPlans,
                         nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations,
                         availableExpressionVariables: AvailableExpressionVariables,
-                        parameterMapping: Map[String, Int])
+                        parameterMapping: Map[String, (Option[AnyValue], Int)])
