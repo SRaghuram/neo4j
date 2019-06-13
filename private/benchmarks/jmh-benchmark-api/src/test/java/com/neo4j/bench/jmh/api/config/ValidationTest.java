@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_BENCHMARK_DOES_NOT_EXIST;

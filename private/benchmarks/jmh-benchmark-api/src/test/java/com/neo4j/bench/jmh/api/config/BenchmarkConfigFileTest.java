@@ -7,7 +7,7 @@ package com.neo4j.bench.jmh.api.config;
 
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;

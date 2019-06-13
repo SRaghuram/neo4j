@@ -81,7 +81,7 @@ class RunExportCommandIT
                     ENTERPRISE,
                     "master",
                     "Trinity",
-                    neo4jConfigFile,
+                    neo4jConfigFile.toPath(),
                     "2",
                     "Trinity",
                     "master",
@@ -114,7 +114,6 @@ class RunExportCommandIT
 
         // Create benchmark configuration file with only one benchmark enabled
         File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
-        Files.write( neo4jConfigFile.toPath(), Arrays.asList( "# empty config file" ) );
 
         Class<?> benchmark = ReadById.class;
         Main.main( new String[]{
@@ -160,6 +159,7 @@ class RunExportCommandIT
 
         int expectedConfigSize = Neo4jConfig.withDefaults()
                                             .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+                                            .mergeWith( RunExportCommand.ADDITIONAL_CONFIG )
                                             .toMap()
                                             .size();
 
@@ -178,8 +178,9 @@ class RunExportCommandIT
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
         assertThat( jfrCount,
                     equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
+        // in 4.0 we do NOT generate Flamegraphs
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount,
-                    equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
+                    equalTo( 0 ) );
     }
 }

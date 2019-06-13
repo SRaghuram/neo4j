@@ -13,6 +13,7 @@
     <name>Neo4j - Benchmarks Procedures</name>
 
     <properties>
+        <moduleName>com.neo4j.bench.procedures</moduleName>
         <uberjar.name>benchmark-procedures</uberjar.name>
         <commons.compress.version>1.12</commons.compress.version>
         <license-text.header>../build/license-header.txt</license-text.header>
@@ -83,11 +84,6 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.5</version>
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>

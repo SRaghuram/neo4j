@@ -237,6 +237,11 @@ public class RunExportCommand implements Runnable
             required = true )
     private String triggeredBy;
 
+    static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfig.empty()
+                                                            .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                                                            .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                                                            .withSetting( new HttpConnector( "https" ).enabled, "false" );
+
     @Override
     public void run()
     {
@@ -260,9 +265,7 @@ public class RunExportCommand implements Runnable
 
         Neo4jConfig baseNeo4jConfig = Neo4jConfig.withDefaults()
                                                  .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
-                                                 .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-                                                 .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                 .withSetting( new HttpConnector( "https" ).enabled, "false" );
+                                                 .mergeWith( ADDITIONAL_CONFIG );
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );

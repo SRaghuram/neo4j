@@ -161,7 +161,7 @@ class InteractiveRunIT extends AnnotationsFixture
                 iterationCount,
                 iterationDuration,
                 Lists.newArrayList( ProfilerType.JFR ),
-                storesDir.toPath()\,
+                storesDir.toPath(),
                 profilerRecordingDirectory,
                 errorPolicy,
                 Paths.get( Jvm.defaultJvmOrFail().launchJava() ),
@@ -174,7 +174,7 @@ class InteractiveRunIT extends AnnotationsFixture
         // (3) for each JFR recording file a FlameGraph should be created
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
-//        IN 4.0 we do NOT generate Flamegraphs
+        // in 4.0 we do NOT generate Flamegraphs
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 

@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.util
 import java.util.Collections
 
+import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import org.neo4j.cypher.internal.logical.plans
@@ -113,7 +113,7 @@ class PartialSortThreadState {
     // Zip the lists together in MapValues
     var i = 0
     val list = new util.ArrayList[util.Map[String, Any]]
-    while(i < listA.size()) {
+    while (i < listA.size()) {
 
       val map = new util.HashMap[String, Any]()
       map.put("a", listA.get(i))

@@ -16,7 +16,7 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmarkWithoutParams;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledGroupBenchmark;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

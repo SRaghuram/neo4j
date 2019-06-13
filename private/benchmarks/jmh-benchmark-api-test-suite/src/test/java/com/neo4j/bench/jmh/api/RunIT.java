@@ -15,17 +15,17 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
+import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,15 +39,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RunIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    Path temporaryFolder;
 
     @Test
     public void shouldRunFromConfigFile() throws IOException
     {
-        Path benchmarkConfig = temporaryFolder.newFile().toPath();
-        Path workDir = temporaryFolder.newFolder().toPath();
-        Path profilerRecordingsOutputDir = temporaryFolder.newFolder().toPath();
+        Path benchmarkConfig = Files.createTempFile( temporaryFolder, "benchmarkConfig", ".tmp" );
+        Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
+        Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
         BenchmarksFinder benchmarksFinder = new BenchmarksFinder( SimpleBenchmark.class.getPackage().getName() );
         SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( benchmarksFinder, new Validation() );
@@ -125,8 +125,8 @@ public class RunIT
     @Test
     public void shouldRunFromSingleBenchmark() throws IOException
     {
-        Path workDir = temporaryFolder.newFolder().toPath();
-        Path profilerRecordingsOutputDir = temporaryFolder.newFolder().toPath();
+        Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
+        Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 

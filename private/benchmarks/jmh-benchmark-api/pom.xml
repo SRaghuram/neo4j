@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmarks</artifactId>
-        <version>3.6.8-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -12,6 +12,7 @@
     <name>JMH Benchmark API</name>
 
     <properties>
+        <moduleName>com.neo4j.bench.jmh.api</moduleName>
         <jmh.version>1.21</jmh.version>
         <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <metrics.version>3.1.2</metrics.version>
@@ -20,14 +21,14 @@
     </properties>
 
     <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2019 "Neo4j,"
+                Neo4j Sweden AB [http://neo4j.com]
+                This file is part of Neo4j internal tooling.
+            </comments>
+        </license>
     </licenses>
 
     <dependencies>
@@ -57,24 +58,25 @@
         </dependency>
 
         <dependency>
-          <groupId>org.junit.jupiter</groupId>
-          <artifactId>junit-jupiter-params</artifactId>
-          <scope>test</scope>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-migrationsupport</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>org.junit.jupiter</groupId>
-          <artifactId>junit-jupiter-migrationsupport</artifactId>
-          <scope>test</scope>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>org.junit.vintage</groupId>
-          <artifactId>junit-vintage-engine</artifactId>
-          <scope>test</scope>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>org.junit.jupiter</groupId>
-          <artifactId>junit-jupiter-engine</artifactId>
-          <scope>test</scope>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -99,10 +101,6 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
             </plugin>
 
             <!-- Integration tests -->
