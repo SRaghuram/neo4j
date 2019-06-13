@@ -13,11 +13,11 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDe
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.morsel.operators._
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, SameId}
@@ -145,7 +145,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                     new ApplyPlans,
                                     new NestedPlanArgumentConfigurations,
                                     new AvailableExpressionVariables,
-                                    Map.empty)
+                                    ParameterMapping.empty)
     physicalPlan.slotConfigurations.set(theId, pipelineBuilder.slotConfiguration)
     physicalPlan.argumentSizes.set(theId, Size.zero)
     val converter = new CompiledExpressionConverter(NullLog.getInstance(), physicalPlan,

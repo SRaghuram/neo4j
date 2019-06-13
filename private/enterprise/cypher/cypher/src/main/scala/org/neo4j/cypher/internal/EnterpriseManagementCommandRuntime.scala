@@ -54,7 +54,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     resolver.resolveDependency(classOf[CommercialAuthManager])
   }
 
-  val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, Map[String, (Option[AnyValue],Int)], String) => ExecutionPlan] = {
+  val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, String) => ExecutionPlan] = {
     // SHOW USERS
     case ShowUsers() => (_, _, _) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,

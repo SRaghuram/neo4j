@@ -21,7 +21,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            columns: Seq[String],
                                            logicalPlan: LogicalPlan,
                                            pipelines: SlotConfigurations,
-                                           parameterMapping: Map[String, (Option[AnyValue],Int)],
+                                           parameterMapping: ParameterMapping,
                                            lenientCreateRelationship: Boolean,
                                            hasLoadCSV: Boolean = false)
   extends BaseExecutionResultBuilderFactory(pipe, readOnly, columns, logicalPlan, hasLoadCSV) {
