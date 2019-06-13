@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -39,7 +39,8 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
     protected override def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): Boolean = {
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
 
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead

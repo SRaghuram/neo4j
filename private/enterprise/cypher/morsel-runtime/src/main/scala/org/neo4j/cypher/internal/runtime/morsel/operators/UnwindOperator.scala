@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -36,7 +36,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): Boolean = {
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
 
       val queryState = new InterpretedQueryState(context,
                                                  resources = null,
@@ -45,7 +46,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  Array.empty[IndexReadSession],
                                                  resources.expressionVariables(state.nExpressionSlots))
 
-      val value = collection(inputMorsel, queryState)
+      initExecutionContext.copyFrom(inputMorsel, inputMorsel.getLongsPerRow, inputMorsel.getRefsPerRow)
+      val value = collection(initExecutionContext, queryState)
       unwoundValues = makeTraversable(value).iterator
       true
     }

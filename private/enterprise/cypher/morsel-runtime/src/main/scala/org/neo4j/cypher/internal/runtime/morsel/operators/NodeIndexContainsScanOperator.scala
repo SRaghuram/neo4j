@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -43,7 +43,8 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): Boolean = {
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
 
       val read = context.transactionalContext.dataRead
       val queryState = new OldQueryState(context,
@@ -52,7 +53,9 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))
-      val value = valueExpr(inputMorsel, queryState)
+
+      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      val value = valueExpr(initExecutionContext, queryState)
 
       value match {
         case value: TextValue =>

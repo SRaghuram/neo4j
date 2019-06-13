@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -23,7 +23,10 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     *
     * @return true iff the inner loop might result it output rows
     */
-  protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean
+  protected def initializeInnerLoop(context: QueryContext,
+                                    state: QueryState,
+                                    resources: QueryResources,
+                                    initExecutionContext: ExecutionContext): Boolean
 
   /**
     * Execute the inner loop for the current input row, and write results to the output.
@@ -46,7 +49,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
     while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
       if (!innerLoop) {
-        innerLoop = initializeInnerLoop(context, state, resources)
+        innerLoop = initializeInnerLoop(context, state, resources, outputRow)
       }
       // Do we have any output rows for this input row?
       if (innerLoop) {

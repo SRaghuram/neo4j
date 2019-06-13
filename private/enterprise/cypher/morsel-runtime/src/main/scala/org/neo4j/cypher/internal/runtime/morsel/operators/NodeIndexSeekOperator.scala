@@ -58,7 +58,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): Boolean = {
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
 
       val queryState = new OldQueryState(context,
                                          resources = null,
@@ -66,7 +67,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))
-      nodeCursors = indexQueries(queryState, inputMorsel)
+      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      nodeCursors = indexQueries(queryState, initExecutionContext)
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       true
     }

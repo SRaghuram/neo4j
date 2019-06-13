@@ -58,7 +58,10 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
       cursor = resources.cursorPools.nodeCursorPool.allocate()
       context.transactionalContext.dataRead.allNodesScan(cursor)
       true

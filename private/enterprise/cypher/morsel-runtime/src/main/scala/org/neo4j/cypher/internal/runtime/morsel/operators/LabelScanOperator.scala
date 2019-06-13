@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -43,7 +43,10 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeLabelIndexCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
       val id = label.getId(context)
       if (id == UNKNOWN) false
       else {

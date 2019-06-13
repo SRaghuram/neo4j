@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -56,7 +56,10 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     private var traversalCursor: RelationshipTraversalCursor = _
     private var relationships: RelationshipSelectionCursor = _
 
-    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+    protected override def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
       val fromNode = inputMorsel.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
         false
