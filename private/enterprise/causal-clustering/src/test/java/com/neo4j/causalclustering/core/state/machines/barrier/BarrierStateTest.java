@@ -13,7 +13,6 @@ import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.lock.AcquireLockTimeoutException;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.fail;
@@ -69,7 +68,7 @@ public class BarrierStateTest
             barrierState.ensureHoldingToken();
             fail( "Should have thrown exception" );
         }
-        catch ( AcquireLockTimeoutException e )
+        catch ( AcquireBarrierTimeoutException e )
         {
             // expected
         }
