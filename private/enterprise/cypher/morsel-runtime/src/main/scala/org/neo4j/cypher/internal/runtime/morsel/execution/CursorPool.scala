@@ -91,8 +91,8 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Free the given cursor. NOOP if `null`.
     */
   def free(cursor: CURSOR): Unit = {
-    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
     if (cursor != null) {
+      DebugSupport.logCursors(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
       liveCount -= 1
       if (cached != null)
         cached.close()

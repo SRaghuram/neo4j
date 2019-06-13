@@ -86,9 +86,9 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     inputMorsel.isValidRow || innerLoop
 
   override protected def closeCursors(resources: QueryResources): Unit = {
-    if (innerLoop) {
-      closeInnerLoop(resources)
-    }
+    // note: we always close, because `innerLoop` might not be reliable if
+    // there has been an exception during `initializeInnerLoop`
+    closeInnerLoop(resources)
   }
 }
 
