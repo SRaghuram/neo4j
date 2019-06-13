@@ -134,7 +134,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   class StandardAggregatingAccumulator(override val argumentRowId: Long,
                                        aggregators: Array[Aggregator]) extends AggregatingAccumulator {
 
-    val reducerMap = new java.util.HashMap[groupings.KeyType, Array[Reducer]]
+    val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
     override def update(data: AggPreMap): Unit = {
      val iterator = data.entrySet().iterator()
