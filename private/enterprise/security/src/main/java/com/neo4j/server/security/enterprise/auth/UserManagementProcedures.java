@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -30,8 +31,7 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException
     {
-        graph.execute( String.format( "CREATE USER `%s` SET PASSWORD '%s' %s", username, password,
-                requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" ) );
+        userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
     }
 
     @Description( "Change the current user's password." )
