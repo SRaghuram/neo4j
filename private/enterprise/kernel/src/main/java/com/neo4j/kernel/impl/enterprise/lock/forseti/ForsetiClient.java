@@ -625,21 +625,20 @@ public class ForsetiClient implements Locks.Client
             if ( exclusiveLocks != null )
             {
                 int size = exclusiveLocks.size();
-                exclusiveLocks.forEachKey(
-                        releaseExclusiveAndClearSharedVisitor.initialize( sharedLocks, lockMaps[i] ) );
-                if ( size <= 32 )
+                if ( size > 0 )
                 {
-                    // If the map is small, its fast and nice to GC to clear it. However, if its large, it is
-                    // 1) Faster to simply allocate a new one and
-                    // 2) Safer, because we guard against clients getting giant maps over time
-                    if ( size > 0 )
+                    exclusiveLocks.forEachKey( releaseExclusiveAndClearSharedVisitor.initialize( sharedLocks, lockMaps[i] ) );
+                    if ( size <= 32 )
                     {
+                        // If the map is small, its fast and nice to GC to clear it. However, if its large, it is
+                        // 1) Faster to simply allocate a new one and
+                        // 2) Safer, because we guard against clients getting giant maps over time
                         exclusiveLocks.clear();
                     }
-                }
-                else
-                {
-                    exclusiveLockCounts[i] = new LongIntHashMap();
+                    else
+                    {
+                        exclusiveLockCounts[i] = new LongIntHashMap();
+                    }
                 }
             }
 
@@ -647,20 +646,20 @@ public class ForsetiClient implements Locks.Client
             if ( sharedLocks != null )
             {
                 int size = sharedLocks.size();
-                sharedLocks.forEachKey( releaseSharedDontCheckExclusiveVisitor.initialize( lockMaps[i] ) );
-                if ( size <= 32 )
+                if ( size > 0 )
                 {
-                    // If the map is small, its fast and nice to GC to clear it. However, if its large, it is
-                    // 1) Faster to simply allocate a new one and
-                    // 2) Safer, because we guard against clients getting giant maps over time
-                    if ( size > 0 )
+                    sharedLocks.forEachKey( releaseSharedDontCheckExclusiveVisitor.initialize( lockMaps[i] ) );
+                    if ( size <= 32 )
                     {
+                        // If the map is small, its fast and nice to GC to clear it. However, if its large, it is
+                        // 1) Faster to simply allocate a new one and
+                        // 2) Safer, because we guard against clients getting giant maps over time
                         sharedLocks.clear();
                     }
-                }
-                else
-                {
-                    sharedLockCounts[i] = new LongIntHashMap();
+                    else
+                    {
+                        sharedLockCounts[i] = new LongIntHashMap();
+                    }
                 }
             }
         }
