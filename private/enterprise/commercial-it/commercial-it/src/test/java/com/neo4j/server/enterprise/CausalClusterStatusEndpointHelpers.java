@@ -50,10 +50,10 @@ class CausalClusterStatusEndpointHelpers
         }
     }
 
-    static CausalClusterInProcessBuilder.CausalCluster startCluster( TestDirectory testDirectory ) throws InterruptedException
+    static CausalClusterInProcessBuilder.CausalCluster startCluster( TestDirectory testDirectory )
     {
-        File clusterDirectory = testDirectory.directory( "CLUSTER" );
-        CausalClusterInProcessBuilder.CausalCluster cluster = CausalClusterInProcessBuilder.init()
+        var clusterDirectory = testDirectory.directory( "CLUSTER" );
+        var cluster = CausalClusterInProcessBuilder.init()
                 .withBuilder( CommercialInProcessNeo4jBuilder::new )
                 .withCores( 3 )
                 .withReplicas( 2 )
@@ -62,8 +62,23 @@ class CausalClusterStatusEndpointHelpers
                 .withOptionalPortsStrategy( new PortAuthorityPortPickingStrategy() )
                 .build();
 
-        cluster.boot();
-        return cluster;
+        try
+        {
+            cluster.boot();
+            return cluster;
+        }
+        catch ( Throwable bootError )
+        {
+            try
+            {
+                cluster.shutdown();
+            }
+            catch ( Throwable shutdownError )
+            {
+                bootError.addSuppressed( shutdownError );
+            }
+            throw bootError;
+        }
     }
 
     static Neo4j getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )

@@ -7,34 +7,72 @@ package org.neo4j.harness;
 
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
-import org.junit.ClassRule;
-import org.junit.Test;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.file.Path;
-
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-public class CausalClusterInProcessRunnerIT
+import static org.neo4j.configuration.Settings.TRUE;
+
+@ExtendWith( TestDirectoryExtension.class )
+class CausalClusterInProcessRunnerIT
 {
-    @ClassRule
-    public static final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
+
+    private CausalClusterInProcessBuilder.CausalCluster cluster;
+
+    @AfterEach
+    void afterEach()
+    {
+        if ( cluster != null )
+        {
+            cluster.shutdown();
+        }
+    }
 
     @Test
-    public void shouldBootAndShutdownCluster() throws Exception
+    void shouldBootAndShutdownCluster()
     {
-        Path clusterPath = testDirectory.directory().toPath();
-        CausalClusterInProcessBuilder.PortPickingStrategy portPickingStrategy = new PortAuthorityPortPickingStrategy();
+        var clusterPath = testDirectory.directory().toPath();
+        var portPickingStrategy = new PortAuthorityPortPickingStrategy();
 
-        CausalClusterInProcessBuilder.CausalCluster cluster =
-                CausalClusterInProcessBuilder.init()
-                        .withBuilder( CommercialInProcessNeo4jBuilder::new )
-                        .withCores( 3 )
-                        .withReplicas( 3 )
-                        .withLogger( NullLogProvider.getInstance() )
-                        .atPath( clusterPath )
-                        .withOptionalPortsStrategy( portPickingStrategy )
-                        .build();
+        cluster = CausalClusterInProcessBuilder.init()
+                .withBuilder( CommercialInProcessNeo4jBuilder::new )
+                .withCores( 3 )
+                .withReplicas( 3 )
+                .withLogger( NullLogProvider.getInstance() )
+                .atPath( clusterPath )
+                .withOptionalPortsStrategy( portPickingStrategy )
+                .build();
+
+        cluster.boot();
+        cluster.shutdown();
+    }
+
+    @Test
+    void shouldBootAndShutdownSecureCluster()
+    {
+        var clusterPath = testDirectory.directory().toPath();
+        var portPickingStrategy = new PortAuthorityPortPickingStrategy();
+
+        cluster = CausalClusterInProcessBuilder.init()
+                .withBuilder( CommercialInProcessNeo4jBuilder::new )
+                .withCores( 3 )
+                .withReplicas( 3 )
+                .withLogger( NullLogProvider.getInstance() )
+                .atPath( clusterPath )
+                .withConfig( GraphDatabaseSettings.auth_enabled.name(), TRUE )
+                .withConfig( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
+                .withConfig( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
+                .withOptionalPortsStrategy( portPickingStrategy )
+                .build();
 
         cluster.boot();
         cluster.shutdown();

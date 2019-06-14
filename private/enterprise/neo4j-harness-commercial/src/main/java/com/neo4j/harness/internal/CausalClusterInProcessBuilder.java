@@ -6,6 +6,7 @@
 package com.neo4j.harness.internal;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -13,11 +14,13 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
@@ -29,6 +32,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.synchronizedList;
+import static java.util.stream.Collectors.toList;
+import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
 public class CausalClusterInProcessBuilder
 {
@@ -231,8 +236,8 @@ public class CausalClusterInProcessBuilder
         private final Map<String,String> config;
         private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
-        private List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
-        private List<InProcessNeo4j> replicaControls = synchronizedList( new ArrayList<>() );
+        private final List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
+        private final List<InProcessNeo4j> replicaControls = synchronizedList( new ArrayList<>() );
 
         private CausalCluster( CausalClusterInProcessBuilder.Builder builder )
         {
@@ -245,7 +250,7 @@ public class CausalClusterInProcessBuilder
             this.serverBuilder = builder.serverBuilder;
         }
 
-        public void boot() throws InterruptedException
+        public void boot()
         {
             List<String> initialMembers = new ArrayList<>( nCores );
 
@@ -255,9 +260,7 @@ public class CausalClusterInProcessBuilder
                 initialMembers.add( "localhost:" + discoveryPort );
             }
 
-            List<Thread> coreThreads = new ArrayList<>();
-            List<Thread> replicaThreads = new ArrayList<>();
-
+            List<Runnable> coreStartActions = new ArrayList<>();
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
                 int discoveryPort = portFactory.discoveryCorePort( coreId );
@@ -293,20 +296,15 @@ public class CausalClusterInProcessBuilder
                 config.forEach( builder::withConfig );
 
                 int finalCoreId = coreId;
-                Thread coreThread = new Thread( () ->
+                coreStartActions.add( () ->
                 {
                     coreNeo4j.add( builder.build() );
                     log.info( "Core " + finalCoreId + " started." );
                 } );
-                coreThreads.add( coreThread );
-                coreThread.start();
             }
+            executeAll( "Error starting cores", "core-start", coreStartActions );
 
-            for ( Thread coreThread : coreThreads )
-            {
-                coreThread.join();
-            }
-
+            List<Runnable> replicaStartActions = new ArrayList<>();
             for ( int replicaId = 0; replicaId < nReplicas; replicaId++ )
             {
                 int discoveryPort = portFactory.discoveryReadReplicaPort( replicaId );
@@ -335,19 +333,13 @@ public class CausalClusterInProcessBuilder
                 config.forEach( builder::withConfig );
 
                 int finalReplicaId = replicaId;
-                Thread replicaThread = new Thread( () ->
+                replicaStartActions.add( () ->
                 {
                     replicaControls.add( builder.build() );
                     log.info( "Read replica " + finalReplicaId + " started." );
                 } );
-                replicaThreads.add( replicaThread );
-                replicaThread.start();
             }
-
-            for ( Thread replicaThread : replicaThreads )
-            {
-                replicaThread.join();
-            }
+            executeAll( "Error starting read replicas", "replica-start", replicaStartActions );
         }
 
         private static String specifyPortOnly( int port )
@@ -383,25 +375,38 @@ public class CausalClusterInProcessBuilder
             return replicaControls;
         }
 
-        public void shutdown() throws InterruptedException
+        public void shutdown()
         {
-            shutdownControls( replicaControls );
-            shutdownControls( coreNeo4j );
+            var shutdownActions = Stream.concat( coreNeo4j.stream(), replicaControls.stream() )
+                    .map( control -> (Runnable) control::close )
+                    .collect( toList() );
+
+            executeAll( "Error shutting down the cluster", "cluster-shutdown", shutdownActions );
         }
 
-        private void shutdownControls( Iterable<? extends InProcessNeo4j> controls ) throws InterruptedException
+        private static void executeAll( String description, String threadPrefix, List<Runnable> actions )
         {
-            Collection<Thread> threads = new ArrayList<>();
-            for ( InProcessNeo4j control : controls )
+            if ( actions.isEmpty() )
             {
-                Thread thread = new Thread( control::close );
-                threads.add( thread );
-                thread.start();
+                return;
             }
 
-            for ( Thread thread : threads )
+            var executor = Executors.newFixedThreadPool( actions.size(), daemon( threadPrefix ) );
+
+            try ( var errorHandler = new ErrorHandler( description ) )
             {
-                thread.join();
+                var futures = actions.stream()
+                        .map( action -> CompletableFuture.runAsync( action, executor ) )
+                        .collect( toList() );
+
+                for ( var future : futures )
+                {
+                    errorHandler.execute( future::join );
+                }
+            }
+            finally
+            {
+                executor.shutdown();
             }
         }
     }

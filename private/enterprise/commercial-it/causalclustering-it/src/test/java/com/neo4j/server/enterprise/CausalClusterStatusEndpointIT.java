@@ -57,27 +57,27 @@ class CausalClusterStatusEndpointIT
     @RegisterExtension
     static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
 
-    private static CausalClusterInProcessBuilder.CausalCluster CLUSTER;
+    private static CausalClusterInProcessBuilder.CausalCluster cluster;
 
     @BeforeAll
-    static void setupClass() throws InterruptedException
+    static void setupClass()
     {
-        CLUSTER = startCluster( testDirectoryClassExtension.getTestDirectory() );
+        cluster = startCluster( testDirectoryClassExtension.getTestDirectory() );
     }
 
     @AfterAll
-    static void shutdownClass() throws InterruptedException
+    static void shutdownClass()
     {
-        if ( CLUSTER != null )
+        if ( cluster != null )
         {
-            CLUSTER.shutdown();
+            cluster.shutdown();
         }
     }
 
     @Test
     void leaderIsWritable() throws InterruptedException
     {
-        Neo4j leader = getLeader( CLUSTER );
+        Neo4j leader = getLeader( cluster );
         assertEventually( canVote( serverStatusEndpoint( leader ) ), equalTo( true ), 1, TimeUnit.MINUTES );
 
         String raw = getStatusRaw( getWritableEndpoint( leader.httpURI() ) );
@@ -87,7 +87,7 @@ class CausalClusterStatusEndpointIT
     @Test
     void booleanEndpointsAreReachable() throws InterruptedException
     {
-        for ( Neo4j core : CLUSTER.getCoreNeo4j() )
+        for ( Neo4j core : cluster.getCoreNeo4j() )
         {
             assertEventually( canVote( serverStatusEndpoint( core ) ), equalTo( true ), 1, TimeUnit.MINUTES );
 
@@ -103,14 +103,14 @@ class CausalClusterStatusEndpointIT
     void statusEndpointIsReachableAndReadable() throws Exception
     {
         // given there is data
-        writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 0L ) ), 3,
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 0L ) ), 3,
                 TimeUnit.MINUTES );
 
         // then cores are valid
-        for ( Neo4j core : CLUSTER.getCoreNeo4j() )
+        for ( Neo4j core : cluster.getCoreNeo4j() )
         {
-            writeSomeData( CLUSTER );
+            writeSomeData( cluster );
             assertEventually( serverStatusEndpoint( core ), coreFieldIs( equalTo( true ) ), 1, TimeUnit.MINUTES );
             assertEventually( serverStatusEndpoint( core ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, TimeUnit.MINUTES );
             assertEventually( serverStatusEndpoint( core ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, TimeUnit.MINUTES );
@@ -123,9 +123,9 @@ class CausalClusterStatusEndpointIT
         }
 
         // and replicas are valid
-        for ( Neo4j replica : CLUSTER.getReplicaControls() )
+        for ( Neo4j replica : cluster.getReplicaControls() )
         {
-            writeSomeData( CLUSTER );
+            writeSomeData( cluster );
             assertEventually( serverStatusEndpoint( replica ), coreFieldIs( equalTo( false ) ), 1, TimeUnit.MINUTES );
             assertEventually( serverStatusEndpoint( replica ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, TimeUnit.MINUTES );
             assertEventually( serverStatusEndpoint( replica ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, TimeUnit.MINUTES );
@@ -142,51 +142,51 @@ class CausalClusterStatusEndpointIT
     void replicasContainTheSameRaftIndexAsCores() throws Exception
     {
         // given starting conditions
-        writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, TimeUnit.MINUTES );
-        long initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection( serverStatusEndpoint( getLeader( CLUSTER ) ) ) ).get()
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, TimeUnit.MINUTES );
+        long initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection( serverStatusEndpoint( getLeader( cluster ) ) ) ).get()
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new RuntimeException( "List is empty" ) );
         assertThat( initialLastAppliedRaftIndex, greaterThan( 0L ) );
 
         // when more data is added
-        writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 1L ) ), 1,
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 1L ) ), 1,
                 TimeUnit.MINUTES );
 
         // then all status endpoints have a matching last appliedRaftIndex
-        assertEventually( lastAppliedRaftIndex( allEndpointsFieldValues( CLUSTER ) ), allValuesEqual(), 1, TimeUnit.MINUTES );
+        assertEventually( lastAppliedRaftIndex( allEndpointsFieldValues( cluster ) ), allValuesEqual(), 1, TimeUnit.MINUTES );
 
         // and endpoint last applied raft index has incremented
-        assertEventually( serverStatusEndpoint( getLeader( CLUSTER ) ), lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ), 1,
+        assertEventually( serverStatusEndpoint( getLeader( cluster ) ), lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ), 1,
                 TimeUnit.MINUTES );
     }
 
     @Test
     void participatingInRaftGroupFalseWhenNotInGroup() throws InterruptedException
     {
-        Neo4j first = CLUSTER.getCoreNeo4j().get( 0 );
+        Neo4j first = cluster.getCoreNeo4j().get( 0 );
         try
         {
             List<InProcessNeo4j> switchedOff =
-                    CLUSTER.getCoreNeo4j().stream().filter( e -> !first.equals( e ) ).peek( InProcessNeo4j::close ).collect( Collectors.toList() );
+                    cluster.getCoreNeo4j().stream().filter( e -> !first.equals( e ) ).peek( InProcessNeo4j::close ).collect( Collectors.toList() );
             assert switchedOff.size() > 0;
             assertEventually( canVote( serverStatusEndpoint( first ) ), equalTo( false ), 1, TimeUnit.MINUTES );
         }
         finally
         {
-            CLUSTER.shutdown();
-            CLUSTER = startCluster( testDirectoryClassExtension.getTestDirectory() );
+            cluster.shutdown();
+            cluster = startCluster( testDirectoryClassExtension.getTestDirectory() );
         }
     }
 
     @Test
     void throughputIsPositive() throws InterruptedException
     {
-        writeSomeData( CLUSTER );
-        assertEventually( allEndpointsFieldValues( CLUSTER ), everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ), 1, TimeUnit.MINUTES );
-        assertEventually( allEndpointsFieldValues( CLUSTER ), everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ), 90,
+        writeSomeData( cluster );
+        assertEventually( allEndpointsFieldValues( cluster ), everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ), 1, TimeUnit.MINUTES );
+        assertEventually( allEndpointsFieldValues( cluster ), everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ), 90,
                 TimeUnit.SECONDS );
     }
 }
