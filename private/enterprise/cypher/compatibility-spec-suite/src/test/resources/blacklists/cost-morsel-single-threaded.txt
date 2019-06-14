@@ -334,6 +334,7 @@ Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with a
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with argument of type NUMBER accepts value of type FLOAT"
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with argument of type FLOAT accepts value of type INTEGER"
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with null argument"
+Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with implicit arguments"
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"
 Feature "ProcedureCallAcceptance": Scenario "Calling the same procedure twice using the same outputs in each call"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to VOID procedure does not consume rows"
