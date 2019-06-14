@@ -116,6 +116,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                             labels,
                                             physicalPlan.argumentSizes(id))
 
+      case plans.RelationshipCountFromCountStore(idName, startLabel, typeNames, endLabel, _) =>
+        val maybeStartLabel = startLabel.map(label => LazyLabel(label)(semanticTable))
+        val relationshipTypes = RelationshipTypes(typeNames.toArray)(semanticTable)
+        val maybeEndLabel = endLabel.map(label => LazyLabel(label)(semanticTable))
+        new RelationshipCountFromCountStoreOperator(WorkIdentity.fromPlan(plan),
+                                                    slots.getReferenceOffsetFor(idName),
+                                                    maybeStartLabel,
+                                                    relationshipTypes,
+                                                    maybeEndLabel,
+                                                    physicalPlan.argumentSizes(id))
+
       case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)

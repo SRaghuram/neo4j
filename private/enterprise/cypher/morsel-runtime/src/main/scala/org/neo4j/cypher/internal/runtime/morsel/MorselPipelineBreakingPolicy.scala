@@ -23,6 +23,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: NodeIndexScan |
            _: NodeByIdSeek |
            _: NodeCountFromCountStore |
+           _: RelationshipCountFromCountStore |
            _: Input |
            _: Argument // TODO: breaking on argument is often silly. Let's not do that when avoidable.
       => true
