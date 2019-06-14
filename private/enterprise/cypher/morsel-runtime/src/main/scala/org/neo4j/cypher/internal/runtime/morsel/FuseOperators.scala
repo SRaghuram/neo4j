@@ -94,6 +94,21 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case plans.NodeByLabelScan(node, label, _) =>
+            val argumentSize = physicalPlan.argumentSizes(id)
+            val maybeToken = tokenContext.getOptLabelId(label.name)
+            val newTemplate = new SingleThreadedLabelScanTaskTemplate(
+              acc.template,
+              innermostTemplate,
+              node,
+              slots.getLongOffsetFor(node),
+              label.name,
+              maybeToken,
+              argumentSize)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)
             val relOffset = slots.getLongOffsetFor(relName)

@@ -8,10 +8,12 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution.{CursorPool, CursorPools, FlowControl, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.token.api.TokenConstants
 
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
@@ -19,6 +21,9 @@ object OperatorCodeGenHelperTemplates {
   }
   case object NodeCursorPool extends CursorPoolsType {
     override def name: String = "nodeCursorPool"
+  }
+  case object NodeLabelIndexCursorPool extends CursorPoolsType {
+    override def name: String = "nodeLabelIndexCursorPool"
   }
   case object GroupCursorPool extends CursorPoolsType {
     override def name: String = "relationshipGroupCursorPool"
@@ -78,6 +83,7 @@ object OperatorCodeGenHelperTemplates {
     load(PRE_POPULATE_RESULTS_V)
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
+  val ALLOCATE_NODE_LABEL_CURSOR: IntermediateRepresentation = allocateCursor(NodeLabelIndexCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
 
@@ -88,6 +94,8 @@ object OperatorCodeGenHelperTemplates {
   val UPDATE_DEMAND: IntermediateRepresentation =
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
 
+  val NO_TOKEN: GetStatic = getStatic[TokenConstants, Int]("NO_TOKEN")
+
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(
       invoke(CURSOR_POOL, method[CursorPools, CursorPool[_]](cursorPools.name)),
@@ -95,6 +103,9 @@ object OperatorCodeGenHelperTemplates {
 
   def allNodeScan(cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), cursor)
+
+  def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
+    invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label, cursor)
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
@@ -107,6 +118,7 @@ object OperatorCodeGenHelperTemplates {
   def cursorNext[CURSOR](cursor: IntermediateRepresentation)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
     invoke(cursor, method[CURSOR, Boolean]("next"))
 
+  def nodeLabelId(labelName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(labelName))
 
   // Profiling
   def profileRow(id: Id): IntermediateRepresentation = {

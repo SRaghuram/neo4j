@@ -5,13 +5,18 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 
 class LabelScanOperator(val workIdentity: WorkIdentity,
@@ -69,5 +74,120 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       resources.cursorPools.nodeLabelIndexCursorPool.free(cursor)
       cursor = null
     }
+  }
+
+}
+
+class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTemplate,
+                                          id: Id,
+                                          val innermost: DelegateOperatorTaskTemplate,
+                                          val nodeVarName: String,
+                                          val offset: Int,
+                                          val labelName: String,
+                                          val maybeLabelId: Option[Int],
+                                          val argumentSize: SlotConfiguration.Size)
+                                         (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private val nodeLabelCursorField = field[NodeLabelIndexCursor](codeGen.namer.nextVariableName())
+  private val labelField = field[Int](codeGen.namer.nextVariableName(), NO_TOKEN)
+
+  override def genFields: Seq[Field] = {
+    (super.genFields :+ nodeLabelCursorField ) ++ maybeLabelId.fold(Option(labelField))(_ => None) ++ inner.genFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    inner.genLocalVariables :+ CURSOR_POOL_V
+  }
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    maybeLabelId match {
+      case Some(labelId) =>
+        /**
+          * {{{
+          *   this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+          *   context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
+          *   this.canContinue = nodeLabelCursor.next()
+          *   true
+          * }}}
+          */
+        block(
+          setField(nodeLabelCursorField, ALLOCATE_NODE_LABEL_CURSOR),
+          nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField)),
+          setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
+          constant(true)
+        )
+
+      case None =>
+        val hasInnerLoop = codeGen.namer.nextVariableName()
+        /**
+          * {{{
+          *   if (this.label == NO_TOKEN) {
+          *     this.label = nodeLabelId(labelName)
+          *   }
+          *   val hasInnerLoop = this.label != NO_TOKEN
+          *   if (shouldContinue) {
+          *     this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+          *     context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
+          *     this.canContinue = nodeLabelCursor.next()
+          *   }
+          *   hasInnerLoop
+          * }}}
+          */
+        block(
+          condition(equal(loadField(labelField), NO_TOKEN)) {
+            setField(labelField, nodeLabelId(labelName))
+          },
+          declareAndAssign(typeRefOf[Boolean], hasInnerLoop, notEqual(loadField(labelField), NO_TOKEN)),
+          condition(load(hasInnerLoop)) {
+            block(
+              setField(nodeLabelCursorField, ALLOCATE_NODE_LABEL_CURSOR),
+              nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
+              setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
+            )
+          },
+          load(hasInnerLoop)
+        )
+    }
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     ...
+      *     << inner.genOperate >>
+      *     this.canContinue = this.nodeLabelCursor.next()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+            loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+        } else {
+          noop()
+        },
+        codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
+        inner.genOperate,
+        setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField)))
+      )
+    )
+  }
+
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   resources.cursorPools.nodeLabelIndexCursorPool.free(nodeLabelCursor)
+      *   nodeLabelCursor = null
+      * }}}
+      */
+    block(
+      freeCursor[NodeLabelIndexCursor](loadField(nodeLabelCursorField), NodeLabelIndexCursorPool),
+      setField(nodeLabelCursorField, constant(null))
+    )
   }
 }
