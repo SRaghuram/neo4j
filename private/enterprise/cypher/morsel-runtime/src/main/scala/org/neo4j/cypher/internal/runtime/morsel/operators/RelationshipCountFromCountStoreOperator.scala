@@ -60,7 +60,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
         val startLabelId = getLabelId(startLabel, context)
         val endLabelId = getLabelId(endLabel, context)
 
-        val count = if (startLabelId == Unknown && endLabelId == Unknown)
+        val count = if (startLabelId == Unknown || endLabelId == Unknown)
           0
         else
           countOneDirection(context, startLabelId.id, endLabelId.id)
