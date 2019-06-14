@@ -414,11 +414,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case StopDatabase(source, normalizedName) => (context, parameterMapping, currentUser) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d:Database {name: $name})
-          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
+        """OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
           |SET d2.status = $status
           |SET d2.stopped_at = datetime()
-          |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
+          |RETURN d2.name as name, d2.status as status""".stripMargin,
         VirtualValues.map(
           Array("name", "oldStatus", "status"),
           Array(Values.stringValue(dbName),
@@ -434,6 +433,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // which means it can be dropped and stopped.
     case EnsureValidNonDefaultDatabase(normalizedName, action) => (_, _, _) =>
       val dbName = normalizedName.name
+      if (dbName.equals(SYSTEM_DATABASE_NAME))
+        throw new DatabaseManagementException("Not allowed to " + action + " system database.")
+
       UpdatingSystemCommandExecutionPlan("EnsureValidNonDefaultDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
           |RETURN db.default as default""".stripMargin,
@@ -446,9 +448,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           .handleResult((_, value) => {
             if (value == Values.TRUE) {
               Some(new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'."))
-            }
-            else if (dbName.equals(SYSTEM_DATABASE_NAME)) {
-              Some(new DatabaseManagementException("Not allowed to " + action + " system database."))
             } else None
           })
       )
