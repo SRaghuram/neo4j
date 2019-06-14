@@ -106,11 +106,6 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PAR
 // NODE HASH JOIN
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
-
-// PROVIDED ORDER
-class ItNoWorkTest extends ProvidedOrderTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ItNoWorkNoFuseTest extends ProvidedOrderTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-
 // REACTIVE
 class ParallelRuntimeReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, PARALLEL)
 class ParallelRuntimeReactiveParallelNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
