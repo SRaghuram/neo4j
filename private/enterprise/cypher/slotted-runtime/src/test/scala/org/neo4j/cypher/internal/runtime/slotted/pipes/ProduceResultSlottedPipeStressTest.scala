@@ -8,17 +8,18 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import java.util.concurrent.{Callable, Executors, Future}
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryStatistics}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.result.QueryResult
-import org.neo4j.cypher.result.QueryResult.Record
+import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
 import org.neo4j.values.AnyValue
+
+import scala.collection.JavaConverters._
 
 class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
 
@@ -55,11 +56,14 @@ class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
   }
 
   private def execute(produceResults: ProduceResultSlottedPipe): AnyValue = {
-    val iterator = produceResults.createResults(QueryStateHelper.empty).asInstanceOf[Iterator[QueryResult.Record]]
-    val row: Record = iterator.next()
-    val result = row.fields()(0)
-    row.release()
-    result
+    val subscriber = new RecordingQuerySubscriber
+    subscriber.onResult(1)
+    val iterator = produceResults.createResults(QueryStateHelper.emptyWith(subscriber = subscriber))
+    subscriber.onResultCompleted(QueryStatistics.empty)
+    //equivalent of request(1)
+    iterator.next()
+
+    subscriber.getOrThrow().asScala.head(0)
   }
 
   private val sourcePipe: Pipe =
