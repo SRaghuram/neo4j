@@ -1546,6 +1546,29 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(2)
   }
 
+  test("should read properties when granted MATCH privilege to custom role for a specific database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name:'a'})")
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO joe")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH neo4j NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+  }
+
   // Tests for granting roles to users
 
   test("should grant role to user") {

@@ -122,7 +122,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     executeOn(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, username, password, query, params, resultHandler)
   }
 
-  private def executeOn(database: String, username: String, password: String, query: String,
+  def executeOn(database: String, username: String, password: String, query: String,
                         params: util.Map[String, Object] = Collections.emptyMap(),
                         resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}) = {
     selectDatabase(database)

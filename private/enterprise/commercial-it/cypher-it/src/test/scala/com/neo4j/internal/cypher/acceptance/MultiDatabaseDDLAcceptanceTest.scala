@@ -398,6 +398,22 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
+  test("should have access on a created database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE USER baz SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO baz")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("baz", Seq("editor"), passwordChangeRequired = false))
+
+    // WHEN
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+
+    // THEN
+    executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
+  }
+
   test("should fail when creating an already existing database") {
     setup(defaultConfig)
 
@@ -519,6 +535,30 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result2 = execute("SHOW DATABASES")
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should not contain "foo"
+  }
+
+  test("should have no access on a dropped database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE baz")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO foo")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("foo", Seq("editor"), passwordChangeRequired = false))
+    execute("SHOW DATABASES").toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+    // WHEN
+    execute("DROP DATABASE baz")
+    execute("SHOW DATABASES").toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+    // THEN
+    the[RuntimeException] thrownBy {
+      executeOn("baz", "foo", "bar", "MATCH (n) RETURN n")
+    } should have message "No such database: baz"
   }
 
   test("should fail when dropping a non-existing database") {
@@ -728,6 +768,30 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
   }
 
+  test("should have access on a re-started database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    execute("CREATE USER baz SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO baz")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("baz", Seq("editor"), passwordChangeRequired = false))
+
+    the[DatabaseShutdownException] thrownBy {
+      executeOn("foo", "baz", "bar", "MATCH (n) RETURN n")
+    } should have message "This database is shutdown."
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("START DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+
+    // THEN
+    executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
+  }
+
   test("should fail when starting a database when not on system database") {
     // GIVEN
     setup(defaultConfig)
@@ -776,6 +840,36 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result2 = execute("SHOW DATABASE foo")
     result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+  }
+
+  test("should have no access on a stopped database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE baz")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO foo")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("foo", Seq("editor"), passwordChangeRequired = false))
+    execute("SHOW DATABASES").toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+    // WHEN
+    execute("STOP DATABASE baz")
+    execute("SHOW DATABASE baz").toSet should be(Set(Map("name" -> "baz", "status" -> offlineStatus, "default" -> false)))
+
+    // THEN
+    the[DatabaseShutdownException] thrownBy {
+      executeOn("baz", "foo", "bar", "MATCH (n) RETURN n")
+    } should have message "This database is shutdown."
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("START DATABASE baz")
+
+    // THEN
+    executeOn("baz", "foo", "bar", "MATCH (n) RETURN n") should be(0)
   }
 
   test("should fail when stopping a non-existing database") {
@@ -866,15 +960,18 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
-    execute("STOP DATABASE neo4j")
     execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true),
+      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
 
+    // WHEN
+    execute("STOP DATABASE neo4j")
+    execute("SHOW DATABASE neo4j").toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true)))
+
+    // THEN
     the[DatabaseShutdownException] thrownBy {
-      // WHEN
       executeOnDefault("foo", "bar", "MATCH (n) RETURN n")
-      // THEN
     } should have message "This database is shutdown."
 
     // WHEN
