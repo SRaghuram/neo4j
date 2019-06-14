@@ -91,7 +91,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE neo4j")
 
     // THEN
-    result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
+    result.toList should be(List(db("neo4j", default = true)))
   }
 
   test("should show custom default database") {
@@ -104,7 +104,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+    result.toList should be(List(db("foo", default = true)))
 
     // WHEN
     val result2 = execute("SHOW DATABASE neo4j")
@@ -124,8 +124,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val fooResult = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true)))
-    fooResult.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    neoResult.toSet should be(Set(db("neo4j", default = true)))
+    fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
     config.augment(default_database, "foo")
@@ -136,8 +136,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val fooResult2 = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult2.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> false)))
-    fooResult2.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+    neoResult2.toSet should be(Set(db("neo4j")))
+    fooResult2.toSet should be(Set(db("foo", default = true)))
   }
 
   test("should start a stopped database when it becomes default") {
@@ -152,7 +152,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toSet should be(Set(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("foo", offlineStatus)))
 
     // GIVEN
     config.augment(default_database, "foo")
@@ -163,7 +163,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     // The new default database should be started when the system is restarted
-    result2.toSet should be(Set(Map("name" -> "foo", "status" -> onlineStatus, "default" -> true)))
+    result2.toSet should be(Set(db("foo", default = true)))
   }
 
   test("should show database using mixed case name") {
@@ -175,7 +175,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE FOO")
 
     // THEN
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
   }
 
   test("should give nothing when showing a non-existing database") {
@@ -216,9 +216,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("neo4j", default = true), db("system")))
   }
 
   test("should show custom default and system databases") {
@@ -231,9 +229,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("foo", default = true), db("system")))
   }
 
   test("should show databases for switch of default database") {
@@ -246,10 +242,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("neo4j", default = true), db("foo"), db("system")))
 
     // GIVEN
     config.augment(default_database, "foo")
@@ -259,11 +252,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result2 = execute("SHOW DATABASES")
 
     // THEN
-    result2.toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
-
+    result2.toSet should be(Set(db("neo4j"), db("foo", default = true), db("system")))
   }
 
   test("should fail when showing databases when not on system database") {
@@ -347,11 +336,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
 
     // WHEN
-    execute("CREATE DATABASE `f.o-o`")
+    execute("CREATE DATABASE `f.o-o123`")
 
     // THEN
-    val result = execute("SHOW DATABASE `f.o-o`")
-    result.toList should be(List(Map("name" -> "f.o-o", "status" -> onlineStatus, "default" -> false)))
+    val result = execute("SHOW DATABASE `f.o-o123`")
+    result.toList should be(List(db("f.o-o123")))
   }
 
   test("should create database in systemdb when max number of databases is not reached") {
@@ -395,7 +384,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val result = execute("SHOW DATABASE fOo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
   }
 
   test("should have access on a created database") {
@@ -408,7 +397,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     execute("CREATE DATABASE foo")
-    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASE foo").toList should be(List(db("foo")))
 
     // THEN
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
@@ -420,7 +409,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
 
     the[DatabaseExistsException] thrownBy {
       // WHEN
@@ -503,11 +492,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toList should contain allOf(
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "bar", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false)
-    )
+    result.toList should contain allOf(db("foo"), db("bar"), db("baz"))
 
     // WHEN
     execute("DROP DATABASE baz") //online database
@@ -526,7 +511,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setup(defaultConfig)
     execute("CREATE DATABASE foo")
-    execute("SHOW DATABASES").toList should contain(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))
+    execute("SHOW DATABASES").toList should contain(db("foo"))
 
     // WHEN
     execute("DROP DATABASE FOO")
@@ -546,14 +531,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+      db("neo4j", default = true), db("baz"), db("system")))
 
     // WHEN
     execute("DROP DATABASE baz")
-    execute("SHOW DATABASES").toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
 
     // THEN
     the[RuntimeException] thrownBy {
@@ -608,7 +590,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE system")
 
     // THEN
-    result.toSet should be(Set(Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("system")))
   }
 
   test("should fail on dropping default database") {
@@ -624,9 +606,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("neo4j", default = true), db("system")))
   }
 
   test("should fail on dropping custom default database") {
@@ -645,9 +625,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("foo", default = true), db("system")))
   }
 
   test("should fail when dropping a database when not on system database") {
@@ -675,7 +653,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
   }
 
   test("should fail when starting a non-existing database") {
@@ -720,14 +698,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
 
     // WHEN
     execute("START DATABASE foo")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result2.toList should be(List(db("foo")))
   }
 
   test("should re-start database") {
@@ -736,17 +714,17 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))) // make sure it was started
+    result.toList should be(List(db("foo"))) // make sure it was started
     execute("STOP DATABASE foo")
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false))) // and stopped
+    result2.toList should be(List(db("foo", offlineStatus))) // and stopped
 
     // WHEN
     execute("START DATABASE foo")
 
     // THEN
     val result3 = execute("SHOW DATABASE foo")
-    result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result3.toList should be(List(db("foo")))
   }
 
   test("should re-start database using mixed case name") {
@@ -755,17 +733,17 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false))) // make sure it was started
+    result.toList should be(List(db("foo"))) // make sure it was started
     execute("STOP DATABASE foo")
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false))) // and stopped
+    result2.toList should be(List(db("foo", offlineStatus))) // and stopped
 
     // WHEN
     execute("START DATABASE FOO")
 
     // THEN
     val result3 = execute("SHOW DATABASE foo")
-    result3.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result3.toList should be(List(db("foo")))
   }
 
   test("should have access on a re-started database") {
@@ -773,7 +751,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
-    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
     execute("CREATE USER baz SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO baz")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
@@ -786,7 +764,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("START DATABASE foo")
-    execute("SHOW DATABASE foo").toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASE foo").toList should be(List(db("foo")))
 
     // THEN
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
@@ -816,14 +794,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
 
     // WHEN
     execute("STOP DATABASE foo")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    result2.toList should be(List(db("foo", offlineStatus)))
   }
 
   test("should stop database using mixed case name") {
@@ -832,14 +810,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     execute("CREATE DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo")))
 
     // WHEN
     execute("STOP DATABASE FoO")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    result2.toList should be(List(db("foo", offlineStatus)))
   }
 
   test("should have no access on a stopped database") {
@@ -851,13 +829,13 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "baz", "status" -> onlineStatus, "default" -> false),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+      db("neo4j", default = true),
+      db("baz"),
+      db("system")))
 
     // WHEN
     execute("STOP DATABASE baz")
-    execute("SHOW DATABASE baz").toSet should be(Set(Map("name" -> "baz", "status" -> offlineStatus, "default" -> false)))
+    execute("SHOW DATABASE baz").toSet should be(Set(db("baz", offlineStatus)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {
@@ -922,7 +900,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASE system")
 
     // THEN
-    result.toSet should be(Set(Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    result.toSet should be(Set(db("system")))
   }
 
   test("should stop default database") {
@@ -934,8 +912,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+      db("neo4j", offlineStatus, default = true), db("system")))
   }
 
   test("should stop custom default database") {
@@ -948,9 +925,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "foo", "status" -> offlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", offlineStatus, default = true), db("system")))
   }
 
   test("should have no access on a stopped default database") {
@@ -960,14 +935,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
-    execute("SHOW DATABASES").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
-      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
 
     // WHEN
     execute("STOP DATABASE neo4j")
-    execute("SHOW DATABASE neo4j").toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true)))
+    execute("SHOW DATABASE neo4j").toSet should be(Set(db("neo4j", offlineStatus, default = true)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {
@@ -989,14 +961,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     val result = execute("SHOW DATABASE foo")
-    result.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    result.toList should be(List(db("foo", offlineStatus)))
 
     // WHEN
     execute("STOP DATABASE foo")
 
     // THEN
     val result2 = execute("SHOW DATABASE foo")
-    result2.toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    result2.toList should be(List(db("foo", offlineStatus)))
   }
 
   test("should fail when stopping a database when not on system database") {
@@ -1009,6 +981,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message
       "This is a DDL command and it should be executed against the system database: STOP DATABASE"
   }
+
+  private def db(name: String, status: String = onlineStatus, default: Boolean = false) =
+    Map("name" -> name, "status" -> status, "default" -> default)
 
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
