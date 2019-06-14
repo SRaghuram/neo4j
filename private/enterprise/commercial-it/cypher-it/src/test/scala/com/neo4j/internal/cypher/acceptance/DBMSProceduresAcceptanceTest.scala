@@ -51,4 +51,30 @@ class DBMSProceduresAcceptanceTest extends DDLAcceptanceTestBase {
     exception.getMessage should include("The specified user 'neo4j' already exists.")
     testUserLogin("neo4j", "neo", AuthenticationResult.SUCCESS)
   }
+
+  test("should fail using non-system procedure on system") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+    // WHEN
+    val exception = the[RuntimeException] thrownBy {
+      executeOnSystem("neo4j", "neo", "CALL dbms.functions()") // any procedure that we will never allow on system should be here
+    }
+    exception.getMessage should include("Not a recognised system command or procedure")
+  }
+
+  test("should fail using non-existing procedure on system") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+    // WHEN
+    val exception = the[RuntimeException] thrownBy {
+      executeOnSystem("neo4j", "neo", "CALL dbms.something.something.profit()")
+    }
+    exception.getMessage should include("There is no procedure with the name `dbms.something.something.profit` registered for this database instance.")
+  }
+
+  // TODO: Add test for running a system procedure towards a non-system database when that check is implemented
 }

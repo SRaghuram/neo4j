@@ -43,12 +43,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
   override def compileToExecutable(state: LogicalQuery, context: RuntimeContext, username: String): ExecutionPlan = {
 
-    val (withSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
+    val (planWithSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
-    if (logicalToExecutable.isDefinedAt(withSlottedParameters) || communityCommandRuntime.logicalToExecutable.isDefinedAt(withSlottedParameters)) {
-      (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
+    // Either the logical plan is a command that the partial function logicalToExecutable provides/understands OR it could be a system procedure
+    // If neither we throw an error
+    if (logicalToExecutable.isDefinedAt(planWithSlottedParameters) || communityCommandRuntime.logicalToExecutable.isDefinedAt(planWithSlottedParameters)) {
+      (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
     } else {
-      ProcedureCallOrSchemaCommandRuntime.logicalToExecutable.applyOrElse(withSlottedParameters, throwCantCompile).apply(context, parameterMapping)
+      ProcedureCallOrSchemaCommandRuntime.logicalToExecutable.applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping)
     }
   }
 
