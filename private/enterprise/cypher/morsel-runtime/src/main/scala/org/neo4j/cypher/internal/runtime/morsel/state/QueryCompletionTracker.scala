@@ -67,7 +67,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
       try {
         if (throwable != null) {
           subscriber.onError(throwable)
-        } else {
+        } else if (!cancelled) {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         }
       } finally {
