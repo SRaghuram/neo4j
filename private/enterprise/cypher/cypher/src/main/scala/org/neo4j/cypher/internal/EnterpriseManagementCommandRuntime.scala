@@ -446,7 +446,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         QueryHandler
           .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")))
           .handleResult((_, value) => {
-            if (value == Values.TRUE) {
+            if (value == Values.TRUE && action.toLowerCase.equals("drop")) {
               Some(new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'."))
             } else None
           })

@@ -15,6 +15,7 @@ import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
+import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.{InvalidSettingException, Setting}
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -830,43 +831,58 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on stopping default database") {
+  test("should stop default database") {
+    // GIVEN
     setup(defaultConfig)
 
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("STOP DATABASE neo4j")
-      // THEN
-    } should have message "Not allowed to stop default database 'neo4j'."
-
     // WHEN
-    val result = execute("SHOW DATABASES")
+    execute("STOP DATABASE neo4j")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "neo4j", "status" -> onlineStatus, "default" -> true),
+    execute("SHOW DATABASES").toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true),
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
   }
 
-  test("should fail on stopping custom default database") {
+  test("should stop custom default database") {
     // GIVEN
     val config = Config.defaults()
     config.augment(default_database, "foo")
     setup(config)
 
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("STOP DATABASE foo")
-      // THEN
-    } should have message "Not allowed to stop default database 'foo'."
-
     // WHEN
-    val result = execute("SHOW DATABASES")
+    execute("STOP DATABASE foo")
 
     // THEN
-    result.toSet should be(Set(
-      Map("name" -> "foo", "status" -> onlineStatus, "default" -> true),
+    execute("SHOW DATABASES").toSet should be(Set(
+      Map("name" -> "foo", "status" -> offlineStatus, "default" -> true),
       Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should have no access on a stopped default database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO foo")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
+      user("foo", Seq("editor"), passwordChangeRequired = false))
+    execute("STOP DATABASE neo4j")
+    execute("SHOW DATABASES").toSet should be(Set(
+      Map("name" -> "neo4j", "status" -> offlineStatus, "default" -> true),
+      Map("name" -> "system", "status" -> onlineStatus, "default" -> false)))
+
+    the[DatabaseShutdownException] thrownBy {
+      // WHEN
+      executeOnDefault("foo", "bar", "MATCH (n) RETURN n")
+      // THEN
+    } should have message "This database is shutdown."
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("START DATABASE neo4j")
+
+    // THEN
+    executeOnDefault("foo", "bar", "MATCH (n) RETURN n") should be(0)
   }
 
   test("should be able to stop a stopped database") {

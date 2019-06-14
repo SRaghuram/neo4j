@@ -28,7 +28,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
 
-  val grantMap = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  val grantMap: Map[String, String] = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
     Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
@@ -38,7 +38,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true, "member" -> null)
   )
 
-  lazy val defaultRolePrivileges = Set(
+  lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
     grantGraph().role("reader").action("find").map,
     grantGraph().role("reader").action("read").map,
 
