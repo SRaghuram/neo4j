@@ -67,25 +67,30 @@ class PipelineState(val pipeline: ExecutablePipeline,
                state: QueryState,
                resources: QueryResources): PipelineTask = {
     var task: PipelineTask = null
-    // Loop until we find a task that is not completely cancelled
-    do {
-      task = if (pipeline.serial) {
-        if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
-          val t = innerNextTask(context, state, resources)
-          if (t == null) {
-            // the data might have been taken while we took the lock
-            executionState.unlock(pipeline)
+    try {
+      // Loop until we find a task that is not completely cancelled
+      do {
+        task = if (pipeline.serial) {
+          if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
+            val t = innerNextTask(context, state, resources)
+            if (t == null) {
+              // the data might have been taken while we took the lock
+              executionState.unlock(pipeline)
+            }
+            t
+          } else {
+             null
           }
-          t
         } else {
-           null
+          innerNextTask(context, state, resources)
         }
-      } else {
-        innerNextTask(context, state, resources)
-      }
-      // filterCancelledArguments checks if there is work left to do for a task
-      // if it returns `true`, there is no work left and the task has been already closed.
-    } while (task != null && task.filterCancelledArguments(resources))
+        // filterCancelledArguments checks if there is work left to do for a task
+        // if it returns `true`, there is no work left and the task has been already closed.
+      } while (task != null && task.filterCancelledArguments(resources))
+    } catch {
+      case t: Throwable =>
+        throw NextTaskException(pipeline, t)
+    }
     task
   }
 

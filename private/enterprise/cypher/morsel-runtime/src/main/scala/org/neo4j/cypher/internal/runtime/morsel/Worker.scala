@@ -11,6 +11,8 @@ import java.util.concurrent.locks.LockSupport
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
 import scala.concurrent.duration.Duration
@@ -119,6 +121,23 @@ class Worker(val workerId: Int,
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {
+      // Failure in nextTask of a pipeline, after taking Morsel
+      case NextTaskException(pipeline, SchedulingInputException(morsel: MorselParallelizer, cause)) =>
+        executingQuery.executionState.closeMorselTask(pipeline, morsel.nextCopy)
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        null
+
+      // Failure in nextTask of a pipeline, after taking Accumulator
+      case NextTaskException(pipeline, SchedulingInputException(acc: MorselAccumulator[_], cause)) =>
+        executingQuery.executionState.closeAccumulatorTask(pipeline, acc)
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        null
+
+      // Failure in nextTask of a pipeline
+      case NextTaskException(pipeline, cause) =>
+        executingQuery.executionState.failQuery(cause, resources, pipeline)
+        null
+
       // Failure in scheduling query
       case throwable: Throwable =>
         executingQuery.executionState.failQuery(throwable, resources, null)

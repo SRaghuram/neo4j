@@ -7,13 +7,13 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
-import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, SchedulingInputException}
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 
 /**
   * Input to use for starting an operator task.
@@ -126,7 +126,12 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
                                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
     val input = operatorInput.takeAccumulator[DATA, ACC]()
     if (input != null) {
-      nextTasks(context, state, input, resources)
+      try {
+        nextTasks(context, state, input, resources)
+      } catch {
+        case t: Throwable =>
+          throw SchedulingInputException(input, t)
+      }
     } else {
       null
     }
@@ -153,7 +158,12 @@ trait StreamingOperator extends Operator with OperatorState {
                                resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val input = operatorInput.takeMorsel()
     if (input != null) {
-      nextTasks(context, state, input, parallelism, resources)
+      try {
+        nextTasks(context, state, input, parallelism, resources)
+      } catch {
+        case t: Throwable =>
+          throw SchedulingInputException(input, t)
+      }
     } else {
       null
     }

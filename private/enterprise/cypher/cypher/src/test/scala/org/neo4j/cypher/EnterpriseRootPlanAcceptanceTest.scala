@@ -46,7 +46,8 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite {
     children.get(0).getArguments.get("DbHits") should equal(1) // AllNodesScan has 1 hit
   }
 
-  test("Rows should be properly formatted in morsel runtime") {
+  // re-enable on morsel PROFILE rows
+  ignore("Rows should be properly formatted in morsel runtime") {
     given("match (n) return n")
       .withRuntime(MorselRuntimeName)
       .planDescription.getArguments.get("Rows") should equal(0)
@@ -147,7 +148,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite {
       }
       val result = executeOfficial(s"$prepend PROFILE $query")
       result.resultAsString()
-      result.getExecutionPlanDescription()
+      result.getExecutionPlanDescription
     }
   }
 }
