@@ -348,6 +348,7 @@ Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with exp
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with explicit arguments"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with null argument"
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with argument of type INTEGER accepts value of type FLOAT"
+Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with implicit arguments"
 Feature "RemoveAcceptance": Scenario "Remove a missing property should be a valid operation"
 Feature "RemoveAcceptance": Scenario "Remove a single label"
 Feature "RemoveAcceptance": Scenario "Remove a single node property"
