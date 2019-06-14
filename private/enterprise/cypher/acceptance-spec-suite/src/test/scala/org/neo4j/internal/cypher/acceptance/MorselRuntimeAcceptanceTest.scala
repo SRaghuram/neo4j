@@ -14,7 +14,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.internal.cypher.acceptance.MorselRuntimeAcceptanceTest.MORSEL_SIZE
 import org.scalactic.{Equality, TolerantNumerics}
-import org.scalatest.Ignore
 
 import scala.collection.Map
 import scala.collection.mutable.ArrayBuffer
@@ -104,10 +103,10 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=parallel MATCH (n1:N)--(m1)--(n2)--(m2) RETURN id(m2)")
 
     var count = 0L
-    while (result.hasNext) {
-      result.next()
-      count += 1
-    }
+    result.accept((_: Result.ResultRow) => {
+      count += 1L
+      true
+    })
     count should be(756900)
   }
 
@@ -132,7 +131,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
   }
 }
 
-@Ignore
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
@@ -142,7 +140,6 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   )
 }
 
-@Ignore
 class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
