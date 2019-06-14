@@ -148,7 +148,6 @@ class MorselRuntime(parallelExecution: Boolean,
                             schedulerTracer: SchedulerTracer,
                             subscriber: QuerySubscriber,
                             doProfile: Boolean) extends RuntimeResult {
-    private var resultRequested = false
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
@@ -180,7 +179,6 @@ class MorselRuntime(parallelExecution: Boolean,
 
     private def ensureQuerySubscription(): Unit = {
       if (querySubscription == null) {
-        resultRequested = true
         val ProfiledQuerySubscription(sub, prof) = queryExecutor.execute(
           executablePipelines,
           executionGraphDefinition,

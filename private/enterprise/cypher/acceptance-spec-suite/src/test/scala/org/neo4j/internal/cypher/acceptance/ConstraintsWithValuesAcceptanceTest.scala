@@ -87,12 +87,12 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
           .containingArgumentRegex(".*cache\\[n\\.prop(1|2)\\]".r))
 
     val expectedResult: Map[String, Any] => Boolean = Set(
-      Map("n.prop1" -> 40, "n.prop2" -> 5, "n.prop3" -> null),
+      Map[String,Any]("n.prop1" -> 40, "n.prop2" -> 5, "n.prop3" -> null),
       Map[String,Any]("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> null.asInstanceOf[Any]),
-      Map("n.prop1" -> 42, "n.prop2" -> 3, "n.prop3" -> null),
-      Map("n.prop1" -> 43, "n.prop2" -> 1, "n.prop3" -> null),
-      Map("n.prop1" -> 44, "n.prop2" -> 3, "n.prop3" -> null),
-      Map("n.prop1" -> 45, "n.prop2" -> 7, "n.prop3" -> "abc"))
+      Map[String,Any]("n.prop1" -> 42, "n.prop2" -> 3, "n.prop3" -> null),
+      Map[String,Any]("n.prop1" -> 43, "n.prop2" -> 1, "n.prop3" -> null),
+      Map[String,Any]("n.prop1" -> 44, "n.prop2" -> 3, "n.prop3" -> null),
+      Map[String,Any]("n.prop1" -> 45, "n.prop2" -> 7, "n.prop3" -> "abc"))
 
     result.toSet should equal(expectedResult)
   }

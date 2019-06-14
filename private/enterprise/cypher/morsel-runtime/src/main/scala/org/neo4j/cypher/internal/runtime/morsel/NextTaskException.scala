@@ -5,7 +5,5 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
-
 case class NextTaskException(pipeline: ExecutablePipeline, cause: Throwable) extends Exception(cause)
 case class SchedulingInputException[T](input: T, cause: Throwable) extends Exception(cause)
