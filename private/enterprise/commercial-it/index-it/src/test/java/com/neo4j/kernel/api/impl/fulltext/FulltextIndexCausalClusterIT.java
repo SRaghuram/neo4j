@@ -39,7 +39,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings;
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.Arabic;
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.UrlOrEmail;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
@@ -64,6 +63,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
+import static org.neo4j.kernel.impl.index.schema.FulltextConfigKey.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 public class FulltextIndexCausalClusterIT
 {
@@ -77,7 +77,7 @@ public class FulltextIndexCausalClusterIT
     private static final String REL_INDEX = "relIndex";
     private static final String NODE_INDEX_EC = "nodeIndexEventuallyConsistent";
     private static final String REL_INDEX_EC = "relIndexEventuallyConsistent";
-    private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT + ": 'true'}";
+    private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + PROCEDURE_EVENTUALLY_CONSISTENT + ": 'true'}";
 
     @Rule
     public ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
