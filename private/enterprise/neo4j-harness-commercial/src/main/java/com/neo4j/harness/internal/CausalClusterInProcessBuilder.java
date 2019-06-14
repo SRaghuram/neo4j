@@ -162,7 +162,7 @@ public class CausalClusterInProcessBuilder
             this.st = st;
         }
 
-        int discoveryPort( int coreId )
+        int discoveryCorePort( int coreId )
         {
             return st.port( 55000, coreId );
         }
@@ -190,6 +190,11 @@ public class CausalClusterInProcessBuilder
         int httpsCorePort( int coreId )
         {
             return st.port( 60000, coreId );
+        }
+
+        int discoveryReadReplicaPort( int replicaId )
+        {
+            return st.port( 55500, replicaId );
         }
 
         int txReadReplicaPort( int replicaId )
@@ -246,7 +251,7 @@ public class CausalClusterInProcessBuilder
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
-                int discoveryPort = portFactory.discoveryPort( coreId );
+                int discoveryPort = portFactory.discoveryCorePort( coreId );
                 initialMembers.add( "localhost:" + discoveryPort );
             }
 
@@ -255,7 +260,7 @@ public class CausalClusterInProcessBuilder
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
-                int discoveryPort = portFactory.discoveryPort( coreId );
+                int discoveryPort = portFactory.discoveryCorePort( coreId );
                 int txPort = portFactory.txCorePort( coreId );
                 int raftPort = portFactory.raftCorePort( coreId );
                 int boltPort = portFactory.boltCorePort( coreId );
@@ -304,6 +309,7 @@ public class CausalClusterInProcessBuilder
 
             for ( int replicaId = 0; replicaId < nReplicas; replicaId++ )
             {
+                int discoveryPort = portFactory.discoveryReadReplicaPort( replicaId );
                 int txPort = portFactory.txReadReplicaPort( replicaId );
                 int boltPort = portFactory.boltReadReplicaPort( replicaId );
                 int httpPort = portFactory.httpReadReplicaPort( replicaId );
@@ -318,6 +324,7 @@ public class CausalClusterInProcessBuilder
 
                 builder.withConfig( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.READ_REPLICA.name() );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
+                builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
 
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "replica," + "replica" + replicaId );
