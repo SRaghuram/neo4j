@@ -63,7 +63,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
-import static org.neo4j.kernel.impl.index.schema.FulltextConfigKey.PROCEDURE_EVENTUALLY_CONSISTENT;
+import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 public class FulltextIndexCausalClusterIT
 {
