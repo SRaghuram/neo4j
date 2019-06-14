@@ -51,6 +51,7 @@ Feature "ConstraintAcceptance": Scenario "Works with property repeated in litera
 Feature "ConstraintAcceptance": Scenario "Works with property in map that gets set"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
 Feature "DeleteAcceptance": Scenario "Return properties from deleted node"
+Feature "ExplainAcceptance": Scenario "Explanation of standalone procedure call"
 Feature "ExplainAcceptance": Scenario "Explanation of in-query procedure call"
 Feature "ForeachAcceptance": Scenario "Add labels inside FOREACH"
 Feature "ForeachAcceptance": Scenario "Merging inside a FOREACH using a previously matched node"
