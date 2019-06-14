@@ -8,17 +8,24 @@ package com.neo4j.dbms.database;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.Label;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
@@ -29,6 +36,8 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.star
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -174,6 +183,72 @@ class ClusterDatabaseManagementIT
 
         // then
         assertDatabaseEventuallyStopped( "foo", cluster );
+    }
+
+    @Disabled( "Won't pass until DROP implemented" )
+    @Test
+    void shouldApplyChangesToCorrectDatabaseIfDropReCreateWhenCoreWasNotConnected() throws Throwable
+    {
+        // Create database
+        var databaseName = "foo";
+        var firstLabel = Label.label( "db1" );
+        var secondLabel = Label.label( "db2" );
+        var timeout = 2;
+        var cluster = startCluster();
+
+        cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
+        {
+            db.execute( "CREATE DATABASE " + databaseName );
+            tx.success();
+        }, timeout, TimeUnit.MINUTES );
+        cluster.awaitLeader( databaseName, timeout, TimeUnit.MINUTES );
+        cluster.coreTx( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ( db, tx ) ->
+        {
+            db.createNode( firstLabel );
+            tx.success();
+        }, timeout, TimeUnit.MINUTES  );
+
+        // Stop a core
+        var toStop = cluster.awaitLeader( databaseName );
+        toStop.shutdown();
+
+        // Drop and recreate database
+        cluster.awaitLeader( databaseName );
+        cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
+        {
+            db.execute( "DROP DATABASE " + databaseName );
+            tx.success();
+        }, timeout, TimeUnit.MINUTES );
+        cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
+        {
+            db.execute( "CREATE DATABASE " + databaseName );
+            tx.success();
+        }, timeout, TimeUnit.MINUTES );
+        cluster.coreTx( databaseName, ( db, tx ) ->
+        {
+            db.createNode( secondLabel );
+            tx.success();
+        } );
+
+        // Restart core
+        toStop.start();
+
+        // Core database should have data only from recreated database
+        Assert.assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1 ), 90, TimeUnit.SECONDS );
+        assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0 ) );
+    }
+
+    private static Integer hasNodeCount( CoreClusterMember member, String databaseName, Label label )
+    {
+        var db = member.defaultDatabase();
+        assertThat( db.databaseName(), equalTo( databaseName ) );
+
+        try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        {
+            var field = "count";
+            var result = db.execute( String.format( "MATCH (n:%s) RETURN count(n) AS %s", label, field ) );
+            return (Integer)result.next().get( field );
+        }
     }
 
     private static void assertCanStopStartDatabase( String databaseName, Cluster cluster ) throws Exception

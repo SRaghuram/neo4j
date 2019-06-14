@@ -497,14 +497,14 @@ public class Cluster
      */
     public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return leaderTx( databaseName, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        return coreTx( databaseName, op, DEFAULT_TIMEOUT_MS, MILLISECONDS );
     }
 
     /**
      * Perform a transaction against the leader of the core cluster, retrying as necessary.
      */
     @SuppressWarnings( "SameParameterValue" )
-    private CoreClusterMember leaderTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+    public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
