@@ -94,11 +94,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plans.NodeByLabelScan(node, label, _) =>
+          case plans@plans.NodeByLabelScan(node, label, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
             val maybeToken = tokenContext.getOptLabelId(label.name)
             val newTemplate = new SingleThreadedLabelScanTaskTemplate(
               acc.template,
+              plans.id,
               innermostTemplate,
               node,
               slots.getLongOffsetFor(node),
