@@ -32,6 +32,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
+import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -115,22 +116,16 @@ class ClusterStateMigrationIT
     @Test
     void shouldFailWhenClusterStateVersionIsWrong() throws Exception
     {
-        // collect all version storages
-        var clusterStateVersionStorages = cluster.coreMembers()
-                .stream()
-                .map( ClusterStateMigrationIT::clusterStateVersionStorage )
-                .collect( toList() );
+        var follower = cluster.getMemberWithAnyRole( FOLLOWER );
+        var followerClusterStateVersionStorage = clusterStateVersionStorage( follower );
 
-        cluster.shutdown();
+        follower.shutdown();
 
-        // write illegal version in all storages
-        for ( var storage : clusterStateVersionStorages )
-        {
-            storage.writeState( new ClusterStateVersion( 42, 0 ) );
-        }
+        // write illegal version in the follower's storage
+        followerClusterStateVersionStorage.writeState( new ClusterStateVersion( 42, 0 ) );
 
-        // cluster should not be able to start
-        var error = assertThrows( Exception.class, cluster::start );
+        // follower should not be able to start
+        var error = assertThrows( Exception.class, follower::start );
         assertThat( getRootCause( error ).getMessage(), containsString( "Illegal cluster state version" ) );
     }
 
