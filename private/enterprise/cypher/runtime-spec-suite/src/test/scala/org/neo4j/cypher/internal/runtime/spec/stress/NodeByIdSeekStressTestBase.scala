@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.runtime.spec.stress
+
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+
+import scala.util.Random
+
+abstract class NodeByIdSeekStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(runtime)
+    with RHSOfApplyLeafStressSuite {
+
+  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD = {
+    val random = new Random(42)
+    val seekNodes = (1 to 5).map(_ => nodes(random.nextInt(nodes.size)))
+    RHSOfApplyLeafTD(
+      _.nodeByIdSeek(variable, ids = seekNodes.map(_.getId): _*),
+      rowsComingIntoTheOperator =>
+        for {
+          Array(x) <- rowsComingIntoTheOperator
+          y <- seekNodes
+        } yield Array(x, y)
+    )
+  }
+}

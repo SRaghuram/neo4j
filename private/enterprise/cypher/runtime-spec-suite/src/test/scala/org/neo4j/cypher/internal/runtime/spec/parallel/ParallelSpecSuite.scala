@@ -28,6 +28,7 @@ class ParallelRuntimeAllNodeScanStressTest extends AllNodeScanStressTestBase(PAR
 // NODE BY ID SEEK
 class ParallelRuntimeNodeByIdSeekTest extends NodeByIdSeekTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(PARALLEL)
 
 // LABEL SCAN
 class ParallelRuntimeLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
