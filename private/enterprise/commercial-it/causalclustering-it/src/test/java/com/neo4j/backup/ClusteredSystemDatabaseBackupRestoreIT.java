@@ -14,6 +14,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -82,6 +83,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         }
     }
 
+    @Disabled
     @Test
     void backingUpSystemDatabaseShouldBeSuccessful() throws Exception
     {

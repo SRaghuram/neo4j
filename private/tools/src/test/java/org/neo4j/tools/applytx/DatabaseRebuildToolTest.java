@@ -58,8 +58,8 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        var fromLayout = directory.databaseLayout( "from" );
-        var toLayout = directory.databaseLayout( "to" );
+        var fromLayout = directory.databaseLayout( "old" );
+        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( System.in, NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
@@ -81,8 +81,8 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        var fromLayout = directory.databaseLayout( "from" );
-        var toLayout = directory.databaseLayout( "to" );
+        var fromLayout = directory.databaseLayout( "old" );
+        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( input( "apply next", "apply next", "cc", "exit" ),
                 NULL_PRINT_STREAM, NULL_PRINT_STREAM );
@@ -146,8 +146,8 @@ class DatabaseRebuildToolTest
     private void shouldPrint( String command, String... expectedResultContaining ) throws Exception
     {
         // GIVEN
-        var fromLayout = directory.databaseLayout( "from" );
-        var toLayout = directory.databaseLayout( "to" );
+        var fromLayout = directory.databaseLayout( "old" );
+        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( toLayout );
         ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( byteArrayOut );

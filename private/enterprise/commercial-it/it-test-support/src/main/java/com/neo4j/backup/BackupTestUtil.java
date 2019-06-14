@@ -58,7 +58,6 @@ public class BackupTestUtil
             ClusterMember clusterMember, String databaseName ) throws IOException, CommandFailed
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
-                .withSetting( GraphDatabaseSettings.default_database, databaseName )
                 .withConnectorsDisabled()
                 .build();
         DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();

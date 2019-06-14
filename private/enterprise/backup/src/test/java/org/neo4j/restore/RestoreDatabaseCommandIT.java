@@ -72,11 +72,11 @@ class RestoreDatabaseCommandIT
     @Test
     void forceShouldRespectStoreLock()
     {
-        var databaseId = databaseIdRepository.get( "to" );
+        var databaseId = databaseIdRepository.get( "new" );
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
-        File fromPath = new File( directory.absolutePath(), "from" );
+        File fromPath = new File( directory.absolutePath(), "old" );
 
         DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
         int fromNodeCount = 10;
@@ -100,11 +100,11 @@ class RestoreDatabaseCommandIT
     void shouldNotCopyOverAndExistingDatabase() throws Exception
     {
         // given
-        var databaseId = databaseIdRepository.get( "to" );
+        var databaseId = databaseIdRepository.get( "new" );
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
-        File fromPath = new File( directory.absolutePath(), "from" );
+        File fromPath = new File( directory.absolutePath(), "old" );
         DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
 
         createDbAt( fromPath, 0 );
@@ -112,17 +112,17 @@ class RestoreDatabaseCommandIT
 
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, false ).execute() );
-        assertTrue( illegalException.getMessage().contains( "Database with name [to] already exists" ), illegalException.getMessage() );
+        assertTrue( illegalException.getMessage().contains( "Database with name [new] already exists" ), illegalException.getMessage() );
     }
 
     @Test
     void shouldThrowExceptionIfBackupDirectoryDoesNotExist() throws Exception
     {
         // given
-        var databaseId = databaseIdRepository.get( "to" );
+        var databaseId = databaseIdRepository.get( "new" );
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
-        File fromPath = new File( directory.absolutePath(), "from" );
+        File fromPath = new File( directory.absolutePath(), "old" );
         DatabaseLayout toLayout = directory.databaseLayout( databaseId.name() );
 
         createDbAt( toLayout.databaseDirectory(), 0 );
@@ -136,10 +136,10 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles()
     {
         // given
-        var databaseId = databaseIdRepository.get( "to" );
+        var databaseId = databaseIdRepository.get( "new" );
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
-        File fromPath = new File( directory.absolutePath(), "from" );
+        File fromPath = new File( directory.absolutePath(), "old" );
         assertTrue( fromPath.mkdirs() );
 
         IllegalArgumentException illegalException =
@@ -151,8 +151,8 @@ class RestoreDatabaseCommandIT
     void shouldAllowForcedCopyOverAnExistingDatabase() throws Exception
     {
         // given
-        StoreLayout toStoreLayout = directory.storeLayout( "to" );
-        StoreLayout fromStoreLayout = directory.storeLayout( "from" );
+        StoreLayout toStoreLayout = directory.storeLayout( "new" );
+        StoreLayout fromStoreLayout = directory.storeLayout( "old" );
         Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
 
         DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
@@ -185,8 +185,8 @@ class RestoreDatabaseCommandIT
     void restoreTransactionLogsInCustomDirectoryForTargetDatabaseWhenConfigured()
             throws IOException, CommandFailed
     {
-        StoreLayout toStoreLayout = directory.storeLayout( "to" );
-        StoreLayout fromStoreLayout = directory.storeLayout( "from" );
+        StoreLayout toStoreLayout = directory.storeLayout( "new" );
+        StoreLayout fromStoreLayout = directory.storeLayout( "old" );
         Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
         File customTxLogDirectory = directory.directory( "customLogicalLog" );
         String customTransactionLogDirectory = customTxLogDirectory.getAbsolutePath();
@@ -219,7 +219,7 @@ class RestoreDatabaseCommandIT
     void doNotRemoveRelativeTransactionDirectoryAgain() throws IOException, CommandFailed
     {
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        File fromPath = directory.directory( "from" );
+        File fromPath = directory.directory( "old" );
         DatabaseLayout testLayout = directory.databaseLayout("testdatabase");
         File relativeLogDirectory = directory.directory( "relativeDirectory" );
 
