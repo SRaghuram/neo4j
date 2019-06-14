@@ -12,8 +12,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.auth._
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
-import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
@@ -35,7 +35,7 @@ import org.neo4j.values.virtual.VirtualValues
   */
 case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
   val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine, resolver)
-  val maxDBLimit = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
+  val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
 
   override def name: String = "enterprise management-commands"
 
@@ -354,6 +354,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // CREATE DATABASE foo
     case CreateDatabase(normalizedName) => (_, _, _) =>
       val dbName = normalizedName.name
+
+      val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
+      val default = dbName.equals(defaultDbName)
+
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         """MATCH (d:Database)
           |WITH count(d) as numberOfDatabases
@@ -362,13 +366,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
           |  CREATE (d:Database {name: $name})
           |  SET d.status = $status
-          |  SET d.default = false
+          |  SET d.default = $default
           |  SET d.created_at = datetime()
           |)
           |WITH "ignoreMe" as ignore
           |MATCH (d:Database {name: $name})
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name", "status", "maxNumberOfDatabases"), Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.longValue(maxDBLimit))),
+        VirtualValues.map(Array("name", "status", "default", "maxNumberOfDatabases"),
+          Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))),
         QueryHandler
           .handleNoResult(() => Some(new DatabaseLimitReachedException()))
           .handleError(e => new DatabaseExistsException(s"The specified database '$dbName' already exists.", e))
@@ -429,7 +434,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
-    // Used to check whether a database is present and not the default or system database,
+    // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
     case EnsureValidNonDefaultDatabase(normalizedName, action) => (_, _, _) =>
       val dbName = normalizedName.name
@@ -438,18 +443,13 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
       UpdatingSystemCommandExecutionPlan("EnsureValidNonDefaultDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
-          |RETURN db.default as default""".stripMargin,
+          |RETURN db.name as name""".stripMargin,
         VirtualValues.map(
           Array("name"),
           Array(Values.stringValue(dbName))
         ),
         QueryHandler
           .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")))
-          .handleResult((_, value) => {
-            if (value == Values.TRUE && action.toLowerCase.equals("drop")) {
-              Some(new DatabaseManagementException("Not allowed to " + action + " default database '" + dbName + "'."))
-            } else None
-          })
       )
   }
 

@@ -1548,11 +1548,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted MATCH privilege to custom role for a specific database") {
     // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (:B {name:'b'})")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name:'a'})")
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO joe")
 

@@ -499,12 +499,17 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE bar")
     execute("DROP DATABASE bar") //offline database
 
-
     // THEN
     val result2 = execute("SHOW DATABASES")
     val databaseNames: Set[String] = result2.columnAs("name").toSet
     databaseNames should contain("foo")
     databaseNames should not contain allOf("bar", "baz")
+
+    // WHEN
+    execute("CREATE DATABASE bar")
+
+    // THEN
+    execute("SHOW DATABASES").toList should contain allOf(db("foo"), db("bar"))
   }
 
   test("should drop database using mixed case name") {
@@ -593,20 +598,21 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(db("system")))
   }
 
-  test("should fail on dropping default database") {
+  test("should drop default database") {
     setup(defaultConfig)
-
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("DROP DATABASE neo4j")
-      // THEN
-    } should have message "Not allowed to drop default database 'neo4j'."
+    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
 
     // WHEN
-    val result = execute("SHOW DATABASES")
+    execute("DROP DATABASE neo4j")
 
     // THEN
-    result.toSet should be(Set(db("neo4j", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db("system")))
+
+    // WHEN
+    execute("CREATE DATABASE neo4j")
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
   }
 
   test("should fail on dropping custom default database") {
@@ -614,18 +620,13 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val config = Config.defaults()
     config.augment(default_database, "foo")
     setup(config)
-
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("DROP DATABASE foo")
-      // THEN
-    } should have message "Not allowed to drop default database 'foo'."
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db("system")))
 
     // WHEN
-    val result = execute("SHOW DATABASES")
+    execute("DROP DATABASE foo")
 
     // THEN
-    result.toSet should be(Set(db("foo", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db("system")))
   }
 
   test("should fail when dropping a database when not on system database") {
@@ -1010,7 +1011,4 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private def threadToStatementContextBridge(): ThreadToStatementContextBridge = {
     graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
-
-  // Use the default value instead of the new value in DDLAcceptanceTestBase
-  override def databaseConfig(): Map[Setting[_], String] = Map()
 }
