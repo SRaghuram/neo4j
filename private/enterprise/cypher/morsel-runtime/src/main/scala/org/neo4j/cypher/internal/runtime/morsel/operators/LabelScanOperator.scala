@@ -171,6 +171,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
+        profileRow(id),
         inner.genOperate,
         setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField)))
       )
