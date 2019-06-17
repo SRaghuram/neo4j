@@ -7,6 +7,7 @@ package com.neo4j.server.enterprise.modules;
 
 import com.neo4j.server.rest.dbms.EnterpriseAuthorizationDisabledFilter;
 
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -22,7 +23,7 @@ public class EnterpriseAuthorizationModule extends AuthorizationModule
     public EnterpriseAuthorizationModule( WebServer webServer,
             Supplier<AuthManager> authManager,
             LogProvider logProvider, Config config,
-            Pattern[] uriWhitelist )
+            List<Pattern> uriWhitelist )
     {
         super( webServer, authManager, logProvider, config, uriWhitelist );
     }

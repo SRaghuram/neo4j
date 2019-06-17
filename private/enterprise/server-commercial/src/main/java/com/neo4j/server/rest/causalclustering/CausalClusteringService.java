@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import java.util.regex.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
@@ -17,6 +18,8 @@ import org.neo4j.server.rest.repr.OutputFormat;
 @Path( CausalClusteringService.BASE_PATH )
 public class CausalClusteringService implements AdvertisableService
 {
+    public static final Pattern URI_WHITELIST = Pattern.compile( "/db/manage/server/causalclustering.*" );
+
     static final String BASE_PATH = "server/causalclustering/";
 
     static final String AVAILABLE = "available";

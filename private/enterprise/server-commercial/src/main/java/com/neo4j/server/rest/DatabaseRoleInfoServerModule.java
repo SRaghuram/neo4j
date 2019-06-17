@@ -17,8 +17,6 @@ import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.web.WebServer;
 
-import static java.util.Arrays.asList;
-
 public class DatabaseRoleInfoServerModule implements ServerModule
 {
     private final WebServer server;
@@ -50,9 +48,7 @@ public class DatabaseRoleInfoServerModule implements ServerModule
 
     private List<Class<?>> getClasses()
     {
-        return asList(
-                CoreDatabaseAvailabilityService.class,
-                ReadReplicaDatabaseAvailabilityService.class,
+        return List.of(
                 CausalClusteringService.class
         );
     }

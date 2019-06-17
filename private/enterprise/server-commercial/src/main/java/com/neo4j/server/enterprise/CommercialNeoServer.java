@@ -11,10 +11,10 @@ import com.neo4j.metrics.source.server.ServerThreadViewSetter;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
+import com.neo4j.server.rest.causalclustering.CausalClusteringService;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -109,17 +109,13 @@ public class CommercialNeoServer extends CommunityNeoServer
     }
 
     @Override
-    protected Pattern[] getUriWhitelist()
+    protected List<Pattern> getUriWhitelist()
     {
-        final List<Pattern> uriWhitelist = new ArrayList<>( Arrays.asList( super.getUriWhitelist() ) );
-
+        var result = new ArrayList<>( super.getUriWhitelist() );
         if ( !getConfig().get( CausalClusteringSettings.status_auth_enabled ) )
         {
-            uriWhitelist.add( Pattern.compile( "/db/manage/server/core.*" ) );
-            uriWhitelist.add( Pattern.compile( "/db/manage/server/read-replica.*" ) );
-            uriWhitelist.add( Pattern.compile( "/db/manage/server/causalclustering.*" ) );
+            result.add( CausalClusteringService.URI_WHITELIST );
         }
-
-        return uriWhitelist.toArray( new Pattern[0] );
+        return result;
     }
 }
