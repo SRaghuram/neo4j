@@ -54,7 +54,7 @@ public class CypherPlanningRunner extends QueryRunner
                             forkDirectory,
                             warmupControl,
                             measurementControl,
-                            true );
+                            false );
             }
         }
         catch ( Exception e )
