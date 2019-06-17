@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.NameId
 import org.neo4j.values.storable.Values
 
@@ -50,7 +50,12 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     private var hasNext = false
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+    override def workIdentity: WorkIdentity = RelationshipCountFromCountStoreOperator.this.workIdentity
+
+    override protected def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
       hasNext = true
       true
     }
