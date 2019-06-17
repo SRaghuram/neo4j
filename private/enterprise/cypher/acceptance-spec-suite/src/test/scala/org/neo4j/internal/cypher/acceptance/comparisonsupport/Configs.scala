@@ -55,7 +55,7 @@ object Configs {
   // from being supported in morsel. When adding support for one of the below in morsel,
   // adding it here should be a fast way to correct many tests, although some might still
   // fail for lack of some other operator or construct.
-  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
