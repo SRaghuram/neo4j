@@ -307,7 +307,6 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
-
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
         assertFail( subject, "CREATE (:A)", "with label `A` must have the property `number`" );
         assertSuccess( adminSubject, "MATCH (a:A) RETURN count(a)", r -> assertKeyIs( r, "count(a)", 1 ));
