@@ -16,7 +16,8 @@ import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.graphdb.DatabaseShutdownException
-import org.neo4j.graphdb.config.{InvalidSettingException, Setting}
+import org.neo4j.graphdb.config.InvalidSettingException
+import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
@@ -29,6 +30,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults()
+  defaultConfig.augment(GraphDatabaseSettings.auth_enabled, "true")
   private val databaseIdRepository = new TestDatabaseIdRepository()
 
   test("should fail at startup when config setting for default database name is invalid") {
@@ -387,6 +389,45 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(db("foo")))
   }
 
+  test("should create default database on re-start after being dropped") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO joe")
+    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+    ))
+
+    // WHEN
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
+
+    // THEN
+    the[RuntimeException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message s"No such database: $DEFAULT_DATABASE_NAME"
+
+    // WHEN
+    initSystemGraph(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:B {name:'b'})")
+
+    // THEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+    ))
+  }
+
   test("should have access on a created database") {
     // GIVEN
     setup(defaultConfig)
@@ -401,6 +442,105 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
+  }
+
+  test("should have no access on a re-created database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (:A {name:'a'})")
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO joe")
+
+    // WHEN
+    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+
+    // THEN
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").user("joe").role("custom").map,
+      grantTraverse().database("foo").user("joe").role("custom").map
+    ))
+    executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("DROP DATABASE foo")
+
+    // THEN
+    the[RuntimeException] thrownBy {
+      executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "No such database: foo"
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (:B {name:'b'})")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").user("joe").role("custom").map,
+      grantTraverse().database("foo").user("joe").role("custom").map
+    ))
+  }
+
+  test("should have no access on a re-created default database"){
+    // GIVEN
+    setup(defaultConfig)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name:'a'})")
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO joe")
+
+    // WHEN
+    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+
+    // THEN
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+    ))
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
+
+    // THEN
+    the[RuntimeException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message s"No such database: $DEFAULT_DATABASE_NAME"
+
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:B {name:'b'})")
+
+    // THEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+    ))
   }
 
   test("should fail when creating an already existing database") {

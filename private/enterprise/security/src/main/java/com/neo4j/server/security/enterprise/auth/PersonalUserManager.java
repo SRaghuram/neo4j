@@ -316,6 +316,12 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
+    public void clearCacheForRoles()
+    {
+        userManager.clearCacheForRoles();
+    }
+
+    @Override
     public Set<String> getAllRoleNames() throws AuthorizationViolationException
     {
         try

@@ -339,6 +339,12 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         userManager.clearCacheForRole( role );
     }
 
+    @Override
+    public void clearCacheForRoles()
+    {
+        userManager.clearCacheForRoles();
+    }
+
     public Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
     {
         List<AuthorizationInfo> infoList = new ArrayList<>( 1 );

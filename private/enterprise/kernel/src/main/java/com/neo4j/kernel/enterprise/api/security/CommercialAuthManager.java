@@ -18,6 +18,8 @@ public interface CommercialAuthManager extends AuthManager
 
     void clearCacheForRole( String role );
 
+    void clearCacheForRoles();
+
     @Override
     CommercialLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
 
@@ -60,6 +62,11 @@ public interface CommercialAuthManager extends AuthManager
 
         @Override
         public void clearCacheForRole( String role )
+        {
+        }
+
+        @Override
+        public void clearCacheForRoles()
         {
         }
 

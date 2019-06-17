@@ -270,6 +270,12 @@ class PersonalUserManagerTest
         }
 
         @Override
+        public void clearCacheForRoles()
+        {
+            delegate.clearCacheForRoles();
+        }
+
+        @Override
         public Set<String> getAllRoleNames()
         {
             return delegate.getAllRoleNames();

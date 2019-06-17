@@ -54,6 +54,11 @@ public interface EnterpriseUserManager extends UserManager
      */
     void clearCacheForRole( String role );
 
+    /**
+     * Clear the cached privileges for all roles.
+     */
+    void clearCacheForRoles();
+
     Set<String> getAllRoleNames();
 
     Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException;
@@ -115,6 +120,11 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void clearCacheForRole( String role )
+        {
+        }
+
+        @Override
+        public void clearCacheForRoles()
         {
         }
 

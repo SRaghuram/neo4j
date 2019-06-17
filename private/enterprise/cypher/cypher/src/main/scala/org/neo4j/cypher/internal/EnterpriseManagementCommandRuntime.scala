@@ -226,6 +226,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
+            .handleResult((_, _) => {
+              clearCacheForAllUsers()
+              clearCacheForRole(roleName)
+            })
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Role '$roleName' does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
       )
@@ -389,7 +393,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        new QueryHandler,
+        QueryHandler.handleResult((_, _) => clearCacheForAllRoles()),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser))
       )
 
@@ -459,8 +463,20 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     None
   }
 
+  protected def clearCacheForAllUsers(): Option[Throwable] = {
+    authManager.clearAuthCache()
+    // Ultimately this should go to the trigger handling done in the reconciler
+    None
+  }
+
   protected def clearCacheForRole(role: String): Option[Throwable]  = {
     authManager.clearCacheForRole(role)
+    // Ultimately this should go to the trigger handling done in the reconciler
+    None
+  }
+
+  protected def clearCacheForAllRoles(): Option[Throwable]  = {
+    authManager.clearCacheForRoles()
     // Ultimately this should go to the trigger handling done in the reconciler
     None
   }

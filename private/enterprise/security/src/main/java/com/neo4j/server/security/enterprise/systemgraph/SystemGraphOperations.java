@@ -371,6 +371,11 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         privilegeCache.invalidate( role );
     }
 
+    void clearCacheForRoles()
+    {
+        privilegeCache.invalidateAll();
+    }
+
     Set<String> getAllRoleNames()
     {
         String query = "MATCH (r:Role) RETURN r.name";

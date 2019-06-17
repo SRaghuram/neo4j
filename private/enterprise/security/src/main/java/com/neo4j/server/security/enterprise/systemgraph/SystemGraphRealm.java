@@ -152,6 +152,12 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
+    public void clearCacheForRoles()
+    {
+        systemGraphOperations.clearCacheForRoles();
+    }
+
+    @Override
     public Set<String> getAllRoleNames()
     {
         return systemGraphOperations.getAllRoleNames();
