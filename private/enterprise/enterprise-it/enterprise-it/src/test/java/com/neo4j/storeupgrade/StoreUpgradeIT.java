@@ -31,7 +31,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
-import org.neo4j.counts.CountsAccessor;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -575,7 +574,8 @@ public class StoreUpgradeIT
                                          .resolveDependency( ThreadToStatementContextBridge.class )
                                          .getKernelTransactionBoundToThisThread( true, db.databaseId() ).acquireStatement() )
             {
-                long countsTxId = ((GBPTreeCountsStore) db.getDependencyResolver().resolveDependency( CountsAccessor.class )).txId();
+                GBPTreeCountsStore countsStore = db.getDependencyResolver().resolveDependency( GBPTreeCountsStore.class );
+                long countsTxId = countsStore.txId();
                 assertEquals( lastCommittedTxId, countsTxId );
                 assertThat( lastCommittedTxId, is( store.lastTxId ) );
             }
