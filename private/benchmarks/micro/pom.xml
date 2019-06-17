@@ -218,7 +218,10 @@
                     </plugin>
                 </plugins>
             </build>
-            <id>package</id>
+            <id>fullBenchmark</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
         </profile>
     </profiles>
 
