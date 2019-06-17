@@ -125,28 +125,33 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     try {
       for (line <- source.getLines()) {
         val parts = line.split(",").map(_.trim)
-        if (header == null)
-          header = parts
-        else
-          dataRows += DataRow(
-            parts(0).toLong,
-            parseUpstreams(parts(1)),
-            parts(2).toInt,
-            parts(3).toLong,
-            parts(4).toLong,
-            parts(5).toLong,
-            parts(6).toLong,
-            parts(7).toLong,
-            parts(8).toLong,
-            parts(9)
+        try {
+          if (header == null)
+            header = parts
+          else
+            dataRows += DataRow(
+              parts(0).toLong,
+              parseUpstreams(parts(1)),
+              parts(2).toInt,
+              parts(3).toLong,
+              parts(4).toLong,
+              parts(5).toLong,
+              parts(6).toLong,
+              parts(7).toLong,
+              parts(8).toLong,
+              parts(9)
             )
+        } catch {
+          case t: Throwable =>
+            throw new SchedulerTraceParseException(s"Failed to parse line `$line`: ${t.getMessage}", t)
+        }
       }
       (header, dataRows)
     } finally source.close()
   }
 
   private def parseUpstreams(upstreams: String): Seq[Long] = {
-    upstreams.slice(1, upstreams.length - 1).split(',').filter(_.nonEmpty).map(_.toLong)
+    upstreams.slice(1, upstreams.length - 1).split(';').filter(_.nonEmpty).map(_.toLong)
   }
 
   private case class DataRow(id: Long,
@@ -159,4 +164,6 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
                              stopTime: Long,
                              pipelineId: Long,
                              pipelineDescription: String)
+
+  class SchedulerTraceParseException(msg: String, cause: Throwable) extends Exception(msg, cause)
 }
