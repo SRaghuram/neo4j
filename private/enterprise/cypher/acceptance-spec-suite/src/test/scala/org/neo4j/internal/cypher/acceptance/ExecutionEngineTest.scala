@@ -98,7 +98,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n1: Node = createNode()
     val n2: Node = createNode()
 
-    val result = executeWith(Configs.NodeById,
+    val result = executeWith(Configs.NodeById - Configs.Morsel,
       s"match (n1), (n2) where id(n1) = ${n1.getId} and id(n2) = ${n2.getId} return n1, n2"
     )
 
@@ -221,7 +221,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
-    val result = executeWith(Configs.NodeById - Configs.Compiled, query, params = Map(
+    val result = executeWith(Configs.NodeById - Configs.Compiled - Configs.Morsel, query, params = Map(
       "a" -> Seq[Long](a),
       "b" -> b.toInt,
       "c" -> Seq(c).asJava,
@@ -395,7 +395,7 @@ order by a.COL1""".format(a, b))
     val a = createNode()
     val b = createNode()
     val r = relate(a, b)
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
+    val result = executeWith(Configs.NodeById - Configs.Compiled - Configs.Morsel, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
 
     result.toList should equal(List(Map("a" -> a, "r" -> r)))
   }
@@ -461,7 +461,7 @@ order by a.COL1""".format(a, b))
     relate(a, b)
 
     val q = "match p = (n)-[*1..]->(m) where id(n)= 0 return p, last(nodes(p)) order by length(nodes(p)) asc"
-    executeWith(Configs.NodeById - Configs.Compiled, q).toList should have size 1
+    executeWith(Configs.NodeById - Configs.Compiled - Configs.Morsel, q).toList should have size 1
   }
 
   test("zero matching subgraphs yield correct count star") {
@@ -749,7 +749,7 @@ order by a.COL1""".format(a, b))
     createNode()
 
     //WHEN
-    val result = executeWith(Configs.NodeById,
+    val result = executeWith(Configs.NodeById - Configs.Morsel,
       """MATCH (p) WHERE id(p) = 0
         WITH p
         MATCH (a) WHERE id(a) = 0
