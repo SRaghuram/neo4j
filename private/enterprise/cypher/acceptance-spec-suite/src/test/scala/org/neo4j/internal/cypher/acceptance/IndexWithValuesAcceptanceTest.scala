@@ -126,7 +126,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
           .withDBHits(0)
           .onTopOf(aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
-        expectPlansToFail = Configs.Compiled + Configs.Morsel // no dbHits yet
+        expectPlansToFail = Configs.Compiled
       )
     )
 
@@ -140,8 +140,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         _ should includeSomewhere.aPlan("Filter")
           .withDBHits(0)
           .onTopOf(aPlan("NodeIndexSeekByRange")
-            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
-        expectPlansToFail = Configs.Morsel // no dbHits yet
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
       )
     )
 
@@ -440,7 +439,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
           .withLHS(includeSomewhere
             .aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
-        expectPlansToFail = Configs.Compiled + Configs.Morsel // no dbHits yet
+        expectPlansToFail = Configs.Compiled
       ))
 
     result.toList should equal(List(Map("m.prop1" -> 42), Map("m.prop1" -> 42)))

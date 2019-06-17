@@ -506,14 +506,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     graph.createIndex("Glass", "name")
 
     // when
-    val result = executeSingle(
-      "profile match (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p) USING INDEX n:Glass(name) WHERE p.name = 'Franny' return p.name", Map.empty)
-
-    // then
-    result.executionPlanDescription() should (
-      includeSomewhere.aPlan("Projection").withDBHits(1) and
-        includeSomewhere.aPlan("Filter").withDBHits(4)
-      )
+    profile(Configs.All,
+            """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p)
+              |  USING INDEX n:Glass(name)
+              |  WHERE p.name = 'Franny'
+              |RETURN p.name""".stripMargin,
+            _ should includeSomewhere.aPlan("Filter").withDBHits(4),
+            configsWithFailingPlanAssertion = Configs.Morsel)
   }
 
   test("joins with identical scans") {

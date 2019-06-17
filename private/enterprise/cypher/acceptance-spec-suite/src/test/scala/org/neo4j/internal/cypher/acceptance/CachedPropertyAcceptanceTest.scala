@@ -24,7 +24,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
-        ), expectPlansToFail = Configs.Morsel // no dbHits yet
+        )
       )
     )
     res.toList should equal(List(Map("n.foo" -> 111), Map("n.foo" -> 112), Map("n.foo" -> 113), Map("n.foo" -> 114)))
@@ -41,7 +41,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
-        ), expectPlansToFail = Configs.Morsel // no dbHits yet
+        )
       )
     )
     res.toList should equal(List(Map("r.foo" -> 20), Map("r.foo" -> 30)))
@@ -105,7 +105,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[n.foo])")
-        ), expectPlansToFail = Configs.Morsel // no dbHits yet
+        )
       )
     )
 
@@ -129,7 +129,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[r.foo])")
-        ), expectPlansToFail = Configs.Morsel // no dbHits yet
+        )
       )
     )
 

@@ -98,6 +98,6 @@ class MorselWorkloadTest extends WorkloadTestBase(SINGLE_THREADED, MORSEL, SIZE_
 class MorselNoFusingWorkloadTest extends WorkloadTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // PROFILE
-class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 class MorselProfileRowsTest extends ProfileRowsTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
-class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
