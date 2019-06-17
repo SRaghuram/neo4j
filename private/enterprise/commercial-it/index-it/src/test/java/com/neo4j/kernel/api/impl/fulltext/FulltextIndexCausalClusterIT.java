@@ -62,6 +62,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE_WITH_CONFIG;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asProcedureConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
@@ -179,12 +180,15 @@ public class FulltextIndexCausalClusterIT
     @Test
     public void fulltextSettingsMustBeReplicatedToAllClusterMembers() throws Exception
     {
-        Map<String,Value> nodeIndexConfig = asConfigMap( new UrlOrEmail().getName(), true );
-        Map<String,Value> relIndexConfig = asConfigMap( new Arabic().getName(), false );
+        String analyserNodeIndex = new UrlOrEmail().getName();
+        boolean eventuallyConsistentNodeIndex = true;
+        String analyzerRelIndex = new Arabic().getName();
+        boolean eventuallyConsistentRelIndex = false;
+
         cluster.coreTx( ( db, tx ) ->
         {
-            String nodeString = asConfigString( nodeIndexConfig );
-            String relString = asConfigString( relIndexConfig );
+            String nodeString = asConfigString( asProcedureConfigMap( analyserNodeIndex, eventuallyConsistentNodeIndex ) );
+            String relString = asConfigString( asProcedureConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex ) );
             db.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
             db.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
             tx.success();
@@ -192,6 +196,8 @@ public class FulltextIndexCausalClusterIT
 
         awaitCatchup();
 
+        Map<String,Value> nodeIndexConfig = asConfigMap( analyserNodeIndex, eventuallyConsistentNodeIndex );
+        Map<String,Value> relIndexConfig = asConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex );
         verifyIndexConfig( NODE_INDEX, nodeIndexConfig );
         verifyIndexConfig( REL_INDEX, relIndexConfig );
     }
