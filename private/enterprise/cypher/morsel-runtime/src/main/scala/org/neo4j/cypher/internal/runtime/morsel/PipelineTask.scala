@@ -26,6 +26,17 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                         pipelineState: PipelineState)
   extends Task[QueryResources] {
 
+  /**
+    * This _output reference is needed to support reactive results in produce results,
+    * and in particular for ProduceResultsOperator to leave continuations. So if all
+    * demand is met before we have produces all output, the _output morsel will be != null,
+    * and the next work unit of this task will continue produce output off that _output,
+    * and not do any other work.
+    *
+    * It is important the all previous output is produced before continuing on any input,
+    * in order to retain the produced row order. Also we can never cancel a task with
+    * unprocessed _output.
+    */
   private var _output: MorselExecutionContext = _
 
   override final def executeWorkUnit(resources: QueryResources,
@@ -65,11 +76,15 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     * @return `true` if the task has become obsolete.
     */
   def filterCancelledArguments(resources: QueryResources): Boolean = {
-    val isCancelled = startTask.filterCancelledArguments(pipelineState)
-    if (isCancelled) {
-      close(resources)
+    if (_output == null) {
+      val isCancelled = startTask.filterCancelledArguments(pipelineState)
+      if (isCancelled) {
+        close(resources)
+      }
+      isCancelled
+    } else {
+      false
     }
-    isCancelled
   }
 
   /**
