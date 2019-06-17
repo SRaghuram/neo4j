@@ -41,4 +41,4 @@ class SlottedLimitTest extends LimitTestBase(ENTERPRISE.SINGLE_THREADED, Slotted
 class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
-
+class SlottedMiscTest extends MiscTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.parallel
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.PARALLEL
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.morsel.{MiscTestSuite, ParallelInputTestBase, SchedulerTracerTestBase}
+import org.neo4j.cypher.internal.runtime.spec.morsel.{ParallelInputTestBase, SchedulerTracerTestBase}
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
@@ -109,8 +109,8 @@ class ParallelRuntimeReactiveParallelNoFusingStressTest
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
 // GENERAL
-class ParallelRuntimeMiscTest extends MiscTestSuite(ENTERPRISE.PARALLEL, PARALLEL)
-class ParallelRuntimeNoFusingMiscTest extends MiscTestSuite(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
+class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 class ParallelRuntimeSchedulerTracerTest extends SchedulerTracerTestBase(PARALLEL)
 
 // WORKLOAD

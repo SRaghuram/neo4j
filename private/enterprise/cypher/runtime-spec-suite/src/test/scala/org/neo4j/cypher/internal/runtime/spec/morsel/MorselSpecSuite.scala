@@ -93,8 +93,8 @@ class MorselReactiveParallelNoFusingStressTest
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
 // GENERAL
-class MorselSingleThreadedTest extends MiscTestSuite(SINGLE_THREADED, MORSEL)
-class MorselSingleThreadedNoFusingTest extends MiscTestSuite(SINGLE_THREADED_NO_FUSING, MORSEL)
+class MorselSingleThreadedTest extends MiscTestBase(SINGLE_THREADED, MORSEL)
+class MorselSingleThreadedNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
 
 // WORKLOAD
