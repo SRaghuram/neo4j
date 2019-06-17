@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
 
+import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdContainer;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdRange;
@@ -185,7 +186,7 @@ class ReplicatedIdGenerator implements IdGenerator
     }
 
     @Override
-    public void start()
+    public void start( FreeIds freeIdsForRebuild )
     {   // Nothing to do
     }
 
