@@ -59,6 +59,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -129,8 +130,8 @@ class EndToEndIT extends AnnotationsFixture
         // assert if environment is setup
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC );
 
-        assertSysctlParameter( 1, "kernel.perf_event_paranoid" );
-        assertSysctlParameter( 0, "kernel.kptr_restrict" );
+        assertSysctlParameter( asList( 1, -1 ), "kernel.perf_event_paranoid" );
+        assertSysctlParameter( asList( 0 ), "kernel.kptr_restrict" );
 
         // setup results store schema
         try ( StoreClient storeClient = StoreClient.connect( boltUri, "", "" ) )
@@ -254,7 +255,7 @@ class EndToEndIT extends AnnotationsFixture
         }
     }
 
-    private static void assertSysctlParameter( int expectecKernelParemeterValue, String kernelParameter ) throws IOException
+    private static void assertSysctlParameter( List<Integer> allowedValues, String kernelParameter ) throws IOException
     {
         ProcessBuilder processBuilder = new ProcessBuilder( "sysctl", kernelParameter );
         try ( BufferedReader reader =
@@ -266,8 +267,9 @@ class EndToEndIT extends AnnotationsFixture
                                                  .flatMap( s -> s.length == 2 ? Optional.of( s[1] ) : Optional.empty() )
                                                  .map( Integer::parseInt )
                                                  .orElseThrow( () -> new RuntimeException( "sysctl output is not parsable" ) );
-            assertEquals( expectecKernelParemeterValue, kernelParameterValue.intValue(),
-                          format( "incorrect value of kernel parameter %s = %d", kernelParameter, kernelParameterValue ) );
+            assertThat( format( "incorrect value of kernel parameter %s = %d", kernelParameter, kernelParameterValue ),
+                        allowedValues,
+                        contains( kernelParameterValue.intValue() ) );
         }
     }
 
