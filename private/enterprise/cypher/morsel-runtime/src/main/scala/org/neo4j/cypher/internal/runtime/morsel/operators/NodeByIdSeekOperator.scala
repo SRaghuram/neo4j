@@ -6,12 +6,12 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
@@ -38,16 +38,28 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
     private var ids: java.util.Iterator[AnyValue] = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
+
+    /**
+      * Initialize the inner loop for the current input row.
+      *
+      * @return true iff the inner loop might result it output rows
+      */
+    override protected def initializeInnerLoop(context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources,
+                                               initExecutionContext: ExecutionContext): Boolean = {
       val queryState = new OldQueryState(context,
                                          resources = null,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))
-      ids = nodeIdsExpr.expressions(inputMorsel, queryState).iterator()
+      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      ids = nodeIdsExpr.expressions(initExecutionContext, queryState).iterator()
       true
     }
+
+    override def workIdentity: WorkIdentity = NodeByIdSeekOperator.this.workIdentity
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
 
