@@ -501,7 +501,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     }
     val (label: Value, qualifierMerge: String) = qualifier match {
       case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
-      case ast.AllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of resultscase ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
+      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {label: $label})")
+      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {label: '*'})") // The label is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
     }
     val (dbName, db, databaseMerge, scopeMerge) = database match {
@@ -556,7 +558,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     }
     val (label: Value, qualifierMatch: String) = qualifier match {
       case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {label: $label})")
-      case ast.AllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
+      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MATCH (q:RelationshipQualifier {label: $label})")
+      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MATCH (q:RelationshipQualifierAll {label: '*'})") // The label is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
     }
     val (dbName, _, scopeMatch) = database match {
@@ -598,8 +602,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
   private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier): String = {
     // TODO: Improve description - or unify with main prettifier
-    val (res, db, label) = Prettifier.extractScope(resource, database, qualifier)
-    s"$actionName $res ON GRAPH $db NODES $label"
+    val (res, db, segment) = Prettifier.extractScope(resource, database, qualifier)
+    s"$actionName $res ON GRAPH $db $segment"
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =
