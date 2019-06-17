@@ -27,13 +27,12 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
-    private static final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private static final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;

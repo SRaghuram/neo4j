@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
@@ -158,6 +159,12 @@ class CatchupClient implements VersionedCatchupClients
         private V3( CatchupChannel channel )
         {
             this.channel = channel;
+        }
+
+        @Override
+        public PreparedRequest<DatabaseId> getDatabaseId( String databaseName )
+        {
+            return handler -> makeBlockingRequest( new GetDatabaseIdRequest( databaseName ), handler, channel );
         }
 
         @Override

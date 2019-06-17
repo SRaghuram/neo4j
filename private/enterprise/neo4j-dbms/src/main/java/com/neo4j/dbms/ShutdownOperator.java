@@ -9,10 +9,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
  * Operator responsible for transitioning all non-DROPPED databases to a STOPPED state.
@@ -21,24 +20,22 @@ import static com.neo4j.dbms.OperatorState.STOPPED;
 class ShutdownOperator extends DbmsOperator
 {
     private final DatabaseManager<?> databaseManager;
-    private final DatabaseId systemDatabaseId;
 
-    ShutdownOperator( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository )
+    ShutdownOperator( DatabaseManager<?> databaseManager )
     {
         this.databaseManager = databaseManager;
-        this.systemDatabaseId = databaseIdRepository.systemDatabase();
     }
 
     void stopAll()
     {
         desired.clear();
         var desireAllStopped = databaseManager.registeredDatabases().entrySet().stream()
-                .filter( e -> !e.getKey().equals( systemDatabaseId ) )
+                .filter( e -> !e.getKey().equals( SYSTEM_DATABASE_ID ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, ignored -> STOPPED ) );
         desired.putAll( desireAllStopped );
         trigger( true ).awaitAll();
 
-        desired.put( systemDatabaseId, STOPPED );
-        trigger( true ).await( systemDatabaseId );
+        desired.put( SYSTEM_DATABASE_ID, STOPPED );
+        trigger( true ).await( SYSTEM_DATABASE_ID );
     }
 }

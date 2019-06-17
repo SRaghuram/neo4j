@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
-
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
@@ -20,9 +18,10 @@ import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
+import java.io.File;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
@@ -52,39 +51,39 @@ public class CoreStateStorageFactory
         return createSimpleStorage( layout.memberIdStateFile(), CoreStateFiles.CORE_MEMBER_ID, globalLogProvider );
     }
 
-    public SimpleStorage<RaftId> createRaftIdStorage( DatabaseId databaseId, DatabaseLogProvider logProvider )
+    public SimpleStorage<RaftId> createRaftIdStorage( String databaseName, DatabaseLogProvider logProvider )
     {
-        return createSimpleStorage( layout.raftIdStateFile( databaseId ), CoreStateFiles.RAFT_ID, logProvider );
+        return createSimpleStorage( layout.raftIdStateFile( databaseName ), CoreStateFiles.RAFT_ID, logProvider );
     }
 
-    public StateStorage<ReplicatedBarrierTokenState> createBarrierTokenStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<ReplicatedBarrierTokenState> createBarrierTokenStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.barrierTokenStateDirectory( databaseId ), CoreStateFiles.BARRIER_TOKEN, life, logProvider );
+        return createDurableStorage( layout.barrierTokenStateDirectory( databaseName ), CoreStateFiles.BARRIER_TOKEN, life, logProvider );
     }
 
-    public StateStorage<Long> createLastFlushedStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<Long> createLastFlushedStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.lastFlushedStateDirectory( databaseId ), CoreStateFiles.LAST_FLUSHED, life, logProvider );
+        return createDurableStorage( layout.lastFlushedStateDirectory( databaseName ), CoreStateFiles.LAST_FLUSHED, life, logProvider );
     }
 
-    public StateStorage<RaftMembershipState> createRaftMembershipStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<RaftMembershipState> createRaftMembershipStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.raftMembershipStateDirectory( databaseId ), CoreStateFiles.RAFT_MEMBERSHIP, life, logProvider );
+        return createDurableStorage( layout.raftMembershipStateDirectory( databaseName ), CoreStateFiles.RAFT_MEMBERSHIP, life, logProvider );
     }
 
-    public StateStorage<GlobalSessionTrackerState> createSessionTrackerStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<GlobalSessionTrackerState> createSessionTrackerStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.sessionTrackerDirectory( databaseId ), CoreStateFiles.SESSION_TRACKER, life, logProvider );
+        return createDurableStorage( layout.sessionTrackerDirectory( databaseName ), CoreStateFiles.SESSION_TRACKER, life, logProvider );
     }
 
-    public StateStorage<TermState> createRaftTermStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<TermState> createRaftTermStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.raftTermStateDirectory( databaseId ), CoreStateFiles.RAFT_TERM, life, logProvider );
+        return createDurableStorage( layout.raftTermStateDirectory( databaseName ), CoreStateFiles.RAFT_TERM, life, logProvider );
     }
 
-    public StateStorage<VoteState> createRaftVoteStorage( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<VoteState> createRaftVoteStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.raftVoteStateDirectory( databaseId ), CoreStateFiles.RAFT_VOTE, life, logProvider );
+        return createDurableStorage( layout.raftVoteStateDirectory( databaseName ), CoreStateFiles.RAFT_VOTE, life, logProvider );
     }
 
     private <T> SimpleStorage<T> createSimpleStorage( File file, CoreStateFiles<T> type, LogProvider logProvider )

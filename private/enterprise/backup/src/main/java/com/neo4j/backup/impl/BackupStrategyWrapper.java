@@ -70,7 +70,7 @@ class BackupStrategyWrapper
         if ( previousBackupExists )
         {
             debugLog.info( "Previous backup found, trying incremental backup." );
-            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull ) )
+            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull, onlineBackupContext.getDatabaseName() ) )
             {
                 return;
             }
@@ -79,12 +79,12 @@ class BackupStrategyWrapper
         if ( previousBackupExists && fallbackToFull )
         {
             debugLog.info( "Incremental backup failed, a new full backup will be performed." );
-            fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
+            fullBackupWithTemporaryFolderResolutions( onlineBackupContext, onlineBackupContext.getDatabaseName() );
         }
         else if ( !previousBackupExists )
         {
             debugLog.info( "Previous backup not found, a new full backup will be performed." );
-            fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
+            fullBackupWithTemporaryFolderResolutions( onlineBackupContext, onlineBackupContext.getDatabaseName() );
         }
         else
         {
@@ -92,12 +92,13 @@ class BackupStrategyWrapper
         }
     }
 
-    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, SocketAddress address, boolean fallbackToFullAllowed )
+    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, SocketAddress address, boolean fallbackToFullAllowed,
+            String databaseName )
             throws BackupExecutionException
     {
         try
         {
-            backupStrategy.performIncrementalBackup( backupLayout, address );
+            backupStrategy.performIncrementalBackup( backupLayout, address, databaseName );
             performRecovery( config, backupLayout );
             return true;
         }
@@ -124,8 +125,9 @@ class BackupStrategyWrapper
      * </p>
      *
      * @param onlineBackupContext command line arguments, config etc.
+     * @param databaseName
      */
-    private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
+    private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext, String databaseName ) throws BackupExecutionException
     {
         Path userSpecifiedBackupLocation = onlineBackupContext.getDatabaseBackupDir();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
@@ -140,7 +142,7 @@ class BackupStrategyWrapper
 
         SocketAddress address = onlineBackupContext.getAddress();
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
-        backupStrategy.performFullBackup( backupLayout, address );
+        backupStrategy.performFullBackup( backupLayout, address, databaseName );
 
         performRecovery( onlineBackupContext.getConfig(), backupLayout );
 

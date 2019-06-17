@@ -29,7 +29,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -55,7 +54,6 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private boolean allowReadsOnFollowers;
     private Policies policies;
     private boolean shouldShuffle;
-    private DatabaseIdRepository databaseIdRepository;
 
     @Override
     public void validate( Config config, Log log )
@@ -64,8 +62,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public void init( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
-            LogProvider logProvider, Config config ) throws InvalidFilterSpecification
+    public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
     {
         this.topologyService = topologyService;
         this.leaderService = leaderService;
@@ -73,7 +70,6 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
         this.policies = FilteringPolicyLoader.loadServerPolicies( config, logProvider.getLog( getClass() ) );
         this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
-        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
@@ -89,16 +85,15 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
+    public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
     {
-        var dbId = databaseIdRepository.get( databaseName );
         Policy policy = policies.selectFor( context );
 
-        DatabaseCoreTopology coreTopology = coreTopologyFor( dbId );
-        DatabaseReadReplicaTopology rrTopology = readReplicaTopology( dbId );
+        DatabaseCoreTopology coreTopology = coreTopologyFor( databaseId );
+        DatabaseReadReplicaTopology rrTopology = readReplicaTopology( databaseId );
 
-        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( dbId ),
-                readEndpoints( coreTopology, rrTopology, policy, dbId ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( databaseId ),
+                readEndpoints( coreTopology, rrTopology, policy, databaseId ), timeToLive );
     }
 
     private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )

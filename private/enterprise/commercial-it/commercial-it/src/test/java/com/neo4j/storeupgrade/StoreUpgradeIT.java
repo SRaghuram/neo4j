@@ -50,7 +50,7 @@ import org.neo4j.kernel.api.InwardKernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -335,7 +335,8 @@ public class StoreUpgradeIT
             try
             {
                 DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) databaseService).getDependencyResolver().resolveDependency( DatabaseManager.class );
-                DatabaseContext databaseContext = databaseManager.getDatabaseContext( new TestDatabaseIdRepository().defaultDatabase() ).get();
+                DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
+                DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseIdRepository.get( DEFAULT_DATABASE_NAME ) ).get();
                 assertTrue( databaseContext.isFailed() );
                 assertThat( databaseContext.failureCause(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
             }

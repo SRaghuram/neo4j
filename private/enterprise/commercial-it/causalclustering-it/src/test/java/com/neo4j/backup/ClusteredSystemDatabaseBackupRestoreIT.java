@@ -36,7 +36,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -51,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 @ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ClusteredSystemDatabaseBackupRestoreIT
@@ -172,9 +172,9 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private static void runRestore( FileSystemAbstraction fs, File backupLocation, Config memberConfig ) throws Exception
     {
         Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
-        var databaseId = new TestDatabaseIdRepository().systemDatabase();
-        new RestoreDatabaseCommand( fs, new File( backupLocation, databaseId.name() ), restoreCommandConfig,
-                databaseId, true ).execute();
+        var databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+        new RestoreDatabaseCommand( fs, new File( backupLocation, databaseName ), restoreCommandConfig,
+                databaseName, true ).execute();
     }
 
     private static boolean runBackupSameJvm( File neo4jHome, String host, String databaseName )
@@ -194,7 +194,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 
-        return databaseManager.getDatabaseContext( new TestDatabaseIdRepository().systemDatabase() )
+        return databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 

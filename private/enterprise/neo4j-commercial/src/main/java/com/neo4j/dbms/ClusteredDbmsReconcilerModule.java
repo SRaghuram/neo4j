@@ -11,7 +11,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.database.DatabaseIdRepository;
+
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule<ClusteredMultiDatabaseManager>
 {
@@ -19,9 +20,9 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     private final ClusterInternalDbmsOperator internalOperator;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager, TransactionEventService txEventService,
-            ClusterInternalDbmsOperator internalOperator, DatabaseIdRepository databaseIdRepository, ReconciledTransactionTracker reconciledTxTracker )
+            ClusterInternalDbmsOperator internalOperator, ReconciledTransactionTracker reconciledTxTracker )
     {
-        super( globalModule, databaseManager, databaseIdRepository, reconciledTxTracker );
+        super( globalModule, databaseManager, reconciledTxTracker );
         this.txEventService = txEventService;
         this.internalOperator = internalOperator;
         //TODO: don't need if we do end up injecting
@@ -37,7 +38,7 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     @Override
     protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
     {
-        txEventService.registerHandler( databaseIdRepository.systemDatabase(), txId -> systemOperator.transactionCommitted( txId, null ) );
+        txEventService.registerHandler( SYSTEM_DATABASE_ID, txId -> systemOperator.transactionCommitted( txId, null ) );
     }
 
     @Override

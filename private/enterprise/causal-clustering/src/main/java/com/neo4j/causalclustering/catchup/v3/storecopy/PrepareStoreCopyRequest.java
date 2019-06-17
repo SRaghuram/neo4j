@@ -13,7 +13,7 @@ import java.util.Objects;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
-public class PrepareStoreCopyRequest extends CatchupProtocolMessage
+public class PrepareStoreCopyRequest extends CatchupProtocolMessage.WithDatabaseId
 {
     private final StoreId storeId;
 
@@ -56,6 +56,6 @@ public class PrepareStoreCopyRequest extends CatchupProtocolMessage
     @Override
     public String toString()
     {
-        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseId() + "}";
+        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseId().name() + "}";
     }
 }

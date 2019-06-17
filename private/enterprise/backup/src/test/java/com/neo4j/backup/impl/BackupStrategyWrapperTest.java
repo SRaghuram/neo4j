@@ -114,7 +114,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupStrategyImplementation ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -128,13 +128,13 @@ class BackupStrategyWrapperTest
 
         // and incremental backup fails because it's a different store
         BackupExecutionException incrementalBackupError = new BackupExecutionException( "Store mismatch" );
-        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then full backup wasnt performed
-        verify( backupStrategyImplementation, never() ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation, never() ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
         assertEquals( incrementalBackupError, error );
     }
 
@@ -151,8 +151,8 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then full backup was performed
-        verify( backupStrategyImplementation, never() ).performIncrementalBackup( any(), any() );
-        verify( backupStrategyImplementation ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation, never() ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
+        verify( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -168,7 +168,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupStrategyImplementation, never() ).performFullBackup( desiredBackupLayout, address );
+        verify( backupStrategyImplementation, never() ).performFullBackup( desiredBackupLayout, address, DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -179,15 +179,15 @@ class BackupStrategyWrapperTest
         onlineBackupContext = newBackupContext( true );
 
         // and incremental fails
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when
         assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
         InOrder inOrder = inOrder( backupStrategyImplementation );
-        inOrder.verify( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
-        inOrder.verify( backupStrategyImplementation ).performFullBackup( any(), any() );
+        inOrder.verify( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
+        inOrder.verify( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -196,7 +196,7 @@ class BackupStrategyWrapperTest
         // given
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
         BackupExecutionException incrementalBackupError = new BackupExecutionException( "Oops" );
-        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // and
         onlineBackupContext = newBackupContext( false );
@@ -205,7 +205,7 @@ class BackupStrategyWrapperTest
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
-        verify( backupStrategyImplementation, never() ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation, never() ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
         assertEquals( incrementalBackupError, error );
     }
 
@@ -219,16 +219,16 @@ class BackupStrategyWrapperTest
         onlineBackupContext = newBackupContext( true );
 
         // and an incremental backup fails
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // and full backup fails
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when backup is performed
         assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then existing backup hasn't moved
-        verify( backupStrategyImplementation ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
         verify( backupCopyService, never() ).moveBackupLocation( any(), any() );
     }
 
@@ -256,10 +256,10 @@ class BackupStrategyWrapperTest
                 .thenReturn( temporaryFullBackupLocation );
 
         // and incremental fails
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // and full passes
-        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any() );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when
         assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -285,10 +285,10 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and incremental fails
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // and full passes
-        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any() );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -297,7 +297,7 @@ class BackupStrategyWrapperTest
         assertEquals( ioException, error.getCause() );
 
         // and full backup was definitely executed
-        verify( backupStrategyImplementation ).performFullBackup( any(), any() );
+        verify( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -321,7 +321,7 @@ class BackupStrategyWrapperTest
         onlineBackupContext = newBackupContext( true );
 
         // and incremental backups are successful
-        doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+        doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -420,24 +420,26 @@ class BackupStrategyWrapperTest
     {
         if ( isSuccessful )
         {
-            doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+            doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
         }
         else
         {
-            doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
+            doThrow( BackupExecutionException.class )
+                    .when( backupStrategyImplementation )
+                    .performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
         }
     }
 
     private void bothBackupsFail() throws Exception
     {
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     private void fallbackToFullPasses() throws Exception
     {
-        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
-        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
     }
 
     private OnlineBackupContext newBackupContext( boolean fallbackToFull )

@@ -12,8 +12,8 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -43,6 +43,8 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         when( module.getGlobalDependencies() ).thenReturn( dependencies );
         when( module.getGlobalConfig() ).thenReturn( Config.defaults() );
         when( module.getLogService() ).thenReturn( NullLogService.getInstance() );
+        when( module.getExternalDependencyResolver() ).thenReturn( new Dependencies() );
+        when( module.getJobScheduler() ).thenReturn( new ThreadPoolJobScheduler() );
         return module;
     }
 }

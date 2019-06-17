@@ -11,7 +11,6 @@ import java.util.Map;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -20,6 +19,7 @@ import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Collections.emptySet;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
  * Operator driving database management operations in response to changes in the system database
@@ -31,13 +31,13 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, DatabaseIdRepository databaseIdRepository, ThreadToStatementContextBridge txBridge,
+    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge,
             ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;
         this.reconciledTxTracker = reconciledTxTracker;
-        this.desired.put( databaseIdRepository.systemDatabase(), STARTED );
+        this.desired.put( SYSTEM_DATABASE_ID, STARTED );
         this.log = logProvider.getLog( getClass() );
     }
 

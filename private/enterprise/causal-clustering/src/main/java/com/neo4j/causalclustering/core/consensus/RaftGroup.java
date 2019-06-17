@@ -77,10 +77,10 @@ public class RaftGroup
         RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, databaseId );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
-        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseId, life, logProvider );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseId.name(), life, logProvider );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, monitors );
-        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseId, life, logProvider );
-        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseId, life, logProvider );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseId.name(), life, logProvider );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseId.name(), life, logProvider );
 
         leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
 
@@ -147,7 +147,7 @@ public class RaftGroup
             // live in a single Raft group and append to the same Raft log under `cluster-state/db/neo4j/raft-log` directory.
             // This will change once we have multiple Raft logs, then the correct database name will be used here.
             // E.g. system will use "system" to append to a Raft log located under `cluster-state/db/system/raft-log`
-            File directory = layout.raftLogDirectory( defaultDatabaseId );
+            File directory = layout.raftLogDirectory( defaultDatabaseId.name() );
 
             return life.add(
                     new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,

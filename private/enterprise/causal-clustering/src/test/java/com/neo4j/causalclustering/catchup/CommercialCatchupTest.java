@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -78,7 +79,7 @@ abstract class CommercialCatchupTest
                 .withDatabaseId( DEFAULT_DB_ID )
                 .withStoreId( StoreId.DEFAULT )
                 .register();
-        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fsa );
+        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fsa, LOG_PROVIDER );
     }
 
     void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception
@@ -162,10 +163,10 @@ abstract class CommercialCatchupTest
 
     static class RequestResponse
     {
-        private final CatchupProtocolMessage request;
+        private final CatchupProtocolMessage.WithDatabaseId request;
         final ResponseAdaptor responseHandler;
 
-        RequestResponse( CatchupProtocolMessage request, ResponseAdaptor responseHandler )
+        RequestResponse( CatchupProtocolMessage.WithDatabaseId request, ResponseAdaptor responseHandler )
         {
             this.request = request;
             this.responseHandler = responseHandler;
@@ -223,6 +224,12 @@ abstract class CommercialCatchupTest
 
         @Override
         public void onGetStoreIdResponse( GetStoreIdResponse response )
+        {
+            unexpected();
+        }
+
+        @Override
+        public void onGetDatabaseIdResponse( GetDatabaseIdResponse response )
         {
             unexpected();
         }

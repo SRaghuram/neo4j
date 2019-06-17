@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
@@ -14,6 +15,7 @@ import java.util.Objects;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -35,9 +37,9 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException
+    public void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException
     {
-        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
+        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address, databaseName );
 
         if ( backupInfo.localStoreId != null )
         {
@@ -48,7 +50,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 
         try
         {
-            backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, targetDbLayout );
+            backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.databaseId, targetDbLayout );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -57,9 +59,9 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException
+    public void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException
     {
-        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
+        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address, databaseName );
 
         if ( !Objects.equals( backupInfo.localStoreId, backupInfo.remoteStoreId ) )
         {
@@ -67,7 +69,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
                     format( "Remote store id was %s but local is %s", backupInfo.remoteStoreId, backupInfo.localStoreId ) ) );
         }
 
-        catchup( backupInfo.remoteAddress, backupInfo.remoteStoreId, targetDbLayout );
+        catchup( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.databaseId, targetDbLayout );
     }
 
     @Override
@@ -82,21 +84,24 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         backupDelegator.stop();
     }
 
-    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, SocketAddress address ) throws BackupExecutionException
+    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, SocketAddress address, String databaseName ) throws BackupExecutionException
     {
         try
         {
             log.info( "Remote backup address is " + address );
 
-            StoreId remoteStoreId = backupDelegator.fetchStoreId( address );
+            DatabaseId databaseId = backupDelegator.fetchDatabaseId( address, databaseName );
+            log.info( "Database id is " + databaseId );
+
+            StoreId remoteStoreId = backupDelegator.fetchStoreId( address, databaseId );
             log.info( "Remote store id is " + remoteStoreId );
 
             StoreId localStoreId = readLocalStoreId( databaseLayout );
             log.info( "Local store id is " + remoteStoreId );
 
-            return new BackupInfo( address, remoteStoreId, localStoreId );
+            return new BackupInfo( address, remoteStoreId, localStoreId, databaseId );
         }
-        catch ( StoreIdDownloadFailedException e )
+        catch ( StoreIdDownloadFailedException | DatabaseIdDownloadFailedException e )
         {
             throw new BackupExecutionException( e );
         }
@@ -119,11 +124,11 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
     }
 
-    private void catchup( SocketAddress fromAddress, StoreId storeId, DatabaseLayout databaseLayout ) throws BackupExecutionException
+    private void catchup( SocketAddress fromAddress, StoreId storeId, DatabaseId databaseId, DatabaseLayout databaseLayout ) throws BackupExecutionException
     {
         try
         {
-            backupDelegator.tryCatchingUp( fromAddress, storeId, databaseLayout );
+            backupDelegator.tryCatchingUp( fromAddress, storeId, databaseId, databaseLayout );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -136,12 +141,14 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         final SocketAddress remoteAddress;
         final StoreId remoteStoreId;
         final StoreId localStoreId;
+        final DatabaseId databaseId;
 
-        BackupInfo( SocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId )
+        BackupInfo( SocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId, DatabaseId databaseId )
         {
             this.remoteAddress = remoteAddress;
             this.remoteStoreId = remoteStoreId;
             this.localStoreId = localStoreId;
+            this.databaseId = databaseId;
         }
     }
 }

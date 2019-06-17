@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
@@ -28,8 +27,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -51,6 +48,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialSystemDatabaseIT
@@ -62,17 +60,15 @@ class CommercialSystemDatabaseIT
     private GraphDatabaseFacade defaultDb;
     private GraphDatabaseFacade systemDb;
     private DatabaseManagementService managementService;
-    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setUp()
     {
-        Dependencies dependencies = new Dependencies();
-        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setExternalDependencies( dependencies ).build();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
-        defaultDb = getDatabaseByName( databaseManager, databaseIdRepository.defaultDatabase() );
-        systemDb = getDatabaseByName( databaseManager, databaseIdRepository.systemDatabase() );
+        defaultDb = getDatabaseByName( databaseManager, databaseManager.databaseIdRepository().get( DEFAULT_DATABASE_NAME ) );
+        systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_ID );
     }
 
     @AfterEach
@@ -117,6 +113,8 @@ class CommercialSystemDatabaseIT
         int systemDatabaseTransactions = 100;
         int defaultDatabaseTransactions = 15;
 
+        var systemTxCountBefore = countTransactionInLogicalStore( systemDb );
+
         for ( int i = 0; i < systemDatabaseTransactions; i++ )
         {
             try ( Transaction transaction = systemDb.beginTx() )
@@ -137,8 +135,11 @@ class CommercialSystemDatabaseIT
             }
         }
 
-        countTransactionInLogicalStore( systemDb, systemDatabaseTransactions * 2 + 11 );
-        countTransactionInLogicalStore( defaultDb, defaultDatabaseTransactions * 2 );
+        var systemTxCountAfter = countTransactionInLogicalStore( systemDb );
+        var defaultTxCount = countTransactionInLogicalStore( defaultDb );
+
+        assertEquals( systemTxCountAfter - systemTxCountBefore, systemDatabaseTransactions * 2 );
+        assertEquals( defaultTxCount, defaultDatabaseTransactions * 2 );
     }
 
     @Test
@@ -195,7 +196,7 @@ class CommercialSystemDatabaseIT
             managementService = new TestCommercialDatabaseManagementServiceBuilder( disabledSystemDbDirectory ).build();
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
-            assertTrue( databaseManager.getDatabaseContext( databaseIdRepository.systemDatabase() ).isPresent() );
+            assertTrue( databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID ).isPresent() );
         }
         finally
         {
@@ -213,17 +214,18 @@ class CommercialSystemDatabaseIT
                 NullLogProvider.getInstance(), false );
     }
 
-    private static void countTransactionInLogicalStore( GraphDatabaseFacade facade, int expectedTransactions ) throws IOException
+    private static int countTransactionInLogicalStore( GraphDatabaseFacade facade ) throws IOException
     {
         LogicalTransactionStore transactionStore = facade.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
-        try ( TransactionCursor transactions = transactionStore.getTransactions( TransactionIdStore.BASE_TX_ID + 1 ) )
+        try ( TransactionCursor cursor = transactionStore.getTransactions( TransactionIdStore.BASE_TX_ID + 1 ) )
         {
-            int counter = 0;
-            while ( transactions.next() )
+            var count = 0;
+            while ( cursor.next() )
             {
-                counter++;
+                cursor.get();
+                count++;
             }
-            assertEquals( expectedTransactions, counter );
+            return count;
         }
     }
 

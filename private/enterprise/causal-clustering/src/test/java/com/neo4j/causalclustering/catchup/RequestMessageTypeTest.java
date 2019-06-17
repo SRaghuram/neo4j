@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.catchup.RequestMessageType.CORE_SNAPSHOT;
+import static com.neo4j.causalclustering.catchup.RequestMessageType.DATABASE_ID;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.PREPARE_STORE_COPY;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.STORE;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.STORE_FILE;
@@ -27,15 +28,15 @@ class RequestMessageTypeTest
     {
         RequestMessageType[] givenStates = RequestMessageType.values();
 
-        RequestMessageType[] exepctedStates =
-                new RequestMessageType[]{TX_PULL_REQUEST, STORE, CORE_SNAPSHOT, STORE_ID, PREPARE_STORE_COPY, STORE_FILE, UNKNOWN};
-        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, (byte) 404};
+        RequestMessageType[] expectedStates =
+                new RequestMessageType[]{TX_PULL_REQUEST, STORE, CORE_SNAPSHOT, STORE_ID, PREPARE_STORE_COPY, STORE_FILE, DATABASE_ID, UNKNOWN};
+        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, (byte) 404};
 
-        assertEquals( exepctedStates.length, givenStates.length );
-        assertEquals( exepctedStates.length, expectedValues.length );
+        assertEquals( expectedStates.length, givenStates.length );
+        assertEquals( expectedStates.length, expectedValues.length );
         for ( int i = 0; i < givenStates.length; i++ )
         {
-            RequestMessageType exepctedState = exepctedStates[i];
+            RequestMessageType exepctedState = expectedStates[i];
             RequestMessageType givenState = givenStates[i];
             assertEquals( givenState.messageType(), exepctedState.messageType(), format( "Expected %s git %s", givenState, exepctedState ) );
             assertEquals( givenState.messageType(), expectedValues[i] );

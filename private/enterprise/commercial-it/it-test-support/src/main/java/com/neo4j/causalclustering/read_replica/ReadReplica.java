@@ -37,8 +37,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
@@ -53,6 +52,7 @@ public class ReadReplica implements ClusterMember
 {
     public interface ReadReplicaGraphDatabaseFactory
     {
+
         ReadReplicaGraphDatabase create( File databaseDirectory, Config memberConfig,
                 GraphDatabaseDependencies databaseDependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
@@ -71,7 +71,6 @@ public class ReadReplica implements ClusterMember
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
     private final File databasesDirectory;
-    private final DatabaseIdRepository databaseIdRepository;
     private final ReadReplicaGraphDatabaseFactory dbFactory;
     private volatile boolean hasPanicked;
 
@@ -126,7 +125,6 @@ public class ReadReplica implements ClusterMember
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
         this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
-        this.databaseIdRepository = new PlaceholderDatabaseIdRepository( memberConfig );
     }
 
     @Override
@@ -168,6 +166,7 @@ public class ReadReplica implements ClusterMember
             finally
             {
                 readReplicaGraphDatabase = null;
+                defaultDatabase = null;
             }
         }
     }
@@ -215,7 +214,7 @@ public class ReadReplica implements ClusterMember
     @Override
     public GraphDatabaseFacade database( String databaseName )
     {
-        return databaseManager.getDatabaseContext( databaseIdRepository.get( databaseName ) )
+        return databaseManager.getDatabaseContext( databaseName )
                 .map( DatabaseContext::databaseFacade )
                 .orElseThrow( DatabaseNotFoundException::new );
     }

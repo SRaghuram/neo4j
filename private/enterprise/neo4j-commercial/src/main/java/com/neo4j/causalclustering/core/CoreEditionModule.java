@@ -97,6 +97,7 @@ import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
@@ -120,7 +121,6 @@ public class CoreEditionModule extends ClusteringEditionModule
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
 
-    private final DatabaseIdRepository databaseIdRepository;
     private final Map<DatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     private final CompositeDatabaseHealth globalHealth;
     private final LogProvider logProvider;
@@ -144,7 +144,6 @@ public class CoreEditionModule extends ClusteringEditionModule
         this.globalConfig = globalModule.getGlobalConfig();
         this.globalHealth = globalModule.getGlobalHealthService();
         this.logProvider = logService.getInternalLogProvider();
-        this.databaseIdRepository = globalModule.getDatabaseIdRepository();
 
         RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
 
@@ -193,7 +192,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )
     {
-        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
+        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, logProvider );
         Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
@@ -217,7 +216,7 @@ public class CoreEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseIdRepository databaseIdRepository ) throws KernelException
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
@@ -241,7 +240,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseIdRepository, databaseManager, config, logProvider );
+        return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseManager, config, logProvider );
     }
 
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
@@ -308,6 +307,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         addPanicEventHandlers( globalLife, panicService );
     }
 
+    // TODO extract common
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
@@ -323,8 +323,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository,
-                reconciledTxTracker );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
@@ -336,8 +335,8 @@ public class CoreEditionModule extends ClusteringEditionModule
     {
         SystemGraphInitializer initializer =
                 CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                        () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getDatabaseIdRepository(), globalModule.getGlobalConfig() ) );
-        databaseInitializerMap.put( databaseIdRepository.systemDatabase(), db ->
+                        () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+        databaseInitializerMap.put( SYSTEM_DATABASE_ID, db ->
         {
             try
             {
@@ -359,7 +358,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( globalModule,
                     globalModule.getLogService().getUserLog( CoreEditionModule.class ), globalProcedures, "commercial-security-module" );
-            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( databaseIdRepository.systemDatabase(), dbInit ) );
+            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_ID, dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }
@@ -368,12 +367,6 @@ public class CoreEditionModule extends ClusteringEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
-    }
-
-    @Override
-    public DatabaseIdRepository databaseIdRepository()
-    {
-        return databaseIdRepository;
     }
 
     private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,

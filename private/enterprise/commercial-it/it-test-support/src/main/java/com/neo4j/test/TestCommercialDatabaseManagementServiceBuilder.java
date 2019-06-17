@@ -103,6 +103,12 @@ public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
+    public TestCommercialDatabaseManagementServiceBuilder noOpSystemGraphInitializer()
+    {
+        return (TestCommercialDatabaseManagementServiceBuilder) super.noOpSystemGraphInitializer();
+    }
+
+    @Override
     public TestCommercialDatabaseManagementServiceBuilder setExternalDependencies( DependencyResolver dependencies )
     {
         return (TestCommercialDatabaseManagementServiceBuilder) super.setExternalDependencies( dependencies );

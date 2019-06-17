@@ -470,7 +470,7 @@ public class Cluster
                 .map( coreClusterMember ->
                 {
                     var coreTopologyService = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CoreTopologyService.class );
-                    var databaseId = coreClusterMember.databaseIdRepository().get( databaseName );
+                    var databaseId = coreClusterMember.databaseId( databaseName );
                     return topologySelector.apply( coreTopologyService, databaseId ).members().size();
                 } )
                 .orElse( 0 );

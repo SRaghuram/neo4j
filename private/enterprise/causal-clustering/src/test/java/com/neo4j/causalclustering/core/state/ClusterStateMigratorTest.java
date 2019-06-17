@@ -20,8 +20,6 @@ import java.io.UncheckedIOException;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -37,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class ClusterStateMigratorTest
@@ -45,8 +44,6 @@ class ClusterStateMigratorTest
     private FileSystemAbstraction fs;
     @Inject
     private TestDirectory testDirectory;
-
-    private static final DatabaseId DEFAULT_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
 
     private LogProvider logProvider;
     private ClusterStateLayout clusterStateLayout;
@@ -59,7 +56,7 @@ class ClusterStateMigratorTest
         logProvider = FormattedLogProvider.toOutputStream( System.out );
 
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( "data" ) );
-        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_ID ) );
+        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), logProvider );
         migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
@@ -138,13 +135,13 @@ class ClusterStateMigratorTest
     {
         assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
         assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile() ) );
-        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_ID ) ) );
+        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
         assertEquals( new ClusterStateVersion( 1, 0 ), clusterStateVersionStorage.readState() );
     }
 
     private void assertMigrationDidNotHappen()
     {
         assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_ID ) ) );
+        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
     }
 }

@@ -17,12 +17,10 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import org.neo4j.test.CallingThreadExecutor;
-import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -38,6 +36,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.CallingThreadExecutor;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
@@ -67,12 +66,13 @@ class CatchupPollingProcessTest
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final SocketAddress coreMemberAddress = new SocketAddress( "hostname", 1234 );
 
     private final MockClientResponses clientResponses = responses();
-    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
+    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
     private final Panicker panicker = mock( Panicker.class );
     private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 

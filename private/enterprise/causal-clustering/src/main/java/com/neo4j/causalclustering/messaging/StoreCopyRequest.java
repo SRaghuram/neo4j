@@ -12,7 +12,7 @@ import java.util.Objects;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
-public abstract class StoreCopyRequest extends CatchupProtocolMessage
+public abstract class StoreCopyRequest extends CatchupProtocolMessage.WithDatabaseId
 {
     private final StoreId expectedStoreId;
     private final long requiredTransactionId;

@@ -17,7 +17,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.maxNumberOfDatabases;
 import static java.lang.String.format;
@@ -37,12 +36,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     {
         super( globalModule, edition, manageDatabasesOnStartAndStop );
         maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
-    }
-
-    @Override
-    public void initialiseDefaultDatabases()
-    {
-        // commercial versions create initial databases using reconciler
     }
 
     @Override

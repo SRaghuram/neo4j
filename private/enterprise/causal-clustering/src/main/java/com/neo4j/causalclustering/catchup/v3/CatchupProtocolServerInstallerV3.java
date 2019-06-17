@@ -16,6 +16,8 @@ import com.neo4j.causalclustering.catchup.storecopy.FileHeaderEncoder;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseEncoder;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseEncoder;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestDecoder;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponseEncoder;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupErrorResponseEncoder;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CoreSnapshotRequestDecoder;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequestDecoder;
@@ -90,6 +92,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .add( "enc_res_type", new ResponseMessageTypeEncoder() )
                 .add( "enc_res_tx_pull", new TxPullResponseEncoder() )
                 .add( "enc_res_store_id", new GetStoreIdResponseEncoder() )
+                .add( "enc_res_database_id", new GetDatabaseIdResponseEncoder() )
                 .add( "enc_res_copy_fin", new StoreCopyFinishedResponseEncoder() )
                 .add( "enc_res_tx_fin", new TxStreamFinishedResponseEncoder() )
                 .add( "enc_res_pre_copy", new PrepareStoreCopyResponse.Encoder() )
@@ -100,6 +103,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .add( "in_req_type", serverMessageHandler( state ) )
                 .add( "dec_req_dispatch", requestDecoders( state ) )
                 .add( "out_chunked_write", new ChunkedWriteHandler() )
+                .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ))
                 .add( "hnd_req_tx", catchupServerHandler.txPullRequestHandler( state ) )
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )
                 .add( "hnd_req_store_listing", catchupServerHandler.storeListingRequestHandler( state ) )
@@ -116,6 +120,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
     private ChannelInboundHandler requestDecoders( CatchupServerProtocol protocol )
     {
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_DATABASE_ID, new GetDatabaseIdRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new GetStoreIdRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new CoreSnapshotRequestDecoder() );

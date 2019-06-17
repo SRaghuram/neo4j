@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-public class GetStoreIdRequest extends CatchupProtocolMessage
+public class GetStoreIdRequest extends CatchupProtocolMessage.WithDatabaseId
 {
     public GetStoreIdRequest( DatabaseId databaseId )
     {

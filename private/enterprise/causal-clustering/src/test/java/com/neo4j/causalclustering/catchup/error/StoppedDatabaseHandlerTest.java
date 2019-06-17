@@ -29,7 +29,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 class StoppedDatabaseHandlerTest
 {
     private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "customers" );
-    private final CatchupProtocolMessage message = new GetStoreIdRequest( databaseId );
+    private final CatchupProtocolMessage.WithDatabaseId message = new GetStoreIdRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();

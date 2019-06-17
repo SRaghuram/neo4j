@@ -10,7 +10,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
 
 public class CommercialMultiDatabaseManager extends MultiDatabaseManager<StandaloneDatabaseContext>
 {

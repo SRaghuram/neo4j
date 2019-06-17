@@ -11,7 +11,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 
 interface BackupStrategy extends Lifecycle
 {
-    void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException;
+    void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException;
 
-    void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException;
+    void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException;
 }

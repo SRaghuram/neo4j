@@ -16,6 +16,7 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
@@ -61,7 +62,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
+                mock( LeaderService.class ), NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -81,7 +82,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
+                mock( LeaderService.class ), NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -100,7 +101,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
+                mock( LeaderService.class ), NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -119,7 +120,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderService.class ), databaseIdRepository, NullLogProvider.getInstance(),
+                mock( LeaderService.class ), NullLogProvider.getInstance(),
                 config );
 
         // then
@@ -170,8 +171,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void init( TopologyService topologyService, LeaderService leaderService, DatabaseIdRepository databaseIdRepository,
-                LogProvider logProvider, Config config )
+        public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
         {
             wasInitialized = true;
         }
@@ -183,7 +183,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public RoutingResult run( String databaseName, MapValue context )
+        public RoutingResult run( DatabaseId databaseId, MapValue context )
         {
             return null;
         }

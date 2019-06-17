@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
@@ -38,6 +37,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -47,8 +47,7 @@ class ClusterOverviewProcedureIT
     private static final int REPLICAS = 2;
     private static final int EXPECTED_COLUMNS = 4;
 
-    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId SYSTEM_DB = DATABASE_ID_REPOSITORY.systemDatabase();
+    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
     private static final DatabaseId DEFAULT_DB = DATABASE_ID_REPOSITORY.defaultDatabase();
 
     @Inject
@@ -128,7 +127,7 @@ class ClusterOverviewProcedureIT
     private static Map<String,String> expectedDatabases( ClusterMember member )
     {
         return Map.of(
-                SYSTEM_DB.name(), expectedRole( member, SYSTEM_DB ).toString(),
+                SYSTEM_DATABASE_ID.name(), expectedRole( member, SYSTEM_DATABASE_ID ).toString(),
                 DEFAULT_DB.name(), expectedRole( member, DEFAULT_DB ).toString() );
     }
 

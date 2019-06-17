@@ -9,9 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.test.scheduler.CallingThreadJobScheduler;
-
 import java.util.Collections;
 import java.util.Optional;
 import java.util.SortedMap;
@@ -19,10 +16,13 @@ import java.util.TreeMap;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -31,6 +31,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.when;
 public class StubClusteredDatabaseManager extends LifecycleAdapter implements DatabaseManager<ClusteredDatabaseContext>
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
+    private final DatabaseIdRepository.Caching databaseIdRepository = new TestDatabaseIdRepository();
 
     @Override
     public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
@@ -67,11 +69,6 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         return Collections.unmodifiableSortedMap( databases );
     }
 
-    @Override
-    public void initialiseDefaultDatabases()
-    { //no-op
-    }
-
     //TODO: change lifecycle management to be per database
     @Override
     public void dropDatabase( DatabaseId databaseId )
@@ -86,6 +83,12 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
     @Override
     public void startDatabase( DatabaseId databaseId )
     {
+    }
+
+    @Override
+    public DatabaseIdRepository.Caching databaseIdRepository()
+    {
+        return databaseIdRepository;
     }
 
     private StubClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )

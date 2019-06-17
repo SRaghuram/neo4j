@@ -17,9 +17,6 @@ import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 @Command(
         name = "restore",
@@ -52,10 +49,8 @@ public class RestoreDatabaseCli extends AbstractCommand
     public void execute() throws IOException
     {
         Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
-        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
-        DatabaseId databaseId = databaseIdRepository.get( database );
 
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, databaseId, force );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, database, force );
         restoreDatabaseCommand.execute();
     }
 }

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.stream.Stream;
+import java.util.UUID;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -19,6 +19,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
@@ -30,6 +31,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LABEL;
 
 @ImpermanentDbmsExtension
 class SystemGraphDbmsModelTest
@@ -45,7 +48,7 @@ class SystemGraphDbmsModelTest
     @BeforeEach
     void before()
     {
-        dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
+        dbmsModel = new SystemGraphDbmsModel();
         dbmsModel.setSystemDatabase( db );
 
         managementService.registerTransactionEventListener( DEFAULT_DATABASE_NAME, new TransactionEventListenerAdapter<>()
@@ -62,81 +65,77 @@ class SystemGraphDbmsModelTest
     void shouldDetectUpdatedDatabases()
     {
         // when
+        HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState> expectedCreated = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "A", true );
-            makeDatabaseNode( "B", true );
-            makeDatabaseNode( "C", false );
+            makeDatabaseNode( "A", true, expectedCreated );
+            makeDatabaseNode( "B", true, expectedCreated );
+            makeDatabaseNode( "C", false, expectedCreated );
             tx.success();
         }
 
         // then
-        assertThat( updatedDatabases, containsInAnyOrder( databaseIds( "A", "B", "C" ) ) );
+        assertThat( updatedDatabases, containsInAnyOrder( expectedCreated.keySet().toArray() ) );
 
         // given
         updatedDatabases.clear();
 
         // when
+        HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState> expectedDeleted = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDeletedDatabaseNode( "D" );
-            makeDeletedDatabaseNode( "E" );
-            makeDeletedDatabaseNode( "F" );
+            makeDeletedDatabaseNode( "D", expectedDeleted );
+            makeDeletedDatabaseNode( "E", expectedDeleted );
+            makeDeletedDatabaseNode( "F", expectedDeleted );
             tx.success();
         }
 
         // then
-        assertThat( updatedDatabases, containsInAnyOrder( databaseIds( "D", "E", "F" ) ) );
-    }
-
-    private DatabaseId[] databaseIds( String... databaseNames )
-    {
-        return Stream.of( databaseNames ).map( name -> databaseIdRepository.get( name ) ).toArray( DatabaseId[]::new );
+        assertThat( updatedDatabases, containsInAnyOrder( expectedDeleted.keySet().toArray() ) );
     }
 
     @Test
     void shouldReturnDatabaseStates()
     {
+
         // when
+        HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState> expected = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "A", true );
-            makeDatabaseNode( "B", false );
-            makeDeletedDatabaseNode( "C" );
+            makeDatabaseNode( "A", true, expected );
+            makeDatabaseNode( "B", false, expected );
+            makeDeletedDatabaseNode( "C", expected );
             tx.success();
         }
 
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "D", true );
-            makeDeletedDatabaseNode( "E" );
-            makeDeletedDatabaseNode( "F" );
+            makeDatabaseNode( "D", true, expected );
+            makeDeletedDatabaseNode( "E", expected );
+            makeDeletedDatabaseNode( "F", expected );
             tx.success();
         }
 
         // then
-        var expected = new HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState>();
-
-        expected.put( databaseIdRepository.get( "A" ), ONLINE );
-        expected.put( databaseIdRepository.get( "B" ), OFFLINE );
-        expected.put( databaseIdRepository.get( "C" ), DELETED );
-        expected.put( databaseIdRepository.get( "D" ), ONLINE );
-        expected.put( databaseIdRepository.get( "E" ), DELETED );
-        expected.put( databaseIdRepository.get( "F" ), DELETED );
-
         assertEquals( expected, dbmsModel.getDatabaseStates() );
     }
 
-    private void makeDatabaseNode( String databaseName, boolean online )
+    private void makeDatabaseNode( String databaseName, boolean online, HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState> expected )
     {
-        Node node = db.createNode( SystemGraphDbmsModel.DATABASE_LABEL );
+        UUID uuid = UUID.randomUUID();
+        Node node = db.createNode( DATABASE_LABEL );
         node.setProperty( "name", databaseName );
         node.setProperty( "status", online ? "online" : "offline" );
+        node.setProperty( "uuid", uuid.toString() );
+        expected.put( DatabaseIdFactory.from( databaseName, uuid ), online ? ONLINE : OFFLINE );
     }
 
-    private void makeDeletedDatabaseNode( String databaseName )
+    private void makeDeletedDatabaseNode( String databaseName, HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState> expected )
     {
-        Node node = db.createNode( SystemGraphDbmsModel.DELETED_DATABASE_LABEL );
+        UUID uuid = UUID.randomUUID();
+        Node node = db.createNode( DELETED_DATABASE_LABEL );
         node.setProperty( "name", databaseName );
+        node.setProperty( "uuid", uuid.toString() );
+        expected.put( DatabaseIdFactory.from( databaseName, uuid ), DELETED );
     }
 }

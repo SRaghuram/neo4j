@@ -119,10 +119,11 @@ class StoreCopyCheckpointMutexIT
      */
     private static Server buildCatchupServer( GraphDatabaseAPI db, InjectingFileSystemAbstraction injectingFS )
     {
+        var databaseManager = resolve( db, DatabaseManager.class );
         var regularCatchupServerHandler = new MultiDatabaseCatchupServerHandler(
-                resolve( db, DatabaseManager.class ),
-                FormattedLogProvider.toOutputStream( System.out ),
-                injectingFS );
+                databaseManager,
+                injectingFS,
+                FormattedLogProvider.toOutputStream( System.out ) );
 
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( regularCatchupServerHandler )

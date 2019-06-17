@@ -8,6 +8,9 @@ package com.neo4j.backup.impl;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.MockCatchupClient;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -21,9 +24,13 @@ import java.io.IOException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -34,20 +41,23 @@ import static org.mockito.Mockito.when;
 class BackupDelegatorTest
 {
     private RemoteStore remoteStore;
-    private CatchupClientFactory catchUpClient;
+    private CatchupClientFactory catchUpClientFactory;
     private StoreCopyClient storeCopyClient;
 
     private BackupDelegator subject;
 
     private final SocketAddress anyAddress = new SocketAddress( "any.address", 1234 );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "a database" );
 
     @BeforeEach
     void setup()
     {
         remoteStore = mock( RemoteStore.class );
-        catchUpClient = mock( CatchupClientFactory.class );
+        catchUpClientFactory = mock( CatchupClientFactory.class );
         storeCopyClient = mock( StoreCopyClient.class );
-        subject = new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
+        var catchUpClient = new MockCatchupClient( CATCHUP_3_0, new MockClientV3( new MockClientResponses(), new TestDatabaseIdRepository() ) );
+        when( catchUpClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchUpClient );
+        subject = new BackupDelegator( id -> remoteStore, id -> storeCopyClient, catchUpClientFactory, NullLogProvider.getInstance() );
     }
 
     @Test
@@ -59,7 +69,7 @@ class BackupDelegatorTest
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "." ) );
 
         // when
-        subject.tryCatchingUp( fromAddress, expectedStoreId, databaseLayout );
+        subject.tryCatchingUp( fromAddress, expectedStoreId, databaseId, databaseLayout );
 
         // then
         verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
@@ -73,7 +83,7 @@ class BackupDelegatorTest
         subject.start();
 
         // then
-        verify( catchUpClient ).start();
+        verify( catchUpClientFactory ).start();
     }
 
     @Test
@@ -83,7 +93,7 @@ class BackupDelegatorTest
         subject.stop();
 
         // then
-        verify( catchUpClient ).stop();
+        verify( catchUpClientFactory ).stop();
     }
 
     @Test
@@ -97,7 +107,7 @@ class BackupDelegatorTest
         when( storeCopyClient.fetchStoreId( fromAddress ) ).thenReturn( expectedStoreId );
 
         // when
-        StoreId storeId = subject.fetchStoreId( fromAddress );
+        StoreId storeId = subject.fetchStoreId( fromAddress, databaseId );
 
         // then
         assertEquals( expectedStoreId, storeId );
@@ -112,7 +122,7 @@ class BackupDelegatorTest
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "." ) );
 
         // when
-        subject.copy( anyAddress, storeId, databaseLayout );
+        subject.copy( anyAddress, storeId, databaseId, databaseLayout );
 
         // then
         ArgumentCaptor<CatchupAddressProvider> argumentCaptor = ArgumentCaptor.forClass( CatchupAddressProvider.class );

@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.storageengine.api.StoreId;
@@ -112,12 +113,19 @@ public class MockCatchupClient implements VersionedCatchupClients
 
     public static class MockClientV3 implements CatchupClientV3
     {
-
         private final MockClientResponses responses;
+        private final DatabaseIdRepository databaseIdRepository;
 
-        public MockClientV3( MockClientResponses responses )
+        public MockClientV3( MockClientResponses responses, DatabaseIdRepository databaseIdRepository )
         {
             this.responses = responses;
+            this.databaseIdRepository = databaseIdRepository;
+        }
+
+        @Override
+        public PreparedRequest<DatabaseId> getDatabaseId( String databaseName )
+        {
+            return handler -> completedFuture( databaseIdRepository.get( databaseName ) );
         }
 
         @Override

@@ -8,23 +8,27 @@ package com.neo4j.dbms;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.DELETED;
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.OFFLINE;
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.ONLINE;
-import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_NAME_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_STATUS_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_UUID_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LABEL;
 
 /**
  * Utility class for accessing the DBMS model in the system database.
@@ -38,17 +42,7 @@ public class SystemGraphDbmsModel
         DELETED
     }
 
-    static final Label DATABASE_LABEL = label( "Database" );
-    static final Label DELETED_DATABASE_LABEL = label( "DeletedDatabase" );
-
-    private final DatabaseIdRepository databaseIdRepository;
-
     private GraphDatabaseService systemDatabase;
-
-    SystemGraphDbmsModel( DatabaseIdRepository databaseIdRepository )
-    {
-        this.databaseIdRepository = databaseIdRepository;
-    }
 
     public void setSystemDatabase( GraphDatabaseService systemDatabase )
     {
@@ -100,7 +94,7 @@ public class SystemGraphDbmsModel
 
     private DatabaseState getOnlineStatus( Node node )
     {
-        String onlineStatus = (String) node.getProperty( "status" );
+        String onlineStatus = (String) node.getProperty( DATABASE_STATUS_PROPERTY );
 
         switch ( onlineStatus )
         {
@@ -115,7 +109,8 @@ public class SystemGraphDbmsModel
 
     private DatabaseId getDatabaseId( Node node )
     {
-        // TODO: Get the actual database ID.
-        return databaseIdRepository.get( (String) node.getProperty( "name" ) );
+        var name = (String) node.getProperty( DATABASE_NAME_PROPERTY );
+        var uuid = UUID.fromString( (String) node.getProperty( DATABASE_UUID_PROPERTY ) );
+        return DatabaseIdFactory.from( name, uuid );
     }
 }

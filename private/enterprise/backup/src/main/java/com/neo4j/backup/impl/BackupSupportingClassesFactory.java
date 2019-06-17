@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -22,8 +21,10 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
@@ -81,18 +82,20 @@ public class BackupSupportingClassesFactory
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
     {
         Config config = onlineBackupContext.getConfig();
-        DatabaseId databaseId = onlineBackupContext.getDatabaseId();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
 
-        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
+        Function<DatabaseId,TxPullClient> txPullClient = databaseId -> new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
                 new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );
 
-        RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
-                txPullClient, transactionLogCatchUpFactory, config, monitors, storageEngineFactory, onlineBackupContext.getDatabaseId() );
+        Function<DatabaseId,StoreCopyClient> storeCopyClient = databaseId ->
+                new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );
 
-        return backupDelegator( remoteStore, catchUpClient, storeCopyClient );
+        Function<DatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
+                storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
+                databaseId );
+
+        return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }
 
     @VisibleForTesting
@@ -129,10 +132,10 @@ public class BackupSupportingClassesFactory
         return sslPolicyLoader.getPolicy( sslPolicyName );
     }
 
-    private static BackupDelegator backupDelegator(
-            RemoteStore remoteStore, CatchupClientFactory catchUpClient, StoreCopyClient storeCopyClient )
+    private static BackupDelegator backupDelegator( Function<DatabaseId,RemoteStore> remoteStore, Function<DatabaseId,StoreCopyClient> storeCopyClient,
+            CatchupClientFactory catchUpClient, LogProvider logProvider )
     {
-        return new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
+        return new BackupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }
 
     private static PageCache createPageCache( FileSystemAbstraction fileSystemAbstraction, Config config, JobScheduler jobScheduler )

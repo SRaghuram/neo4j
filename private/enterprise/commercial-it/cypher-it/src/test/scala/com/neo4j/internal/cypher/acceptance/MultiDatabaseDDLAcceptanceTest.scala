@@ -16,10 +16,10 @@ import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
+import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
@@ -32,7 +32,6 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
-  private val databaseIdRepository = new TestDatabaseIdRepository()
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -1147,16 +1146,17 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
     graphOps = managementService.database(SYSTEM_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
+    databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
 
     initSystemGraph(config)
   }
 
   private def initSystemGraph(config: Config): Unit = {
-    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge(), databaseIdRepository)
+    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
-    val systemGraphInitializer = new CommercialSystemGraphInitializer(databaseManager, databaseIdRepository, config)
+    val systemGraphInitializer = new CommercialSystemGraphInitializer(databaseManager, config)
     val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(systemGraphInitializer, queryExecutor, mock[Log], systemGraphOperations, importOptions, secureHasher)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)

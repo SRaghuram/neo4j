@@ -86,7 +86,7 @@ public class SnapshotDownloaderTest
     {
         CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
 
-        CatchupClientV3 v3Client = new MockClientV3( clientResponses );
+        CatchupClientV3 v3Client = new MockClientV3( clientResponses, databaseIdRepository );
 
         VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v3Client );
         when( catchupClientFactory.getClient( eq( remoteAddress ), any( Log.class ) ) ).thenReturn( catchupClient );

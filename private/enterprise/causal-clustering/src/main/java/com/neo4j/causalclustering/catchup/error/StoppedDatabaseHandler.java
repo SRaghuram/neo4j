@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import org.neo4j.logging.LogProvider;
 
-public class StoppedDatabaseHandler<T extends CatchupProtocolMessage> extends ErrorReportingHandler<T>
+public class StoppedDatabaseHandler<T extends CatchupProtocolMessage.WithDatabaseId> extends ErrorReportingHandler<T>
 {
     public StoppedDatabaseHandler( Class<T> messageType, CatchupServerProtocol protocol, LogProvider logProvider )
     {

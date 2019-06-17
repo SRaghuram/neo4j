@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.io.IOException;
@@ -33,6 +34,8 @@ public interface CatchupResponseHandler
     void onTxStreamFinishedResponse( TxStreamFinishedResponse response );
 
     void onGetStoreIdResponse( GetStoreIdResponse response );
+
+    void onGetDatabaseIdResponse( GetDatabaseIdResponse response );
 
     void onCoreSnapshot( CoreSnapshot coreSnapshot );
 

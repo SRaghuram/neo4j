@@ -50,6 +50,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -83,9 +84,9 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseIdRepository databaseIdRepository ) throws KernelException
     {
-        super.registerEditionSpecificProcedures( globalProcedures );
+        super.registerEditionSpecificProcedures( globalProcedures, databaseIdRepository );
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
     }
@@ -137,14 +138,14 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
-        CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this );
+        var databaseManager = new CommercialMultiDatabaseManager( globalModule, this );
 
         createDatabaseManagerDependentModules( databaseManager );
 
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository(), reconciledTxTracker );
+        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
@@ -160,7 +161,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
         SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getDatabaseIdRepository(), globalModule.getGlobalConfig() ) );
+                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
         return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
     }
 
@@ -204,7 +205,7 @@ public class CommercialEditionModule extends CommunityEditionModule
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManager, internalLogProvider, fs ),
+                new MultiDatabaseCatchupServerHandler( databaseManager, fs, internalLogProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
                 portRegister

@@ -64,6 +64,8 @@ public interface VersionedCatchupClients extends AutoCloseable
 
     interface CatchupClientV3
     {
+        PreparedRequest<DatabaseId> getDatabaseId( String databaseName );
+
         PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId );
 
         PreparedRequest<StoreId> getStoreId( DatabaseId databaseId );

@@ -11,15 +11,13 @@ import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-public abstract class CatchupProtocolMessage implements Message
+public abstract class CatchupProtocolMessage
 {
-    private final RequestMessageType type;
-    private final DatabaseId databaseId;
+    protected final RequestMessageType type;
 
-    protected CatchupProtocolMessage( RequestMessageType type, DatabaseId databaseId )
+    public CatchupProtocolMessage( RequestMessageType type )
     {
         this.type = type;
-        this.databaseId = databaseId;
     }
 
     public final RequestMessageType messageType()
@@ -27,36 +25,47 @@ public abstract class CatchupProtocolMessage implements Message
         return type;
     }
 
-    public final DatabaseId databaseId()
+    public abstract static class WithDatabaseId extends CatchupProtocolMessage
     {
-        return databaseId;
-    }
+        private final DatabaseId databaseId;
 
-    @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
+        protected WithDatabaseId( RequestMessageType type, DatabaseId databaseId )
         {
-            return true;
+            super( type );
+            this.databaseId = databaseId;
         }
-        if ( o == null || getClass() != o.getClass() )
+
+        public final DatabaseId databaseId()
         {
-            return false;
+            return databaseId;
         }
-        CatchupProtocolMessage that = (CatchupProtocolMessage) o;
-        return type == that.type &&
-               Objects.equals( databaseId, that.databaseId );
-    }
 
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash( type, databaseId );
-    }
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            WithDatabaseId that = (WithDatabaseId) o;
+            return type == that.type &&
+                   Objects.equals( databaseId, that.databaseId );
+        }
 
-    @Override
-    public String toString()
-    {
-        return getClass().getSimpleName() + "{type=" + type + ", databaseId='" + databaseId + "'}";
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( type, databaseId );
+        }
+
+        @Override
+        public String toString()
+        {
+            return getClass().getSimpleName() + "{type=" + type + ", databaseId='" + databaseId + "'}";
+        }
     }
 }

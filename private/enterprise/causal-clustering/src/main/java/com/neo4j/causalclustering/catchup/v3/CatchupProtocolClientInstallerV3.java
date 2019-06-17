@@ -24,6 +24,9 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponseDecoder;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseHandler;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseDecoder;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseHandler;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestEncoder;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponseDecoder;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponseHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupErrorResponseDecoder;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupErrorResponseHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CoreSnapshotRequestEncoder;
@@ -87,6 +90,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
 
         RequestDecoderDispatcher<CatchupClientProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
         decoderDispatcher.register( CatchupClientProtocol.State.STORE_ID, new GetStoreIdResponseDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.DATABASE_ID, new GetDatabaseIdResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.TX_PULL_RESPONSE, new TxPullResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.CORE_SNAPSHOT, new CoreSnapshotDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.STORE_COPY_FINISHED, new StoreCopyFinishedResponseDecoder() );
@@ -103,6 +107,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "enc_req_store", new GetStoreFileRequestEncoder() )
                 .add( "enc_req_snapshot", new CoreSnapshotRequestEncoder() )
                 .add( "enc_req_store_id", new GetStoreIdRequestEncoder() )
+                .add( "enc_req_database_id", new GetDatabaseIdRequestEncoder() )
                 .add( "enc_req_type", new ResponseMessageTypeEncoder() )
                 .add( "enc_res_type", new RequestMessageTypeEncoder() )
                 .add( "enc_req_precopy", new PrepareStoreCopyRequestEncoder() )
@@ -115,6 +120,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "hnd_res_file_header", new FileHeaderHandler( protocol, handler ) )
                 .add( "hnd_res_file_chunk", new FileChunkHandler( protocol, handler ) )
                 .add( "hnd_res_store_id", new GetStoreIdResponseHandler( protocol, handler ) )
+                .add( "hnd_res_database_id", new GetDatabaseIdResponseHandler( protocol, handler ) )
                 .add( "hnd_res_store_listing", new StoreListingResponseHandler( protocol, handler ))
                 .add( "hnd_res_catchup_error", new CatchupErrorResponseHandler( protocol, handler ) )
                 .install();

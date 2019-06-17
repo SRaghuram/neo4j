@@ -39,10 +39,8 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class ServerShufflingTest
 {
@@ -72,7 +70,7 @@ class ServerShufflingTest
                 new ArrayList<>( readers ),
                 ttl );
 
-        when( delegate.run( anyString(), any() ) ).thenReturn( result );
+        when( delegate.run( any(), any() ) ).thenReturn( result );
 
         var plugin = new ServerShufflingProcessor( delegate );
 
@@ -80,7 +78,7 @@ class ServerShufflingTest
         for ( var i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            var shuffledResult = plugin.run( DEFAULT_DATABASE_NAME, MapValue.EMPTY );
+            var shuffledResult = plugin.run( new TestDatabaseIdRepository().defaultDatabase(), MapValue.EMPTY );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );
@@ -130,7 +128,7 @@ class ServerShufflingTest
         var serverPoliciesPlugin = new ServerPoliciesPlugin();
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
 
-        serverPoliciesPlugin.init( coreTopologyService, leaderService, new TestDatabaseIdRepository(), NullLogProvider.getInstance(),
+        serverPoliciesPlugin.init( coreTopologyService, leaderService, NullLogProvider.getInstance(),
                 Config.defaults( CausalClusteringSettings.load_balancing_shuffle, true ) );
 
         var routers = coreMembers.values().stream().map( ClientConnector::boltAddress ).collect( toList() );
@@ -143,7 +141,7 @@ class ServerShufflingTest
         for ( var i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            var shuffledResult = serverPoliciesPlugin.run( databaseId.name(), MapValue.EMPTY );
+            var shuffledResult = serverPoliciesPlugin.run( databaseId, MapValue.EMPTY );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );

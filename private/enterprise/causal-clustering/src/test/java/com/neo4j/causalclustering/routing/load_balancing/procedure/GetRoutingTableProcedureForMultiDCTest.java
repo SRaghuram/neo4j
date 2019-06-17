@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,22 +67,22 @@ class GetRoutingTableProcedureForMultiDCTest
     void shouldPassClientContextToPlugin() throws Exception
     {
         // given
-        var databaseName = "my_database";
         var databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseIdRepository.get( databaseName ) ).register();
+        var databaseId = databaseManager.databaseIdRepository().get( "my_database" );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
         var addresses = List.of( new SocketAddress( "localhost", 12345 ) );
         var result = new RoutingResult( addresses, addresses, addresses, 100 );
-        when( plugin.run( anyString(), any( MapValue.class ) ) ).thenReturn( result );
+        when( plugin.run( any(), any( MapValue.class ) ) ).thenReturn( result );
         var proc = newProcedure( plugin, databaseManager );
         var clientContext = ValueUtils.asMapValue( map( "key", "value", "key2", "value2" ) );
 
         // when
-        proc.apply( null, new AnyValue[]{clientContext, stringValue( databaseName )}, null );
+        proc.apply( null, new AnyValue[]{clientContext, stringValue( databaseId.name() )}, null );
 
         // then
-        verify( plugin ).run( databaseName, clientContext );
+        verify( plugin ).run( databaseId, clientContext );
     }
 
     @Test
@@ -131,17 +130,17 @@ class GetRoutingTableProcedureForMultiDCTest
     @Test
     void shouldThrowWhenPluginReturnsAnEmptyRoutingTable() throws Exception
     {
-        var databaseName = "customers";
         var databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseIdRepository.get( databaseName ) ).register();
+        var databaseId = databaseManager.databaseIdRepository().get( "customers" );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
-        when( plugin.run( anyString(), any() ) ).thenReturn( new RoutingResult( emptyList(), emptyList(), emptyList(), 42 ) );
+        when( plugin.run( any(), any() ) ).thenReturn( new RoutingResult( emptyList(), emptyList(), emptyList(), 42 ) );
         var proc = newProcedure( plugin, databaseManager );
 
-        var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseName )}, null ) );
+        var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
-        verify( plugin ).run( databaseName, MapValue.EMPTY );
+        verify( plugin ).run( databaseId, MapValue.EMPTY );
     }
 
     private static GetRoutingTableProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin )
@@ -151,7 +150,6 @@ class GetRoutingTableProcedureForMultiDCTest
 
     private static GetRoutingTableProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin, DatabaseManager<?> databaseManager )
     {
-        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, new TestDatabaseIdRepository(),
-                databaseManager, Config.defaults() );
+        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, databaseManager, Config.defaults() );
     }
 }

@@ -23,7 +23,7 @@ import org.neo4j.logging.LogProvider;
  *
  * @param <T> The type of request to multiplex.
  */
-class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
+class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage.WithDatabaseId> extends SimpleChannelInboundHandler<T>
 {
     private final Class<T> messageType;
     private final DatabaseManager<?> databaseManager;

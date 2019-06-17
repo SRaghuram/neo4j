@@ -14,8 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -23,7 +25,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -161,10 +162,9 @@ class DefaultDatabaseSelectionIT
     private static void checkDatabaseNames( GraphDatabaseService database, String databaseName )
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
-        Set<DatabaseId> databases = databaseManager.registeredDatabases().keySet();
-        var databaseIdRepository = new TestDatabaseIdRepository();
-        assertThat( databases, hasItem( databaseIdRepository.get( databaseName ) ) );
-        assertThat( databases, hasItem( databaseIdRepository.systemDatabase() ) );
+        Set<String> databases = databaseManager.registeredDatabases().keySet().stream().map( DatabaseId::name ).collect( Collectors.toSet() );
+        assertThat( databases, hasItem( new NormalizedDatabaseName( databaseName ).name() ) );
+        assertThat( databases, hasItem( SYSTEM_DATABASE_NAME ) );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException

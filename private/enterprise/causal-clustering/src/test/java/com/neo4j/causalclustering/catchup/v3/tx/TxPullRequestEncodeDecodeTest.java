@@ -36,5 +36,4 @@ class TxPullRequestEncodeDecodeTest
         assertNotSame( sent, received );
         assertEquals( sent, received );
     }
-
 }

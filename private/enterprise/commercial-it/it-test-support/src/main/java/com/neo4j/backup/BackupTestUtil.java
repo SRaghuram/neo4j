@@ -27,8 +27,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
@@ -60,8 +58,7 @@ public class BackupTestUtil
         Config config = Config.newBuilder().fromConfig( clusterMember.config() )
                 .build();
         ConfigUtils.disableAllConnectors( config );
-        DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseIdRepository.get( databaseName ), true );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseName, true );
         restoreDatabaseCommand.execute();
     }
 

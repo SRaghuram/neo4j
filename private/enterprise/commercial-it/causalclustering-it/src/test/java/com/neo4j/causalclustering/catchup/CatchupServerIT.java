@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
@@ -71,8 +72,7 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
-    private static final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private static final DatabaseId UNKNOWN_DB_ID = databaseIdRepository.get( "unknown.db" );
+    private static final DatabaseId UNKNOWN_DB_ID = new TestDatabaseIdRepository().get( "unknown.db" );
     private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 1122, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
@@ -92,6 +92,7 @@ class CatchupServerIT
     private PageCache pageCache;
     private CatchupClientFactory catchupClient;
     private DatabaseManagementService managementService;
+    private DatabaseIdRepository databaseIdRepository;
 
     @BeforeEach
     void startDb() throws Throwable
@@ -106,7 +107,9 @@ class CatchupServerIT
         addData( db );
 
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
-        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fs );
+        databaseIdRepository = databaseManager.databaseIdRepository();
+        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fs,
+                LOG_PROVIDER );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );
@@ -169,7 +172,7 @@ class CatchupServerIT
 
         // when the list of files are requested from the server with the wrong storeId
         PrepareStoreCopyResponse prepareStoreCopyResponse =
-                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, databaseIdRepository.defaultDatabase() );
+                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, databaseIdRepository.get( DEFAULT_DATABASE_NAME ) );
         simpleCatchupClient.close();
 
         // then the response is not a list of files but an error
@@ -214,7 +217,7 @@ class CatchupServerIT
 
         // when we copy that file using a different storeId
         StoreCopyFinishedResponse storeCopyFinishedResponse =
-                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, databaseIdRepository.defaultDatabase() );
+                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, databaseIdRepository.get( DEFAULT_DATABASE_NAME ) );
         simpleCatchupClient.close();
 
         // then the response from the server should be an error message that describes a store ID mismatch
@@ -245,15 +248,15 @@ class CatchupServerIT
     @Test
     void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
     {
-        var databaseId = databaseIdRepository.get( "testDatabase" );
-        managementService.createDatabase( databaseId.name() );
+        String testDatabase = new NormalizedDatabaseName( "testDatabase" ).name();
+        managementService.createDatabase( testDatabase );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseId ) )
+        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( testDatabase ) ) )
         {
-            managementService.shutdownDatabase( databaseId.name() );
+            managementService.shutdownDatabase( testDatabase );
 
             var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseId.name() + " is stopped" ) );
+            assertThat( getRootCauseMessage( error ), containsString( "database " + testDatabase + " is stopped" ) );
         }
     }
 
@@ -319,7 +322,7 @@ class CatchupServerIT
 
     private SimpleCatchupClient newSimpleCatchupClient()
     {
-        return newSimpleCatchupClient( databaseIdRepository.defaultDatabase() );
+        return newSimpleCatchupClient( databaseIdRepository.get( DEFAULT_DATABASE_NAME ) );
     }
 
     private SimpleCatchupClient newSimpleCatchupClient( DatabaseId databaseId )

@@ -9,29 +9,31 @@ import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
+import java.util.UUID;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 
 public class DatabaseIdMarshal extends SafeChannelMarshal<DatabaseId>
 {
     public static final DatabaseIdMarshal INSTANCE = new DatabaseIdMarshal();
 
-    private final DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() ); // TODO not this
-
     @Override
     protected DatabaseId unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        return databaseIdRepository.get( StringMarshal.unmarshal( channel ) );
+        String name = StringMarshal.unmarshal( channel );
+        long msb = channel.getLong();
+        long lsb = channel.getLong();
+        return DatabaseIdFactory.from( name, new UUID( msb, lsb ) );
     }
 
     @Override
     public void marshal( DatabaseId databaseId, WritableChannel channel ) throws IOException
     {
         StringMarshal.marshal( channel, databaseId.name() );
+        channel.putLong( databaseId.uuid().getMostSignificantBits() );
+        channel.putLong( databaseId.uuid().getLeastSignificantBits() );
     }
 }

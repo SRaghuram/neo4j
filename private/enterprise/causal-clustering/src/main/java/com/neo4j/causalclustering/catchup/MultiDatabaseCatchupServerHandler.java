@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvide
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
 import com.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequestHandler;
@@ -33,11 +34,17 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, FileSystemAbstraction fs, LogProvider logProvider )
     {
         this.databaseManager = databaseManager;
         this.logProvider = logProvider;
         this.fs = fs;
+    }
+
+    @Override
+    public ChannelHandler getDatabaseIdRequestHandler( CatchupServerProtocol protocol )
+    {
+        return new GetDatabaseIdRequestHandler( databaseManager.databaseIdRepository(), protocol );
     }
 
     @Override

@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -48,7 +49,6 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.Role;
@@ -89,8 +89,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 // TODO: Better tests for LeaderLocator function.
 class GetRoutingTableProcedureForSingleDCTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.get( "my_test_database" );
+    private DatabaseManager<?> databaseManager;
+    private DatabaseId databaseId;
     private final RaftId raftId = new RaftId( UUID.randomUUID() );
 
     @Target( ElementType.METHOD )
@@ -107,6 +107,15 @@ class GetRoutingTableProcedureForSingleDCTest
                 Arguments.of( Config.defaults( cluster_allow_reads_on_followers, true ) ),
                 Arguments.of( Config.defaults( cluster_allow_reads_on_followers, false ) )
         );
+    }
+
+    @BeforeEach
+    private void setUp()
+    {
+        var databaseManager = new StubClusteredDatabaseManager();
+        this.databaseId = databaseManager.databaseIdRepository().get( "my_test_database" );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
+        this.databaseManager = databaseManager;
     }
 
     @RoutingConfigsTest
@@ -417,12 +426,13 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldThrowWhenDatabaseDoesNotExist() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
+        var databaseId = new TestDatabaseIdRepository().get( "this database does not exist" );
         var topologyService = mock( CoreTopologyService.class );
         var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var proc = newProcedure( topologyService, leaderService, databaseManager );
 
-        var error = assertThrows( ProcedureException.class, () -> run( proc, Config.defaults() ) );
+        var error = assertThrows( ProcedureException.class, () -> run( proc, databaseId, Config.defaults() ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
     }
 
@@ -430,20 +440,21 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldThrowWhenDatabaseIsStopped() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
+        var databaseId = databaseManager.databaseIdRepository().get( "stopped database" );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
         var topologyService = mock( CoreTopologyService.class );
         var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var proc = newProcedure( topologyService, leaderService, databaseManager );
 
-        var error = assertThrows( ProcedureException.class, () -> run( proc, Config.defaults() ) );
+        var error = assertThrows( ProcedureException.class, () -> run( proc, databaseId, Config.defaults() ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
     }
 
     @Test
     void shouldThrowWhenTopologyServiceContainsNoInfoAboutTheDatabase() throws Exception
     {
-        var unknownDatabaseId = databaseIdRepository.get( "unknown" );
+        var unknownDatabaseId = databaseManager.databaseIdRepository().get( "unknown" );
         var topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.EMPTY );
         when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.EMPTY );
@@ -506,8 +517,6 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private CallableProcedure newProcedure( CoreTopologyService coreTopologyService, LeaderService leaderService, Config config )
     {
-        var databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
         return newProcedure( coreTopologyService, leaderService, databaseManager, config );
     }
 
@@ -518,7 +527,6 @@ class GetRoutingTableProcedureForSingleDCTest
                 DEFAULT_NAMESPACE,
                 coreTopologyService,
                 leaderService,
-                databaseIdRepository,
                 databaseManager,
                 config,
                 NullLogProvider.getInstance() );

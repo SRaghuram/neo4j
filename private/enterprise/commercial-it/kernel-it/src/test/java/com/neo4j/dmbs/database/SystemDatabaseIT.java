@@ -16,8 +16,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -34,7 +32,6 @@ public class SystemDatabaseIT
     @Inject
     private TestDirectory testDirectory;
     private DatabaseManagementService databaseManagementService;
-    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setUp()
@@ -65,6 +62,6 @@ public class SystemDatabaseIT
 
     private Database getDatabaseByName( DatabaseManager<?> databaseManager, String name )
     {
-        return databaseManager.getDatabaseContext( databaseIdRepository.get( name ) ).get().database();
+        return databaseManager.getDatabaseContext( name ).get().database();
     }
 }

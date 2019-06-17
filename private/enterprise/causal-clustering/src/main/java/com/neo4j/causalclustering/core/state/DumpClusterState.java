@@ -5,21 +5,18 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Optional;
 
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 
@@ -29,7 +26,7 @@ public class DumpClusterState
 {
     private final CoreStateStorageFactory storageFactory;
     private final PrintStream out;
-    private final DatabaseId databaseToDump;
+    private final String databaseToDump;
 
     /**
      * @param args [0] = data directory
@@ -39,7 +36,6 @@ public class DumpClusterState
         File dataDirectory;
         Optional<String> databaseToDumpOpt;
         Optional<String> databaseNameOpt;
-        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( Config.defaults() );
         if ( args.length == 1 )
         {
             dataDirectory = new File( args[0] );
@@ -69,7 +65,7 @@ public class DumpClusterState
         {
             String databaseName = databaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             String databaseToDump = databaseToDumpOpt.orElse( databaseName );
-            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseIdRepository.get( databaseToDump ) );
+            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump );
             dumpTool.dump();
         }
         catch ( Exception e )
@@ -79,7 +75,7 @@ public class DumpClusterState
         }
     }
 
-    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, DatabaseId databaseToDump )
+    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump )
     {
         this.storageFactory = newCoreStateStorageService( fs, dataDirectory );
         this.out = out;

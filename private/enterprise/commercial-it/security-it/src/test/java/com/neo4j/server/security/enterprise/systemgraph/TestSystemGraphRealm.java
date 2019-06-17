@@ -14,10 +14,8 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.cypher.security.TestBasicSystemGraphRealm;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
-import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
@@ -58,16 +56,16 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge(), new TestDatabaseIdRepository() );
-        return testRealm( importOptions, securityLog, dbManager, dbManager.getManagementService(), executor, config );
+        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        return testRealm( importOptions, securityLog, dbManager, executor, config );
     }
 
     public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager,
-            DatabaseManagementService managementService, QueryExecutor executor, Config config ) throws Throwable
+            QueryExecutor executor, Config config ) throws Throwable
     {
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
-        CommercialSystemGraphInitializer systemGraphInitializer = new CommercialSystemGraphInitializer( dbManager, new TestDatabaseIdRepository(), config );
+        CommercialSystemGraphInitializer systemGraphInitializer = new CommercialSystemGraphInitializer( dbManager, config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( systemGraphInitializer, executor, securityLog, systemGraphOperations, importOptions, secureHasher );
 

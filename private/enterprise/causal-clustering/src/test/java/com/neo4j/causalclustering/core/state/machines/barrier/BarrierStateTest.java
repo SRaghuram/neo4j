@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.fail;
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings( "unchecked" )
 public class BarrierStateTest
 {
-    private final DatabaseId databaseId = new DatabaseId( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     public void leaderShouldBeBarrierHolder() throws Exception

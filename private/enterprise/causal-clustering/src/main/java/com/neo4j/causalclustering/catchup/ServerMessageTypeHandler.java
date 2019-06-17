@@ -40,6 +40,10 @@ public class ServerMessageTypeHandler extends ChannelInboundHandlerAdapter
             {
                 protocol.expect( CatchupServerProtocol.State.GET_STORE_ID );
             }
+            else if ( requestMessageType.equals( RequestMessageType.DATABASE_ID ) )
+            {
+                protocol.expect( CatchupServerProtocol.State.GET_DATABASE_ID );
+            }
             else if ( requestMessageType.equals( RequestMessageType.CORE_SNAPSHOT ) )
             {
                 protocol.expect( CatchupServerProtocol.State.GET_CORE_SNAPSHOT );

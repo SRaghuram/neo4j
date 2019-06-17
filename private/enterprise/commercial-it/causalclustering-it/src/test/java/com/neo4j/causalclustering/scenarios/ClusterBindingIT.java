@@ -26,12 +26,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.UnableToStartDatabaseException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.NullLogProvider;
@@ -166,8 +165,7 @@ class ClusterBindingIT
 
         var coreMember = cluster.getCoreMemberById( 0 );
         cluster.removeCoreMemberWithServerId( 0 );
-        DatabaseId systemDatabase = new TestDatabaseIdRepository().systemDatabase();
-        changeRaftId( coreMember, systemDatabase );
+        changeRaftId( coreMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
@@ -210,11 +208,11 @@ class ClusterBindingIT
         return dbs.stream().map( CoreClusterMember::databaseLayout ).collect( Collectors.toList() );
     }
 
-    private void changeRaftId( CoreClusterMember coreMember, DatabaseId databaseId ) throws IOException
+    private void changeRaftId( CoreClusterMember coreMember, String databaseName ) throws IOException
     {
         var layout = coreMember.clusterStateLayout();
         var storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
-        var raftIdStorage = storageFactory.createRaftIdStorage( databaseId, nullDatabaseLogProvider() );
+        var raftIdStorage = storageFactory.createRaftIdStorage( databaseName, nullDatabaseLogProvider() );
         raftIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
     }
 

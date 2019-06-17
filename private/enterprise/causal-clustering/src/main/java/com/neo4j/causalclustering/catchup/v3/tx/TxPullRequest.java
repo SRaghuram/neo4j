@@ -15,7 +15,7 @@ import org.neo4j.storageengine.api.StoreId;
 
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-public class TxPullRequest extends CatchupProtocolMessage
+public class TxPullRequest extends CatchupProtocolMessage.WithDatabaseId
 {
     private final long previousTxId;
     private final StoreId expectedStoreId;
@@ -73,6 +73,6 @@ public class TxPullRequest extends CatchupProtocolMessage
     @Override
     public String toString()
     {
-        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseId() + "'}";
+        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseId().name() + "'}";
     }
 }

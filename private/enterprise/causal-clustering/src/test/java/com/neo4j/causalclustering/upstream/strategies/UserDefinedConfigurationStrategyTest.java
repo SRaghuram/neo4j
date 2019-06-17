@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -45,7 +44,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class UserDefinedConfigurationStrategyTest
 {
-    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
     private static final DatabaseId DATABASE_ID = DATABASE_ID_REPOSITORY.get( "customers" );
 
     private final String northGroup = "north";

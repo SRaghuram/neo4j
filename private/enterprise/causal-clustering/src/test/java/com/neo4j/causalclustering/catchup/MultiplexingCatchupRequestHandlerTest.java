@@ -100,50 +100,50 @@ class MultiplexingCatchupRequestHandlerTest
         return dbManager;
     }
 
-    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler()
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage.WithDatabaseId> newMultiplexingHandler()
     {
         return newMultiplexingHandler( MultiplexingCatchupRequestHandlerTest::newHandlerFactory );
     }
 
-    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler( DatabaseManager<?> databaseManager )
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage.WithDatabaseId> newMultiplexingHandler( DatabaseManager<?> databaseManager )
     {
         return newMultiplexingHandler( databaseManager, MultiplexingCatchupRequestHandlerTest::newHandlerFactory );
     }
 
-    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler(
-            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage.WithDatabaseId> newMultiplexingHandler(
+            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId>> handlerFactory )
     {
         return newMultiplexingHandler( newDbManager(), handlerFactory );
     }
 
-    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler( DatabaseManager<?> databaseManager,
-            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage.WithDatabaseId> newMultiplexingHandler( DatabaseManager<?> databaseManager,
+            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId>> handlerFactory )
     {
         return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), databaseManager, handlerFactory,
-                CatchupProtocolMessage.class, NullLogProvider.getInstance() );
+                CatchupProtocolMessage.WithDatabaseId.class, NullLogProvider.getInstance() );
     }
 
-    private static SimpleChannelInboundHandler<CatchupProtocolMessage> newHandlerFactory( Database db )
+    private static SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId> newHandlerFactory( Database db )
     {
         assertEquals( EXISTING_DB_ID, db.getDatabaseId() );
         return new CatchupProtocolMessageHandler();
     }
 
-    private static CatchupProtocolMessage newCatchupRequest( DatabaseId databaseId )
+    private static CatchupProtocolMessage.WithDatabaseId newCatchupRequest( DatabaseId databaseId )
     {
         return new DummyMessage( databaseId );
     }
 
-    private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage>
+    private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId>
     {
         @Override
-        protected void channelRead0( ChannelHandlerContext ctx, CatchupProtocolMessage request )
+        protected void channelRead0( ChannelHandlerContext ctx, CatchupProtocolMessage.WithDatabaseId request )
         {
             ctx.writeAndFlush( SUCCESS_RESPONSE );
         }
     }
 
-    private static class DummyMessage extends CatchupProtocolMessage
+    private static class DummyMessage extends CatchupProtocolMessage.WithDatabaseId
     {
         DummyMessage( DatabaseId databaseId )
         {

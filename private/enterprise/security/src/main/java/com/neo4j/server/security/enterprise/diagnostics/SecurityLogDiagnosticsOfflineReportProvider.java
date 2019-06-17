@@ -15,7 +15,6 @@ import java.util.Set;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 
@@ -33,7 +32,7 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, DatabaseIdRepository databaseIdRepository, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
     {
         this.fs = fs;
         this.config = config;

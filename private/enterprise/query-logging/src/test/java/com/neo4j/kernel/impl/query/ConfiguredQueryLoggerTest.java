@@ -21,7 +21,6 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorCounters;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
@@ -54,7 +53,7 @@ class ConfiguredQueryLoggerTest
     private static final String QUERY_3 = "MATCH (c)-[:FOO]->(d) RETURN d.size";
     private static final String QUERY_4 = "MATCH (n) WHERE n.age IN {ages} RETURN n";
     private final FakeClock clock = Clocks.fakeClock();
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final FakeCpuClock cpuClock = new FakeCpuClock();
     private final FakeHeapAllocation heapAllocation = new FakeHeapAllocation();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();

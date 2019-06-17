@@ -18,6 +18,8 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.test.rule.TestDirectory;
@@ -30,6 +32,7 @@ class SystemGraphRealmTestHelper
     {
         GraphDatabaseFacade testSystemDb;
         private final DatabaseManagementService managementService;
+        private final DatabaseIdRepository.Caching databaseIdRepository = new TestDatabaseIdRepository();
 
         TestDatabaseManager( TestDirectory testDir )
         {
@@ -77,8 +80,9 @@ class SystemGraphRealmTestHelper
         }
 
         @Override
-        public void initialiseDefaultDatabases()
+        public DatabaseIdRepository.Caching databaseIdRepository()
         {
+            return databaseIdRepository;
         }
 
         @Override

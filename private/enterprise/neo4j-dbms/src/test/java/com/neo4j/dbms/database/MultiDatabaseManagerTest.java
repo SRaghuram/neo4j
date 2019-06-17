@@ -13,28 +13,24 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.spy;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 class MultiDatabaseManagerTest
 {
     private static final String CUSTOM_DATABASE_NAME = "custom";
-    private static final DatabaseIdRepository databaseIdReposity = new PlaceholderDatabaseIdRepository( Config.defaults() );
-    private static final DatabaseId sysId = databaseIdReposity.systemDatabase();
-    private static final DatabaseId neoId = databaseIdReposity.defaultDatabase();
-    private static final DatabaseId customId = databaseIdReposity.get( CUSTOM_DATABASE_NAME );
+    private static final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private static final DatabaseId sysId = SYSTEM_DATABASE_ID;
+    private static final DatabaseId neoId = databaseIdRepository.defaultDatabase();
+    private static final DatabaseId customId = databaseIdRepository.get( CUSTOM_DATABASE_NAME );
 
     private MultiDatabaseManager<DatabaseContext> databaseManager;
     private DatabaseContext sys;

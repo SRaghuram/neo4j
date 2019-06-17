@@ -15,12 +15,11 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.dbms.database.DatabaseContext
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
-import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
 
 import scala.collection.Map
@@ -79,12 +78,11 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   )
 
   def authManager: CommercialAuthManager = graph.getDependencyResolver.resolveDependency(classOf[CommercialAuthManager])
-  def databaseManager: DatabaseManager[DatabaseContext] = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
 
   override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
   def selectDatabase(name: String): Unit = {
-    val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(new TestDatabaseIdRepository().get(name))
+    val maybeCtx: Optional[DatabaseContext] = databaseManager.getDatabaseContext(name)
     val dbCtx: DatabaseContext = maybeCtx.orElseGet(() => throw new RuntimeException(s"No such database: $name"))
     graphOps = dbCtx.databaseFacade()
     graph = new GraphDatabaseCypherService(graphOps)

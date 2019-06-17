@@ -16,28 +16,25 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 class ShutdownOperatorTest
 {
-    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private DatabaseManager<?> databaseManager = new StubMultiDatabaseManager();
-    private ShutdownOperator operator = new ShutdownOperator( databaseManager, databaseIdRepository );
+    private ShutdownOperator operator = new ShutdownOperator( databaseManager );
     private DbmsReconciler dbmsReconciler = mock( DbmsReconciler.class );
     private TestOperatorConnector connector = new TestOperatorConnector( dbmsReconciler );
-    private List<DatabaseId> databases = asList(
-            databaseIdRepository.systemDatabase(),
+    private List<DatabaseId> databases = asList( SYSTEM_DATABASE_ID,
             databaseIdRepository.defaultDatabase(),
             databaseIdRepository.get( "foo" )
     );
@@ -59,12 +56,12 @@ class ShutdownOperatorTest
         Assertions.assertEquals( triggerCalls.size(), 2 );
         var initialDesired = triggerCalls.get( 0 ).first();
         var expected = databases.stream()
-                .filter( id -> !databaseIdRepository.systemDatabase().equals( id ) )
+                .filter( id -> !SYSTEM_DATABASE_ID.equals( id ) )
                 .collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
         assertEquals( expected, initialDesired );
 
         var subsequentDesired = triggerCalls.get( 1 ).first();
-        expected.put( databaseIdRepository.systemDatabase(), STOPPED );
+        expected.put( SYSTEM_DATABASE_ID, STOPPED );
         assertEquals( expected, subsequentDesired );
     }
 

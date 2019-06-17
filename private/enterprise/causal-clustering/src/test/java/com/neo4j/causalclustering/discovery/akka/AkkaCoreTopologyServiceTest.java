@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -50,6 +49,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 class AkkaCoreTopologyServiceTest
 {
@@ -60,7 +60,7 @@ class AkkaCoreTopologyServiceTest
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
 
@@ -221,7 +221,7 @@ class AkkaCoreTopologyServiceTest
     void shouldNotBootstrapWhenEmpty()
     {
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.defaultDatabase() ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.systemDatabase() ) );
+        assertFalse( service.canBootstrapRaftGroup( SYSTEM_DATABASE_ID ) );
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "customers" ) ) );
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "orders" ) ) );
     }
@@ -238,7 +238,7 @@ class AkkaCoreTopologyServiceTest
         assertTrue( service.canBootstrapRaftGroup( databaseId ) );
 
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.defaultDatabase() ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.systemDatabase() ) );
+        assertFalse( service.canBootstrapRaftGroup( SYSTEM_DATABASE_ID ) );
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "customers" ) ) );
     }
 

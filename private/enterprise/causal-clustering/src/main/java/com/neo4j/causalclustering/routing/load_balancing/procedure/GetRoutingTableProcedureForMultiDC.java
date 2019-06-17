@@ -13,7 +13,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
@@ -31,10 +30,10 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor,
-            DatabaseIdRepository databaseIdRepository, DatabaseManager<?> databaseManager, Config config )
+    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor, DatabaseManager<?> databaseManager,
+            Config config )
     {
-        super( namespace, databaseIdRepository, databaseManager, config );
+        super( namespace, databaseManager, config );
         this.loadBalancingProcessor = loadBalancingProcessor;
     }
 
@@ -47,6 +46,6 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
     @Override
     protected RoutingResult invoke( DatabaseId databaseId, MapValue routingContext ) throws ProcedureException
     {
-        return loadBalancingProcessor.run( databaseId.name(), routingContext );
+        return loadBalancingProcessor.run( databaseId, routingContext );
     }
 }

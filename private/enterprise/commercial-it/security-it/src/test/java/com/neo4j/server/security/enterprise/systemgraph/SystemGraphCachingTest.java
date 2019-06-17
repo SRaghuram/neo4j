@@ -66,7 +66,7 @@ class SystemGraphCachingTest
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
         realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
-                securityLog, databaseManager, managementService, systemGraphExecutor, Config.defaults() );
+                securityLog, databaseManager, systemGraphExecutor, Config.defaults() );
     }
 
     @AfterEach
@@ -134,7 +134,7 @@ class SystemGraphCachingTest
         TestQueryExecutor( DatabaseManager<?> databaseManager, ThreadToStatementContextBridge threadToStatementContextBridge,
                 DatabaseIdRepository databaseIdRepository )
         {
-            super( databaseManager, threadToStatementContextBridge, databaseIdRepository );
+            super( databaseManager, threadToStatementContextBridge );
         }
 
         boolean takeAccessFlag()

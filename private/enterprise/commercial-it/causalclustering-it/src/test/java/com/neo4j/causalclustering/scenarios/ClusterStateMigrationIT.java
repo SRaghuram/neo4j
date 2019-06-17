@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -132,7 +132,7 @@ class ClusterStateMigrationIT
     private static RaftId readRaftId( CoreClusterMember member )
     {
         var storageFactory = storageFactory( member );
-        var raftIdStorage = storageFactory.createRaftIdStorage( new TestDatabaseIdRepository().defaultDatabase(), nullDatabaseLogProvider() );
+        var raftIdStorage = storageFactory.createRaftIdStorage( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, nullDatabaseLogProvider() );
         try
         {
             return raftIdStorage.readState();

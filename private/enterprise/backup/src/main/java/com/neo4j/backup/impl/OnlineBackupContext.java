@@ -11,16 +11,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.consistency.checking.full.ConsistencyFlags;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
+import org.neo4j.consistency.checking.full.ConsistencyFlags;
 
 public class OnlineBackupContext
 {
     private final SocketAddress address;
-    private final DatabaseId databaseId;
+    private final String databaseName;
     private final Path databaseBackupDir;
     private final Path reportDir;
     private final boolean fallbackToFullBackup;
@@ -28,11 +26,11 @@ public class OnlineBackupContext
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
 
-    private OnlineBackupContext( SocketAddress address, DatabaseId databaseId, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
+    private OnlineBackupContext( SocketAddress address, String databaseName, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
             boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config )
     {
         this.address = address;
-        this.databaseId = databaseId;
+        this.databaseName = databaseName;
         this.databaseBackupDir = databaseBackupDir;
         this.reportDir = reportDir;
         this.fallbackToFullBackup = fallbackToFullBackup;
@@ -51,9 +49,9 @@ public class OnlineBackupContext
         return address;
     }
 
-    public DatabaseId getDatabaseId()
+    public String getDatabaseName()
     {
-        return databaseId;
+        return databaseName;
     }
 
     public Path getDatabaseBackupDir()
@@ -177,19 +175,13 @@ public class OnlineBackupContext
 
         public OnlineBackupContext build()
         {
-            DatabaseId databaseId;
             if ( config == null )
             {
                 config = Config.defaults();
             }
-            DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
             if ( databaseName == null )
             {
-                databaseId = databaseIdRepository.defaultDatabase();
-            }
-            else
-            {
-                databaseId = databaseIdRepository.get( databaseName );
+                databaseName = config.get( GraphDatabaseSettings.default_database );
             }
             if ( backupDirectory == null )
             {
@@ -201,10 +193,10 @@ public class OnlineBackupContext
             }
 
             SocketAddress address = buildAddress();
-            Path databaseBackupDirectory = backupDirectory.resolve( databaseId.name() );
+            Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
 
-            return new OnlineBackupContext( address, databaseId, databaseBackupDirectory, reportsDirectory,
+            return new OnlineBackupContext( address, databaseName, databaseBackupDirectory, reportsDirectory,
                     fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
         }
 

@@ -68,7 +68,6 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 public class ReadReplicaEditionModule extends ClusteringEditionModule
 {
     protected final LogProvider logProvider;
-    private final DatabaseIdRepository databaseIdRepository;
     private final Config globalConfig;
     private final CompositeDatabaseHealth globalHealth;
     private final GlobalModule globalModule;
@@ -93,7 +92,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         this.myIdentity = myIdentity;
         LogService logService = globalModule.getLogService();
         this.globalConfig = globalModule.getGlobalConfig();
-        this.databaseIdRepository = globalModule.getDatabaseIdRepository();
         logProvider = logService.getInternalLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myIdentity ) );
 
@@ -120,7 +118,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures, DatabaseIdRepository databaseIdRepository ) throws KernelException
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
@@ -133,7 +131,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     {
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
-        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, databaseIdRepository, config );
+        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config );
     }
 
     private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Health globalHealth, Server catchupServer, Optional<Server> backupServer )
@@ -173,8 +171,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository,
-                reconciledTxTracker );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
@@ -191,7 +188,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         topologyService = createTopologyService( databaseManager, globalLogService );
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
-        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem );
+        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, logProvider );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );
@@ -247,12 +244,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, myIdentity, hostnameResolver,
                 sslPolicyLoader, discoveryMemberFactory );
-    }
-
-    @Override
-    public DatabaseIdRepository databaseIdRepository()
-    {
-        return databaseIdRepository;
     }
 
     ReadReplicaDatabaseFactory readReplicaDatabaseFactory()

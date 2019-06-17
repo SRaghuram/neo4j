@@ -132,6 +132,12 @@ class FakeCatchupServer implements CatchupServerHandler
     }
 
     @Override
+    public ChannelHandler getDatabaseIdRequestHandler( CatchupServerProtocol protocol )
+    {
+        return new ChannelInboundHandlerAdapter();
+    }
+
+    @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
         return new ChannelInboundHandlerAdapter();

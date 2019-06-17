@@ -7,10 +7,10 @@ package com.neo4j.causalclustering.catchup;
 
 import io.netty.channel.ChannelHandler;
 
-import java.util.Optional;
-
 public interface CatchupServerHandler
 {
+    ChannelHandler getDatabaseIdRequestHandler( CatchupServerProtocol protocol );
+
     ChannelHandler txPullRequestHandler( CatchupServerProtocol catchupServerProtocol );
 
     ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol catchupServerProtocol );

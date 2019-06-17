@@ -63,6 +63,7 @@ class MultiDatabaseGuardIT
         String secondDatabase = "Lila";
         String thirdDatabase = "Bender";
 
+        // We are not creating database nodes in system db, so cannot use database id repository from DatabaseManager as it would not find database
         var databaseIdRepository = new TestDatabaseIdRepository();
         databaseManager.createDatabase( databaseIdRepository.get( firstDatabase ) );
         assertEquals( 3, compositeGuard.getGuards().size() );

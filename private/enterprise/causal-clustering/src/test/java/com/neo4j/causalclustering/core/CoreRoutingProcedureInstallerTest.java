@@ -19,7 +19,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
@@ -67,8 +66,8 @@ class CoreRoutingProcedureInstallerTest
         var topologyService = mock( TopologyService.class );
         var leaderService = mock( LeaderService.class );
 
-        var installer = new CoreRoutingProcedureInstaller( topologyService, leaderService, new TestDatabaseIdRepository(),
-                new StubClusteredDatabaseManager(), config, NullLogProvider.getInstance() );
+        var installer = new CoreRoutingProcedureInstaller( topologyService, leaderService, new StubClusteredDatabaseManager(), config,
+                NullLogProvider.getInstance() );
         installer.install( procedures );
     }
 

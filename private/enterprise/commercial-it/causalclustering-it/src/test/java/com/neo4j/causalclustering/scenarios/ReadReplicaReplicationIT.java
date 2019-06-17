@@ -49,7 +49,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
@@ -551,8 +550,7 @@ class ReadReplicaReplicationIT
     private static void assertFailedToStart( ReadReplica readReplica, String databaseName )
     {
         var defaultDatabase = readReplica
-                .databaseManager()
-                .getDatabaseContext( new TestDatabaseIdRepository().get( databaseName ) )
+                .databaseManager().getDatabaseContext( databaseName )
                 .orElseThrow();
 
         assertTrue( defaultDatabase.isFailed() );

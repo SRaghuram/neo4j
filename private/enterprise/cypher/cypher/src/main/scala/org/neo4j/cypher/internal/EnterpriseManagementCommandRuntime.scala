@@ -441,10 +441,11 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |  SET d.status = $status
           |  SET d.default = $default
           |  SET d.created_at = datetime()
+          |  SET d.uuid = randomUUID()
           |)
           |WITH "ignoreMe" as ignore
           |MATCH (d:Database {name: $name})
-          |RETURN d.name as name, d.status as status""".stripMargin,
+          |RETURN d.name as name, d.status as status, d.uuid as uuid""".stripMargin,
         VirtualValues.map(Array("name", "status", "default", "maxNumberOfDatabases"),
           Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))),
         QueryHandler

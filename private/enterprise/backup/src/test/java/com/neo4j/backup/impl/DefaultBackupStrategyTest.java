@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
@@ -15,6 +16,8 @@ import java.io.IOException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -23,6 +26,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -37,13 +41,16 @@ class DefaultBackupStrategyTest
     private SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
     private StoreFiles storeFiles = mock( StoreFiles.class );
     private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
+    private DatabaseId databaseId = new TestDatabaseIdRepository().get( "database" );
     private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
+    private final String databaseName = "database name";
 
     @BeforeEach
-    void setup() throws IOException, StoreIdDownloadFailedException
+    void setup() throws IOException, StoreIdDownloadFailedException, DatabaseIdDownloadFailedException
     {
         when( storeFiles.readStoreId( any() ) ).thenReturn( expectedStoreId );
-        when( backupDelegator.fetchStoreId( any() ) ).thenReturn( expectedStoreId );
+        when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenReturn( databaseId );
+        when( backupDelegator.fetchStoreId( any(), any() ) ).thenReturn( expectedStoreId );
     }
 
     @Test
@@ -52,10 +59,11 @@ class DefaultBackupStrategyTest
         // given
 
         // when
-        strategy.performIncrementalBackup( desiredBackupLayout, address );
+        strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName );
 
         // then
-        verify( backupDelegator ).tryCatchingUp( eq( address ), any( StoreId.class ), eq( desiredBackupLayout ) );
+        verify( backupDelegator ).fetchDatabaseId( eq( address ), eq( databaseName ) );
+        verify( backupDelegator ).tryCatchingUp( eq( address ), any( StoreId.class ), eq( databaseId ), eq( desiredBackupLayout ) );
     }
 
     @Test
@@ -65,10 +73,11 @@ class DefaultBackupStrategyTest
         doThrow( IOException.class ).when( storeFiles ).readStoreId( any() );
 
         // when
-        strategy.performFullBackup( desiredBackupLayout, address );
+        strategy.performFullBackup( desiredBackupLayout, address, databaseName );
 
         // then
-        verify( backupDelegator ).fetchStoreId( address );
+        verify( backupDelegator ).fetchDatabaseId( address, databaseName );
+        verify( backupDelegator ).fetchStoreId( address, databaseId );
     }
 
     @Test
@@ -77,11 +86,12 @@ class DefaultBackupStrategyTest
         // given
 
         // when
-        strategy.performIncrementalBackup( desiredBackupLayout, address );
+        strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName );
 
         // then
-        verify( backupDelegator ).fetchStoreId( address );
-        verify( backupDelegator ).tryCatchingUp( eq( address ), eq( expectedStoreId ), any() );
+        verify( backupDelegator ).fetchDatabaseId( address, databaseName );
+        verify( backupDelegator ).fetchStoreId( address, databaseId );
+        verify( backupDelegator ).tryCatchingUp( eq( address ), eq( expectedStoreId ), eq( databaseId ), any() );
     }
 
     @Test
@@ -91,11 +101,27 @@ class DefaultBackupStrategyTest
         when( storeFiles.readStoreId( any() ) ).thenThrow( IOException.class );
 
         // when
-        strategy.performFullBackup( desiredBackupLayout, address );
+        strategy.performFullBackup( desiredBackupLayout, address, databaseName );
 
         // then
-        verify( backupDelegator ).fetchStoreId( address );
-        verify( backupDelegator ).copy( address, expectedStoreId, desiredBackupLayout );
+        verify( backupDelegator ).fetchDatabaseId( address, databaseName );
+        verify( backupDelegator ).fetchStoreId( address, databaseId );
+        verify( backupDelegator ).copy( address, expectedStoreId, databaseId, desiredBackupLayout );
+    }
+
+    @Test
+    void failingToRetrieveDatabaseIdCausesException_incrementalBackup() throws Exception
+    {
+        // given
+        DatabaseIdDownloadFailedException exception = new DatabaseIdDownloadFailedException( "oops" );
+        when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenThrow( exception );
+
+        // when
+        BackupExecutionException error = assertThrows( BackupExecutionException.class,
+                () -> strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName ) );
+
+        // then
+        assertEquals( exception, error.getCause() );
     }
 
     @Test
@@ -103,11 +129,11 @@ class DefaultBackupStrategyTest
     {
         // given
         StoreIdDownloadFailedException storeIdDownloadFailedException = new StoreIdDownloadFailedException( "Expected description" );
-        when( backupDelegator.fetchStoreId( any() ) ).thenThrow( storeIdDownloadFailedException );
+        when( backupDelegator.fetchStoreId( any(), any() ) ).thenThrow( storeIdDownloadFailedException );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performIncrementalBackup( desiredBackupLayout, address ) );
+                () -> strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertEquals( storeIdDownloadFailedException, error.getCause() );
@@ -118,14 +144,29 @@ class DefaultBackupStrategyTest
     {
         // given
         StoreCopyFailedException storeCopyFailedException = new StoreCopyFailedException( "Ops" );
-        doThrow( storeCopyFailedException ).when( backupDelegator).tryCatchingUp( any(), eq( expectedStoreId ), any() );
+        doThrow( storeCopyFailedException ).when( backupDelegator).tryCatchingUp( any(), eq( expectedStoreId ), any(), any() );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performIncrementalBackup( desiredBackupLayout, address ) );
+                () -> strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertEquals( storeCopyFailedException, error.getCause() );
+    }
+
+    @Test
+    void failingToRetrieveDatabaseIdCausesException_fullBackup() throws Exception
+    {
+        // given
+        DatabaseIdDownloadFailedException exception = new DatabaseIdDownloadFailedException( "oops" );
+        when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenThrow( exception );
+
+        // when
+        BackupExecutionException error = assertThrows( BackupExecutionException.class,
+                () -> strategy.performFullBackup( desiredBackupLayout, address, databaseName ) );
+
+        // then
+        assertEquals( exception, error.getCause() );
     }
 
     @Test
@@ -133,11 +174,11 @@ class DefaultBackupStrategyTest
     {
         // given
         StoreIdDownloadFailedException storeIdDownloadFailedException = new StoreIdDownloadFailedException( "Expected description" );
-        when( backupDelegator.fetchStoreId( any() ) ).thenThrow( storeIdDownloadFailedException );
+        when( backupDelegator.fetchStoreId( any(), any() ) ).thenThrow( storeIdDownloadFailedException );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performFullBackup( desiredBackupLayout, address ) );
+                () -> strategy.performFullBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertEquals( storeIdDownloadFailedException, error.getCause() );
@@ -148,14 +189,14 @@ class DefaultBackupStrategyTest
     {
         // given
         StoreCopyFailedException storeCopyFailedException = new StoreCopyFailedException( "Oops" );
-        doThrow( storeCopyFailedException ).when( backupDelegator ).copy( any(), any(), any() );
+        doThrow( storeCopyFailedException ).when( backupDelegator ).copy( any(), any(), any(), any() );
 
         // and
         when( storeFiles.readStoreId( any() ) ).thenThrow( IOException.class );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performFullBackup( desiredBackupLayout, address ) );
+                () -> strategy.performFullBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertEquals( storeCopyFailedException, error.getCause() );
@@ -187,7 +228,7 @@ class DefaultBackupStrategyTest
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performIncrementalBackup( desiredBackupLayout, address ) );
+                () -> strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
@@ -201,7 +242,7 @@ class DefaultBackupStrategyTest
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performIncrementalBackup( desiredBackupLayout, address ) );
+                () -> strategy.performIncrementalBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
@@ -215,7 +256,7 @@ class DefaultBackupStrategyTest
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performFullBackup( desiredBackupLayout, address ) );
+                () -> strategy.performFullBackup( desiredBackupLayout, address, databaseName ) );
 
         // then
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );

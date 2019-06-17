@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.nio.channels.ClosedChannelException;
@@ -58,11 +59,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     @Override
     public void onFileHeader( FileHeader fileHeader )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onFileHeader( requestOutcomeSignal, fileHeader );
-        }
+        ifNotCancelled( () -> delegate.onFileHeader( requestOutcomeSignal, fileHeader ) );
     }
 
     @Override
@@ -80,70 +77,57 @@ class TrackingResponseHandler implements CatchupResponseHandler
     @Override
     public void onFileStreamingComplete( StoreCopyFinishedResponse response )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onFileStreamingComplete( requestOutcomeSignal, response );
-        }
+        ifNotCancelled( () -> delegate.onFileStreamingComplete( requestOutcomeSignal, response ) );
     }
 
     @Override
     public void onTxPullResponse( TxPullResponse tx )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onTxPullResponse( requestOutcomeSignal, tx );
-        }
+        ifNotCancelled( () -> delegate.onTxPullResponse( requestOutcomeSignal, tx ) );
     }
 
     @Override
     public void onTxStreamFinishedResponse( TxStreamFinishedResponse response )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onTxStreamFinishedResponse( requestOutcomeSignal, response );
-        }
+        ifNotCancelled( () -> delegate.onTxStreamFinishedResponse( requestOutcomeSignal, response ) );
     }
 
     @Override
     public void onGetStoreIdResponse( GetStoreIdResponse response )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onGetStoreIdResponse( requestOutcomeSignal, response );
-        }
+        ifNotCancelled( () -> delegate.onGetStoreIdResponse( requestOutcomeSignal, response ) );
+    }
+
+    @Override
+    public void onGetDatabaseIdResponse( GetDatabaseIdResponse response )
+    {
+        ifNotCancelled( () -> delegate.onGetDatabaseIdResponse( requestOutcomeSignal, response ) );
     }
 
     @Override
     public void onCoreSnapshot( CoreSnapshot coreSnapshot )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onCoreSnapshot( requestOutcomeSignal, coreSnapshot );
-        }
+        ifNotCancelled( () -> delegate.onCoreSnapshot( requestOutcomeSignal, coreSnapshot ) );
     }
 
     @Override
     public void onStoreListingResponse( PrepareStoreCopyResponse storeListingRequest )
     {
-        if ( !requestOutcomeSignal.isCancelled() )
-        {
-            recordLastResponse();
-            delegate.onStoreListingResponse( requestOutcomeSignal, storeListingRequest );
-        }
+        ifNotCancelled( () -> delegate.onStoreListingResponse( requestOutcomeSignal, storeListingRequest ) );
     }
 
     @Override
     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
     {
+        ifNotCancelled( () -> delegate.onCatchupErrorResponse( requestOutcomeSignal, catchupErrorResponse ) );
+    }
+
+    private void ifNotCancelled( Runnable runnable )
+    {
         if ( !requestOutcomeSignal.isCancelled() )
         {
             recordLastResponse();
-            delegate.onCatchupErrorResponse( requestOutcomeSignal, catchupErrorResponse );
+            runnable.run();
         }
     }
 

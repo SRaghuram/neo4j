@@ -18,8 +18,6 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSources;
@@ -32,7 +30,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 {
     private FileSystemAbstraction fs;
     private ClusterStateLayout clusterStateLayout;
-    private DatabaseId defaultDatabaseId;
+    private String defaultDatabaseName;
 
     public ClusterDiagnosticsOfflineReportProvider()
     {
@@ -40,11 +38,11 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, DatabaseIdRepository databaseIdRepository, Config config, File storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, File storeDirectory )
     {
         this.fs = fs;
         this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() );
-        this.defaultDatabaseId = databaseIdRepository.defaultDatabase();
+        this.defaultDatabaseName = defaultDatabaseName;
     }
 
     @Override
@@ -65,7 +63,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getRaftLogs( List<DiagnosticsReportSource> sources )
     {
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseId );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
         FileNames fileNames = new FileNames( raftLogDirectory );
         SortedMap<Long,File> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
 
@@ -77,7 +75,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseId, type -> type != RAFT_LOG );
+        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
 
         for ( File directory : directories )
         {

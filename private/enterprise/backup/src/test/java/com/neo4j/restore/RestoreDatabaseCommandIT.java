@@ -26,8 +26,6 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.locker.DatabaseLocker;
 import org.neo4j.kernel.internal.locker.Locker;
@@ -62,18 +60,17 @@ class RestoreDatabaseCommandIT
     @Inject
     private FileSystemAbstraction fileSystem;
     private static DatabaseManagementService managementService;
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
     void forceShouldRespectDatabaseLock()
     {
-        var databaseId = databaseIdRepository.get( "new" );
+        var databaseName =  "new" ;
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
 
-        DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
+        DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
         int fromNodeCount = 10;
         int toNodeCount = 20;
 
@@ -85,7 +82,7 @@ class RestoreDatabaseCommandIT
             try ( Locker storeLocker = new DatabaseLocker( fileSystem, toLayout ) )
             {
                 storeLocker.checkLock();
-                new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, true ).execute();
+                new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, true ).execute();
             }
         } );
         assertThat( commandFailedException.getMessage(), equalTo( "The database is in use. Stop database 'new' and try again." ) );
@@ -95,18 +92,18 @@ class RestoreDatabaseCommandIT
     void shouldNotCopyOverAndExistingDatabase() throws Exception
     {
         // given
-        var databaseId = databaseIdRepository.get( "new" );
+        var databaseName =  "new" ;
         StoreLayout testStore = directory.storeLayout( "testStore" );
         Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
-        DatabaseLayout toLayout = testStore.databaseLayout( databaseId.name() );
+        DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
 
         createDbAt( fromPath, 0 );
         createDbAt( toLayout, 0 );
 
         IllegalArgumentException illegalException =
-                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, false ).execute() );
+                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Database with name [new] already exists" ), illegalException.getMessage() );
     }
 
@@ -114,16 +111,16 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotExist() throws Exception
     {
         // given
-        var databaseId = databaseIdRepository.get( "new" );
+        var databaseName =  "new" ;
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
-        DatabaseLayout toLayout = directory.databaseLayout( databaseId.name() );
+        DatabaseLayout toLayout = directory.databaseLayout( databaseName );
 
         createDbAt( toLayout.databaseDirectory(), 0 );
 
         IllegalArgumentException illegalException =
-                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, false ).execute() );
+                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory does not exist" ), illegalException.getMessage() );
     }
 
@@ -131,14 +128,14 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles()
     {
         // given
-        var databaseId = databaseIdRepository.get( "new" );
+        var databaseName =  "new" ;
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         assertTrue( fromPath.mkdirs() );
 
         IllegalArgumentException illegalException =
-                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, false ).execute() );
+                assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory is not a database backup" ), illegalException.getMessage() );
     }
 
@@ -160,7 +157,7 @@ class RestoreDatabaseCommandIT
         createDbAt( toLayout, toNodeCount );
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), true ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true ).execute();
 
         // then
         DatabaseManagementService managementService =
@@ -197,7 +194,7 @@ class RestoreDatabaseCommandIT
         managementService.shutdown();
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), true ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true ).execute();
 
         LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem ).build();
         LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem ).build();
@@ -221,7 +218,7 @@ class RestoreDatabaseCommandIT
 
         createDbAt( fromPath, 10 );
 
-        new RestoreDatabaseCommand( fs, fromPath, config, databaseIdRepository.get( "testDatabase" ), true ).execute();
+        new RestoreDatabaseCommand( fs, fromPath, config, "testDatabase", true ).execute();
 
         verify( fs ).deleteRecursively( eq( testLayout.databaseDirectory() ) );
         verify( fs, never() ).deleteRecursively( eq( relativeLogDirectory ) );

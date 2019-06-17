@@ -11,8 +11,6 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,8 +36,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
@@ -98,8 +97,8 @@ class StoreCopyClientTest
     private ConstantTimeTimeoutStrategy backOffStrategy;
     private MockCatchupClient catchupClient;
     private final MockCatchupClient.MockClientResponses clientResponses = responses();
-    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )

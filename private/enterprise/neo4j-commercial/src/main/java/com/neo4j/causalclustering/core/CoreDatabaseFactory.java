@@ -292,7 +292,7 @@ class CoreDatabaseFactory
 
         SessionTracker sessionTracker = createSessionTracker( databaseId, life, debugLog );
 
-        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId, life, debugLog );
+        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId.name(), life, debugLog );
         CoreState coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
         CommandApplicationProcess commandApplicationProcess = createCommandApplicationProcess( raftGroup, panicService, config, life, jobScheduler,
@@ -339,7 +339,7 @@ class CoreDatabaseFactory
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem,
                 debugLog, storageEngineFactory, config );
 
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId, debugLog );
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId.name(), debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( databaseId, raftIdStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ), clusterBindingTimeout,
@@ -383,7 +383,8 @@ class CoreDatabaseFactory
 
     private SessionTracker createSessionTracker( DatabaseId databaseId, LifeSupport life, DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( databaseId, life, databaseLogProvider );
+        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage =
+                storageFactory.createSessionTrackerStorage( databaseId.name(), life, databaseLogProvider );
         return new SessionTracker( sessionTrackerStorage );
     }
 
@@ -420,15 +421,18 @@ class CoreDatabaseFactory
     {
         BooleanSupplier idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myIdentity );
         Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( databaseId, barrierTokenState );
-        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler ).withIdGenerationFactoryProvider(
-                idGeneratorProvider ).withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
+        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler )
+                .withIdGenerationFactoryProvider( idGeneratorProvider )
+                .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) )
+                .build();
         return idContextFactory.createIdContext( databaseId );
     }
 
     private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life,
                                                                                DatabaseLogProvider databaseLogProvider )
     {
-        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createBarrierTokenStorage( databaseId, life, databaseLogProvider );
+        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage =
+                storageFactory.createBarrierTokenStorage( databaseId.name(), life, databaseLogProvider );
         return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage );
     }
 

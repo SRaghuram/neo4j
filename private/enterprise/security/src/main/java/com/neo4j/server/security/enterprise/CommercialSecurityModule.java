@@ -141,7 +141,7 @@ public class CommercialSecurityModule extends SecurityModule
         SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, dependencies.databaseIdRepository() );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, databaseManager.databaseIdRepository() );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
@@ -284,7 +284,7 @@ public class CommercialSecurityModule extends SecurityModule
             DatabaseIdRepository databaseIdRepository )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge, databaseIdRepository );
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
@@ -644,7 +644,7 @@ public class CommercialSecurityModule extends SecurityModule
             DatabaseIdRepository databaseIdRepository )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge, databaseIdRepository );
+                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphImportOptions importOptions =
                 configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );
