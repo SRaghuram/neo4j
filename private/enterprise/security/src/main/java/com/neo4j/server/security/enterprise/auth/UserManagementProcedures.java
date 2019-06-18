@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -27,7 +26,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.createUser", mode = DBMS )
     public void createUser( @Name( "username" ) String username, @Name( "password" ) String password,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException, IOException
+            throws InvalidArgumentsException
     {
         userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
     }
@@ -36,7 +35,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.changePassword", mode = DBMS )
     public void changePassword( @Name( "password" ) String password,
             @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException, IOException
+            throws InvalidArgumentsException
     {
         setUserPassword( securityContext.subject().username(), password, requirePasswordChange );
     }
@@ -45,7 +44,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS )
     public void changeUserPassword( @Name( "username" ) String username, @Name( "newPassword" ) String newPassword,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException, IOException
+            throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
         setUserPassword( username, newPassword, requirePasswordChange );
@@ -54,8 +53,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Assign a role to the user." )
     @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS )
-    public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username )
-            throws IOException, InvalidArgumentsException
+    public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws InvalidArgumentsException
     {
         userManager.addRoleToUser( roleName, username );
     }
@@ -63,8 +61,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Unassign a role from the user." )
     @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS )
-    public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username )
-            throws InvalidArgumentsException, IOException
+    public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws InvalidArgumentsException
     {
         userManager.removeRoleFromUser( roleName, username );
     }
@@ -72,7 +69,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Delete the specified user." )
     @Procedure( name = "dbms.security.deleteUser", mode = DBMS )
-    public void deleteUser( @Name( "username" ) String username ) throws InvalidArgumentsException, IOException
+    public void deleteUser( @Name( "username" ) String username ) throws InvalidArgumentsException
     {
         if ( userManager.deleteUser( username ) )
         {
@@ -83,7 +80,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Suspend the specified user." )
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS )
-    public void suspendUser( @Name( "username" ) String username ) throws IOException, InvalidArgumentsException
+    public void suspendUser( @Name( "username" ) String username ) throws InvalidArgumentsException
     {
         userManager.suspendUser( username );
         kickoutUser( username, "suspension" );
@@ -94,7 +91,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.activateUser", mode = DBMS )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws IOException, InvalidArgumentsException
+            throws InvalidArgumentsException
     {
         userManager.activateUser( username, requirePasswordChange );
     }
@@ -126,8 +123,7 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Description( "List all roles assigned to the specified user." )
     @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS )
-    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username )
-            throws InvalidArgumentsException
+    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
         return userManager.getRoleNamesForUser( username ).stream().map( StringResult::new );
@@ -136,8 +132,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "List all users currently assigned the specified role." )
     @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS )
-    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName )
-            throws InvalidArgumentsException
+    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
     {
         return userManager.getUsernamesForRole( roleName ).stream().map( StringResult::new );
     }
@@ -145,7 +140,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Create a new role." )
     @Procedure( name = "dbms.security.createRole", mode = DBMS )
-    public void createRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException, IOException
+    public void createRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
     {
         userManager.newRole( roleName );
     }
@@ -153,88 +148,17 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @Description( "Delete the specified role. Any role assignments will be removed." )
     @Procedure( name = "dbms.security.deleteRole", mode = DBMS )
-    public void deleteRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException, IOException
+    public void deleteRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
     {
         userManager.deleteRole( roleName );
     }
 
-    private void setUserPassword( String username, String newPassword, boolean requirePasswordChange )
-            throws IOException, InvalidArgumentsException
+    private void setUserPassword( String username, String newPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
         userManager.setUserPassword( username, newPassword != null ? UTF8.encode( newPassword ) : null, requirePasswordChange );
         if ( securityContext.subject().hasUsername( username ) )
         {
             securityContext.subject().setPasswordChangeNoLongerRequired();
-        }
-    }
-
-    @Admin
-    @Description( "Grant privilege to role." )
-    @Procedure( name = "dbms.security.grantPrivilegeToRole", mode = DBMS )
-    public void grantPrivilegeToRole(
-            @Name( "roleName" ) String roleName,
-            @Name( "action" ) String action,
-            @Name( "resource" ) String resource,
-            @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
-    {
-        ResourcePrivilege privilege;
-        if ( database.isBlank() )
-        {
-            privilege = new ResourcePrivilege(
-                    asAction( action ),
-                    Resource.parse( resource, null, null ),
-                    Segment.ALL
-            );
-        }
-        else
-        {
-            privilege = new ResourcePrivilege(
-                    asAction( action ),
-                    Resource.parse( resource, null, null ),
-                    Segment.ALL,
-                    database );
-        }
-        userManager.grantPrivilegeToRole( roleName, privilege );
-    }
-
-    @Admin
-    @Description( "Revoke privilege from role." )
-    @Procedure( name = "dbms.security.revokePrivilegeFromRole", mode = DBMS )
-    public void revokePrivilegeFromRole(
-            @Name( "roleName" ) String roleName,
-            @Name( "action" ) String action,
-            @Name( "resource" ) String resource,
-            @Name( value = "database", defaultValue = "" ) String database ) throws InvalidArgumentsException
-    {
-        ResourcePrivilege privilege;
-        if ( database.isBlank() )
-        {
-            privilege = new ResourcePrivilege(
-                    asAction( action ),
-                    Resource.parse( resource, null, null ),
-                    Segment.ALL
-            );
-        }
-        else
-        {
-            privilege = new ResourcePrivilege(
-                    asAction( action ),
-                    Resource.parse( resource, null, null ),
-                    Segment.ALL,
-                    database );
-        }
-        userManager.revokePrivilegeFromRole( roleName, privilege );
-    }
-
-    private ResourcePrivilege.Action asAction( String actionString ) throws InvalidArgumentsException
-    {
-        try
-        {
-            return ResourcePrivilege.Action.valueOf( actionString.toUpperCase() );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new InvalidArgumentsException( String.format( "'%s' is not a valid action", actionString ) );
         }
     }
 }

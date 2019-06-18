@@ -5,15 +5,12 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Set;
 
-import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -31,8 +28,6 @@ class PersonalUserManagerTest
     private EvilUserManager evilUserManager;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
-
-    private static final String ROLE_NAME = "custom";
 
     @BeforeEach
     void setup()
@@ -52,7 +47,7 @@ class PersonalUserManagerTest
         log.clear();
 
         //Expect
-        assertException( () -> userManager.newUser( "HeWhoShallNotBeNamed", password( "avada kedavra" ), false ), IOException.class );
+        assertException( () -> userManager.newUser( "HeWhoShallNotBeNamed", password( "avada kedavra" ), false ), InvalidArgumentsException.class );
         log.assertExactly( error( "[Alice]: tried to create user `%s`: %s", "HeWhoShallNotBeNamed", "newUserException" ) );
     }
 
@@ -68,126 +63,9 @@ class PersonalUserManagerTest
         log.assertExactly( error( "[Bob]: tried to create user `%s`: %s", "HeWhoShallNotBeNamed", "Permission denied." ) );
     }
 
-    @Test
-    void shouldLogSuccessGrantPrivilege() throws IOException, InvalidArgumentsException
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        userManager.newRole( ROLE_NAME );
-        log.clear();
-
-        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) );
-        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for %s to role `%s`", Action.READ, "graph", "all databases", ROLE_NAME ) );
-    }
-
-    @Test
-    void shouldLogFailureGrantPrivilege()
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        log.clear();
-        evilUserManager.setFailNextCall();
-
-        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
-        log.assertExactly( error( "[Alice]: tried to grant `%s` privilege on `%s` for %s to role `%s`: %s",
-                Action.READ, "graph", "all databases", ROLE_NAME, "assignPrivilegeToRoleException" )
-        );
-    }
-
-    @Test
-    void shouldLogUnauthorizedGrantPrivilege()
-    {
-        PersonalUserManager userManager = getUserManager( "Bob", false );
-        log.clear();
-
-        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
-        log.assertExactly( error( "[Bob]: tried to grant `%s` privilege on `%s` for %s to role `%s`: %s",
-                Action.READ, "graph", "all databases", ROLE_NAME, "Permission denied." ) );
-    }
-
-    @Test
-    void shouldLogSuccessRevokePrivilege() throws IOException, InvalidArgumentsException
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        userManager.newRole( ROLE_NAME );
-        log.clear();
-
-        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) );
-        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for %s from role `%s`", Action.READ, "graph", "all databases", ROLE_NAME ) );
-    }
-
-    @Test
-    void shouldLogFailureRevokePrivilege()
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        log.clear();
-        evilUserManager.setFailNextCall();
-
-        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
-        log.assertExactly( error( "[Alice]: tried to revoke `%s` privilege on `%s` for %s from role `%s`: %s",
-                Action.READ, "graph", "all databases", ROLE_NAME, "revokePrivilegeFromRoleException" )
-        );
-    }
-
-    @Test
-    void shouldLogUnauthorizedRevokePrivilege()
-    {
-        PersonalUserManager userManager = getUserManager( "Bob", false );
-        log.clear();
-
-        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, new Resource.GraphResource() ) ) );
-        log.assertExactly( error( "[Bob]: tried to revoke `%s` privilege on `%s` for %s from role `%s`: %s",
-                Action.READ, "graph", "all databases", ROLE_NAME, "Permission denied." ) );
-    }
-
-    @Test
-    void shouldLogUnauthorizedShowPrivileges()
-    {
-        PersonalUserManager userManager = getUserManager( "Bob", false );
-        log.clear();
-
-        catchAuthorizationViolation( () -> userManager.showPrivilegesForUser( "Alice" ) );
-        log.assertExactly(
-                error( "[Bob]: tried to show privileges for user `%s`: %s", "Alice", "Permission denied." ) );
-    }
-
-    @Test
-    void shouldLogFailureShowPrivileges()
-    {
-        PersonalUserManager userManager = getUserManager( "Alice", true );
-        log.clear();
-
-        evilUserManager.setFailNextCall();
-        catchInvalidArguments( () -> userManager.showPrivilegesForUser( "IDoNotExist" ) );
-        log.assertExactly(
-                error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
-    }
-
-    private ResourcePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
-    {
-        return new ResourcePrivilege( action, resource, Segment.ALL );
-    }
-
     private PersonalUserManager getUserManager( String userName, boolean isAdmin )
     {
         return new PersonalUserManager( evilUserManager, new MockAuthSubject( userName ), securityLog, isAdmin );
-    }
-
-    private void catchInvalidArguments( ThrowingAction<Exception> f )
-    {
-        assertException( f, InvalidArgumentsException.class );
-    }
-
-    private void catchAuthorizationViolation( ThrowingAction<Exception> f )
-    {
-        assertException( f, AuthorizationViolationException.class );
-    }
-
-    private AssertableLogProvider.LogMatcher info( String message, Object... arguments )
-    {
-        if ( arguments.length == 0 )
-        {
-            return inLog( this.getClass() ).info( message );
-        }
-        return inLog( this.getClass() ).info( message, (Object[]) arguments );
     }
 
     private AssertableLogProvider.LogMatcher error( String message, Object... arguments )
@@ -212,23 +90,23 @@ class PersonalUserManagerTest
 
         @Override
         public User newUser( String username, byte[] password, boolean changeRequired )
-                throws IOException, InvalidArgumentsException
+                throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "newUserException" );
+                throw new InvalidArgumentsException( "newUserException" );
             }
             return delegate.newUser( username, password, changeRequired );
         }
 
         @Override
-        public boolean deleteUser( String username ) throws IOException, InvalidArgumentsException
+        public boolean deleteUser( String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "deleteUserException" );
+                throw new InvalidArgumentsException( "deleteUserException" );
             }
             return delegate.deleteUser( username );
         }
@@ -252,34 +130,34 @@ class PersonalUserManagerTest
 
         @Override
         public void setUserPassword( String username, byte[] password, boolean requirePasswordChange )
-                throws IOException, InvalidArgumentsException
+                throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "setUserPasswordException" );
+                throw new InvalidArgumentsException( "setUserPasswordException" );
             }
             delegate.setUserPassword( username, password, requirePasswordChange );
         }
 
         @Override
-        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, IOException
+        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "setUserRequirePasswordChangeException" );
+                throw new InvalidArgumentsException( "setUserRequirePasswordChangeException" );
             }
             delegate.setUserRequirePasswordChange( username, requirePasswordChange );
         }
 
         @Override
-        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException, IOException
+        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "setUserStatusException" );
+                throw new InvalidArgumentsException( "setUserStatusException" );
             }
             delegate.setUserStatus( username, isSuspended );
         }
@@ -291,57 +169,57 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void suspendUser( String username ) throws IOException, InvalidArgumentsException
+        public void suspendUser( String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "suspendUserException" );
+                throw new InvalidArgumentsException( "suspendUserException" );
             }
             delegate.suspendUser( username );
         }
 
         @Override
         public void activateUser( String username, boolean requirePasswordChange )
-                throws IOException, InvalidArgumentsException
+                throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "activateUserException" );
+                throw new InvalidArgumentsException( "activateUserException" );
             }
             delegate.activateUser( username, requirePasswordChange );
         }
 
         @Override
-        public void newRole( String roleName, String... usernames ) throws IOException, InvalidArgumentsException
+        public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "newRoleException" );
+                throw new InvalidArgumentsException( "newRoleException" );
             }
             delegate.newRole( roleName, usernames );
         }
 
         @Override
-        public void newCopyOfRole( String roleName, String from ) throws IOException, InvalidArgumentsException
+        public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "newRoleFromCopyException" );
+                throw new InvalidArgumentsException( "newRoleFromCopyException" );
             }
             delegate.newCopyOfRole( roleName, from );
         }
 
         @Override
-        public boolean deleteRole( String roleName ) throws IOException, InvalidArgumentsException
+        public boolean deleteRole( String roleName ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "deleteRoleException" );
+                throw new InvalidArgumentsException( "deleteRoleException" );
             }
             return delegate.deleteRole( roleName );
         }
@@ -358,58 +236,25 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void addRoleToUser( String roleName, String username ) throws IOException, InvalidArgumentsException
+        public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "addRoleToUserException" );
+                throw new InvalidArgumentsException( "addRoleToUserException" );
             }
             delegate.addRoleToUser( roleName, username );
         }
 
         @Override
-        public void removeRoleFromUser( String roleName, String username ) throws IOException, InvalidArgumentsException
+        public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
-                throw new IOException( "removeRoleFromUserException" );
+                throw new InvalidArgumentsException( "removeRoleFromUserException" );
             }
             delegate.removeRoleFromUser( roleName, username );
-        }
-
-        @Override
-        public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "assignPrivilegeToRoleException" );
-            }
-            delegate.grantPrivilegeToRole( roleName, privilege );
-        }
-
-        @Override
-        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "revokePrivilegeFromRoleException" );
-            }
-            delegate.revokePrivilegeFromRole( roleName, privilege );
-        }
-
-        @Override
-        public Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "showPrivilegesForUserException" );
-            }
-            return delegate.showPrivilegesForUser( username );
         }
 
         @Override

@@ -31,12 +31,14 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginContext>
 {
     private GraphDatabaseFacade db;
+    private GraphDatabaseFacade systemDB;
     private CommercialAuthManager authManager;
     private ConnectorPortRegister connectorRegister;
     private DatabaseManagementService managementService;
@@ -62,6 +64,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
         managementService = builder.build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
+        systemDB = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
@@ -80,6 +83,12 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     public GraphDatabaseFacade getLocalGraph()
     {
         return db;
+    }
+
+    @Override
+    public GraphDatabaseFacade getSystemGraph()
+    {
+        return systemDB;
     }
 
     @Override

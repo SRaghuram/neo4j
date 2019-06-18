@@ -24,6 +24,8 @@ public interface NeoInteractionLevel<S>
 
     GraphDatabaseFacade getLocalGraph();
 
+    GraphDatabaseFacade getSystemGraph();
+
     void shutdown();
 
     FileSystemAbstraction fileSystem();

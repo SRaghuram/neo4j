@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -17,15 +16,15 @@ import static java.util.Collections.emptySet;
 
 public interface EnterpriseUserManager extends UserManager
 {
-    void suspendUser( String username ) throws IOException, InvalidArgumentsException;
+    void suspendUser( String username ) throws InvalidArgumentsException;
 
-    void activateUser( String username, boolean requirePasswordChange ) throws IOException, InvalidArgumentsException;
+    void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException;
 
-    void newRole( String roleName, String... usernames ) throws IOException, InvalidArgumentsException;
+    void newRole( String roleName, String... usernames ) throws InvalidArgumentsException;
 
-    void newCopyOfRole( String roleName, String from ) throws IOException, InvalidArgumentsException;
+    void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException;
 
-    boolean deleteRole( String roleName ) throws IOException, InvalidArgumentsException;
+    boolean deleteRole( String roleName ) throws InvalidArgumentsException;
 
     void assertRoleExists( String roleName ) throws InvalidArgumentsException;
 
@@ -35,9 +34,8 @@ public interface EnterpriseUserManager extends UserManager
      * @param roleName name of role
      * @param username name of user
      * @throws InvalidArgumentsException if the role does not exist
-     * @throws IOException
      */
-    void addRoleToUser( String roleName, String username ) throws IOException, InvalidArgumentsException;
+    void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException;
 
     /**
      * Unassign a role from a user. The role and the user have to exist.
@@ -45,37 +43,8 @@ public interface EnterpriseUserManager extends UserManager
      * @param roleName name of role
      * @param username name of user
      * @throws InvalidArgumentsException if the username or the role does not exist
-     * @throws IOException
      */
-    void removeRoleFromUser( String roleName, String username ) throws IOException, InvalidArgumentsException;
-
-    /**
-     * Grant privilege on a resource to a role. The role have to exist.
-     * If the role already have this privilege nothing will change.
-     *
-     * @param roleName name of role
-     * @param privilege privilege to grant
-     * @throws InvalidArgumentsException if the role or database does not exist
-     */
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException;
-
-    /**
-     * Revoke a privilege on a resource from a role. The role have to exist.
-     * If the role does not have a existing grant on the privilege, no change will happen.
-     *
-     * @param roleName name of role
-     * @param privilege privilege to revoke
-     * @throws InvalidArgumentsException if the role or database does not exist
-     */
-    void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege ) throws InvalidArgumentsException;
-
-    /**
-     * Show the privileges for a user.
-     *
-     * @param username name of user
-     * @throws InvalidArgumentsException if the user does not exist
-     */
-    Set<ResourcePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException;
+    void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException;
 
     Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles );
 
@@ -136,22 +105,6 @@ public interface EnterpriseUserManager extends UserManager
         @Override
         public void removeRoleFromUser( String roleName, String username )
         {
-        }
-
-        @Override
-        public void grantPrivilegeToRole( String roleName, ResourcePrivilege privilege )
-        {
-        }
-
-        @Override
-        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege privilege )
-        {
-        }
-
-        @Override
-        public Set<ResourcePrivilege> showPrivilegesForUser( String username )
-        {
-            return emptySet();
         }
 
         @Override
@@ -233,12 +186,12 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
-        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
+        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange )
         {
         }
 
         @Override
-        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
+        public void setUserStatus( String username, boolean isSuspended )
         {
         }
 

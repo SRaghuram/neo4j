@@ -23,6 +23,10 @@ class MorselInputTest extends InputTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselAllNodeScanTest extends AllNodeScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// NODE BY ID SEEK
+class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // LABEL SCAN
 class MorselLabelScanTest extends LabelScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselLabelScanNoFusingTest extends LabelScanTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)

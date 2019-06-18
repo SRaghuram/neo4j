@@ -102,6 +102,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                           converters.toCommandExpression(id, valueExpr),
                                           argumentSize)
 
+      case plans.NodeByIdSeek(column, nodeIds, _) =>
+        new NodeByIdSeekOperator(WorkIdentity.fromPlan(plan),
+                                 slots.getLongOffsetFor(column),
+                                 converters.toCommandSeekArgs(id, nodeIds),
+                                 physicalPlan.argumentSizes(id))
+
       case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
@@ -260,12 +266,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         generateSlotAccessorFunctions(slots)
 
         plan match {
-          case plans.Sort(_, sortItems) => {
+          case plans.Sort(_, sortItems) =>
             val argumentDepth = physicalPlan.applyPlans(id)
             val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
             val ordering = sortItems.map(translateColumnOrder(slots, _))
             new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
-          }
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
             val argumentDepth = physicalPlan.applyPlans(id)
