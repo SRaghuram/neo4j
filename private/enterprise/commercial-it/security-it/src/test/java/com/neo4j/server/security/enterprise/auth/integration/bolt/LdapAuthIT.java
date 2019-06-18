@@ -150,7 +150,8 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldShowCurrentUser()
     {
-        try ( Driver driver = connectDriver( "smith", "abc123" ); Session session = driver.session() )
+        try ( Driver driver = connectDriver( "smith", "abc123" );
+                Session session = driver.session() )
         {
             // when
             Record record = session.run( "CALL dbms.showCurrentUser()" ).single();

@@ -160,14 +160,14 @@ class GlobalMetricsExtensionFactoryIT
         @Override
         protected boolean matchesSafely( AnyValue[] item )
         {
-            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.transaction.active_write" ).equals( item[0] ) &&
+            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.transaction.active_write,type=gauges" ).equals( item[0] ) &&
                     stringValue( "Information on the management interface of the MBean" ).equals( item[1] );
         }
 
         @Override
         public void describeTo( Description description )
         {
-            description.appendText( "Expected to see neo4j.vm.memory.pool.code_cache in result set" );
+            description.appendText( "Expected to see neo4j.system.transaction.active_write in result set" );
         }
     }
 }

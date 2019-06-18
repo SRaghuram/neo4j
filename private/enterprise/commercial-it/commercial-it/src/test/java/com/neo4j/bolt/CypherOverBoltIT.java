@@ -54,7 +54,8 @@ public class CypherOverBoltIT
 
         for ( int i = lineCountInCSV - 1; i < lineCountInCSV + 1; i++ ) // test with different periodic commit sizes
         {
-            try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+            try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                    Session session = driver.session() )
             {
                 StatementResult result = session.run( "USING PERIODIC COMMIT " + i + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                         "MERGE (currentnode:Label1 {uuid:row[0]})\n" + "RETURN currentnode;" );
@@ -75,7 +76,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork2()
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV + 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -95,7 +97,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork3()
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + lineCountInCSV + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -115,7 +118,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -139,7 +143,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithListsOfLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -165,7 +170,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMaps() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -191,7 +197,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMapsWithinMaps() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -220,7 +227,8 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMapsWithLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+                Session session = driver.session() )
         {
             StatementResult result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +

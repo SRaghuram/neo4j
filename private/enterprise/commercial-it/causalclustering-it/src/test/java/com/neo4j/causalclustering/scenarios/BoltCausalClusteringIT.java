@@ -97,7 +97,8 @@ class BoltCausalClusteringIT
     @BeforeEach
     void removePersons() throws TimeoutException
     {
-        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ); Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
+        try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() );
+                Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
         {
             // when
             session.run( "MATCH (n:Person) DELETE n" ).consume();
@@ -206,7 +207,8 @@ class BoltCausalClusteringIT
         // given
         CoreClusterMember leader = cluster.awaitLeader();
 
-        try ( Driver driver = makeDriver( leader.routingURI() ); Session session = driver.session() )
+        try ( Driver driver = makeDriver( leader.routingURI() );
+                Session session = driver.session() )
         {
             session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
@@ -446,7 +448,8 @@ class BoltCausalClusteringIT
 
             assertNotNull( bookmark );
 
-            try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) ); Transaction tx = session.beginTransaction() )
+            try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) );
+                    Transaction tx = session.beginTransaction() )
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                 assertEquals( 1, record.get( "count" ).asInt() );
