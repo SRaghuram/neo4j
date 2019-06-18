@@ -28,7 +28,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
 
-  val grantMap: Map[String, String] = Map("grant" -> "GRANTED", "database" -> "*", "label" -> "*")
+  val grantMap: Map[String, String] = Map("grant" -> "GRANTED", "graph" -> "*", "label" -> "*")
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
     Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
@@ -89,7 +89,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
 
     def label(label: String) = PrivilegeMapBuilder(map + ("label" -> label))
 
-    def database(database: String) = PrivilegeMapBuilder(map + ("database" -> database))
+    def database(database: String) = PrivilegeMapBuilder(map + ("graph" -> database))
 
     def resource(resource: String) = PrivilegeMapBuilder(map + ("resource" -> resource))
 

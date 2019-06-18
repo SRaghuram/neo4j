@@ -307,7 +307,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       val returnColumns =
         s"""
           |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
-          |coalesce(d.name, '*') AS database, q.label AS label, r.name AS role
+          |coalesce(d.name, '*') AS graph, q.label AS label, r.name AS role
         """.stripMargin
 
       val (grantee: Value, query) = scope match {
