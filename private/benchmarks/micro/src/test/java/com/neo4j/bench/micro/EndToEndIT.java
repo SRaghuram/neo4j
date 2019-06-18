@@ -96,7 +96,7 @@ public class EndToEndIT extends AnnotationsFixture
         Files.copy( microJar, workPath.resolve( "micro/target/micro-benchmarks.jar" ) );
 
         // assert if environment is setup
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC );
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
         assertSysctlParameter( asList( 1, -1 ), "kernel.perf_event_paranoid" );
         assertSysctlParameter( asList( 0 ), "kernel.kptr_restrict" );
@@ -164,10 +164,8 @@ public class EndToEndIT extends AnnotationsFixture
                                                                     neo4jConfig.toString(),
                                                                     // jvm_path
                                                                     Jvm.defaultJvmOrFail().launchJava(),
-                                                                    // with_jfr
-                                                                    Boolean.toString( profilers.contains( ProfilerType.JFR ) ),
-                                                                    // with_async
-                                                                    Boolean.toString( profilers.contains( ProfilerType.ASYNC ) ),
+                                                                    // profilers
+                                                                    ProfilerType.serializeProfilers( profilers ),
                                                                     // triggered_by
                                                                     "triggered_by",
                                                                     endpointUrl ) )
@@ -264,7 +262,7 @@ public class EndToEndIT extends AnnotationsFixture
 
     private static int randomLocalPort() throws IOException
     {
-        try ( ServerSocket socket = new ServerSocket( 0 ); )
+        try ( ServerSocket socket = new ServerSocket( 0 ) )
         {
             return socket.getLocalPort();
         }
