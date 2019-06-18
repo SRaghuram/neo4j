@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
@@ -127,7 +126,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
           *     this.label = nodeLabelId(labelName)
           *   }
           *   val hasInnerLoop = this.label != NO_TOKEN
-          *   if (shouldContinue) {
+          *   if (hasInnerLoop) {
           *     this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
           *     context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
           *     this.canContinue = nodeLabelCursor.next()
@@ -158,6 +157,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
       *   while (hasDemand && this.canContinue) {
       *     ...
       *     << inner.genOperate >>
+      *     setLongAt(offset, nodeLabelCursor.nodeReference())
       *     this.canContinue = this.nodeLabelCursor.next()
       *   }
       * }}}
