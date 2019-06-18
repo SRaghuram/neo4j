@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
+import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
@@ -226,17 +227,28 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "action", resourcePrivilege.getAction().toString(),
                 "resource", resource.type().toString(),
                 "arg1", resource.getArg1(),
-                "arg2", resource.getArg2(),
-                "label", ((LabelSegment) resourcePrivilege.getSegment()).getLabel()
+                "arg2", resource.getArg2()
         );
     }
 
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
         Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
-        boolean fullSegment = resourcePrivilege.getSegment().equals( LabelSegment.ALL );
         String databaseMatch = resourcePrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
-        String qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}" : "q:LabelQualifier {label: $label}";
+        Segment segment = resourcePrivilege.getSegment();
+        String qualifierPattern;
+        if ( segment instanceof LabelSegment )
+        {
+            boolean fullSegment = segment.equals( LabelSegment.ALL );
+            qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}"
+                                           : String.format( "q:LabelQualifier {label: '%s'}", ((LabelSegment) segment).getLabel() );
+        }
+        else
+        {
+            boolean fullSegment = segment.equals( RelTypeSegment.ALL );
+            qualifierPattern = fullSegment ? "q:RelationshipQualifierAll {label: '*'}"
+                                           : String.format( "q:RelationshipQualifier {label: '%s'}", ((RelTypeSegment) segment).getRelType() );
+        }
 
         String query = String.format(
                 "MATCH (r:Role {name: $roleName}) " +

@@ -5,12 +5,13 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.util.Collection
+import java.util
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
+import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -1433,7 +1434,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", resultHandler = (row, _) => {
-      row.get("labels(n)").asInstanceOf[Collection[String]] should contain("A")
+      row.get("labels(n)").asInstanceOf[util.Collection[String]] should contain("A")
     }) should be(1)
   }
 
@@ -1858,6 +1859,157 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+    }) should be(2)
+  }
+
+  test("should find relationship when granted traversal privilege") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})")
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should (be("a") or be("b"))
+    })
+
+    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (_, _) => {
+      fail("should not get a match")
+    }) should be(0)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+  }
+
+  test("should get correct count for all relationships with traversal privilege") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(0)
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(1)
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(2)
+    }) should be(1)
+  }
+
+  test("should get correct count for specific relationship with traversal privilege") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
+    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(0)
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(1)
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * NODES B TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(2)
+    }) should be(1)
+  }
+
+  test("should get relationships for a matched node") {
+
+    import scala.collection.JavaConverters._
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()")
+
+    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+      val node = row.get("a").asInstanceOf[Node]
+      node.getDegree() should be(1)
+      node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A"))
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+      val node = row.get("a").asInstanceOf[Node]
+      node.getDegree() should be(2)
+      node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A", "B"))
+    }) should be(1)
+  }
+
+  test("should get relationship types and count from procedure") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->(), (a)-[:B]->()")
+
+    val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("reltype") should be("A")
+      row.get("count") should be(1)
+    }) should be(1)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom")
+
+    val expected = List(
+      ("A", 1),
+      ("B", 2)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("reltype"), row.get("count")) should be(expected(index))
     }) should be(2)
   }
 

@@ -66,11 +66,11 @@ class PrivilegeBuilder
             case "LabelQualifierAll":
                 this.segment = LabelSegment.ALL;
                 break;
-            case "RelTypeQualifier":
-                String relType = ((TextValue) qualifierNode.properties().get( "reltype" )).stringValue();
+            case "RelationshipQualifier":
+                String relType = ((TextValue) qualifierNode.properties().get( "label" )).stringValue();
                 this.segment = new RelTypeSegment( relType );
                 break;
-            case "RelTypeQualifierAll":
+            case "RelationshipQualifierAll":
                 this.segment = RelTypeSegment.ALL;
                 break;
             default:

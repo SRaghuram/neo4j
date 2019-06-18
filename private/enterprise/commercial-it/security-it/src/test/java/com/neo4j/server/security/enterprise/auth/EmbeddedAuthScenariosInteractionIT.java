@@ -492,6 +492,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, C, D TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (a:A)--(n1:D) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
@@ -524,6 +525,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String varlenBasic = "MATCH p = (:A)-[:R*3]-(n:C) return length(p)";
@@ -546,6 +548,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
