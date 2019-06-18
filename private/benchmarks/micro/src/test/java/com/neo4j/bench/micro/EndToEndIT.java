@@ -59,7 +59,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -269,7 +269,7 @@ class EndToEndIT extends AnnotationsFixture
                                                  .orElseThrow( () -> new RuntimeException( "sysctl output is not parsable" ) );
             assertThat( format( "incorrect value of kernel parameter %s = %d", kernelParameter, kernelParameterValue ),
                         allowedValues,
-                        contains( kernelParameterValue.intValue() ) );
+                        hasItem( kernelParameterValue.intValue() ) );
         }
     }
 
