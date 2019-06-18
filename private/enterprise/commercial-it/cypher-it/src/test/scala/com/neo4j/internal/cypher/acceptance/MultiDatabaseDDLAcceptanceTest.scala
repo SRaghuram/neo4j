@@ -422,10 +422,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should have access on a created database") {
@@ -487,10 +484,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").user("joe").role("custom").map,
-      grantTraverse().database("foo").user("joe").role("custom").map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should have no access on a re-created default database"){
@@ -537,10 +531,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
-    ))
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should fail when creating an already existing database") {

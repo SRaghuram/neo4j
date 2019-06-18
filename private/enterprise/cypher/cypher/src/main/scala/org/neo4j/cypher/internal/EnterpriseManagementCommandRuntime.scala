@@ -295,7 +295,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |    (a)-[:APPLIES_TO]->(res:Resource),
           |    (s)-[:FOR]->(d),
           |    (s)-[:QUALIFIED]->(q)
-          |
+          |WHERE d:Database OR d:DatabaseAll
         """.stripMargin
       val resourceColumn =
         """
