@@ -64,7 +64,7 @@ object Configs {
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
+  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
