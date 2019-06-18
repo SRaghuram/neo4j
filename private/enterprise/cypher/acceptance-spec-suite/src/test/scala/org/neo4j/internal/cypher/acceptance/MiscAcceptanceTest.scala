@@ -186,4 +186,12 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // This is not a strict requirement. NodeRightOuterHashJoin would also be OK. Also if planner changes needs to happen, don't let this block you.
     result.executionPlanDescription should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
   }
+
+  test("should get degree of node from a parameter") {
+    val node = createLabeledNode("Item")
+    relate(createNode(), node, "CONTAINS")
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
+    result.toList should equal(List(Map("total" -> 1)))
+  }
+
 }
