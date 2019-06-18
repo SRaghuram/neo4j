@@ -15,7 +15,6 @@ import com.neo4j.restore.RestoreDatabaseCommand;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,7 +36,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
@@ -83,7 +81,6 @@ class ClusteredSystemDatabaseBackupRestoreIT
         }
     }
 
-    @Disabled
     @Test
     void backingUpSystemDatabaseShouldBeSuccessful() throws Exception
     {
@@ -92,7 +89,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String leaderAddress = leader.settingValue( backupAddress );
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupLocation, databaseName ) ) );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
         cluster.coreTx( ( db, tx ) ->
