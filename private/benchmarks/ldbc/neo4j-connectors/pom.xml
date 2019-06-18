@@ -23,14 +23,14 @@
     </properties>
 
     <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2019 "Neo4j,"
+                Neo4j Sweden AB [http://neo4j.com]
+                This file is part of Neo4j internal tooling.
+            </comments>
+        </license>
     </licenses>
 
     <dependencies>
@@ -174,10 +174,7 @@
                     </plugin>
                 </plugins>
             </build>
-            <id>fullBenchmark</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+            <id>fullBenchmarks</id>
         </profile>
     </profiles>
 
