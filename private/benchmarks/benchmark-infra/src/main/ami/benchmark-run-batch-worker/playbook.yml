@@ -1,0 +1,21 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: set perf_event_paranoid parameter
+      sysctl:
+        name: kernel.perf_event_paranoid
+        value: -1
+        reload: yes
+        state: present
+    - name: set kptr_restrict parameter
+      sysctl:
+        name: kernel.kptr_restrict
+        value: 0
+        reload: yes
+        state: present
+    - name: copy per-instance script
+      copy:
+        src: "init-ephemeral-storage.sh"
+        dest: "/var/lib/cloud/scripts/per-instance"
+        mode: u=rx,g=r,o=r
