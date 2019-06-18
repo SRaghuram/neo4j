@@ -59,8 +59,8 @@ import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -240,7 +240,7 @@ public class EndToEndIT
                                                  .orElseThrow( () -> new RuntimeException( "sysctl output is not parsable" ) );
             assertThat( format( "incorrect value of kernel parameter %s = %d", kernelParameter, kernelParameterValue ),
                         allowedValues,
-                        contains( kernelParameterValue.intValue() ) );
+                        hasItem( kernelParameterValue.intValue() ) );
         }
     }
 
