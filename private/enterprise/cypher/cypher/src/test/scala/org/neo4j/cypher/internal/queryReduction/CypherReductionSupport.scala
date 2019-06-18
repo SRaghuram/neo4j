@@ -40,6 +40,7 @@ import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, RecordingQ
 import org.neo4j.logging.NullLog
 import org.neo4j.monitoring.Monitors
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
+import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.util.Try
@@ -225,6 +226,6 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
     PlannerContextCreator.create(NO_TRACING, devNullLogger, planContext, query, Set(),
                                  None, WrappedMonitors(new Monitors), metricsFactory,
                                  queryGraphSolver, config, defaultUpdateStrategy, MasterCompiler.CLOCK,
-                                 logicalPlanIdGen, null, new GeneratingNamer)
+                                 logicalPlanIdGen, null, new GeneratingNamer, MapValue.EMPTY)
   }
 }

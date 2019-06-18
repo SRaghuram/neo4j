@@ -26,6 +26,44 @@ class DBMSProceduresAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should execute dbms.security.createUser with return values on system") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+    // WHEN
+    executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser('Alice', 'foo') RETURN 'yay'")
+
+    //THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should not execute dbms.security.createUser with more clauses on system") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+    // WHEN
+    val exception = the[RuntimeException] thrownBy {
+      executeOnSystem("neo4j", "neo", "MATCH (anything) " +
+        "CALL dbms.security.createUser('Alice', 'foo') " +
+        "RETURN anything")
+    }
+    exception.getMessage should include("Not a recognised system command or procedure")
+
+    val exception2 = the[RuntimeException] thrownBy {
+      executeOnSystem("neo4j", "neo", "MERGE (anything) WITH anything " +
+        "CALL dbms.security.createUser('Alice', 'foo') " +
+        "RETURN anything")
+    }
+    exception2.getMessage should include("Not a recognised system command or procedure")
+
+
+    //THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+  }
+
   test("should execute dbms.security.createUser on system with parameter") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

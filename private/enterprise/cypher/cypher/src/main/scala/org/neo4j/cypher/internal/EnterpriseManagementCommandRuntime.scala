@@ -45,13 +45,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     val (planWithSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 
-    // Either the logical plan is a command that the partial function logicalToExecutable provides/understands OR it could be a system procedure
+    // Either the logical plan is a command that the partial function logicalToExecutable provides/understands OR we delegate to communitys version of it (which supports common things like procedures)
     // If neither we throw an error
-    if (logicalToExecutable.isDefinedAt(planWithSlottedParameters) || communityCommandRuntime.logicalToExecutable.isDefinedAt(planWithSlottedParameters)) {
-      (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
-    } else {
-      ProcedureCallOrSchemaCommandRuntime.logicalToExecutable.applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping)
-    }
+    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, username)
   }
 
   private lazy val authManager = {

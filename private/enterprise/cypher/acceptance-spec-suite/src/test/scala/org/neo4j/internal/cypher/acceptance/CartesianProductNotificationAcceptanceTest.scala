@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{CartesianProductNotification, InputPosition}
 import org.neo4j.kernel.api.{KernelTransaction, Statement}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
+import org.neo4j.values.virtual.MapValue
 
 class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with GraphDatabaseTestSupport {
   var logger: InternalNotificationLogger = _
@@ -84,12 +85,12 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     graph.inTx {
       val tracer = CompilationPhaseTracer.NO_TRACING
       val innerVariableNamer = new GeneratingNamer
-      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer)
+      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY)
       val kernelTransaction = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getKernelTransactionBoundToThisThread(true)
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,
                                                  None, monitors, metricsFactory, createQueryGraphSolver(), configuration, defaultUpdateStrategy, Clock.systemUTC(), new SequentialIdGen(),
-                                                 simpleExpressionEvaluator, innerVariableNamer)
+                                                 simpleExpressionEvaluator, innerVariableNamer, MapValue.EMPTY)
 
       try {
         val normalized = compiler.normalizeQuery(parsed, context)
