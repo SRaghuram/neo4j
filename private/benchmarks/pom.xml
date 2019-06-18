@@ -73,6 +73,7 @@
         <module>ldbc</module>
         <module>macro</module>
         <module>import</module>
+        <module>benchmark-infra</module>
     </modules>
 
     <profiles>
