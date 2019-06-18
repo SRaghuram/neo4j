@@ -292,6 +292,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       makeGrantExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
+    case RevokeWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
+
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _, _) =>
       val privilegeMatch =

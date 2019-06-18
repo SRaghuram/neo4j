@@ -818,7 +818,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message "This is a DDL command and it should be executed against the system database: GRANT WRITE"
   }
 
-  // Tests for REVOKE READ, TRAVERSE and MATCH
+  // Tests for REVOKE READ, TRAVERSE, MATCH and WRITE
 
   test("should revoke correct read privilege different label qualifier") {
     // GIVEN
@@ -1116,6 +1116,40 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct write privilege different databases") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH bar NODES * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantWrite().role("custom").map,
+      grantWrite().role("custom").database("foo").map,
+      grantWrite().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE WRITE (*) ON GRAPH foo NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantWrite().role("custom").map,
+      grantWrite().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantWrite().role("custom").database("bar").map
+    ))
+  }
+
   test("should revoke correct traverse and read privileges from different MATCH privileges") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1217,24 +1251,44 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
     val error1 = the [InvalidArgumentsException] thrownBy {
-      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
     }
 
     // THEN
-    error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
+    error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
       be("The role 'wrongRole' does not exist."))
 
     // WHEN
     val error2 = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+    }
+
+    // THEN
+    error2.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
+      be("The role 'wrongRole' does not exist."))
+
+    // WHEN
+    val error3 = the [InvalidArgumentsException] thrownBy {
       execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
     }
     // THEN
-    error2.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
+    error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
+      be("The role 'wrongRole' does not exist."))
+
+    // WHEN
+    val error4 = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM wrongRole")
+    }
+
+    // THEN
+    error4.getMessage should (be("The role 'wrongRole' does not have the specified privilege: write * ON GRAPH * NODES *.") or
       be("The role 'wrongRole' does not exist."))
   }
 
@@ -1244,8 +1298,17 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE custom")
     execute("CREATE ROLE role")
     execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    val errorTraverse = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role")
+    }
+    // THEN
+    errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
     val errorRead = the [InvalidArgumentsException] thrownBy {
@@ -1260,6 +1323,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }
     // THEN
     errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
+
+    // WHEN
+    val errorWrite = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM role")
+    }
+    // THEN
+    errorWrite.getMessage should include("The role 'role' does not have the specified privilege")
   }
 
   test("should fail when revoking traversal privilege with missing database") {
@@ -1297,6 +1367,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       be("The privilege 'read * ON GRAPH foo NODES *' does not exist."))
   }
 
+  test("should fail when revoking WRITE privilege with missing database") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+
+    // WHEN
+    val e = the [InvalidArgumentsException] thrownBy {
+      execute("REVOKE WRITE (*) ON GRAPH foo NODES * (*) FROM custom")
+    }
+    // THEN
+    e.getMessage should be("The privilege 'write * ON GRAPH foo NODES *' does not exist.")
+  }
+
+
   test("should fail when revoking traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -1322,6 +1407,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // THEN
     } should have message
       "This is a DDL command and it should be executed against the system database: REVOKE MATCH"
+  }
+
+  test("should fail when revoking WRITE privilege to custom role when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM custom")
+      // THEN
+    } should have message "This is a DDL command and it should be executed against the system database: REVOKE WRITE"
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
