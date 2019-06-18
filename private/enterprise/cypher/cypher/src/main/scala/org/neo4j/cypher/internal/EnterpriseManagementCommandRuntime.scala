@@ -8,9 +8,11 @@ package org.neo4j.cypher.internal
 import java.util
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.auth._
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
+import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
@@ -21,7 +23,7 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
-import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
+import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.string.UTF8
 import org.neo4j.values.AnyValue
@@ -33,6 +35,7 @@ import org.neo4j.values.virtual.VirtualValues
   */
 case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
   val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine, resolver)
+  val maxDBLimit = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
 
   override def name: String = "enterprise management-commands"
 
@@ -351,14 +354,24 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     // CREATE DATABASE foo
     case CreateDatabase(normalizedName) => (_, _, _) =>
       val dbName = normalizedName.name
-      SystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
-        """CREATE (d:Database {name: $name})
-          |SET d.status = $status
-          |Set d.default = false
-          |SET d.created_at = datetime()
+      UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
+        """MATCH (d:Database)
+          |WITH count(d) as numberOfDatabases
+          |
+          |// the following basically acts as an "if" clause
+          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
+          |  CREATE (d:Database {name: $name})
+          |  SET d.status = $status
+          |  SET d.default = false
+          |  SET d.created_at = datetime()
+          |)
+          |WITH "ignoreMe" as ignore
+          |MATCH (d:Database {name: $name})
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name", "status"), Array(Values.stringValue(dbName), DatabaseStatus.Online)),
-        onError = e => new DatabaseExistsException(s"The specified database '$dbName' already exists.", e)
+        VirtualValues.map(Array("name", "status", "maxNumberOfDatabases"), Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.longValue(maxDBLimit))),
+        QueryHandler
+          .handleNoResult(() => Some(new DatabaseLimitReachedException()))
+          .handleError(e => new DatabaseExistsException(s"The specified database '$dbName' already exists.", e))
       )
 
     // DROP DATABASE foo

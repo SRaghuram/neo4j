@@ -7,13 +7,14 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.io.File
 
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.DatabaseManagementException
-import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseNotFoundException}
+import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.graphdb.config.{InvalidSettingException, Setting}
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -350,6 +351,39 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val result = execute("SHOW DATABASE `f.o-o`")
     result.toList should be(List(Map("name" -> "f.o-o", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should create database in systemdb when max number of databases is not reached") {
+
+    val config = Config.defaults()
+    config.augment(CommercialEditionSettings.maxNumberOfDatabases, "3")
+    setup(config)
+    execute("SHOW DATABASES").toList.size should equal(2)
+
+    // WHEN
+    execute("CREATE DATABASE `foo`")
+
+    // THEN
+    val result = execute("SHOW DATABASE `foo`")
+    result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+  }
+
+  test("should fail to create database in systemdb when max number of databases is already reached") {
+
+    val config = Config.defaults()
+    config.augment(CommercialEditionSettings.maxNumberOfDatabases, "2")
+    setup(config)
+    execute("SHOW DATABASES").toList.size should equal(2)
+
+    // WHEN
+    the[DatabaseLimitReachedException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE `foo`")
+      // THEN
+    } should have message "The total limit of databases is already reached. To create more you need to either drop databases or change the limit via the config setting 'dbms.max_databases'"
+
+    // THEN
+    execute("SHOW DATABASES").toList.size should equal(2)
   }
 
   test("should create database using mixed case name") {
