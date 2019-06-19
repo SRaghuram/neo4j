@@ -77,6 +77,7 @@ import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -178,6 +179,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
+            assertFalse( new File( testDir.databaseLayout().countStore().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( testDir.databaseLayout().countStore().getAbsolutePath() + ".b" ).exists() );
         }
 
         @Test
@@ -383,7 +386,6 @@ public class StoreUpgradeIT
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
-
             }
             finally
             {
