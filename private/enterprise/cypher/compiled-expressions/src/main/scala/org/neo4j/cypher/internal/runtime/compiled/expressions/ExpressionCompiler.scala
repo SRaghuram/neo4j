@@ -1631,11 +1631,11 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
            p2 <- intermediateCompileExpression(c.args(1))
       } yield {
         val variableName = namer.nextVariableName()
-        val local = variable[AnyValue](variableName,
-                                       invokeStatic(method[CypherFunctions, Value, AnyValue, AnyValue]("distance"), p1.ir, p2.ir))
-        IntermediateExpression(
-          load(variableName),
-          p1.fields ++ p2.fields,  p1.variables ++ p2.variables :+ local, Set(equal(load(variableName), noValue)))
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
+                                       invokeStatic(method[CypherFunctions, Value, AnyValue, AnyValue]("distance"), p1.ir, p2.ir)))
+        val ops = block(lazySet, load(variableName))
+        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        IntermediateExpression(ops, p1.fields ++ p2.fields,  p1.variables ++ p2.variables, Set(nullChecks))
       }
 
     case functions.StartNode =>
