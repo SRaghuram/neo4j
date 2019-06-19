@@ -930,23 +930,20 @@ order by a.COL1""".format(a, b))
   }
 
   test("replanning should happen after data source restart") {
+    // given
+    graph.execute("match (n) return n").hasNext shouldBe false
+
+    val database = graph.getDependencyResolver.resolveDependency(classOf[Database])
+    database.stop()
+    database.start()
+
+    // when
     val planningListener = PlanningListener()
     kernelMonitors.addMonitorListener(planningListener)
+    graph.execute("match (n) return n").hasNext shouldBe false
 
-    val result1 = execute("match (n) return n")
-    result1 shouldBe empty
-
-    val ds = graph.getDependencyResolver.resolveDependency(classOf[Database])
-    ds.stop()
-    ds.start()
-
-    val result2 = execute("match (n) return n")
-    result2 shouldBe empty
-
-    planningListener.planRequests should equal(Seq(
-      s"match (n) return n",
-      s"match (n) return n"
-    ))
+    // then
+    planningListener.planRequests should equal(Seq("match (n) return n"))
   }
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
