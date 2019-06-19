@@ -235,6 +235,12 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                         }
 
                         @Override
+                        public void onError() throws IOException
+                        {
+                            writer.onError();
+                        }
+
+                        @Override
                         public void addMetadata( String key, AnyValue value )
                         {
                             //do nothing
