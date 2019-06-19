@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, PipelineDefinition, ProduceResultOutput}
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
@@ -129,14 +129,17 @@ class FuseOperators(operatorFactory: OperatorFactory,
             valueExpr match {
               // Index exact value seek on single value
               case SingleQueryExpression(expr) =>
+                assert(properties.length == 1)
                 val newTemplate = new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
                                                                                 plan.id,
                                                                                 innermostTemplate,
                                                                                 node,
                                                                                 slots.getLongOffsetFor(node),
-                                                                                properties.head.propertyKeyToken.nameId.id,
+                                                                                SlottedIndexedProperty(node,
+                                                                                                       properties.head,
+                                                                                                       slots),
                                                                                 expr,
-                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties),
+                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
                                                                                 asKernelIndexOrder(indexOrder),
                                                                                 argumentSize)(expressionCompiler)
                 acc.copy(

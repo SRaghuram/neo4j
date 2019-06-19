@@ -169,7 +169,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                                 innermost: DelegateOperatorTaskTemplate,
                                                 nodeVarName: String,
                                                 offset: Int,
-                                                propertyId: Int,
+                                                property: SlottedIndexedProperty,
                                                 rawExpression: expressions.Expression,
                                                 queryIndexId: Int,
                                                 indexOrder: IndexOrder,
@@ -178,7 +178,6 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
   import OperatorCodeGenHelperTemplates._
-
   private var query: IntermediateExpression = _
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
@@ -192,10 +191,10 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    query = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
-    //IndexQuery.exact(
-    val input = invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(propertyId),
-                 asValue(query.ir))
+    val compiled = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
+    query = compiled.copy(ir = asValue(compiled.ir))
+    val input = invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(property.propertyKeyId),
+                             asValue(query.ir))
     block(
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
       nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, input),
@@ -210,6 +209,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       *     ...
       *     << inner.genOperate >>
       *     setLongAt(offset, nodeIndexCursor.nodeReference())
+      *     setCachedPropertyAt(offset, value)
       *     this.canContinue = this.nodeIndexCursor.next()
       *   }
       * }}}
@@ -223,6 +223,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, query.ir)).getOrElse(noop()),
         profileRow(id),
         inner.genOperate,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
