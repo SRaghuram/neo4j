@@ -174,12 +174,13 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => e
         }
 
-      case GetDegree(Variable(n), typ, direction) =>
+      case original@GetDegree(Variable(n), typ, direction) =>
         val maybeToken: Option[String] = typ.map(r => r.name)
         slotConfiguration(n) match {
           case LongSlot(offset, false, CTNode) => GetDegreePrimitive(offset, maybeToken, direction)
           case LongSlot(offset, true, CTNode) => NullCheck(offset, GetDegreePrimitive(offset, maybeToken, direction))
-          case _ => throw new CantCompileQueryException(s"Invalid slot for GetDegree: $n")
+          // For ref-slots, we just use the non-specialized GetDegree
+          case _ => original
         }
 
       case Variable(k) =>
