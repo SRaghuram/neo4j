@@ -185,24 +185,13 @@ public class RunExportCommand implements Runnable
             required = true )
     private File profilerOutput;
 
-    private static final String CMD_PROFILE_JFR = "--profile-jfr";
+    private static final String CMD_PROFILERS = "--profilers";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILE_JFR},
-            description = "Run with JFR profiler",
-            title = "Run with JFR profiler",
+            name = {CMD_PROFILERS},
+            description = "Comma separated list of profilers to run with",
+            title = "Profilers",
             required = false )
-    // TODO replace with Macro-like arg
-    private boolean doJfrProfile;
-
-    private static final String CMD_PROFILE_ASYNC = "--profile-async";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILE_ASYNC},
-            description = "Run with Async profiler",
-            title = "Run with Async profiler",
-            required = false )
-    // TODO replace with Macro-like arg
-    private boolean doAsyncProfile;
-    // TODO add GC profiler
+    private String profilerNames = "";
 
     private static final String CMD_STORES_DIR = "--stores-dir";
     @Option( type = OptionType.COMMAND,
@@ -245,15 +234,7 @@ public class RunExportCommand implements Runnable
     @Override
     public void run()
     {
-        List<ProfilerType> profilers = new ArrayList<>();
-        if ( doJfrProfile )
-        {
-            profilers.add( ProfilerType.JFR );
-        }
-        if ( doAsyncProfile )
-        {
-            profilers.add( ProfilerType.ASYNC );
-        }
+        List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
         for ( ProfilerType profiler : profilers )
         {
             boolean errorOnMissingSecondaryEnvironmentVariables = true;
@@ -399,27 +380,14 @@ public class RunExportCommand implements Runnable
                 CMD_ERROR_POLICY,
                 errorPolicy.name(),
                 CMD_TRIGGERED_BY,
-                triggeredBy );
+                triggeredBy,
+                CMD_PROFILERS,
+                ProfilerType.serializeProfilers( profilers ) );
         if ( jvm.hasPath() )
         {
             commandArgs.add( CMD_JVM_PATH );
             commandArgs.add( jvm.launchJava() );
         }
-        profilers.forEach( profiler ->
-                           {
-                               if ( profilers.contains( ProfilerType.JFR ) )
-                               {
-                                   commandArgs.add( CMD_PROFILE_JFR );
-                               }
-                               else if ( profilers.contains( ProfilerType.ASYNC ) )
-                               {
-                                   commandArgs.add( CMD_PROFILE_ASYNC );
-                               }
-                               else
-                               {
-                                   throw new RuntimeException( "Unsupported profiler type: " + profiler );
-                               }
-                           } );
         return commandArgs;
     }
 }

@@ -9,9 +9,9 @@
 set -e
 set -u
 
-if [ $# -lt 20 ] ; then
+if [ $# -lt 19 ] ; then
     echo "Expected at least 20 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path with_jfr with_async triggered_by"
+    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path profilers triggered_by"
     exit 1
 fi
 
@@ -32,17 +32,16 @@ jvm_args="${14}"
 jmh_args="${15}"
 neo4j_config_path="${16}"
 jvm_path="${17}"
-with_jfr="${18}"
-with_async="${19}"
-triggered_by="${20}"
+profilers="${18}"
+triggered_by="${19}"
 micro_benchmarks_dir=$(pwd)
 json_path=${micro_benchmarks_dir}/results.json
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
-if [[ $# -eq 21 ]]; then
-	AWS_EXTRAS="--endpoint-url=${21}"
+if [[ $# -eq 20 ]]; then
+	AWS_EXTRAS="--endpoint-url=${20}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -73,13 +72,8 @@ echo "FlameGraph dir: ${FLAMEGRAPH_DIR}"
 echo "JFR FlameGraph Dir: ${JFR_FLAMEGRAPH}"
 echo "JSON Path : ${json_path}"
 echo "Profiler Recordings dir: ${profiler_recording_output_dir}"
-echo "JFR Enabled : ${with_jfr}"
-echo "ASYNC Enabled : ${with_async}"
+echo "Profilers: ${profilers}"
 echo "Build triggered by : ${triggered_by}"
-
-declare -a profilers
-[ "${with_jfr}" = "true" ] && profilers+=('--profile-jfr') && echo "Profiling with JFR Enabled!"
-[ "${with_async}" = "true" ] && profilers+=('--profile-async') && echo "Profiling with Async Enabled!"
 
 ${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
         --jvm "${jvm_path}" \
@@ -99,7 +93,7 @@ ${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
         --profiles-dir "${profiler_recording_output_dir}" \
-        "${profilers[@]}"
+        --profilers "${profilers}"
 
 # --- create archive of profiler recording artifacts---
 profiler_recording_dir_name=$(basename "${profiler_recording_output_dir}")

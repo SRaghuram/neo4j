@@ -46,6 +46,8 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             return JfrProfiler.class;
         case ASYNC:
             return AsyncProfiler.class;
+        case GC:
+            return GcProfiler.class;
         default:
             throw new RuntimeException( "There is no JMH profiler for profiler type: " + profilerType );
         }
