@@ -746,18 +746,24 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
   }
 
-  test("should fail on dropping custom default database") {
+  test("should drop custom default database") {
     // GIVEN
     val config = Config.defaults()
     config.augment(default_database, "foo")
     setup(config)
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute("DROP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
+
+    // WHEN
+    execute("CREATE DATABASE foo")
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should fail when dropping a database when not on system database") {
