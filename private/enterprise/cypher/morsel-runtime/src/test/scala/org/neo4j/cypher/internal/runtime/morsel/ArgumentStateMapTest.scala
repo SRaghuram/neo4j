@@ -14,7 +14,8 @@ class ArgumentStateMapTest extends MorselUnitTest {
                                     2 -> 2,
                                     4 -> 3,
                                     5 -> 4,
-                                    6 -> 4)) {
+                                    6 -> 4,
+                                    7 -> 4)) {
 
     test(s"filter should work, while changing current row from $inputPos to $outputPos") {
       val (morsel, row) = new Input()
@@ -28,9 +29,9 @@ class ArgumentStateMapTest extends MorselUnitTest {
         .build
 
       row.moveToRow(inputPos)
-      ArgumentStateMap.filter[SumState](0, row,
-                                        (_, _) => new SumState(),
-                                        (state, currentRow) => state.keepGoing(currentRow.getLongAt(1)))
+      ArgumentStateMap.filter[SumUntil32](0, row,
+                                        (_, _) => new SumUntil32(),
+                                        (state, currentRow) => state.sumAndCheckIfPast32(currentRow.getLongAt(1)))
 
       row.getCurrentRow should be(outputPos)
       new ThenOutput(morsel, row, 2, 0)
@@ -46,7 +47,8 @@ class ArgumentStateMapTest extends MorselUnitTest {
                                     3 -> 3,
                                     4 -> 3,
                                     5 -> 4,
-                                    6 -> 4)) {
+                                    6 -> 4,
+                                    7 -> 4)) {
 
     test(s"filterCancelledArguments should work, while changing current row from $inputPos to $outputPos") {
       val (morsel, row) = new Input()
@@ -74,8 +76,9 @@ class ArgumentStateMapTest extends MorselUnitTest {
     }
   }
 
-  class SumState(var sum: Long = 0){
-    def keepGoing(add: Long): Boolean = {
+  class SumUntil32() {
+    var sum: Long = 0
+    def sumAndCheckIfPast32(add: Long): Boolean = {
       sum += add
       sum <= 32
     }

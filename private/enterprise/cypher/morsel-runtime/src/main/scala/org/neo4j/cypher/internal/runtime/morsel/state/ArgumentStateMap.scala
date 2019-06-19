@@ -221,6 +221,10 @@ object ArgumentStateMap {
       }
     }
 
+    if (newCurrentRow == -1 && morsel.getCurrentRow >= morsel.getValidRows) {
+      newCurrentRow = writingRow.getCurrentRow
+    }
+
     morsel.moveToRow(newCurrentRow)
     morsel.finishedWritingUsing(writingRow)
   }
@@ -251,6 +255,10 @@ object ArgumentStateMap {
         }
         readingRow.moveToNextRow()
       }
+    }
+
+    if (newCurrentRow == -1 && morsel.getCurrentRow >= morsel.getValidRows) {
+      newCurrentRow = writingRow.getCurrentRow
     }
 
     morsel.moveToRow(newCurrentRow)
