@@ -85,15 +85,15 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // Tests for showing databases
 
-  test("should show database neo4j") {
+  test(s"should show database $DEFAULT_DATABASE_NAME") {
     // GIVEN
     setup(defaultConfig)
 
     // WHEN
-    val result = execute("SHOW DATABASE neo4j")
+    val result = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    result.toList should be(List(db("neo4j", default = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
   }
 
   test("should show custom default database") {
@@ -109,7 +109,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(db("foo", default = true)))
 
     // WHEN
-    val result2 = execute("SHOW DATABASE neo4j")
+    val result2 = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     result2.toList should be(empty)
@@ -122,11 +122,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE database foo")
 
     // WHEN
-    val neoResult = execute("SHOW DATABASE neo4j")
+    val neoResult = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
     val fooResult = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult.toSet should be(Set(db("neo4j", default = true)))
+    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
@@ -134,11 +134,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     initSystemGraph(config)
 
     // WHEN
-    val neoResult2 = execute("SHOW DATABASE neo4j")
+    val neoResult2 = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
     val fooResult2 = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult2.toSet should be(Set(db("neo4j")))
+    neoResult2.toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
     fooResult2.toSet should be(Set(db("foo", default = true)))
   }
 
@@ -204,7 +204,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("SHOW DATABASE neo4j")
+      execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
       // THEN
     } should have message
       "This is a DDL command and it should be executed against the system database: SHOW DATABASE"
@@ -218,7 +218,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("neo4j", default = true), db("system")))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show custom default and system databases") {
@@ -231,7 +231,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("foo", default = true), db("system")))
+    result.toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show databases for switch of default database") {
@@ -244,7 +244,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("neo4j", default = true), db("foo"), db("system")))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
 
     // GIVEN
     config.augment(default_database, "foo")
@@ -254,7 +254,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result2 = execute("SHOW DATABASES")
 
     // THEN
-    result2.toSet should be(Set(db("neo4j"), db("foo", default = true), db("system")))
+    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should fail when showing databases when not on system database") {
@@ -276,7 +276,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result.toList should be(List(Map("name" -> "neo4j", "status" -> onlineStatus)))
+    result.toList should be(List(Map("name" -> DEFAULT_DATABASE_NAME, "status" -> onlineStatus)))
   }
 
   test("should show custom default database using show default database command") {
@@ -292,7 +292,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toList should be(List(Map("name" -> "foo", "status" -> onlineStatus)))
 
     // WHEN
-    val result2 = execute("SHOW DATABASE neo4j")
+    val oldDefaultName = DEFAULT_DATABASE_NAME
+    val result2 = execute(s"SHOW DATABASE $oldDefaultName")
 
     // THEN
     result2.toList should be(empty)
@@ -307,7 +308,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val result = execute("SHOW DEFAULT DATABASE")
 
     // THEN
-    result.toSet should be(Set(Map("name" -> "neo4j", "status" -> onlineStatus)))
+    result.toSet should be(Set(Map("name" -> DEFAULT_DATABASE_NAME, "status" -> onlineStatus)))
 
     // GIVEN
     execute("CREATE database foo")
@@ -460,9 +461,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database("foo").user("joe").role("custom").map,
       grantTraverse().database("foo").user("joe").role("custom").map
     ))
-    executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should be("a")
-    }) should be(1)
+    executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
+      resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
 
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -505,9 +505,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should be("a")
-    }) should be(1)
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
+      resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
 
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -667,11 +666,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      db("neo4j", default = true), db("baz"), db("system")))
+      db(DEFAULT_DATABASE_NAME, default = true), db("baz"), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute("DROP DATABASE baz")
-    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // THEN
     the[RuntimeException] thrownBy {
@@ -718,32 +717,32 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("DROP DATABASE system")
+      execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
     } should have message "Not allowed to drop system database."
 
     // WHEN
-    val result = execute("SHOW DATABASE system")
+    val result = execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME")
 
     // THEN
-    result.toSet should be(Set(db("system")))
+    result.toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop default database") {
     setup(defaultConfig)
-    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
-    execute("DROP DATABASE neo4j")
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
-    execute("CREATE DATABASE neo4j")
+    execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop custom default database") {
@@ -967,9 +966,9 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      db("neo4j", default = true),
+      db(DEFAULT_DATABASE_NAME, default = true),
       db("baz"),
-      db("system")))
+      db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute("STOP DATABASE baz")
@@ -1030,15 +1029,15 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("STOP DATABASE system")
+      execute(s"STOP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
     } should have message "Not allowed to stop system database."
 
     // WHEN
-    val result = execute("SHOW DATABASE system")
+    val result = execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME")
 
     // THEN
-    result.toSet should be(Set(db("system")))
+    result.toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop default database") {
@@ -1046,11 +1045,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
 
     // WHEN
-    execute("STOP DATABASE neo4j")
+    execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db("neo4j", offlineStatus, default = true), db("system")))
+      db(DEFAULT_DATABASE_NAME, offlineStatus, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop custom default database") {
@@ -1063,7 +1062,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", offlineStatus, default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", offlineStatus, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should have no access on a stopped default database") {
@@ -1073,11 +1072,11 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
-    execute("SHOW DATABASES").toSet should be(Set(db("neo4j", default = true), db("system")))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
-    execute("STOP DATABASE neo4j")
-    execute("SHOW DATABASE neo4j").toSet should be(Set(db("neo4j", offlineStatus, default = true)))
+    execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {
@@ -1086,7 +1085,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("START DATABASE neo4j")
+    execute(s"START DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     executeOnDefault("foo", "bar", "MATCH (n) RETURN n") should be(0)

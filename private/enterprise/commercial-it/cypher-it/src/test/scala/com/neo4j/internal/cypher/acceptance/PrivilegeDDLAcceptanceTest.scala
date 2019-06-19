@@ -8,7 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import java.util.Collection
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -22,7 +22,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show privileges for users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
@@ -30,7 +30,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show all privileges") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges)
@@ -47,7 +47,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show privileges for specific role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     val result = execute("SHOW ROLE editor PRIVILEGES")
@@ -64,7 +64,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should give nothing when showing privileges for non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     val resultFoo = execute("SHOW ROLE foo PRIVILEGES")
@@ -91,7 +91,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should show privileges for specific user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     val result = execute("SHOW USER neo4j PRIVILEGES")
@@ -111,7 +111,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should give nothing when showing privileges for non-existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     val resultFoo = execute("SHOW USER foo PRIVILEGES")
@@ -140,7 +140,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -152,7 +152,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail granting traversal privilege for all databases and all labels to non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     the[InvalidArgumentsException] thrownBy {
@@ -167,7 +167,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for all databases but only a specific label (that does not need to exist)") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -179,7 +179,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for a specific database and a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -192,7 +192,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for a specific database and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -205,7 +205,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -222,7 +222,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to custom role for a specific database and multiple labels in one grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -238,7 +238,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant traversal privilege to multiple roles for a specific database and multiple labels in one grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role1")
     execute("CREATE ROLE role2")
     execute("CREATE DATABASE foo")
@@ -259,7 +259,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when granting traversal privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     the [DatabaseNotFoundException] thrownBy {
       execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
@@ -279,7 +279,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -291,7 +291,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail granting read privilege for all databases and all labels to non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     the[InvalidArgumentsException] thrownBy {
@@ -306,7 +306,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege to custom role for all databases but only a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -318,7 +318,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege to custom role for a specific database and a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -331,7 +331,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege to custom role for a specific database and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -344,7 +344,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -361,7 +361,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when granting read privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     the [DatabaseNotFoundException] thrownBy {
       execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
@@ -370,7 +370,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for specific property to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -382,7 +382,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for specific property to custom role for all databases but only a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -394,7 +394,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for specific property to custom role for a specific database and a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -407,7 +407,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for specific property to custom role for a specific database and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -420,7 +420,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for specific property to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -437,7 +437,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for multiple properties to custom role for a specific database and specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -454,7 +454,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for multiple properties to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -471,7 +471,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant read privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role1")
     execute("CREATE ROLE role2")
     execute("CREATE ROLE role3")
@@ -502,7 +502,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -517,7 +517,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege to custom role for all databases but only a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -532,7 +532,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege to custom role for a specific database and a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -548,7 +548,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege to custom role for a specific database and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -564,7 +564,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -583,7 +583,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail grant MATCH privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     the [DatabaseNotFoundException] thrownBy {
       execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
@@ -592,7 +592,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for specific property to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -607,7 +607,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for specific property to custom role for all databases but only a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -622,7 +622,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for specific property to custom role for a specific database and a specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -638,7 +638,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for specific property to custom role for a specific database and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -654,7 +654,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for specific property to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -673,7 +673,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for multiple properties to custom role for a specific database and specific label") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -691,7 +691,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for multiple properties to custom role for a specific database and multiple labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -710,7 +710,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant MATCH privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role1")
     execute("CREATE ROLE role2")
     execute("CREATE ROLE role3")
@@ -743,7 +743,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct read privilege different label qualifier") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
@@ -776,7 +776,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct read privilege different property") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
@@ -809,7 +809,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct read privilege different databases") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
@@ -843,7 +843,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct traverse privilege different label qualifier") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
@@ -876,7 +876,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct traverse privilege different databases") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
@@ -910,7 +910,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct MATCH privilege different label qualifier") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT MATCH (bar) ON GRAPH foo NODES * (*) TO custom")
@@ -952,7 +952,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct MATCH privilege different property") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
@@ -996,7 +996,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct MATCH privilege different databases") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
@@ -1039,7 +1039,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct traverse and read privileges from different MATCH privileges") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
@@ -1087,7 +1087,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
@@ -1135,7 +1135,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail revoke privilege from non-existent role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
@@ -1161,7 +1161,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail revoke privilege not granted to role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE ROLE role")
     execute("CREATE DATABASE foo")
@@ -1185,7 +1185,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when revoking traversal privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     the [InvalidArgumentsException] thrownBy {
@@ -1195,7 +1195,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when revoking read privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     the [InvalidArgumentsException] thrownBy {
@@ -1205,7 +1205,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when revoking MATCH privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
 
@@ -1249,18 +1249,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE custom")
     execute("GRANT ROLE custom TO joe")
 
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", resultHandler = (row, _) => {
@@ -1270,19 +1270,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted read privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE custom")
     execute("GRANT ROLE custom TO joe")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
@@ -1293,13 +1293,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE custom")
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
 
     // THEN
@@ -1308,7 +1308,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }
 
     // WHEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
@@ -1317,7 +1317,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
 
     // WHEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
@@ -1328,15 +1328,15 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("read privilege should not imply traverse privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE custom")
     execute("GRANT ROLE custom TO joe")
 
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
@@ -1346,7 +1346,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should see properties and nodes depending on granted traverse and read privileges for role") {
     // GIVEN
     setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role1")
     execute("CREATE ROLE role2")
@@ -1368,7 +1368,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT ROLE role1 TO joe")
 
     val expected1 = List(
@@ -1383,7 +1383,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role1 FROM joe")
     execute("GRANT ROLE role2 TO joe")
 
@@ -1399,7 +1399,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role2 FROM joe")
     execute("GRANT ROLE role3 TO joe")
 
@@ -1417,7 +1417,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should see properties and nodes depending on granted MATCH privileges for role") {
     // GIVEN
     setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role1")
     execute("CREATE ROLE role2")
@@ -1438,7 +1438,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT ROLE role1 TO joe")
 
     val expected1 = List(
@@ -1453,7 +1453,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role1 FROM joe")
     execute("GRANT ROLE role2 TO joe")
 
@@ -1469,7 +1469,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role2 FROM joe")
     execute("GRANT ROLE role3 TO joe")
 
@@ -1487,7 +1487,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should see properties and nodes when revoking privileges for role") {
     // GIVEN
     setupMultilabelData
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role1")
     execute("GRANT ROLE role1 TO joe")
@@ -1497,7 +1497,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role1")
 
@@ -1517,7 +1517,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role1")
 
     val expected2 = List(
@@ -1532,7 +1532,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
     }) should be(4)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role1")
 
     val expected3 = List(
@@ -1548,19 +1548,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted MATCH privilege to custom role for a specific database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name:'a'})")
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
-    execute("GRANT MATCH (*) ON GRAPH neo4j NODES * (*) TO custom")
+    execute(s"GRANT MATCH (*) ON GRAPH ${DEFAULT_DATABASE_NAME} NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -1576,7 +1576,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER user SET PASSWORD 'neo'")
 
@@ -1594,7 +1594,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // Bar   : dragon, fairy
     // Baz   :
     // Zet   : fairy
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE USER Zet SET PASSWORD 'NeX'")
@@ -1618,7 +1618,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant role to several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER userA SET PASSWORD 'neo'")
     execute("CREATE USER userB SET PASSWORD 'neo'")
@@ -1633,7 +1633,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant multiple roles to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1648,7 +1648,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant multiple roles to several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1667,7 +1667,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should be able to grant already granted role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE ROLE dragon")
     execute("GRANT ROLE dragon TO Bar")
@@ -1682,7 +1682,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when granting non-existing role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
@@ -1712,7 +1712,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when granting role to non-existing user") {
     // GIVEN
     val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "isBuiltIn" -> false, "member" -> null))
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE dragon")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
@@ -1742,7 +1742,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when granting non-existing role to non-existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
@@ -1775,10 +1775,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       "This is a DDL command and it should be executed against the system database: GRANT ROLE"
 
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE ROLE dragon")
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
 
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -1792,7 +1792,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke role from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER user SET PASSWORD 'neo'")
     execute("GRANT ROLE custom TO user")
@@ -1806,7 +1806,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke role from several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER userA SET PASSWORD 'neo'")
     execute("CREATE USER userB SET PASSWORD 'neo'")
@@ -1822,7 +1822,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke multiple roles from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1839,7 +1839,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke multiple roles from several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1863,7 +1863,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should be able to revoke already revoked role from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER user SET PASSWORD 'neo'")
     execute("GRANT ROLE custom TO user")
@@ -1878,7 +1878,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should grant and revoke multiple roles to multiple users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
@@ -1921,7 +1921,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail revoking non-existent role from (existing) user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     the [InvalidArgumentsException] thrownBy {
@@ -1936,7 +1936,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail revoking role from non-existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     the [InvalidArgumentsException] thrownBy {
@@ -1951,7 +1951,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail revoking non-existing role from non-existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -1972,11 +1972,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       "This is a DDL command and it should be executed against the system database: REVOKE ROLE"
 
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE ROLE dragon")
     execute("GRANT ROLE dragon TO Bar")
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
 
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -1989,7 +1989,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // helper variable, methods and class
 
   private def setupMultilabelData = {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {foo:1, bar:2})")
     execute("CREATE (n:B {foo:3, bar:4})")
     execute("CREATE (n:A:B {foo:5, bar:6})")
