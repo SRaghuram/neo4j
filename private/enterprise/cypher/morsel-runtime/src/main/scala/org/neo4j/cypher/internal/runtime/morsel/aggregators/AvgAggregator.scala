@@ -64,7 +64,7 @@ case object AvgAggregator extends Aggregator {
     private[AvgAggregator] var sumNanos = 0L
 
     override def update(value: AnyValue): Unit = {
-      if (value == Values.NO_VALUE)
+      if (value eq Values.NO_VALUE)
         return
 
       count += 1

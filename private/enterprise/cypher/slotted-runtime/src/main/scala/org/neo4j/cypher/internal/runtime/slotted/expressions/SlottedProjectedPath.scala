@@ -80,7 +80,7 @@ object SlottedProjectedPath {
         tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
 
       case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case x if x eq NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
 
@@ -94,7 +94,7 @@ object SlottedProjectedPath {
         tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
 
       case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case x if x eq NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
 
@@ -114,7 +114,7 @@ object SlottedProjectedPath {
         }
 
       case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case x if x eq NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
 
@@ -158,7 +158,7 @@ object SlottedProjectedPath {
     case r: RelationshipValue =>
       builder.addRelationship(r).addNode(startNode(r, state.query, state.cursors.relationshipScanCursor))
 
-    case NO_VALUE => builder.addNoValue()
+    case x if x eq NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
   }
 
@@ -166,7 +166,7 @@ object SlottedProjectedPath {
     case r: RelationshipValue =>
       builder.addRelationship(r).addNode(endNode(r, state.query, state.cursors.relationshipScanCursor))
 
-    case NO_VALUE => builder.addNoValue()
+    case x if x eq NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
   }
 
@@ -175,7 +175,7 @@ object SlottedProjectedPath {
       val previous = builder.previousNode
       builder.addRelationship(r).addNode(CypherFunctions.otherNode(r, state.query, previous, state.cursors.relationshipScanCursor))
 
-    case NO_VALUE => builder.addNoValue()
+    case x if x eq NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
   }
 

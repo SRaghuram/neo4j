@@ -65,7 +65,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
-        case Values.NO_VALUE =>
+        case x if x eq Values.NO_VALUE =>
           false // CONTAINS null does not produce any rows
 
         case x => throw new CypherTypeException(s"Expected a string value, but got $x")

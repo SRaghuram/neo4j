@@ -75,7 +75,7 @@ class InputOperator(val workIdentity: WorkIdentity,
 
 object InputOperator {
   def nodeOrNoValue(value: AnyValue): Long =
-    if (value == Values.NO_VALUE) NullChecker.NULL_ENTITY
+    if (value eq Values.NO_VALUE) NullChecker.NULL_ENTITY
     else value.asInstanceOf[VirtualNodeValue].id()
 }
 

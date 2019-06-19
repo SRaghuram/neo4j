@@ -30,7 +30,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
 
   override def computeKey(context: ExecutionContext, keyColumns: Expression, queryState: QueryState): Option[AnyValue] = {
     val value = keyColumns.apply(context, queryState)
-    if (value == NO_VALUE)
+    if (value eq NO_VALUE)
       None
     else
       Some(value)

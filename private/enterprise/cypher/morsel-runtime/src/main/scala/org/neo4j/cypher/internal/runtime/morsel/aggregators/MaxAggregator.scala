@@ -21,14 +21,14 @@ case object MaxAggregator extends Aggregator {
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =
-    max == Values.NO_VALUE || AnyValues.COMPARATOR.compare(max, value) < 0
+    (max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0
 }
 
 class MaxUpdater() extends MaxUpdaterBase
 abstract class MaxUpdaterBase extends Updater {
   private[aggregators] var max: AnyValue = Values.NO_VALUE
   override def update(value: AnyValue): Unit =
-    if (value != Values.NO_VALUE) {
+    if (!(value eq Values.NO_VALUE)) {
       if (MaxAggregator.shouldUpdate(max, value))
         max = value
     }

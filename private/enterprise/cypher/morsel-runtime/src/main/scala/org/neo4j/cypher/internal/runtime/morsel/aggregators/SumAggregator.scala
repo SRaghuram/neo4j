@@ -25,7 +25,7 @@ case object SumAggregator extends Aggregator {
   class SumUpdater() extends SumStandardBase with Updater {
 
     override def update(value: AnyValue): Unit = {
-      if (value == Values.NO_VALUE)
+      if (value eq Values.NO_VALUE)
         return
 
       value match {

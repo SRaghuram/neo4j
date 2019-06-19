@@ -262,7 +262,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
           .handleResult((_, u) => {
-            if (u != Values.NO_VALUE) clearCacheForUser(u.asInstanceOf[TextValue].stringValue())
+            if (!(u eq Values.NO_VALUE)) clearCacheForUser(u.asInstanceOf[TextValue].stringValue())
             else Some(new InvalidArgumentsException(s"Cannot revoke role '$roleName' from non-existent user '$userName'"))
           })
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Cannot revoke non-existent role '$roleName' from user '$userName'"))),
@@ -423,7 +423,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           )
         ),
         QueryHandler.handleResult((offset, value) => {
-          if (offset == 2 && value == Values.NO_VALUE) Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
+          if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist."))
           else None
         })
       )
@@ -587,8 +587,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
         .handleResult((offset, value) => {
-          if (offset == 0 && value == Values.NO_VALUE) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
-          else if (offset == 1 && value == Values.NO_VALUE )Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
+          if (offset == 0 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
+          else if (offset == 1 && (value eq Values.NO_VALUE))Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
           else clearCacheForRole(roleName)
         })
         .handleNoResult(() => Some(new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))),

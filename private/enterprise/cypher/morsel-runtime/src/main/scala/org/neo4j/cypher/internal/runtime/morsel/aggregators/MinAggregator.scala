@@ -21,14 +21,14 @@ case object MinAggregator extends Aggregator {
   override def newConcurrentReducer: Reducer = new MinConcurrentReducer
 
   def shouldUpdate(min: AnyValue, value: AnyValue): Boolean =
-    min == Values.NO_VALUE || AnyValues.COMPARATOR.compare(min, value) > 0
+    (min eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(min, value) > 0
 }
 
 class MinUpdater() extends MinUpdaterBase
 abstract class MinUpdaterBase extends Updater {
   private[aggregators] var min: AnyValue = Values.NO_VALUE
   override def update(value: AnyValue): Unit =
-    if (value != Values.NO_VALUE) {
+    if (!(value eq Values.NO_VALUE)) {
       if (MinAggregator.shouldUpdate(min, value))
         min = value
     }

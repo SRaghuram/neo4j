@@ -21,7 +21,7 @@ case object CountAggregator extends Aggregator {
 
   class CountUpdater() extends CountUpdaterBase {
     override def update(value: AnyValue): Unit =
-      if (value != Values.NO_VALUE)
+      if (!(value eq Values.NO_VALUE))
         count += 1
   }
 }

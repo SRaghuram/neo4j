@@ -93,7 +93,7 @@ object SlotConfigurationUtils {
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
-            if (value == Values.NO_VALUE)
+            if (value eq Values.NO_VALUE)
               PRIMITIVE_NULL
             else
               value.asInstanceOf[VirtualNodeValue].id()
@@ -106,7 +106,7 @@ object SlotConfigurationUtils {
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
-            if (value == Values.NO_VALUE)
+            if (value eq Values.NO_VALUE)
               PRIMITIVE_NULL
             else
               value.asInstanceOf[VirtualRelationshipValue].id()
@@ -159,7 +159,7 @@ object SlotConfigurationUtils {
 
       case LongSlot(offset, true, CTNode) =>
         (context: ExecutionContext, value: AnyValue) =>
-          if (value == Values.NO_VALUE)
+          if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
             try {
@@ -172,7 +172,7 @@ object SlotConfigurationUtils {
 
       case LongSlot(offset, true, CTRelationship) =>
         (context: ExecutionContext, value: AnyValue) =>
-          if (value == Values.NO_VALUE)
+          if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
             try {

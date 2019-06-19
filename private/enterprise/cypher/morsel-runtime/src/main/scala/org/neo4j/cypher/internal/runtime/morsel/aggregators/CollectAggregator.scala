@@ -26,7 +26,7 @@ case object CollectAggregator extends Aggregator {
 class CollectUpdater() extends Updater {
   private[aggregators] val collection = new util.ArrayList[AnyValue]()
   override def update(value: AnyValue): Unit =
-    if (value != Values.NO_VALUE) {
+    if (!(value eq Values.NO_VALUE)) {
       collection.add(value)
     }
 }
