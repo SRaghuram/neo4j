@@ -11,7 +11,8 @@ public enum Runtime
     INTERPRETED,
     SLOTTED,
     COMPILED,
-    MORSEL;
+    MORSEL,
+    PARALLEL;
 
     public String value()
     {
