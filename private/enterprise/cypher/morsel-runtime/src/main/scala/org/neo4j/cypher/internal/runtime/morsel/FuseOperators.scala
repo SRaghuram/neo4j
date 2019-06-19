@@ -128,7 +128,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
             valueExpr match {
               // Index exact value seek on single value
-              case SingleQueryExpression(expr) =>
+              case SingleQueryExpression(expr) if operatorFactory.readOnly =>
                 assert(properties.length == 1)
                 val newTemplate = new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
                                                                                 plan.id,

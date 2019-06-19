@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.CypherCoercions
+import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
@@ -115,8 +116,6 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
                      cursor)
 
-  //  void nodeIndexSeek( IndexReadSession index, NodeValueIndexCursor cursor, IndexOrder indexOrder, boolean needsValues, IndexQuery... query )
-  //  throws KernelException;
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     indexOrder: IndexOrder,
@@ -135,6 +134,9 @@ object OperatorCodeGenHelperTemplates {
                      constant(false),
                      arrayOf[IndexQuery](query))
   }
+
+  def exactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(prop), expression)
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)

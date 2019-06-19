@@ -179,6 +179,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
 
   import OperatorCodeGenHelperTemplates._
   private var query: IntermediateExpression = _
+  private val queryVariable = codeGen.namer.nextVariableName()
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
@@ -193,13 +194,35 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val compiled = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
     query = compiled.copy(ir = asValue(compiled.ir))
-    val input = invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(property.propertyKeyId),
-                             asValue(query.ir))
+    val hasInnerLoopVar = codeGen.namer.nextVariableName()
+
+    /**
+      * {{{
+      *   val query = asStorable([query predicate])
+      *   val hasInnerLoop = query != NO_VALUE
+      *   if (hasInnerLoop) {
+      *     nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+      *     context.transactionalContext.dataRead.nodeIndexSeek(indexReadSession(queryIndexId),
+      *                                                         nodeIndexCursor,
+      *                                                         indexOrder,
+      *                                                         IndexQuery.exact(prop, query))
+      *     this.canContinue = nodeLabelCursor.next()
+      *    }
+      *    hasInnerLoop
+      * }}}
+      */
     block(
-      setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
-      nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, input),
-      setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
-      constant(true))
+      declareAndAssign(typeRefOf[Value], queryVariable, query.ir),
+      declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, notEqual(load(queryVariable), noValue)),
+      condition(load(hasInnerLoopVar))(
+        block(
+          setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
+          nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder,
+                        exactSeek(property.propertyKeyId, load(queryVariable))),
+          setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+          )),
+      load(hasInnerLoopVar)
+      )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
@@ -223,7 +246,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, query.ir)).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, load(queryVariable))).getOrElse(noop()),
         profileRow(id),
         inner.genOperate,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
@@ -234,8 +257,8 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
       * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeLabelCursor)
-      *   nodeValueCursor = null
+      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+      *   nodeIndexCursor = null
       * }}}
       */
     block(
