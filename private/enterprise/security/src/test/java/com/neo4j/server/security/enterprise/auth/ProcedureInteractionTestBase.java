@@ -146,7 +146,7 @@ public abstract class ProcedureInteractionTestBase<S>
     protected EnterpriseUserManager userManager;
 
     protected NeoInteractionLevel<S> neo;
-    protected TransportTestUtil util;
+    protected final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
     File securityLog;
 
     Map<String,String> defaultConfiguration() throws IOException
@@ -163,7 +163,6 @@ public abstract class ProcedureInteractionTestBase<S>
     public void setUp() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
-        util = new TransportTestUtil( new Neo4jPackV1() );
     }
 
     void configuredSetup( Map<String,String> config ) throws Throwable
@@ -194,11 +193,13 @@ public abstract class ProcedureInteractionTestBase<S>
         writeSubject = neo.login( "writeSubject", "abc" );
         schemaSubject = neo.login( "schemaSubject", "abc" );
         adminSubject = neo.login( "adminSubject", "abc" );
+        createSomeNodes();
+    }
+
+    private void createSomeNodes()
+    {
         try ( Transaction tx = neo.getLocalGraph().beginTx( 1, TimeUnit.HOURS ) )
         {
-            assertEmpty( schemaSubject, "CREATE (n) SET n:A:Test:NEWNODE:VeryUniqueLabel:Node " +
-                                        "SET n.id = '2', n.square = '4', n.name = 'me', n.prop = 'a', n.number = '1' " +
-                                        "DELETE n" );
             assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
             tx.success();
         }

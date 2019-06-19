@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -64,7 +63,6 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailWrite( subject );
     }
 
-    @Disabled
     @Test
     void shouldRevokePrivilegeFromRole() throws Throwable
     {
@@ -82,35 +80,18 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", roleName ) );
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", roleName ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", roleName ) );
 
         // Then
         testSuccessfulRead( subject, 3 );
         testSuccessfulWrite( subject );
 
         // When
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", roleName ) );
+        neo.getSystemGraph().execute( String.format( "REVOKE WRITE(*) ON GRAPH * FROM %s", roleName ) );
 
         // Then
         testSuccessfulRead( subject, 4 );
         testFailWrite( subject );
-    }
-
-    @Disabled
-    @Test
-    void shouldAllowUserManagementForCustomRoleWithAdminPrivilege() throws Throwable
-    {
-        // Given
-        userManager.newUser( "Alice", password( PASSWORD ), false );
-        userManager.newRole( "UserManager", "Alice" );
-
-        // When
-        neo.getSystemGraph().execute( "GRANT ADMIN ALL ON GRAPH * TO UserManager" );
-
-        // Then
-        CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
-        assertEmpty( subject, "CALL dbms.security.createUser('Bob', 'bar', false)" );
-        testFailRead( subject, 3 );
     }
 
     @Test
@@ -294,7 +275,6 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
     }
 
-    @Disabled
     @Test
     void shouldRespectExistsConstraintsWithoutReadPrivileges() throws Throwable
     {
@@ -303,7 +283,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE(*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -311,7 +291,6 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, "MATCH (a:A) RETURN count(a)", r -> assertKeyIs( r, "count(a)", 1 ));
     }
 
-    @Disabled
     @Test
     void shouldRespectUniqueConstraintsWithoutReadPrivileges() throws Throwable
     {
@@ -320,7 +299,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
@@ -393,14 +372,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( subject, shortestWithProperty, r -> assertKeyIs( r, "length", 3 ) );
     }
 
-    @Disabled
     @Test
     void shouldReadBackNodeCreatedInSameTransaction() throws Throwable
     {
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE(*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
@@ -410,14 +388,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( subject, query, Collections.singletonMap("param", 3L), r -> assertKeyIs( r, "a.foo", null, null, 3 ) );
     }
 
-    @Disabled
     @Test
     void shouldReadBackIndexedNodeCreatedInSameTransaction() throws Throwable
     {
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT CREATE ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         setupGraph();
