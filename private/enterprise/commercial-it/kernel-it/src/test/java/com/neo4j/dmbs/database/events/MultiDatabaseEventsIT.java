@@ -5,12 +5,9 @@
  */
 package com.neo4j.dmbs.database.events;
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,30 +19,15 @@ import org.neo4j.graphdb.event.DatabaseEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@CommercialDbmsExtension
 class MultiDatabaseEventsIT
 {
     private static final MutableInt ZERO = new MutableInt( 0 );
     @Inject
-    private TestDirectory testDirectory;
     private DatabaseManagementService managementService;
-
-    @BeforeEach
-    void setUp()
-    {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
-    }
-
-    @AfterEach
-    void tearDown()
-    {
-        managementService.shutdown();
-    }
 
     @Test
     void databaseStartNotification()
@@ -53,9 +35,9 @@ class MultiDatabaseEventsIT
         MultiDatabaseEventListener eventListener = new MultiDatabaseEventListener();
         managementService.registerDatabaseEventListener( eventListener );
 
-        String firstDatabaseName = "firstDatabase";
-        String secondDatabaseName = "secondDatabase";
-        String thirdDatabaseName = "thirdDatabase";
+        String firstDatabaseName = "firstDatabaseA";
+        String secondDatabaseName = "secondDatabaseA";
+        String thirdDatabaseName = "thirdDatabaseA";
 
         managementService.createDatabase( firstDatabaseName );
 
@@ -77,9 +59,9 @@ class MultiDatabaseEventsIT
         MultiDatabaseEventListener eventListener = new MultiDatabaseEventListener();
         managementService.registerDatabaseEventListener( eventListener );
 
-        String firstDatabaseName = "firstDatabase";
-        String secondDatabaseName = "secondDatabase";
-        String thirdDatabaseName = "thirdDatabase";
+        String firstDatabaseName = "firstDatabaseB";
+        String secondDatabaseName = "secondDatabaseB";
+        String thirdDatabaseName = "thirdDatabaseB";
 
         managementService.createDatabase( firstDatabaseName );
         managementService.createDatabase( secondDatabaseName );
@@ -103,8 +85,8 @@ class MultiDatabaseEventsIT
         MultiDatabaseEventListener eventListener = new MultiDatabaseEventListener();
         managementService.registerDatabaseEventListener( eventListener );
 
-        String firstDatabaseName = "firstDatabase";
-        String secondDatabaseName = "secondDatabase";
+        String firstDatabaseName = "firstDatabaseC";
+        String secondDatabaseName = "secondDatabaseC";
 
         managementService.createDatabase( firstDatabaseName );
         managementService.createDatabase( secondDatabaseName );
