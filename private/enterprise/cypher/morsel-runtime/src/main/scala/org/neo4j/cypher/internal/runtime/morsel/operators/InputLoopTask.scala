@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
@@ -108,11 +108,10 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genCloseCursors: IntermediateRepresentation = {
     block(
-      condition(loadField(INNER_LOOP))(
-        genCloseInnerLoop
-      ),
-      inner.genCloseCursors
-    )
+      // note: we always close, because `innerLoop` might not be reliable if
+      // there has been an exception during `initializeInnerLoop`
+      genCloseInnerLoop,
+      inner.genCloseCursors)
   }
 
   override def genInit: IntermediateRepresentation = {
