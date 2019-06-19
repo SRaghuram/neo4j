@@ -240,14 +240,15 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         if ( segment instanceof LabelSegment )
         {
             boolean fullSegment = segment.equals( LabelSegment.ALL );
-            qualifierPattern = fullSegment ? "q:LabelQualifierAll {label: '*'}"
-                                           : String.format( "q:LabelQualifier {label: '%s'}", ((LabelSegment) segment).getLabel() );
+            qualifierPattern = fullSegment ? "q:LabelQualifierAll {type: 'node', label: '*'}"
+                                           : String.format( "q:LabelQualifier {type: 'node', label: '%s'}", ((LabelSegment) segment).getLabel() );
         }
         else
         {
             boolean fullSegment = segment.equals( RelTypeSegment.ALL );
-            qualifierPattern = fullSegment ? "q:RelationshipQualifierAll {label: '*'}"
-                                           : String.format( "q:RelationshipQualifier {label: '%s'}", ((RelTypeSegment) segment).getRelType() );
+            qualifierPattern = fullSegment ? "q:RelationshipQualifierAll {type: 'relationship', label: '*'}"
+                                           : String.format( "q:RelationshipQualifier {type: 'relationship', label: '%s'}",
+                                                   ((RelTypeSegment) segment).getRelType() );
         }
 
         String query = String.format(

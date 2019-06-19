@@ -55,9 +55,12 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val expected = Set(
-      grantGraph().role("editor").action("find").map,
-      grantGraph().role("editor").action("read").map,
-      grantGraph().role("editor").action("write").map
+      grantGraph().role("editor").action("find").node("*").map,
+      grantGraph().role("editor").action("read").node("*").map,
+      grantGraph().role("editor").action("write").node("*").map,
+      grantGraph().role("editor").action("find").relationship("*").map,
+      grantGraph().role("editor").action("read").relationship("*").map,
+      grantGraph().role("editor").action("write").relationship("*").map
     )
 
     result.toSet should be(expected)
@@ -99,12 +102,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val expected = Set(
-      grantGraph().role("admin").user("neo4j").action("find").map,
-      grantGraph().role("admin").user("neo4j").action("read").map,
-      grantGraph().role("admin").user("neo4j").action("write").map,
-      grantSystem().role("admin").user("neo4j").action("write").map,
-      grantToken().role("admin").user("neo4j").action("write").map,
-      grantSchema().role("admin").user("neo4j").action("write").map
+      grantGraph().role("admin").user("neo4j").action("find").node("*").map,
+      grantGraph().role("admin").user("neo4j").action("read").node("*").map,
+      grantGraph().role("admin").user("neo4j").action("write").node("*").map,
+      grantSystem().role("admin").user("neo4j").action("write").node("*").map,
+      grantToken().role("admin").user("neo4j").action("write").node("*").map,
+      grantSchema().role("admin").user("neo4j").action("write").node("*").map,
+      grantGraph().role("admin").user("neo4j").action("find").relationship("*").map,
+      grantGraph().role("admin").user("neo4j").action("read").relationship("*").map,
+      grantGraph().role("admin").user("neo4j").action("write").relationship("*").map,
+      grantSystem().role("admin").user("neo4j").action("write").relationship("*").map,
+      grantToken().role("admin").user("neo4j").action("write").relationship("*").map,
+      grantSchema().role("admin").user("neo4j").action("write").relationship("*").map
     )
 
     result.toSet should be(expected)
@@ -151,6 +160,31 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
   }
 
+  test("should grant traversal privilege to custom role for all databases and all relationship types") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").relationship("*").map))
+  }
+
+  test("should grant traversal privilege to custom role for all databases and all element types") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map, grantTraverse().role("custom").relationship("*").map))
+  }
+
   test("should fail granting traversal privilege for all databases and all labels to non-existing role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -159,6 +193,20 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      // THEN
+    } should have message "Role 'custom' does not exist."
+
+    // WHEN
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+      // THEN
+    } should have message "Role 'custom' does not exist."
+
+    // WHEN
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) TO custom")
       // THEN
     } should have message "Role 'custom' does not exist."
 
@@ -175,7 +223,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").node("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and a specific label") {
@@ -188,7 +236,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").node("A").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and all labels") {
@@ -216,8 +264,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").label("A").map,
-      grantTraverse().role("custom").database("foo").label("B").map
+      grantTraverse().role("custom").database("foo").node("A").map,
+      grantTraverse().role("custom").database("foo").node("B").map
     ))
   }
 
@@ -232,8 +280,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").label("A").map,
-      grantTraverse().role("custom").database("foo").label("B").map
+      grantTraverse().role("custom").database("foo").node("A").map,
+      grantTraverse().role("custom").database("foo").node("B").map
     ))
   }
 
@@ -249,12 +297,12 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role1").database("foo").label("A").map,
-      grantTraverse().role("role1").database("foo").label("B").map
+      grantTraverse().role("role1").database("foo").node("A").map,
+      grantTraverse().role("role1").database("foo").node("B").map
     ))
     execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role2").database("foo").label("A").map,
-      grantTraverse().role("role2").database("foo").label("B").map
+      grantTraverse().role("role2").database("foo").node("A").map,
+      grantTraverse().role("role2").database("foo").node("B").map
     ))
   }
 
@@ -314,7 +362,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (*) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").resource("all_properties").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").resource("all_properties").node("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and a specific label") {
@@ -327,7 +375,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (*) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").resource("all_properties").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").resource("all_properties").node("A").map))
   }
 
   test("should grant read privilege to custom role for a specific database and all labels") {
@@ -355,8 +403,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().role("custom").database("foo").resource("all_properties").label("A").map,
-      grantRead().role("custom").database("foo").resource("all_properties").label("B").map
+      grantRead().role("custom").database("foo").resource("all_properties").node("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").node("B").map
     ))
   }
 
@@ -390,7 +438,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (bar) ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").node("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and a specific label") {
@@ -403,7 +451,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").label("A").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").node("A").map))
   }
 
   test("should grant read privilege for specific property to custom role for a specific database and all labels") {
@@ -431,8 +479,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
   }
 
@@ -448,8 +496,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("baz").label("A").map
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("baz").node("A").map
     ))
   }
 
@@ -465,8 +513,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("baz").label("B").map
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("baz").node("B").map
     ))
   }
 
@@ -483,7 +531,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val expected = for (p <- Seq("a", "b", "c"); l <- Seq("A", "B", "C")) yield {
-      grantRead().database("foo").property(p).label(l)
+      grantRead().database("foo").property(p).node(l)
     }
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
     execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
@@ -526,8 +574,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").label("A").map,
-      grantRead().role("custom").resource("all_properties").label("A").map
+      grantTraverse().role("custom").node("A").map,
+      grantRead().role("custom").resource("all_properties").node("A").map
     ))
   }
 
@@ -542,8 +590,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").label("A").map,
-      grantRead().role("custom").database("foo").resource("all_properties").label("A").map
+      grantTraverse().role("custom").database("foo").node("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").node("A").map
     ))
   }
 
@@ -575,10 +623,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").label("A").map,
-      grantTraverse().role("custom").database("foo").label("B").map,
-      grantRead().role("custom").database("foo").resource("all_properties").label("A").map,
-      grantRead().role("custom").database("foo").resource("all_properties").label("B").map
+      grantTraverse().role("custom").database("foo").node("A").map,
+      grantTraverse().role("custom").database("foo").node("B").map,
+      grantRead().role("custom").database("foo").resource("all_properties").node("A").map,
+      grantRead().role("custom").database("foo").resource("all_properties").node("B").map
     ))
   }
 
@@ -616,8 +664,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").label("A").map,
-      grantRead().role("custom").property("bar").label("A").map
+      grantTraverse().role("custom").node("A").map,
+      grantRead().role("custom").property("bar").node("A").map
     ))
   }
 
@@ -632,8 +680,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map
     ))
   }
 
@@ -665,10 +713,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
   }
 
@@ -684,9 +732,9 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("baz").label("A").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("baz").node("A").map
     ))
   }
 
@@ -702,10 +750,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("baz").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("baz").node("B").map
     ))
   }
 
@@ -723,8 +771,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     val expected = (for (l <- Seq("A", "B", "C")) yield {
       (for(p <- Seq("a", "b", "c")) yield {
-        grantRead().database("foo").property(p).label(l)
-      }) :+ grantTraverse().database("foo").label(l)
+        grantRead().database("foo").property(p).node(l)
+      }) :+ grantTraverse().database("foo").node(l)
     }).flatten
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
     execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
@@ -832,8 +880,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantRead().database("foo").role("custom").property("bar").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
 
     // WHEN
@@ -842,7 +890,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantRead().database("foo").role("custom").property("bar").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
 
     // WHEN
@@ -850,7 +898,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
   }
 
@@ -932,8 +980,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").map,
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantTraverse().database("foo").role("custom").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map
     ))
 
     // WHEN
@@ -942,7 +990,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").map,
-      grantTraverse().database("foo").role("custom").label("B").map
+      grantTraverse().database("foo").role("custom").node("B").map
     ))
 
     // WHEN
@@ -950,7 +998,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("B").map
+      grantTraverse().database("foo").role("custom").node("B").map
     ))
   }
 
@@ -1000,10 +1048,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").map,
       grantRead().database("foo").role("custom").property("bar").map,
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantRead().database("foo").role("custom").property("bar").label("A").map,
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
 
     // WHEN
@@ -1013,9 +1061,9 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").map,
       grantRead().database("foo").role("custom").property("bar").map,
-      grantTraverse().database("foo").role("custom").label("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
 
     // WHEN
@@ -1024,9 +1072,9 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().database("foo").role("custom").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      grantTraverse().database("foo").role("custom").label("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").property("bar").label("B").map
+      grantTraverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map
     ))
   }
 
@@ -1159,12 +1207,12 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("A").map,
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").label("A").property("foo").map,
-      grantRead().database("foo").role("custom").label("B").property("foo").map,
-      grantRead().database("foo").role("custom").label("A").property("bar").map,
-      grantRead().database("foo").role("custom").label("B").property("bar").map
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").node("A").property("foo").map,
+      grantRead().database("foo").role("custom").node("B").property("foo").map,
+      grantRead().database("foo").role("custom").node("A").property("bar").map,
+      grantRead().database("foo").role("custom").node("B").property("bar").map
     ))
 
     // WHEN
@@ -1172,11 +1220,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").label("A").property("foo").map,
-      grantRead().database("foo").role("custom").label("B").property("foo").map,
-      grantRead().database("foo").role("custom").label("A").property("bar").map,
-      grantRead().database("foo").role("custom").label("B").property("bar").map
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").node("A").property("foo").map,
+      grantRead().database("foo").role("custom").node("B").property("foo").map,
+      grantRead().database("foo").role("custom").node("A").property("bar").map,
+      grantRead().database("foo").role("custom").node("B").property("bar").map
     ))
 
     // WHEN
@@ -1184,9 +1232,9 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").label("A").property("foo").map,
-      grantRead().database("foo").role("custom").label("A").property("bar").map
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").node("A").property("foo").map,
+      grantRead().database("foo").role("custom").node("A").property("bar").map
     ))
 
     // WHEN
@@ -1194,8 +1242,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").label("B").map,
-      grantRead().database("foo").role("custom").label("A").property("bar").map
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantRead().database("foo").role("custom").node("A").property("bar").map
     ))
   }
 
@@ -1217,8 +1265,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database("foo").role("custom").property("a").map,
       grantRead().database("foo").role("custom").property("b").map,
 
-      grantTraverse().role("custom").database("foo").label("A").map, // From both MATCH and TRAVERSE on NODES A
-      grantRead().database("foo").role("custom").property("a").label("A").map
+      grantTraverse().role("custom").database("foo").node("A").map, // From both MATCH and TRAVERSE on NODES A
+      grantRead().database("foo").role("custom").property("a").node("A").map
     ))
 
     // WHEN
@@ -1230,8 +1278,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database("foo").role("custom").map,
       grantRead().database("foo").role("custom").property("a").map,
 
-      grantTraverse().role("custom").database("foo").label("A").map,
-      grantRead().database("foo").role("custom").property("a").label("A").map
+      grantTraverse().role("custom").database("foo").node("A").map,
+      grantRead().database("foo").role("custom").property("a").node("A").map
     ))
 
     // WHEN
@@ -1243,7 +1291,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database("foo").role("custom").map,
       grantRead().database("foo").role("custom").property("a").map,
 
-      grantTraverse().role("custom").database("foo").label("A").map
+      grantTraverse().role("custom").database("foo").node("A").map
     ))
   }
 

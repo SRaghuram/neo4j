@@ -306,6 +306,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |    (s)-[:QUALIFIED]->(q)
           |WHERE d:Database OR d:DatabaseAll
         """.stripMargin
+      val segmentColumn =
+        """
+          |CASE q.type
+          |  WHEN 'node' THEN 'NODE('+q.label+')'
+          |  WHEN 'relationship' THEN 'RELATIONSHIP('+q.label+')'
+          |  ELSE 'ELEMENT('+q.label+')'
+          |END
+        """.stripMargin
       val resourceColumn =
         """
           |CASE res.type
@@ -316,7 +324,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       val returnColumns =
         s"""
           |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
-          |coalesce(d.name, '*') AS graph, q.label AS label, r.name AS role
+          |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
 
       val (grantee: Value, query) = scope match {
@@ -324,7 +332,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           s"""
              |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
              |$privilegeMatch
-             |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
+             |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
           """.stripMargin
         )
@@ -332,7 +340,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch
-             |WITH g, a, res, d, q, r, u ORDER BY d.name, u.name, r.name, q.label
+             |WITH g, a, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
              |$returnColumns, u.name AS user
           """.stripMargin
         )
@@ -340,7 +348,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           s"""
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
-             |WITH g, a, res, d, q, r ORDER BY d.name, r.name, q.label
+             |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
           """.stripMargin
         )
@@ -500,10 +508,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case _ => throw new IllegalStateException(s"Invalid privilege grant resource type $resource")
     }
     val (label: Value, qualifierMerge: String) = qualifier match {
-      case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
-      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of resultscase ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
-      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {label: $label})")
-      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {label: '*'})") // The label is just for later printout of results
+      case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {type: 'node', label: $label})")
+      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of resultscase ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {label: $label})")
+      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {type: 'relationship', label: $label})")
+      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
     }
     val (dbName, db, databaseMerge, scopeMerge) = database match {
@@ -557,10 +565,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case _ => throw new IllegalStateException(s"Invalid privilege grant resource type $resource")
     }
     val (label: Value, qualifierMatch: String) = qualifier match {
-      case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {label: $label})")
-      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {label: '*'})") // The label is just for later printout of results
-      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MATCH (q:RelationshipQualifier {label: $label})")
-      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MATCH (q:RelationshipQualifierAll {label: '*'})") // The label is just for later printout of results
+      case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {type: 'node', label: $label})")
+      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
+      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MATCH (q:RelationshipQualifier {type: 'relationship', label: $label})")
+      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MATCH (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
       case _ => throw new IllegalStateException(s"Invalid privilege grant qualifier $qualifier")
     }
     val (dbName, _, scopeMatch) = database match {

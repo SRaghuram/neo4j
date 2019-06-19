@@ -205,9 +205,9 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
     execute("GRANT READ (a,b,c) ON GRAPH * NODES A (*) TO foo")
     val expected = Set(grantTraverse().map,
-      grantRead().property("a").label("A").map,
-      grantRead().property("b").label("A").map,
-      grantRead().property("c").label("A").map
+      grantRead().property("a").node("A").map,
+      grantRead().property("b").node("A").map,
+      grantRead().property("c").node("A").map
     )
     val expectedFoo = expected.map(_ ++ Map("role" -> "foo"))
     val expectedBar = expected.map(_ ++ Map("role" -> "bar"))
