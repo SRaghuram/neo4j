@@ -1982,35 +1982,121 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE custom")
     execute("GRANT ROLE custom TO joe")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->(), (a)-[:B]->()")
+    graph.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)")
 
-    val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
+    // WHEN ... THEN
     executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("should get no result")
     }) should be(0)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("reltype") should be("A")
       row.get("count") should be(1)
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom")
 
-    val expected = List(
+    val expected1 = List(
+      ("A", 1),
+      ("B", 1)
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("reltype"), row.get("count")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+
+    val expected2 = List(
       ("A", 1),
       ("B", 2)
     )
 
+    // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expected(index))
+      (row.get("reltype"), row.get("count")) should be(expected2(index))
     }) should be(2)
+  }
+
+  test("should give correct results with relationship fulltext index") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE (:A)-[:A {prop: 'string with words in it'}]->(:A),
+        |(:A)-[:B {prop: 'another string with words in it'}]->(:A),
+        |(:C)-[:B {prop: 'this string contains words'}]->(:A),
+        |(:A)-[:B {prop: 'this is just a string'}]->(:A),
+        |()-[:A {prop: 'words words words'}]->(:A)
+      """.stripMargin)
+
+    execute("CALL db.index.fulltext.createRelationshipIndex('relIndex', ['A', 'B'], ['prop'])")
+    execute("CALL db.awaitIndexes()")
+
+    val query = "CALL db.index.fulltext.queryRelationships('relIndex', 'words') YIELD relationship RETURN relationship.prop AS prop"
+
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("prop") should be("string with words in it")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP B TO custom")
+
+    // THEN
+    val expected1 = List(
+      "string with words in it",
+      "another string with words in it"
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("prop") should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES C TO custom")
+
+    // THEN
+    val expected2 = List(
+      "string with words in it",
+      "another string with words in it",
+      "this string contains words"
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("prop") should be(expected2(index))
+    }) should be(3)
   }
 
   test("should read properties when granted MATCH privilege to custom role for a specific database") {
@@ -2026,7 +2112,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setupUserJoeWithCustomRole()
 
     // WHEN
-    execute(s"GRANT MATCH (*) ON GRAPH ${DEFAULT_DATABASE_NAME} NODES * (*) TO custom")
+    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
