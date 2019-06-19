@@ -58,7 +58,7 @@ public class DumpIndexStatisticsStore
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.of( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate() );
-                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, pageCache, immediate() ),
+                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider );
                 NeoStores neoStores = factory.openAllNeoStores();
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );

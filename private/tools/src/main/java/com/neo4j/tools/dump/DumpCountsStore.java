@@ -69,7 +69,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
             if ( fs.isDirectory( path ) )
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.of( path );
-                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, pages, immediate() ),
+                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pages, fs, logProvider );
                 CountsTracker counts = new ReadOnlyCountsTracker( logProvider, fs, pages, config, databaseLayout );
                 life.add( counts );

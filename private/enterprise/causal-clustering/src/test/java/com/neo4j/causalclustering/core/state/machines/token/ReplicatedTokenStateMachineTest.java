@@ -220,7 +220,7 @@ public class ReplicatedTokenStateMachineTest
         DatabaseLayout layout = testDirectory.databaseLayout();
         Config config = Config.defaults();
         PageCache pageCache = pageCacheRule.getPageCache( fs );
-        IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
+        IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
         StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider );
         NeoStores stores = cleanupRule.add( storeFactory.openAllNeoStores( true ) );
         TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );

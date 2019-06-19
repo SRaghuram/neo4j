@@ -13,6 +13,7 @@ import java.util.function.LongSupplier;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.io.pagecache.PageCache;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
@@ -34,9 +35,10 @@ public class FreeIdFilteredIdGeneratorFactoryTest
         long highId = 1L;
         long maxId = 10L;
         LongSupplier highIdSupplier = () -> highId;
-        IdGenerator idGenerator = filteredGenerator.open( file, idType, highIdSupplier, maxId );
+        PageCache pageCache = mock( PageCache.class );
+        IdGenerator idGenerator = filteredGenerator.open( pageCache, file, idType, highIdSupplier, maxId );
 
-        verify( idGeneratorFactory ).open( eq( file ), eq( idType ), any( LongSupplier.class ), eq( maxId ) );
+        verify( idGeneratorFactory ).open( eq( pageCache ), eq( file ), eq( idType ), any( LongSupplier.class ), eq( maxId ) );
         assertThat( idGenerator, instanceOf( FreeIdFilteredIdGenerator.class ) );
     }
 
@@ -48,9 +50,10 @@ public class FreeIdFilteredIdGeneratorFactoryTest
         long highId = 1L;
         long maxId = 10L;
         LongSupplier highIdSupplier = () -> highId;
-        IdGenerator idGenerator = filteredGenerator.open( file, idType, highIdSupplier, maxId );
+        PageCache pageCache = mock( PageCache.class );
+        IdGenerator idGenerator = filteredGenerator.open( pageCache, file, idType, highIdSupplier, maxId );
 
-        verify( idGeneratorFactory ).open( file, idType, highIdSupplier, maxId );
+        verify( idGeneratorFactory ).open( pageCache, file, idType, highIdSupplier, maxId );
         assertThat( idGenerator, instanceOf( FreeIdFilteredIdGenerator.class ) );
     }
 

@@ -15,6 +15,7 @@ import java.util.function.LongSupplier;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.io.pagecache.PageCache;
 
 public class FreeIdFilteredIdGeneratorFactory implements IdGeneratorFactory
 {
@@ -29,18 +30,19 @@ public class FreeIdFilteredIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator open( File filename, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
+    public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
     {
         FreeIdFilteredIdGenerator freeIdFilteredIdGenerator =
-                new FreeIdFilteredIdGenerator( delegate.open( filename, idType, highIdScanner, maxId ), freeIdCondition );
+                new FreeIdFilteredIdGenerator( delegate.open( pageCache, filename, idType, highIdScanner, maxId ), freeIdCondition );
         delegatedGenerator.put( idType, freeIdFilteredIdGenerator );
         return freeIdFilteredIdGenerator;
     }
 
     @Override
-    public IdGenerator create( File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
+    public IdGenerator create( PageCache pageCache, File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+            OpenOption... openOptions )
     {
-        return delegate.create( filename, idType, highId, throwIfFileExists, maxId, openOptions );
+        return delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, openOptions );
     }
 
     @Override

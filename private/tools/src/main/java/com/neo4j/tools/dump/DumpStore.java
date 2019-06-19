@@ -89,7 +89,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = createPageCache( fs, scheduler ) )
         {
-            final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
+            final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.of( file.getParentFile() ),
                     Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider() );
 

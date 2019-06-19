@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
@@ -241,32 +241,32 @@ public class RaftBootstrapper
      */
     private IdAllocationState deriveIdAllocationState( DatabaseLayout layout )
     {
-        DefaultIdGeneratorFactory factory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
+        DefaultIdGeneratorFactory factory = new DefaultIdGeneratorFactory( fs, immediate() );
 
         long[] highIds = new long[]{
-                getHighId( factory, NODE, layout.idNodeStore() ),
-                getHighId( factory, RELATIONSHIP, layout.idRelationshipStore() ),
-                getHighId( factory, PROPERTY, layout.idPropertyStore() ),
-                getHighId( factory, STRING_BLOCK, layout.idPropertyStringStore() ),
-                getHighId( factory, ARRAY_BLOCK, layout.idPropertyArrayStore() ),
-                getHighId( factory, PROPERTY_KEY_TOKEN, layout.idPropertyKeyTokenStore() ),
-                getHighId( factory, PROPERTY_KEY_TOKEN_NAME, layout.idPropertyKeyTokenNamesStore() ),
-                getHighId( factory, RELATIONSHIP_TYPE_TOKEN, layout.idRelationshipTypeTokenStore() ),
-                getHighId( factory, RELATIONSHIP_TYPE_TOKEN_NAME, layout.idRelationshipTypeTokenNamesStore() ),
-                getHighId( factory, LABEL_TOKEN, layout.idLabelTokenStore() ),
-                getHighId( factory, LABEL_TOKEN_NAME, layout.idLabelTokenNamesStore() ),
-                getHighId( factory, NEOSTORE_BLOCK, layout.idMetadataStore() ),
-                getHighId( factory, SCHEMA, layout.idSchemaStore() ),
-                getHighId( factory, NODE_LABELS, layout.idNodeLabelStore() ),
-                getHighId( factory, RELATIONSHIP_GROUP, layout.idRelationshipGroupStore() )};
+                getHighId( factory, pageCache, NODE, layout.idNodeStore() ),
+                getHighId( factory, pageCache, RELATIONSHIP, layout.idRelationshipStore() ),
+                getHighId( factory, pageCache, PROPERTY, layout.idPropertyStore() ),
+                getHighId( factory, pageCache, STRING_BLOCK, layout.idPropertyStringStore() ),
+                getHighId( factory, pageCache, ARRAY_BLOCK, layout.idPropertyArrayStore() ),
+                getHighId( factory, pageCache, PROPERTY_KEY_TOKEN, layout.idPropertyKeyTokenStore() ),
+                getHighId( factory, pageCache, PROPERTY_KEY_TOKEN_NAME, layout.idPropertyKeyTokenNamesStore() ),
+                getHighId( factory, pageCache, RELATIONSHIP_TYPE_TOKEN, layout.idRelationshipTypeTokenStore() ),
+                getHighId( factory, pageCache, RELATIONSHIP_TYPE_TOKEN_NAME, layout.idRelationshipTypeTokenNamesStore() ),
+                getHighId( factory, pageCache, LABEL_TOKEN, layout.idLabelTokenStore() ),
+                getHighId( factory, pageCache, LABEL_TOKEN_NAME, layout.idLabelTokenNamesStore() ),
+                getHighId( factory, pageCache, NEOSTORE_BLOCK, layout.idMetadataStore() ),
+                getHighId( factory, pageCache, SCHEMA, layout.idSchemaStore() ),
+                getHighId( factory, pageCache, NODE_LABELS, layout.idNodeLabelStore() ),
+                getHighId( factory, pageCache, RELATIONSHIP_GROUP, layout.idRelationshipGroupStore() )};
 
         return new IdAllocationState( highIds, FIRST_INDEX );
     }
 
-    private static long getHighId( DefaultIdGeneratorFactory factory, IdType idType, File idFile )
+    private static long getHighId( DefaultIdGeneratorFactory factory, PageCache pageCache, IdType idType, File idFile )
     {
         LongSupplier throwingHighIdSupplier = throwIfIdFileDoesNotExist( idType, idFile );
-        try ( IdGenerator idGenerator = factory.open( idFile, idType, throwingHighIdSupplier, Long.MAX_VALUE ) )
+        try ( IdGenerator idGenerator = factory.open( pageCache, idFile, idType, throwingHighIdSupplier, Long.MAX_VALUE ) )
         {
             return idGenerator.getHighId();
         }

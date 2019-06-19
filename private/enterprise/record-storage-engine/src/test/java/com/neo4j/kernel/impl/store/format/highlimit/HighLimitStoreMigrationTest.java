@@ -105,7 +105,7 @@ class HighLimitStoreMigrationTest
     {
         File store = databaseLayout.schemaStore();
         File idFile = databaseLayout.idSchemaStore();
-        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, pageCache, immediate() );
+        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;
         Config config = Config.defaults();

@@ -107,7 +107,7 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               PageCache pageCache = createPageCache( fs, createInitialisedScheduler() ) )
         {
-            DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
+            DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
             Config config = Config.defaults();
             StoreFactory storeFactory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs,
                     logProvider() );

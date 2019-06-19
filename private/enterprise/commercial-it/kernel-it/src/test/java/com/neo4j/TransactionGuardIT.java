@@ -541,7 +541,7 @@ public class TransactionGuardIT
 
         return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(
-                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, pageCache, immediate() ) ) )
+                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate() ) ) )
                 .build();
     }
 
@@ -621,15 +621,16 @@ public class TransactionGuardIT
         }
 
         @Override
-        public IdGenerator open( File filename, IdType idType, LongSupplier highIdSupplier, long maxId, OpenOption... openOptions )
+        public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdSupplier, long maxId, OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.open( filename, idType, highIdSupplier, maxId ) );
+            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId ) );
         }
 
         @Override
-        public IdGenerator create( File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
+        public IdGenerator create( PageCache pageCache, File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+                OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.create( filename, idType, highId, throwIfFileExists, maxId, openOptions ) );
+            return new TerminationIdGenerator( delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, openOptions ) );
         }
 
         @Override

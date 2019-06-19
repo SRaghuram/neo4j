@@ -17,6 +17,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
@@ -36,7 +37,7 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator open( File fileName, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
+    public IdGenerator open( PageCache pageCache, File fileName, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
     {
         return openGenerator( fileName, idType, highIdScanner, maxId );
     }
@@ -61,7 +62,8 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator create( File fileName, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
+    public IdGenerator create( PageCache pageCache, File fileName, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+            OpenOption... openOptions )
     {
         ReplicatedIdGenerator.createGenerator( fs, fileName, highId, throwIfFileExists );
         return openGenerator( fileName, idType, () -> highId, maxId );
