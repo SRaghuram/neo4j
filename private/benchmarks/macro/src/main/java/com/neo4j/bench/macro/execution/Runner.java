@@ -38,7 +38,8 @@ public class Runner
                             ParametersReader parametersReader,
                             ForkDirectory forkDirectory,
                             MeasurementControl warmupControl,
-                            MeasurementControl measurementControl ) throws Exception
+                            MeasurementControl measurementControl,
+                            boolean shouldRollbackWarmup ) throws Exception
     {
         // completely skip profiling and execution logic if there is no warmup for this query
         warmupControl.reset();
@@ -63,7 +64,7 @@ public class Runner
             try ( Results.ResultsWriter warmupResultsWriter = Results.newWriter( forkDirectory, Phase.WARMUP, NANOSECONDS ) )
             {
                 System.out.println( format( "Performing warmup (%s). Policy: %s", warmupQueryString.executionMode(), warmupControl.description() ) );
-                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter );
+                execute( warmupQueryString, parametersReader, warmupControl, database, warmupResultsWriter, shouldRollbackWarmup );
             }
 
             /*
@@ -103,7 +104,7 @@ public class Runner
         try ( Results.ResultsWriter measurementResultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, NANOSECONDS ) )
         {
             System.out.println( format( "Performing measurement (%s). Policy: %s", queryString.executionMode(), measurementControl.description() ) );
-            execute( queryString, parametersReader, measurementControl, database, measurementResultsWriter );
+            execute( queryString, parametersReader, measurementControl, database, measurementResultsWriter, false );
         }
 
         /*
@@ -124,7 +125,8 @@ public class Runner
                                  ParametersReader parameters,
                                  MeasurementControl measurementControl,
                                  Database db,
-                                 Results.ResultsWriter resultsWriter ) throws Exception
+                                 Results.ResultsWriter resultsWriter,
+                                 boolean shouldRollback ) throws Exception
     {
         boolean executeInTx = !queryString.isPeriodicCommit();
         measurementControl.reset();
@@ -135,7 +137,7 @@ public class Runner
             long startTimeUtc = System.currentTimeMillis();
             long start = System.nanoTime();
 
-            int rowCount = db.execute( queryForThisIteration, queryParameters, executeInTx );
+            int rowCount = db.execute( queryForThisIteration, queryParameters, executeInTx, shouldRollback );
 
             long stop = System.nanoTime();
             long duration = stop - start;
