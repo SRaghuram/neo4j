@@ -19,5 +19,5 @@ public interface Database extends AutoCloseable, HasPid
      * @param inTx specifies if query execution should be wrapped in a new transaction
      * @return row count
      */
-    int execute( String query, Map<String,Object> parameters, boolean inTx );
+    int execute( String query, Map<String,Object> parameters, boolean inTx, boolean shouldRollback );
 }
