@@ -9,11 +9,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.morsel.execution.{CursorPool, CursorPools, FlowControl, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
 
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
@@ -24,6 +27,9 @@ object OperatorCodeGenHelperTemplates {
   }
   case object NodeLabelIndexCursorPool extends CursorPoolsType {
     override def name: String = "nodeLabelIndexCursorPool"
+  }
+  case object NodeValueIndexCursorPool extends CursorPoolsType {
+    override def name: String = "nodeValueIndexCursorPool"
   }
   case object GroupCursorPool extends CursorPoolsType {
     override def name: String = "relationshipGroupCursorPool"
@@ -84,6 +90,7 @@ object OperatorCodeGenHelperTemplates {
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation = allocateCursor(NodeCursorPool)
   val ALLOCATE_NODE_LABEL_CURSOR: IntermediateRepresentation = allocateCursor(NodeLabelIndexCursorPool)
+  val ALLOCATE_NODE_INDEX_CURSOR: IntermediateRepresentation = allocateCursor(NodeValueIndexCursorPool)
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
 
@@ -105,7 +112,29 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), cursor)
 
   def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label, cursor)
+    invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
+                     cursor)
+
+  //  void nodeIndexSeek( IndexReadSession index, NodeValueIndexCursor cursor, IndexOrder indexOrder, boolean needsValues, IndexQuery... query )
+  //  throws KernelException;
+  def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
+                    cursor: IntermediateRepresentation,
+                    indexOrder: IndexOrder,
+                    query: IntermediateRepresentation): IntermediateRepresentation = {
+    val order = indexOrder match {
+      case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
+      case IndexOrder.DESCENDING => getStatic[IndexOrder, IndexOrder]("DESCENDING")
+      case IndexOrder.NONE => getStatic[IndexOrder, IndexOrder]("NONE")
+    }
+    invokeSideEffect(loadField(DATA_READ),
+                     method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
+                       "nodeIndexSeek"),
+                     indexReadSession,
+                     cursor,
+                     order,
+                     constant(false),
+                     arrayOf[IndexQuery](query))
+  }
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
@@ -124,4 +153,9 @@ object OperatorCodeGenHelperTemplates {
   def profileRow(id: Id): IntermediateRepresentation = {
     invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("row"))
   }
+
+  def indexReadSession(offset: Int): IntermediateRepresentation =
+    arrayLoad(invoke(QUERY_STATE, method[QueryState, Array[IndexReadSession]]("queryIndexes")), offset)
+
+  def asValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherCoercions, Value, AnyValue]("asStorableValue"), in)
 }

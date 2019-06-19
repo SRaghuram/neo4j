@@ -5,11 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{NoOutput, OutputDefinition, PipelineDefinition, ProduceResultOutput}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{SingleThreadedAllNodeScanTaskTemplate, _}
@@ -77,6 +79,17 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
     val reversePlans = (headPlan +: middlePlans).reverse
 
+    def cantHandle(acc: FusionPlan,
+                   nextPlan: LogicalPlan) = {
+      // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
+      innermostTemplate.shouldWriteToContext = true
+      acc.copy(
+        template = innermostTemplate,
+        fusedPlans = List.empty,
+        unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]) ::: acc.unhandledPlans,
+        unhandledOutput = output)
+    }
+
     val fusedPipeline =
       reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
@@ -110,6 +123,30 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _,  indexOrder) if properties.forall(!_.shouldGetValue) =>
+            val argumentSize = physicalPlan.argumentSizes(id)
+
+            valueExpr match {
+              // Index exact value seek on single value
+              case SingleQueryExpression(expr) =>
+                val newTemplate = new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
+                                                                                plan.id,
+                                                                                innermostTemplate,
+                                                                                node,
+                                                                                slots.getLongOffsetFor(node),
+                                                                                properties.head.propertyKeyToken.nameId.id,
+                                                                                expr,
+                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties),
+                                                                                asKernelIndexOrder(indexOrder),
+                                                                                argumentSize)(expressionCompiler)
+                acc.copy(
+                  template = newTemplate,
+                  fusedPlans = nextPlan :: acc.fusedPlans)
+
+              case _ => cantHandle(acc, nextPlan)
+            }
+
+
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
@@ -140,9 +177,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Selection(predicate, _) =>
-            val compiledPredicate = () => expressionCompiler.intermediateCompileExpression(predicate).getOrElse(
-              return (None, middlePlans, acc.unhandledOutput)
-            )
+            val compiledPredicate = () =>
+              expressionCompiler.intermediateCompileExpression(predicate).getOrElse(throw new CantCompileQueryException)
             acc.copy(
               template = new FilterOperatorTemplate(acc.template, plan.id, compiledPredicate),
               fusedPlans = nextPlan :: acc.fusedPlans)
@@ -154,13 +190,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                      fusedPlans = nextPlan :: acc.fusedPlans)
 
           case _ =>
-            // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
-            innermostTemplate.shouldWriteToContext = true
-            acc.copy(
-              template = innermostTemplate,
-              fusedPlans = List.empty,
-              unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]):::acc.unhandledPlans,
-              unhandledOutput = output)
+            cantHandle(acc, nextPlan)
         }
       }
 
@@ -171,8 +201,13 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val workIdentity = WorkIdentity.fromFusedPlans(fusedPipeline.fusedPlans)
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
-      val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate)
-      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
+      try {
+        val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate)
+        (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
+      } catch {
+        case _: CantCompileQueryException =>
+          (None, middlePlans, output)
+      }
     }
   }
 }

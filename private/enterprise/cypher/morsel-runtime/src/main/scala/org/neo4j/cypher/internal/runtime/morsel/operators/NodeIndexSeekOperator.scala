@@ -5,24 +5,29 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
+import org.neo4j.cypher.internal.v4_0.expressions
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{Value, Values}
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             offset: Int,
-                            label: LabelToken,
                             properties: Array[SlottedIndexedProperty],
                             queryIndexId: Int,
                             indexOrder: IndexOrder,
@@ -157,3 +162,84 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 }
 
 class NodeWithValues(val nodeId: Long, val values: Array[Value])
+
+
+class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+                                                id: Id,
+                                                innermost: DelegateOperatorTaskTemplate,
+                                                nodeVarName: String,
+                                                offset: Int,
+                                                propertyId: Int,
+                                                rawExpression: expressions.Expression,
+                                                queryIndexId: Int,
+                                                indexOrder: IndexOrder,
+                                                argumentSize: SlotConfiguration.Size)
+                                               (codeGen: OperatorExpressionCompiler)
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private var query: IntermediateExpression = _
+
+  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
+
+  override def genFields: Seq[Field] = {
+    (super.genFields ++ query.fields :+ nodeIndexCursorField ) ++ inner.genFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    query.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
+  }
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    query = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
+    //IndexQuery.exact(
+    val input = invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(propertyId),
+                 asValue(query.ir))
+    block(
+      setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
+      nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, input),
+      setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+      constant(true))
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     ...
+      *     << inner.genOperate >>
+      *     setLongAt(offset, nodeIndexCursor.nodeReference())
+      *     this.canContinue = this.nodeIndexCursor.next()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+        } else {
+          noop()
+        },
+        codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
+        profileRow(id),
+        inner.genOperate,
+        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+        )
+      )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeLabelCursor)
+      *   nodeValueCursor = null
+      * }}}
+      */
+    block(
+      freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
+      setField(nodeIndexCursorField, constant(null))
+      )
+  }
+}
