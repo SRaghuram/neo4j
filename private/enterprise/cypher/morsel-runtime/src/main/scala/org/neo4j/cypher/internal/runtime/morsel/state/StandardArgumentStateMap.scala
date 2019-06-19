@@ -44,6 +44,12 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     }
   }
 
+  override def isEmpty: Boolean = {
+    controllers.forall {
+      case (_, controller) => controller.isZero
+    }
+  }
+
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {

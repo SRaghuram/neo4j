@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
@@ -154,7 +155,9 @@ class Buffers(numBuffers: Int,
     * Clear all data from all buffers.
     */
   def clearAll(): Unit = {
-    for (buffer <- buffers) {
+    var i = 0
+    while (i < buffers.length) {
+      val buffer = buffers(i)
       buffer match {
         case dataHolder: DataHolder =>
           DebugSupport.logErrorHandling(s"Clearing $dataHolder")
@@ -162,6 +165,25 @@ class Buffers(numBuffers: Int,
         case x => // nothing to do here
           DebugSupport.logErrorHandling(s"Not clearing $x")
       }
+      i += 1
+    }
+  }
+
+  /**
+    * Assert that all buffers are empty
+    */
+  def assertAllEmpty() : Unit = {
+    var i = 0
+    while (i < buffers.length) {
+      val buffer = buffers(i)
+      buffer match {
+        case s: Source[_] =>
+          if(s.hasData) {
+            throw new RuntimeResourceLeakException(s"Buffer $s is not empty after query completion.")
+          }
+        case _ =>
+      }
+      i += 1
     }
   }
 }

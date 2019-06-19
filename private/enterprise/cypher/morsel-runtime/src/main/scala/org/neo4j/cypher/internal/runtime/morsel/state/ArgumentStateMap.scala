@@ -18,6 +18,8 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   def clearAll(f: S => Unit): Unit
 
+  def isEmpty: Boolean
+
   /**
     * Update the [[ArgumentState]] related to `argument` and decrement
     * the argument counter.

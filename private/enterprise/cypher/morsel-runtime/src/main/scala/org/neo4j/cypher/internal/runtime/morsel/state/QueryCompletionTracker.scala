@@ -12,7 +12,11 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner.Thunk
 import org.neo4j.kernel.impl.query.QuerySubscriber
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
@@ -40,6 +44,21 @@ trait QueryCompletionTracker extends FlowControl {
     * @return true iff the query has completed
     */
   def isCompleted: Boolean
+
+  /**
+    * Add an assertion to be run when the query is completed.
+    */
+  def addCompletionAssertion(assertion: Thunk): Unit = {
+    if (AssertionRunner.isAssertionsEnabled) {
+      assertions += assertion
+    }
+  }
+
+  protected val assertions: ArrayBuffer[Thunk] = new ArrayBuffer[Thunk]()
+
+  protected def runAssertions(): Unit = {
+    assertions.foreach(AssertionRunner.runUnderAssertion)
+  }
 }
 
 /**
@@ -124,7 +143,12 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
            |count: $count, cancelled: $cancelled, demand: $demand""".stripMargin)
     }
 
-    count > 0 && !cancelled
+    val moreToCome = count > 0 && !cancelled
+    if (!moreToCome) {
+      runAssertions()
+    }
+
+    moreToCome
   }
 
   override def toString: String = s"StandardQueryCompletionTracker($count)"
@@ -229,7 +253,11 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (!errors.isEmpty) {
       throw allErrors()
     }
-    !isCompleted
+    val moreToCome = !isCompleted
+    if (!moreToCome) {
+      runAssertions()
+    }
+    moreToCome
   }
 
   private def releaseLatch(): Unit = synchronized {

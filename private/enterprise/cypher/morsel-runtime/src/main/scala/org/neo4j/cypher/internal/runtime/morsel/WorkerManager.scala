@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 
 /**
   * Manages [[Worker]]s and checks that all worker related resources are released.
@@ -21,19 +22,21 @@ abstract class WorkerManager(val numberOfWorkers: Int,
     }).toArray
 
   def assertAllReleased(): Unit = {
-    val liveCounts = new LiveCounts()
-    for (w <- workers) {
-      w.collectCursorLiveCounts(liveCounts)
-    }
-    liveCounts.assertAllReleased()
+    AssertionRunner.runUnderAssertion { () =>
+      val liveCounts = new LiveCounts()
+      for (w <- workers) {
+        w.collectCursorLiveCounts(liveCounts)
+      }
+      liveCounts.assertAllReleased()
 
-    val activeWorkers =
-      for {
-        worker <- workers.filter(_.sleeper.isWorking)
-      } yield Worker.WORKING_THOUGH_RELEASED(worker)
+      val activeWorkers =
+        for {
+          worker <- workers.filter(_.sleeper.isWorking)
+        } yield Worker.WORKING_THOUGH_RELEASED(worker)
 
-    if (activeWorkers.nonEmpty) {
-      throw new RuntimeResourceLeakException(activeWorkers.mkString("\n"))
+      if (activeWorkers.nonEmpty) {
+        throw new RuntimeResourceLeakException(activeWorkers.mkString("\n"))
+      }
     }
   }
 }

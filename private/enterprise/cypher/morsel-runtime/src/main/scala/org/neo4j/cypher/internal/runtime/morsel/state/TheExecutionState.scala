@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -36,6 +37,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   for (i <- executionGraphDefinition.buffers.indices)
     Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
+
+  // Add assertion for query completion
+  tracker.addCompletionAssertion(() => this.assertEmpty())
 
   // State
 
@@ -259,6 +263,29 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def prettyString(pipeline: ExecutablePipeline): String = {
     s"""continuations: ${continuations(pipeline.id.x)}
        |""".stripMargin
+  }
+
+  /**
+    * Assert that all buffers, continuations and argument state maps are empty.
+    */
+  private def assertEmpty(): Unit = {
+    buffers.assertAllEmpty()
+    var i = 0
+    while (i < continuations.length) {
+      val continuation = continuations(i)
+      if (continuation.hasData) {
+        throw new RuntimeResourceLeakException(s"Continuation buffer $continuation is not empty after query completion.")
+      }
+      i += 1
+    }
+    i = 0
+    while (i < argumentStateMaps.length) {
+      val asm = argumentStateMaps(i)
+      if (!asm.isEmpty) {
+        throw new RuntimeResourceLeakException(s"Argument State Map $asm is not empty after query completion.")
+      }
+      i += 1
+    }
   }
 
   // used by join operator, to create thread-safe argument states in its RHS ASM

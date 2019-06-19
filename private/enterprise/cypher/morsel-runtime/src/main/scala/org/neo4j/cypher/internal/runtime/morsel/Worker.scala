@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 
 import scala.concurrent.duration.Duration
 
@@ -154,12 +155,14 @@ class Worker(val workerId: Int,
   }
 
   def assertAllReleased(): Unit = {
-    val liveCounts = new LiveCounts()
-    collectCursorLiveCounts(liveCounts)
-    liveCounts.assertAllReleased()
+    AssertionRunner.runUnderAssertion { () =>
+      val liveCounts = new LiveCounts()
+      collectCursorLiveCounts(liveCounts)
+      liveCounts.assertAllReleased()
 
-    if (sleeper.isWorking) {
-      throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
+      if (sleeper.isWorking) {
+        throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
+      }
     }
   }
 
