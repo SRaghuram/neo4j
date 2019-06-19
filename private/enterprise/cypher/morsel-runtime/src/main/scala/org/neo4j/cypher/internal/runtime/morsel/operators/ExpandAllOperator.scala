@@ -264,6 +264,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *     pools.nodeCursorPool.free(nodeCursor)
     *     pools.relationshipGroupCursorPool.free(groupCursor)
     *     pools.relationshipTraversalCursorPool.free(traversalCursor)
+    *     nodeCursor = null
+    *     groupCursor = null
+    *     traversalCursor = null
     *     relationships = null
     * }}}
     */
@@ -272,6 +275,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
      freeCursor[RelationshipGroupCursor](loadField(groupCursorField), GroupCursorPool),
      freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
+     setField(nodeCursorField, constant(null)),
+     setField(groupCursorField, constant(null)),
+     setField(traversalCursorField, constant(null)),
      setField(relationshipsField, constant(null))
    )
   }
