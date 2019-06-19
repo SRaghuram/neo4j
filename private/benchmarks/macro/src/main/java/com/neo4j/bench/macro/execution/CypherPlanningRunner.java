@@ -53,7 +53,8 @@ public class CypherPlanningRunner extends QueryRunner
                             query.parameters().create(),
                             forkDirectory,
                             warmupControl,
-                            measurementControl );
+                            measurementControl,
+                            false );
             }
         }
         catch ( Exception e )
