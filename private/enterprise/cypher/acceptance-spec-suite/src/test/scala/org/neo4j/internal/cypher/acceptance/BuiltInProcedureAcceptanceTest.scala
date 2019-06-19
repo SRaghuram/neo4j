@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.graphdb.{Label, Node, Relationship}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
-import org.scalatest.LoneElement._
 
 import scala.collection.JavaConversions._
 
@@ -418,19 +417,19 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes")
 
     // Then
+    val provider = GenericNativeIndexProvider.DESCRIPTOR.name
     result.toList should equal(
-      List(Map("description" -> "INDEX ON :A(prop)",
-        "indexName" -> index.getName,
-        "tokenNames" -> List("A"),
-        "properties" -> List("prop"),
-        "state" -> "ONLINE",
-        "progress" -> 100D,
-        "type" -> "node_label_property",
+      List(Map(
         "id" -> 1,
-        "provider" -> Map(
-          "version" -> GenericNativeIndexProvider.DESCRIPTOR.getVersion,
-          "key" -> GenericNativeIndexProvider.DESCRIPTOR.getKey),
-        "failureMessage" -> "")))
+        "name" -> index.getName,
+        "state" -> "ONLINE",
+        "populationPercent" -> 100.0,
+        "uniqueness" -> "NONUNIQUE",
+        "type" -> "BTREE",
+        "entityType" -> "NODE",
+        "labelsOrTypes" -> List("A"),
+        "properties" -> List("prop"),
+        "provider" -> provider )))
   }
 
   test("yield from void procedure should return correct error msg") {
@@ -460,18 +459,17 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     // Then
     listResult.toList should equal(
-      List(Map("description" -> "INDEX ON :Person(name)",
-        "indexName" -> index.getName,
-        "tokenNames" -> List("Person"),
-        "properties" -> List("name"),
+      List(Map(
+        "id" -> 1,
+        "name" -> index.getName,
         "state" -> "ONLINE",
-        "progress" -> 100D,
-        "type" -> "node_label_property",
-        "id" -> index.getId,
-        "provider" -> Map(
-          "version" -> "3.0",
-          "key" -> "lucene+native"),
-        "failureMessage" -> "" )))
+        "populationPercent" -> 100.0,
+        "uniqueness" -> "NONUNIQUE",
+        "type" -> "FUSION",
+        "entityType" -> "NODE",
+        "labelsOrTypes" -> List("Person"),
+        "properties" -> List("name"),
+        "provider" -> "lucene+native-3.0" )))
   }
 
   test("should create unique property constraint from built-in-procedure") {
@@ -487,24 +485,24 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
+    val index = graph.getIndex("Person", Seq("name"))
 
     // when
-    val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement
+    val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
 
     // then
-    mapResult should have size 10
-    mapResult("description") should equal("INDEX ON :Person(name)")
-    mapResult("indexName").asInstanceOf[String] should equal("Uniqueness constraint on :Person (name)")
-    mapResult("id").asInstanceOf[Long].intValue() should be >= 1
-    mapResult("tokenNames") should equal(List("Person"))
-    mapResult("properties") should equal(List("name"))
-    mapResult("state") should equal("ONLINE")
-    mapResult("progress") should equal(100D)
-    mapResult("type") should equal("node_unique_property")
-    mapResult("provider") should equal(Map(
-               "version" -> "3.0",
-                "key" -> "lucene+native"))
-    mapResult("failureMessage") should equal("")
+    listResult.toList should equal(
+      List(Map(
+        "id" -> 3,
+        "name" -> index.getName,
+        "state" -> "ONLINE",
+        "populationPercent" -> 100.0,
+        "uniqueness" -> "UNIQUE",
+        "type" -> "FUSION",
+        "entityType" -> "NODE",
+        "labelsOrTypes" -> List("Person"),
+        "properties" -> List("name"),
+        "provider" -> "lucene+native-3.0" )))
   }
 
   test("should create node key constraint from built-in-procedure") {
@@ -520,24 +518,24 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
+    val index = graph.getIndex("Person", Seq("name"))
 
     // when
-    val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement
+    val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
 
     // then
-    mapResult should have size 10
-    mapResult("description") should equal("INDEX ON :Person(name)")
-    mapResult("indexName").asInstanceOf[String] should equal("Node key constraint on :Person (name)")
-    mapResult("id").asInstanceOf[Long].intValue() should be >= 1
-    mapResult("tokenNames") should equal(List("Person"))
-    mapResult("properties") should equal(List("name"))
-    mapResult("state") should equal("ONLINE")
-    mapResult("progress") should equal(100D)
-    mapResult("type") should equal("node_unique_property")
-    mapResult("provider") should equal(Map(
-      "version" -> "3.0",
-      "key" -> "lucene+native"))
-    mapResult("failureMessage") should equal("")
+    listResult.toList should equal(
+      List(Map(
+        "id" -> 3,
+        "name" -> index.getName,
+        "state" -> "ONLINE",
+        "populationPercent" -> 100.0,
+        "uniqueness" -> "UNIQUE",
+        "type" -> "FUSION",
+        "entityType" -> "NODE",
+        "labelsOrTypes" -> List("Person"),
+        "properties" -> List("name"),
+        "provider" -> "lucene+native-3.0" )))
   }
 
   test("should list indexes in alphabetical order") {
@@ -549,10 +547,10 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     graph.createIndex("A", "bar")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes() YIELD description RETURN description")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes() YIELD name RETURN name")
 
     // Then
-    result.columnAs("description").toList should equal(
-      List("INDEX ON :A(bar)", "INDEX ON :A(foo)", "INDEX ON :A(prop)", "INDEX ON :B(foo)", "INDEX ON :C(foo)"))
+    result.columnAs("name").toList should equal(
+      List("index_1", "index_2", "index_3", "index_4", "index_5"))
   }
 }
