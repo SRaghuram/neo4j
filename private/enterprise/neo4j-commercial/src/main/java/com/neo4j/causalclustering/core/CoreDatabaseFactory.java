@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
@@ -62,9 +62,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -80,6 +78,8 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.TransactionEventService;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 
 import java.time.Clock;
@@ -93,6 +93,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -100,13 +101,15 @@ import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
@@ -160,10 +163,9 @@ class CoreDatabaseFactory
     private final JobScheduler jobScheduler;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
-    private final CompositeDatabaseAvailabilityGuard availabilityGuard;
     private final StorageEngineFactory storageEngineFactory;
 
-    private final ClusteredDatabaseManager databaseManager;
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private final CatchupComponentsRepository catchupComponentsRepository;
     private final CatchupComponentsProvider catchupComponentsProvider;
 
@@ -184,19 +186,19 @@ class CoreDatabaseFactory
     private final CommercialIdTypeConfigurationProvider idTypeConfigurationProvider;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<AdvertisedSocketAddress,Message> raftSender;
+    private final TransactionEventService txEventService;
 
-    CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, ClusteredDatabaseManager databaseManager, CoreTopologyService topologyService,
-            CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory, Map<DatabaseId,DatabaseInitializer> databaseInitializers,
-            MemberId myIdentity, RaftGroupFactory raftGroupFactory, RaftMessageDispatcher raftMessageDispatcher,
-            CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade, RaftMessageLogger<MemberId> raftLogger,
-            Outbound<AdvertisedSocketAddress,Message> raftSender )
+    CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
+            CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
+            Map<DatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
+            RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
+            RaftMessageLogger<MemberId> raftLogger, Outbound<AdvertisedSocketAddress,Message> raftSender, TransactionEventService txEventService )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();
         this.jobScheduler = globalModule.getJobScheduler();
         this.fileSystem = globalModule.getFileSystem();
         this.pageCache = globalModule.getPageCache();
-        this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
 
         this.databaseManager = databaseManager;
@@ -215,6 +217,7 @@ class CoreDatabaseFactory
         this.recoveryFacade = recoveryFacade;
         this.raftLogger = raftLogger;
         this.raftSender = raftSender;
+        this.txEventService = txEventService;
 
         this.allocationSizes = getIdTypeAllocationSizeFromConfig( config );
 
@@ -258,7 +261,7 @@ class CoreDatabaseFactory
     }
 
     CoreEditionKernelComponents createKernelComponents( DatabaseId databaseId, LifeSupport life, CoreRaftContext raftContext,
-            CoreKernelResolvers kernelResolvers, DatabaseLogService logService )
+            CoreKernelResolvers kernelResolvers, DatabaseLogService logService, VersionContextSupplier versionContextSupplier )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
         Replicator replicator = raftContext.replicator();
@@ -291,7 +294,8 @@ class CoreDatabaseFactory
                 relationshipTypeTokenRegistry, debugLog, databaseManager );
 
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( raftContext.commandIndexTracker(),
-                replicatedLockTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, databaseManager );
+                replicatedLockTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, versionContextSupplier,
+                txEventService.getCommitNotifier( databaseId ) );
 
         Locks lockManager = createLockManager(
                 config, clock, logService, replicator, myIdentity, raftGroup.raftMachine(), replicatedLockTokenStateMachine, databaseId );
@@ -310,8 +314,9 @@ class CoreDatabaseFactory
         return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines, accessCapability );
     }
 
-    void createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies, StoreDownloadContext downloadContext,
-            Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext )
+    CoreDatabaseLife createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
+            StoreDownloadContext downloadContext, Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext,
+            ClusterInternalDbmsOperator internalOperator )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
         DatabaseLogProvider debugLog = kernelDatabase.getInternalLogProvider();
@@ -350,12 +355,12 @@ class CoreDatabaseFactory
                 raftGroup, downloadService, commandApplicationProcess );
 
         CoreDatabaseLife coreDatabaseLife = new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess,
-                messageHandler, snapshotService, downloadService, recoveryFacade, topologyService );
-
-        life.add( coreDatabaseLife );
+                messageHandler, snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService );
 
         panicService.addPanicEventHandler( commandApplicationProcess );
         panicService.addPanicEventHandler( raftGroup.raftMachine() );
+
+        return coreDatabaseLife;
     }
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, CoreStateStorageFactory storageFactory,
@@ -425,8 +430,7 @@ class CoreDatabaseFactory
         Duration leaderAwaitDuration = config.get( CausalClusteringSettings.replication_leader_await_timeout );
 
         return new RaftReplicator( databaseId, leaderLocator, myIdentity, raftOutbound, sessionPool, progressTracker, progressRetryStrategy,
-                availabilityTimeoutMillis,
-                debugLog, databaseManager, monitors, leaderAwaitDuration );
+                availabilityTimeoutMillis, debugLog, databaseManager, monitors, leaderAwaitDuration );
     }
 
     private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicService, JobScheduler jobScheduler,

@@ -6,6 +6,7 @@
 package com.neo4j.commercial.edition;
 
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,17 +16,17 @@ import java.io.IOException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.configuration.Settings.FALSE;
@@ -107,22 +108,28 @@ class ExistingDatabaseCreationIT
     {
         managementService = startManagementService();
 
-        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+        var database = managementService.database( DEFAULT_DATABASE_NAME );
         createSomeNodes( database );
 
         managementService.createDatabase( anotherDatabaseName );
 
-        GraphDatabaseAPI anotherDatabaseService = (GraphDatabaseAPI) managementService.database( anotherDatabaseName );
+        var anotherDatabaseService = (GraphDatabaseAPI) managementService.database( anotherDatabaseName );
         createSomeNodes( anotherDatabaseService );
-        DatabaseLayout databaseLayout = anotherDatabaseService.databaseLayout();
+        var databaseLayout = anotherDatabaseService.databaseLayout();
         managementService.shutdown();
 
-        DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        var cloneLayout = testDirectory.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
-        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        var logProvider = new AssertableLogProvider();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setInternalLogProvider( logProvider )
+                .build();
 
-        assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( cloneDatabase ) );
+        managementService.createDatabase( cloneDatabase );
+        //TODO: replace with failed to reconcile when failures are handled by reconciler not database manager
+        logProvider.rawMessageMatcher().assertContains( "Exception occurred while starting the database" );
+        assertFalse( managementService.database( cloneDatabase ).isAvailable( 0 ) );
     }
 
     private void verifyExpectedNodeCounts( GraphDatabaseService cloneDatabaseService )

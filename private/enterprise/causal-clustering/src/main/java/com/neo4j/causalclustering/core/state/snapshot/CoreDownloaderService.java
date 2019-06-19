@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.util.Optional;
 

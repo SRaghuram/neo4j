@@ -77,6 +77,11 @@ class SystemGraphRealmTestHelper
         }
 
         @Override
+        public void initialiseDefaultDatabases()
+        {
+        }
+
+        @Override
         public SortedMap<DatabaseId,StandaloneDatabaseContext> registeredDatabases()
         {
             return Collections.emptySortedMap();

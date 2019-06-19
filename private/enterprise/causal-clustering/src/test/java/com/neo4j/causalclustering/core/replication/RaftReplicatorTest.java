@@ -14,8 +14,8 @@ import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -73,7 +73,7 @@ class RaftReplicatorTest
     private final Duration leaderAwaitDuration = Duration.ofMillis( 500 );
     private final Health health = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), NullLog.getInstance() );
     private DatabaseAvailabilityGuard availabilityGuard;
-    private StubClusteredDatabaseManager clusteredDatabaseManager;
+    private StubClusteredDatabaseManager databaseManager;
 
     @Inject
     private LifeSupport lifeSupport;
@@ -84,12 +84,12 @@ class RaftReplicatorTest
         availabilityGuard = new DatabaseAvailabilityGuard( databaseId, Clocks.systemClock(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
 
-        clusteredDatabaseManager = new StubClusteredDatabaseManager();
-        clusteredDatabaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( databaseId )
-                .withDatabaseAvailabilityGuard( availabilityGuard )
-                .withDatabaseHealth( health )
-                .register();
+        databaseManager = new StubClusteredDatabaseManager();
+        databaseManager.givenDatabaseWithConfig()
+                       .withDatabaseId( databaseId )
+                       .withDatabaseAvailabilityGuard( availabilityGuard )
+                       .withDatabaseHealth( health )
+                       .register();
 
         lifeSupport.add( availabilityGuard );
     }
@@ -325,7 +325,7 @@ class RaftReplicatorTest
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
         return new RaftReplicator( databaseId, leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10,
-                NullLogProvider.getInstance(), clusteredDatabaseManager, monitors, leaderAwaitDuration );
+                NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )

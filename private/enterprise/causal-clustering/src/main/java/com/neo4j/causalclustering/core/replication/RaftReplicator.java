@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -16,8 +16,10 @@ import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.replication.session.OperationContext;
 import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
-import com.neo4j.causalclustering.helper.TimeoutStrategy.Timeout;
+
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy.Timeout;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
@@ -42,7 +44,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final LocalSessionPool sessionPool;
     private final TimeoutStrategy progressTimeoutStrategy;
     private final Log log;
-    private final ClusteredDatabaseManager databaseManager;
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private final ReplicationMonitor replicationMonitor;
     private final long availabilityTimeoutMillis;
     private final LeaderProvider leaderProvider;
@@ -50,7 +52,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     // TODO: Get rid of dependency on database manager!
     public RaftReplicator( DatabaseId databaseId, LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound,
             LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis,
-            LogProvider logProvider, ClusteredDatabaseManager databaseManager, Monitors monitors, Duration leaderAwaitDuration )
+            LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
         this.databaseId = databaseId;
         this.me = me;

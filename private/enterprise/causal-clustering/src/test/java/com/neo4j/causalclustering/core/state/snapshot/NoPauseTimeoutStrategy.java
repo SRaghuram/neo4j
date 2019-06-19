@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

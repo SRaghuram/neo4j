@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.io.File;
 import java.net.ConnectException;

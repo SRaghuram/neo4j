@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -162,7 +163,7 @@ class StoreDownloaderTest
 
         LogFiles transactionLogs = mock( LogFiles.class );
 
-        return new StoreDownloadContext( database, storeFiles, transactionLogs );
+        return new StoreDownloadContext( database, storeFiles, transactionLogs, mock( ClusterInternalDbmsOperator.class ) );
     }
 
     private RemoteStore mockRemoteSuccessfulStore( DatabaseId databaseId ) throws StoreIdDownloadFailedException

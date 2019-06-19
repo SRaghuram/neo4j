@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;

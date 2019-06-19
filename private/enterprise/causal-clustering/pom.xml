@@ -60,6 +60,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-dbms-commercial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-consistency-check</artifactId>
             <version>${project.version}</version>

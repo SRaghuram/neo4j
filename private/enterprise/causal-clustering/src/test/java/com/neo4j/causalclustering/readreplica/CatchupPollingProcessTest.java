@@ -17,10 +17,12 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helpers.FakeExecutor;
+import org.neo4j.test.CallingThreadExecutor;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -45,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -59,10 +61,12 @@ class CatchupPollingProcessTest
 {
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
-    private final Executor executor = new FakeExecutor();
+    private final Executor executor = new CallingThreadExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
+    private final ClusterInternalDbmsOperator internalOperator = mock( ClusterInternalDbmsOperator.class, Mockito.RETURNS_MOCKS );
+    private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
@@ -87,12 +91,15 @@ class CatchupPollingProcessTest
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any() )).thenReturn( storeId );
 
-        databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ) ) );
+        databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ),
+                internalOperator ) );
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
         when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
+        when( databaseContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
+        clearInvocations( databaseContext );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
@@ -186,7 +193,7 @@ class CatchupPollingProcessTest
         // then
         verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( databaseContext, atLeast( 1 ) ).start();
+        verify( storeCopyHandle ).restart();
         verify( txApplier ).refreshFromNewStore();
 
         // then
@@ -210,7 +217,7 @@ class CatchupPollingProcessTest
         // then
         verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( databaseContext ).start();
+        verify( storeCopyHandle ).restart();
         verify( txApplier ).refreshFromNewStore();
 
         // then

@@ -17,11 +17,9 @@ import org.neo4j.bolt.testing.RecordedBoltResponse;
 import org.neo4j.bolt.v1.runtime.BoltStateMachineV1;
 import org.neo4j.bolt.v1.runtime.integration.SessionExtension;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -42,14 +40,14 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     @RegisterExtension
     static final SessionExtension env = new SessionExtension( new TestCommercialDatabaseManagementServiceBuilder() );
 
-    protected DatabaseManager<?> databaseManager()
+    protected DatabaseManagementService managementService()
     {
-        return env.databaseManager();
+        return env.managementService();
     }
 
-    private DatabaseId defaultDatabaseId()
+    private String defaultDatabaseName()
     {
-        return new TestDatabaseIdRepository().get( env.defaultDatabaseName() );
+        return env.defaultDatabaseName();
     }
 
     @Test
@@ -108,16 +106,16 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     void shouldErrorIfDatabaseNotExists() throws Throwable
     {
         BoltStateMachineV1 machine = newStateMachineInReadyState();
-        DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.dropDatabase( defaultDatabaseId() );
+        DatabaseManagementService managementService = managementService();
+        managementService.dropDatabase( defaultDatabaseName() );
         runWithFailure( "RETURN 1", machine, Status.Database.DatabaseNotFound );
     }
 
     @Test
     void shouldErrorIfDatabaseStopped() throws Throwable
     {
-        DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.stopDatabase( defaultDatabaseId() );
+        DatabaseManagementService managementService = managementService();
+        managementService.shutdownDatabase( defaultDatabaseName() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();
         runWithFailure( "RETURN 1", machine, Status.General.DatabaseUnavailable );

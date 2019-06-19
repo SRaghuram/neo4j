@@ -8,10 +8,10 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
 
 /**
@@ -24,16 +24,16 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public class CatchupComponentsRepository
 {
-    private final ClusteredDatabaseManager clusteredDatabaseManager;
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
 
-    public CatchupComponentsRepository( ClusteredDatabaseManager clusteredDatabaseManager )
+    public CatchupComponentsRepository( DatabaseManager<ClusteredDatabaseContext> databaseManager )
     {
-        this.clusteredDatabaseManager = clusteredDatabaseManager;
+        this.databaseManager = databaseManager;
     }
 
     public Optional<CatchupComponents> componentsFor( DatabaseId databaseId )
     {
-        return clusteredDatabaseManager.getDatabaseContext( databaseId ).map( ClusteredDatabaseContext::catchupComponents );
+        return databaseManager.getDatabaseContext( databaseId ).map( ClusteredDatabaseContext::catchupComponents );
     }
 
     /** Simple struct to make working with various per database catchup components a bit easier */

@@ -18,10 +18,8 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -66,6 +64,7 @@ class MultiDatabaseLockManagerIT
     @Test
     void databasesHaveDifferentLockManagers() throws DatabaseExistsException
     {
+
         GraphDatabaseFacade secondFacade = startSecondDatabase();
         Locks firstDbLocks = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( Locks.class );
         Locks secondDbLocks = secondFacade.getDependencyResolver().resolveDependency( Locks.class );
@@ -98,8 +97,8 @@ class MultiDatabaseLockManagerIT
     private GraphDatabaseFacade startSecondDatabase() throws DatabaseExistsException
     {
         String secondDb = "second";
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( new TestDatabaseIdRepository().get( secondDb ) ).databaseFacade();
+        managementService.createDatabase( secondDb );
+        return (GraphDatabaseFacade) managementService.database( secondDb );
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )
@@ -113,10 +112,4 @@ class MultiDatabaseLockManagerIT
             }
         } );
     }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
-    }
-
 }

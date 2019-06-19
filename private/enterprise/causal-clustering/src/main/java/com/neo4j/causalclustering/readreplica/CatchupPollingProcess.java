@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -63,8 +64,9 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
-            StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
+    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext,
+            CatchupClientFactory catchUpClient, BatchingTxApplier applier, StoreCopyProcess storeCopyProcess,
+            LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
         this.databaseContext = databaseContext;
@@ -121,11 +123,9 @@ public class CatchupPollingProcess extends LifecycleAdapter
                 case TX_PULLING:
                     pullTransactions();
                     break;
-
                 case STORE_COPYING:
                     copyStore();
                     break;
-
                 default:
                     throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
                 }
@@ -139,6 +139,18 @@ public class CatchupPollingProcess extends LifecycleAdapter
             panic( e );
             return null;
         } );
+    }
+
+    String describeState()
+    {
+        if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
+        {
+            return format( "%s is %s (%d of %d)", databaseContext.databaseId(), TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+        }
+        else
+        {
+            return String.format( "%s is %s", databaseContext.databaseId(), state.name() );
+        }
     }
 
     private synchronized void panic( Throwable e )
@@ -264,32 +276,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private void transitionToStoreCopy()
     {
-        try
-        {
-            databaseContext.stopForStoreCopy();
-        }
-        catch ( Throwable throwable )
-        {
-            throw new RuntimeException( throwable );
-        }
-
         state = STORE_COPYING;
     }
 
     private void transitionToTxPulling()
     {
-        try
-        {
-            databaseContext.start();
-        }
-        catch ( Throwable throwable )
-        {
-            throw new RuntimeException( throwable );
-        }
-
-        latestTxIdOfUpStream = 0; // we will find out on the next pull request response
-        applier.refreshFromNewStore();
-
         state = TX_PULLING;
     }
 
@@ -297,8 +288,10 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
+            var stoppedDb = databaseContext.stopForStoreCopy();
             storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, databaseContext.storeId() );
             transitionToTxPulling();
+            restartDatabase( stoppedDb );
         }
         catch ( IOException | StoreCopyFailedException e )
         {
@@ -310,15 +303,18 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    String describeState()
+    private void restartDatabase( ClusterInternalDbmsOperator.StoreCopyHandle stoppedDb )
     {
-        if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
+        try
         {
-            return format( "%s is %s (%d of %d)", databaseContext.databaseId(), TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+            stoppedDb.restart();
         }
-        else
+        catch ( Throwable throwable )
         {
-            return String.format( "%s is %s", databaseContext.databaseId(), state.name() );
+            throw new RuntimeException( throwable );
         }
+
+        latestTxIdOfUpStream = 0; // we will find out on the next pull request response
+        applier.refreshFromNewStore();
     }
 }

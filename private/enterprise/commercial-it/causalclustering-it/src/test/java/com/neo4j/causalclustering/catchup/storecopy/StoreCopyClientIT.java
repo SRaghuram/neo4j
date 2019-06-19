@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
-import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.Server;
 import io.netty.channel.ChannelHandler;

@@ -12,7 +12,10 @@ import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterInternalDbmsOperator.BootstrappingHandle;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.UUID;
 
@@ -20,23 +23,31 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith( {LifeExtension.class} )
 class CoreDatabaseLifeTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+
+    @Inject
+    private LifeSupport life;
 
     @Test
     void shouldNotifyTopologyServiceOnStart() throws Exception
     {
         var databaseId = databaseIdRepository.get( "customers" );
         var topologyService = mock( CoreTopologyService.class );
-        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService );
+        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
         coreDatabaseLife.init();
         coreDatabaseLife.start();
@@ -49,7 +60,7 @@ class CoreDatabaseLifeTest
     {
         var databaseId = databaseIdRepository.get( "orders" );
         var topologyService = mock( CoreTopologyService.class );
-        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService );
+        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
         coreDatabaseLife.init();
         coreDatabaseLife.start();
@@ -60,7 +71,7 @@ class CoreDatabaseLifeTest
         inOrder.verify( topologyService ).onDatabaseStop( databaseId );
     }
 
-    private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService ) throws Exception
+    private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService, LifeSupport life ) throws Exception
     {
         var raftMachine = mock( RaftMachine.class );
 
@@ -75,8 +86,10 @@ class CoreDatabaseLifeTest
         var snapshotService = mock( CoreSnapshotService.class );
         var downloaderService = mock( CoreDownloaderService.class );
         var recoveryFacade = mock( RecoveryFacade.class );
+        var internalOperator = mock( ClusterInternalDbmsOperator.class );
+        when( internalOperator.bootstrap( any() ) ).thenReturn( mock( BootstrappingHandle.class ) );
 
         return new CoreDatabaseLife( raftMachine, database, raftBinder, applicationProcess, messageHandler, snapshotService,
-                downloaderService, recoveryFacade, topologyService );
+                downloaderService, recoveryFacade, life, internalOperator, topologyService );
     }
 }

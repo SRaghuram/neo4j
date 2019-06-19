@@ -13,16 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -38,7 +34,6 @@ class MultiDatabaseIdGeneratorIT
 {
     @Inject
     private TestDirectory testDirectory;
-    private GraphDatabaseService database;
     private GraphDatabaseFacade firstDatabase;
     private GraphDatabaseFacade secondDatabase;
     private IdGeneratorFactory firstIdGeneratorFactory;
@@ -49,10 +44,10 @@ class MultiDatabaseIdGeneratorIT
     void setUp() throws DatabaseExistsException
     {
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
-        database = managementService.database( DEFAULT_DATABASE_NAME );
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        firstDatabase = getDefaultDatabase( databaseManager );
-        secondDatabase = startSecondDatabase( databaseManager );
+        firstDatabase = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
+        var secondDb = "second";
+        managementService.createDatabase( secondDb );
+        secondDatabase = (GraphDatabaseFacade) managementService.database( secondDb );
         firstIdGeneratorFactory = getIdGeneratorFactory( firstDatabase );
         secondIdGeneratorFactory = getIdGeneratorFactory( secondDatabase );
     }
@@ -115,25 +110,8 @@ class MultiDatabaseIdGeneratorIT
         return firstDatabase.getDependencyResolver().resolveDependency( IdController.class );
     }
 
-    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
-    {
-        return databaseManager.createDatabase( new TestDatabaseIdRepository().get( "second" ) ).databaseFacade();
-    }
-
-    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<?> databaseManager )
-    {
-        return databaseManager.getDatabaseContext( new TestDatabaseIdRepository().defaultDatabase() )
-                .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
-                .databaseFacade();
-    }
-
     private static IdGeneratorFactory getIdGeneratorFactory( GraphDatabaseFacade database )
     {
         return database.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

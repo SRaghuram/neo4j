@@ -5,17 +5,18 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -45,7 +46,7 @@ class CommitProcessStateMachineCollaborationTest
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( mock( CommandIndexTracker.class ),
                         lockState( finalLockSessionId ), 16, NullLogProvider.getInstance(),
-                        PageCursorTracerSupplier.NULL, mock( ClusteredDatabaseManager.class ) );
+                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );

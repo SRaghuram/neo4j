@@ -55,8 +55,8 @@ public class CoreClusterMember implements ClusterMember
 {
     public interface CoreGraphDatabaseFactory
     {
-        CoreGraphDatabase create( File databaseDirectory, Config memberConfig,
-                GraphDatabaseDependencies databaseDependencies, DiscoveryServiceFactory discoveryServiceFactory );
+        CoreGraphDatabase create( File databaseDirectory, Config memberConfig, GraphDatabaseDependencies databaseDependencies,
+                DiscoveryServiceFactory discoveryServiceFactory );
     }
 
     private final File neo4jHome;
@@ -70,6 +70,7 @@ public class CoreClusterMember implements ClusterMember
     private final String raftListenAddress;
     private CoreGraphDatabase coreGraphDatabase;
     private GraphDatabaseFacade defaultDatabase;
+    private GraphDatabaseFacade systemDatabase;
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
@@ -94,8 +95,7 @@ public class CoreClusterMember implements ClusterMember
                               Map<String, IntFunction<String>> instanceExtraParams,
                               String listenAddress,
                               String advertisedAddress,
-                              CoreGraphDatabaseFactory dbFactory
-            )
+                              CoreGraphDatabaseFactory dbFactory )
     {
         this.serverId = serverId;
 
@@ -189,14 +189,10 @@ public class CoreClusterMember implements ClusterMember
         coreGraphDatabase = dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
         defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        systemDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
-        // TODO: We currently require system database to start correctly and can't really test scenarios where it doesn't.
-        GraphDatabaseFacade systemFacade = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( SYSTEM_DATABASE_NAME );
-
-        DependencyResolver dependencyResolver = systemFacade.getDependencyResolver();
-
-        // TODO: This is a global dependency, but we look it up through the system database, which will bubble up to the parent.
-        PanicService panicService = dependencyResolver.resolveDependency( PanicService.class );
+        DependencyResolver deps = systemDatabase.getDependencyResolver();
+        PanicService panicService = deps.resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
@@ -229,6 +225,7 @@ public class CoreClusterMember implements ClusterMember
         return hasPanicked;
     }
 
+    @Override
     public DatabaseManagementService managementService()
     {
         if ( coreGraphDatabase == null )
@@ -242,6 +239,18 @@ public class CoreClusterMember implements ClusterMember
     public GraphDatabaseFacade defaultDatabase()
     {
         return defaultDatabase;
+    }
+
+    @Override
+    public GraphDatabaseFacade systemDatabase()
+    {
+        return systemDatabase;
+    }
+
+    @Override
+    public GraphDatabaseFacade database( String databaseName )
+    {
+        return (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName );
     }
 
     @Override

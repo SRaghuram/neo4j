@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.helpers.FakeJobScheduler;
+
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -23,6 +25,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Health;
@@ -32,7 +35,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
+public class StubClusteredDatabaseManager extends LifecycleAdapter implements DatabaseManager<ClusteredDatabaseContext>
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
 
@@ -64,6 +67,11 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         return Collections.unmodifiableSortedMap( databases );
     }
 
+    @Override
+    public void initialiseDefaultDatabases()
+    { //no-op
+    }
+
     //TODO: change lifecycle management to be per database
     @Override
     public void dropDatabase( DatabaseId databaseId )
@@ -78,27 +86,6 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
     @Override
     public void startDatabase( DatabaseId databaseId )
     {
-    }
-
-    @Override
-    public void init()
-    {
-    }
-
-    @Override
-    public void start()
-    {
-    }
-
-    @Override
-    public void stop()
-    {
-    }
-
-    @Override
-    public void shutdown()
-    {
-
     }
 
     private StubClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )
@@ -133,7 +120,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.CatchupComponents.class );
         private StoreId storeId;
         private Dependencies dependencies;
-        private JobScheduler jobScheduler = new FakeJobScheduler();
+        private JobScheduler jobScheduler = new CallingThreadJobScheduler();
         private StoreFiles storeFiles = mock( StoreFiles.class );
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );

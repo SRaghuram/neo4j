@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,9 +45,9 @@ public class BatchingTxApplierTest
     private final long startTxId = 31L;
     private final int maxBatchSize = 16;
 
-    private final BatchingTxApplier txApplier = new BatchingTxApplier(
-            maxBatchSize, () -> idStore, () -> commitProcess, new Monitors(), PageCursorTracerSupplier.NULL,
-            () -> EmptyVersionContextSupplier.EMPTY, commandIndexTracker, NullLogProvider.getInstance() );
+    private final BatchingTxApplier txApplier = new BatchingTxApplier( maxBatchSize, () -> idStore, () -> commitProcess,
+            new Monitors(), PageCursorTracerSupplier.NULL, () -> EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
+            NullLogProvider.getInstance(), mock( TransactionCommitNotifier.class ) );
 
     @Before
     public void before()

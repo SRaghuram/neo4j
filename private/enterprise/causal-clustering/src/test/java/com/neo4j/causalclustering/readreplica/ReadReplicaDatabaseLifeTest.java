@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
@@ -34,6 +35,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
@@ -43,6 +45,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -89,7 +92,7 @@ class ReadReplicaDatabaseLifeTest
             ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
     {
         return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(), nullLogProvider(),
-                topologyService, () -> catchupComponents );
+                topologyService, () -> catchupComponents, mock( LifeSupport.class ), mock( ClusterInternalDbmsOperator.class, RETURNS_MOCKS ) );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException
@@ -103,7 +106,8 @@ class ReadReplicaDatabaseLifeTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs );
+        return new ReadReplicaDatabaseContext(
+                kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, mock( ClusterInternalDbmsOperator.class ) );
     }
 
     private ReadReplicaDatabaseContext failToReadLocalStoreId( DatabaseId databaseId, Class<? extends Throwable> throwableClass ) throws IOException
@@ -116,7 +120,8 @@ class ReadReplicaDatabaseLifeTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs );
+        return new ReadReplicaDatabaseContext(
+                kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, mock( ClusterInternalDbmsOperator.class ) );
     }
 
     @Test
@@ -131,10 +136,9 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = failToReadLocalStoreId( databaseA, exception );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when / then
-        assertThrows( exception, readReplicaDatabaseLife::start );
+        assertThrows( exception, readReplicaDatabaseLife::init );
         assertNeverStarted( databaseContext.database(), catchupProcess );
     }
 
@@ -216,10 +220,9 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when / then
-        RuntimeException ex = assertThrows( RuntimeException.class, readReplicaDatabaseLife::start );
+        RuntimeException ex = assertThrows( RuntimeException.class, readReplicaDatabaseLife::init );
         assertThat( ex.getMessage(),
                 allOf( containsString( "This read replica cannot join the cluster." ), containsString( "is not empty and has a mismatching storeId" ) ) );
 

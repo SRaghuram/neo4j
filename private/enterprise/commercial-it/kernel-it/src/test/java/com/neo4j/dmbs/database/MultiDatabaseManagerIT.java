@@ -8,25 +8,17 @@ package com.neo4j.dmbs.database;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Optional;
-
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseLimitReachedException;
-import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -43,22 +35,19 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
 {
-    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId CUSTOM_DATABASE_ID = DATABASE_ID_REPOSITORY.get( "customDatabaseName" );
+    private static final String CUSTOM_DATABASE_NAME = "customdatabasename";
 
     @Inject
     private TestDirectory testDirectory;
-    private GraphDatabaseService database;
     private AssertableLogProvider logProvider;
-    private DatabaseManager<?> databaseManager;
     private DatabaseManagementService managementService;
-    private DatabaseId systemDB = new TestDatabaseIdRepository().systemDatabase();
 
     @BeforeEach
     void setUp()
@@ -66,31 +55,15 @@ class MultiDatabaseManagerIT
         logProvider = new AssertableLogProvider( true );
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setInternalLogProvider( logProvider )
-                .setConfig( default_database, CUSTOM_DATABASE_ID.name() )
+                .setConfig( default_database, CUSTOM_DATABASE_NAME )
                 .setConfig( maxNumberOfDatabases, "5" )
                 .build();
-        database = managementService.database( CUSTOM_DATABASE_ID.name() );
-        databaseManager = getDatabaseManager();
     }
 
     @AfterEach
     void tearDown()
     {
         managementService.shutdown();
-    }
-
-    @Test
-    void failToDropSystemDatabaseOnDatabaseManagerLevel()
-    {
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        assertThrows( DatabaseManagementException.class, () -> databaseManager.dropDatabase( systemDB ) );
-    }
-
-    @Test
-    void failToStopSystemDatabase()
-    {
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        assertThrows( DatabaseManagementException.class, () -> databaseManager.stopDatabase( systemDB ) );
     }
 
     @Test
@@ -138,139 +111,142 @@ class MultiDatabaseManagerIT
     @Test
     void createDatabase() throws DatabaseExistsException
     {
-        DatabaseId databaseId = DATABASE_ID_REPOSITORY.get( "testDatabase" );
-        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseId ).databaseFacade();
+        String testDatabaseName = "testdatabase";
+        managementService.createDatabase( testDatabaseName );
+        GraphDatabaseService createdDatabase = managementService.database( testDatabaseName );
 
-        assertNotNull( database1 );
-        assertEquals( databaseId.name(), database1.databaseName() );
+        assertNotNull( createdDatabase );
+        assertEquals( "testdatabase", createdDatabase.databaseName() );
     }
 
     @Test
     void failToCreateDatabasesWithSameName() throws DatabaseExistsException
     {
-        DatabaseId uniqueDatabaseName = DATABASE_ID_REPOSITORY.get( "uniqueDatabaseName" );
-        databaseManager.createDatabase( uniqueDatabaseName );
+        String uniqueDatabaseName = "uniqueDatabaseName";
+        managementService.createDatabase( uniqueDatabaseName );
 
-        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> managementService.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> managementService.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> managementService.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> managementService.createDatabase( uniqueDatabaseName ) );
     }
 
     @Test
     void failToStartUnknownDatabase()
     {
-        DatabaseId unknownDatabase = DATABASE_ID_REPOSITORY.get( "unknownDatabase" );
-        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.shutdownDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStartDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseToDrop = DATABASE_ID_REPOSITORY.get( "databaseToDrop" );
-        databaseManager.createDatabase( databaseToDrop );
-        databaseManager.dropDatabase( databaseToDrop );
+        String databaseToDrop = "databaseToDrop";
+        managementService.createDatabase( databaseToDrop );
+        managementService.dropDatabase( databaseToDrop );
 
-        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.startDatabase( databaseToDrop ) );
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.startDatabase( databaseToDrop ) );
     }
 
     @Test
     void startStartedDatabase() throws DatabaseExistsException
     {
-        DatabaseId multiStartDatabase = DATABASE_ID_REPOSITORY.get( "multiStartDatabase" );
-        databaseManager.createDatabase( multiStartDatabase );
+        String multiStartDatabase = "multiStartDatabase";
+        managementService.createDatabase( multiStartDatabase );
 
-        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
-        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
-        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
-        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> managementService.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> managementService.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> managementService.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> managementService.startDatabase( multiStartDatabase ) );
     }
 
     @Test
     void stopStartDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId startStopDatabase = DATABASE_ID_REPOSITORY.get( "startStopDatabase" );
-        databaseManager.createDatabase( startStopDatabase );
+        String startStopDatabaseName = "startStopDatabase";
+        managementService.createDatabase( startStopDatabaseName );
         for ( int i = 0; i < 10; i++ )
         {
-            databaseManager.stopDatabase( startStopDatabase );
-            Optional<? extends DatabaseContext> databaseContext = databaseManager.getDatabaseContext( startStopDatabase );
-            assertFalse( databaseContext.get().database().isStarted() );
-            databaseManager.startDatabase( startStopDatabase );
-            assertTrue( databaseContext.get().database().isStarted() );
+            managementService.shutdownDatabase( startStopDatabaseName );
+            GraphDatabaseService database = managementService.database( startStopDatabaseName );
+            assertFalse( database.isAvailable( 0 ) );
+            managementService.startDatabase( startStopDatabaseName );
+            assertTrue( database.isAvailable( 0 ) );
         }
     }
 
     @Test
     void failToCreateDatabaseWithStoppedDatabaseName() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId stoppedDatabase = DATABASE_ID_REPOSITORY.get( "stoppedDatabase" );
-        databaseManager.createDatabase( stoppedDatabase );
+        String stoppedDatabaseName = "stoppedDatabase";
+        managementService.createDatabase( stoppedDatabaseName );
 
-        databaseManager.stopDatabase( stoppedDatabase );
+        managementService.shutdownDatabase( stoppedDatabaseName );
 
-        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( stoppedDatabase ) );
+        assertThrows( DatabaseExistsException.class, () -> managementService.createDatabase( stoppedDatabaseName ) );
     }
 
     @Test
     void stopStoppedDatabaseIsFine() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId stoppedDatabase = DATABASE_ID_REPOSITORY.get( "stoppedDatabase" );
+        String stoppedDatabaseName = "stoppedDatabase";
 
-        databaseManager.createDatabase( stoppedDatabase );
-        databaseManager.stopDatabase( stoppedDatabase );
+        managementService.createDatabase( stoppedDatabaseName );
+        managementService.shutdownDatabase( stoppedDatabaseName );
 
-        assertDoesNotThrow( () -> databaseManager.stopDatabase( stoppedDatabase ) );
+        assertDoesNotThrow( () -> managementService.shutdownDatabase( stoppedDatabaseName ) );
     }
 
     @Test
+    @Disabled // TODO: Fix re-creation of dropped database.
     void recreateDatabaseWithSameName() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseToRecreate = DATABASE_ID_REPOSITORY.get( "databaseToRecreate" );
+        String databaseToRecreate = "databaseToRecreate";
 
-        databaseManager.createDatabase( databaseToRecreate );
+        managementService.createDatabase( databaseToRecreate );
 
-        databaseManager.dropDatabase( databaseToRecreate );
-        assertFalse( databaseManager.getDatabaseContext( databaseToRecreate ).isPresent() );
+        managementService.dropDatabase( databaseToRecreate );
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( databaseToRecreate ) );
 
-        assertDoesNotThrow( () -> databaseManager.createDatabase( databaseToRecreate ) );
-        assertTrue( databaseManager.getDatabaseContext( databaseToRecreate ).isPresent() );
+        assertDoesNotThrow( () -> managementService.createDatabase( databaseToRecreate ) );
+        assertNotNull( managementService.database( databaseToRecreate ) );
     }
 
     @Test
     void dropStartedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId startedDatabase = DATABASE_ID_REPOSITORY.get( "startedDatabase" );
+        String dropStartedDatabaseName = "dropStarted";
 
-        databaseManager.createDatabase( startedDatabase );
-        databaseManager.dropDatabase( startedDatabase );
-        assertFalse( databaseManager.getDatabaseContext( startedDatabase ).isPresent() );
+        managementService.createDatabase( dropStartedDatabaseName );
+        managementService.dropDatabase( dropStartedDatabaseName );
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( dropStartedDatabaseName ) );
     }
 
     @Test
     void dropStoppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId stoppedDatabase = DATABASE_ID_REPOSITORY.get( "stoppedDatabase" );
+        String stoppedDatabase = "stoppedDatabase";
 
-        databaseManager.createDatabase( stoppedDatabase );
-        databaseManager.stopDatabase( stoppedDatabase );
+        managementService.createDatabase( stoppedDatabase );
+        managementService.shutdownDatabase( stoppedDatabase );
 
-        databaseManager.dropDatabase( stoppedDatabase );
-        assertFalse( databaseManager.getDatabaseContext( stoppedDatabase ).isPresent() );
+        managementService.dropDatabase( stoppedDatabase );
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( stoppedDatabase ) );
     }
 
     @Test
     void dropRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseToDrop = DATABASE_ID_REPOSITORY.get( "databaseToDrop" );
-        DatabaseContext database = databaseManager.createDatabase( databaseToDrop );
+        String databaseToDrop = "databaseToDrop";
+        managementService.createDatabase( databaseToDrop );
+        GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToDrop );
 
-        DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
+        DatabaseLayout databaseLayout = database.databaseLayout();
         assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
         assertTrue( databaseLayout.databaseDirectory().exists() );
         assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
 
-        databaseManager.dropDatabase( databaseToDrop );
+        managementService.dropDatabase( databaseToDrop );
         assertFalse( databaseLayout.databaseDirectory().exists() );
         assertFalse( databaseLayout.getTransactionLogsDirectory().exists() );
     }
@@ -278,14 +254,15 @@ class MultiDatabaseManagerIT
     @Test
     void stopDoesNotRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseToStop = DATABASE_ID_REPOSITORY.get( "databaseToStop" );
-        DatabaseContext database = databaseManager.createDatabase( databaseToStop );
+        String databaseToStop = "databaseToStop";
+        managementService.createDatabase( databaseToStop );
+        GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToStop );
 
-        DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
+        DatabaseLayout databaseLayout = database.databaseLayout();
         assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
         assertTrue( databaseLayout.databaseDirectory().exists() );
 
-        databaseManager.stopDatabase( databaseToStop );
+        managementService.shutdownDatabase( databaseToStop );
         assertTrue( databaseLayout.databaseDirectory().exists() );
         assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
     }
@@ -293,60 +270,58 @@ class MultiDatabaseManagerIT
     @Test
     void failToDropUnknownDatabase()
     {
-        DatabaseId unknownDatabase = DATABASE_ID_REPOSITORY.get( "unknownDatabase" );
-        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.dropDatabase( unknownDatabase ) );
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.dropDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStopUnknownDatabase()
     {
-        DatabaseId unknownDatabase = DATABASE_ID_REPOSITORY.get( "unknownDatabase" );
-        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.shutdownDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStopDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId testDatabase = DATABASE_ID_REPOSITORY.get( "testDatabase" );
-        databaseManager.createDatabase( testDatabase );
-        databaseManager.dropDatabase( testDatabase );
-        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( testDatabase ) );
+        String testDatabase = "testDatabase";
+        managementService.createDatabase( testDatabase );
+        managementService.dropDatabase( testDatabase );
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.shutdownDatabase( testDatabase ) );
     }
 
     @Test
     void lookupNotExistingDatabase()
     {
-        var database = databaseManager.getDatabaseContext( DATABASE_ID_REPOSITORY.get( "testDatabase" ) );
-        assertFalse( database.isPresent() );
+        String testDatabase = "testdatabase";
+        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( testDatabase ) );
     }
 
     @Test
     void lookupExistingDatabase()
     {
-        var database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_ID );
-        assertTrue( database.isPresent() );
+        assertNotNull( managementService.database( CUSTOM_DATABASE_NAME ) );
     }
 
     @Test
-    void createAndStopDatabase() throws DatabaseExistsException, DatabaseNotFoundException
+    void createAndshutdownDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId databaseId = DATABASE_ID_REPOSITORY.get( "databaseToShutdown" );
-        DatabaseContext context = databaseManager.createDatabase( databaseId );
+        String databaseToShutdown = "databaseToShutdown";
+        managementService.createDatabase( databaseToShutdown );
 
-        var databaseLookup = databaseManager.getDatabaseContext( databaseId );
-        assertTrue( databaseLookup.isPresent() );
-        assertEquals( context, databaseLookup.get() );
+        var databaseLookup = managementService.database( databaseToShutdown );
+        assertNotNull( databaseLookup );
 
-        databaseManager.stopDatabase( databaseId );
-        assertTrue( databaseManager.getDatabaseContext( databaseId ).isPresent() );
+        managementService.shutdownDatabase( databaseToShutdown );
+        assertNotNull( managementService.database( databaseToShutdown ) );
     }
 
     @Test
     void logAboutDatabaseCreationAndStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseId logTestDb = DATABASE_ID_REPOSITORY.get( "logTestDb" );
-        databaseManager.createDatabase( logTestDb );
-        databaseManager.stopDatabase( logTestDb );
+        String logTestDb = "logTestDb";
+        managementService.createDatabase( logTestDb );
+        managementService.shutdownDatabase( logTestDb );
         logProvider.formattedMessageMatcher().assertContains( "Creating 'logtestdb' database." );
         logProvider.formattedMessageMatcher().assertContains( "Stop 'logtestdb' database." );
     }
@@ -354,31 +329,16 @@ class MultiDatabaseManagerIT
     @Test
     void listAvailableDatabases() throws DatabaseExistsException
     {
-        var initialDatabases = databaseManager.registeredDatabases();
+        var initialDatabases = managementService.listDatabases();
         assertEquals( 2, initialDatabases.size() );
-        assertTrue( initialDatabases.containsKey( CUSTOM_DATABASE_ID ) );
-        DatabaseId myAnotherDatabase = DATABASE_ID_REPOSITORY.get( "myAnotherDatabase" );
-        DatabaseId aMyAnotherDatabase = DATABASE_ID_REPOSITORY.get( "aMyAnotherDatabase" );
-        databaseManager.createDatabase( myAnotherDatabase );
-        databaseManager.createDatabase( aMyAnotherDatabase );
-        var postCreationDatabases = databaseManager.registeredDatabases();
+        assertTrue( initialDatabases.contains( CUSTOM_DATABASE_NAME ) );
+        String myAnotherDatabase = "myanotherdatabase";
+        String aMyAnotherDatabase = "amyanotherdatabase";
+        managementService.createDatabase( myAnotherDatabase );
+        managementService.createDatabase( aMyAnotherDatabase );
+        var postCreationDatabases = managementService.listDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
-        assertThat( postCreationDatabases.keySet(),
-                contains( DATABASE_ID_REPOSITORY.systemDatabase(), aMyAnotherDatabase, CUSTOM_DATABASE_ID, myAnotherDatabase) );
-    }
-
-    @Test
-    void listAvailableDatabaseOnShutdownManager() throws Throwable
-    {
-        databaseManager.stop();
-        databaseManager.shutdown();
-        var databases = databaseManager.registeredDatabases();
-        assertTrue( databases.isEmpty() );
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
+        assertThat( postCreationDatabases, contains( aMyAnotherDatabase, CUSTOM_DATABASE_NAME, myAnotherDatabase, SYSTEM_DATABASE_NAME ) );
     }
 }

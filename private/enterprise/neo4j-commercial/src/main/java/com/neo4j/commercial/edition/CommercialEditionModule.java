@@ -11,16 +11,18 @@ import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
+import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
-import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -30,15 +32,11 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.dbms.api.DatabaseExistsException;
-import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.event.DatabaseEventContext;
-import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -49,15 +47,12 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
-import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -67,7 +62,6 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.any;
 
 public class CommercialEditionModule extends CommunityEditionModule
@@ -146,41 +140,20 @@ public class CommercialEditionModule extends CommunityEditionModule
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log msgLog )
     {
         CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog );
+
         createDatabaseManagerDependentModules( databaseManager );
+
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
+
+        globalModule.getGlobalLife().add( new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository() ) );
+
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( DatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private void createDatabaseManagerDependentModules( MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
     {
         initBackupIfNeeded( globalModule, globalModule.getGlobalConfig(), databaseManager );
-    }
-
-    @Override
-    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
-    {
-        createCommercialEditionDatabases( databaseManager );
-    }
-
-    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager )
-            throws DatabaseExistsException
-    {
-        databaseManager.createDatabase( databaseIdRepository().systemDatabase() );
-        createConfiguredDatabases( databaseManager );
-    }
-
-    private void createConfiguredDatabases( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
-    {
-        databaseManager.createDatabase( databaseIdRepository().defaultDatabase() );
-        DatabaseManagementService managementService = globalModule.getGlobalDependencies().resolveDependency( DatabaseManagementService.class );
-        globalModule.getGlobalLife().addLifecycleListener( ( instance, from, to ) ->
-        {
-            if ( instance instanceof CompositeDatabaseAvailabilityGuard && LifecycleStatus.STARTED == to )
-            {
-                globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME,
-                        new MultiDatabaseTransactionEventListener( databaseManager, databaseIdRepository() ) );
-            }
-        } );
-        managementService.registerDatabaseEventListener( new SystemDatabaseEventListener( databaseManager, databaseIdRepository() ) );
     }
 
     @Override
@@ -233,26 +206,5 @@ public class CommercialEditionModule extends CommunityEditionModule
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
-    }
-
-    private static class SystemDatabaseEventListener extends DatabaseEventListenerAdapter
-    {
-        private final DatabaseManager<?> databaseManager;
-        private final DatabaseIdRepository databaseIdRepository;
-
-        SystemDatabaseEventListener( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository )
-        {
-            this.databaseManager = databaseManager;
-            this.databaseIdRepository = databaseIdRepository;
-        }
-
-        @Override
-        public void databaseStart( DatabaseEventContext eventContext )
-        {
-            if ( SYSTEM_DATABASE_NAME.equals( eventContext.getDatabaseName() ) )
-            {
-                MultiDatabaseTransactionEventListener.createDatabasesFromSystem( databaseManager, databaseIdRepository );
-            }
-        }
     }
 }

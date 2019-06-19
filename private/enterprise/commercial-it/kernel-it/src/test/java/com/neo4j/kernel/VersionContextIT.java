@@ -6,8 +6,7 @@
 package com.neo4j.kernel;
 
 import com.neo4j.test.extension.CommercialDbmsExtension;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -39,18 +38,12 @@ class VersionContextIT
         builder.setConfig( GraphDatabaseSettings.snapshot_query, TRUE );
     }
 
-    @BeforeEach
+    @BeforeAll
     void setUp()
     {
         managementService.createDatabase( databaseName );
         futuramaDatabase = (GraphDatabaseAPI) managementService.database( databaseName );
         defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
-    }
-
-    @AfterEach
-    void tearDown()
-    {
-        managementService.dropDatabase( databaseName );
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -49,6 +50,7 @@ class PersistentSnapshotDownloaderTest
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
 
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
+    private StoreCopyHandle storeCopyHandle;
 
     private PersistentSnapshotDownloader createDownloader()
     {
@@ -60,6 +62,8 @@ class PersistentSnapshotDownloaderTest
     void setUp()
     {
         when( downloadContext.databaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
+        storeCopyHandle = mock( StoreCopyHandle.class );
+        when( downloadContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
     }
 
     @Test
@@ -73,14 +77,14 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        InOrder inOrder = inOrder( applicationProcess, downloadContext, coreDownloader );
+        InOrder inOrder = inOrder( applicationProcess, downloadContext, coreDownloader, storeCopyHandle );
 
         inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         inOrder.verify( downloadContext ).stopForStoreCopy();
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
-        inOrder.verify( downloadContext ).start();
+        inOrder.verify( storeCopyHandle ).restart();
         inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
@@ -208,7 +212,7 @@ class PersistentSnapshotDownloaderTest
         thread.join();
 
         verify( downloadContext ).stopForStoreCopy();
-        verify( downloadContext, never() ).start();
+        verify( storeCopyHandle, never() ).restart();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException

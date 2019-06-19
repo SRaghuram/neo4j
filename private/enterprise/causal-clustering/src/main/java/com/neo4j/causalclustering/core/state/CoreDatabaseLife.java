@@ -5,21 +5,25 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.util.Optional;
 
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.lifecycle.SafeLifecycle;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.scheduler.JobHandle;
 
-public class CoreDatabaseLife extends SafeLifecycle
+
+public class CoreDatabaseLife implements ClusteredDatabaseLife
 {
     private final RaftMachine raftMachine;
     private final Database kernelDatabase;
@@ -31,10 +35,12 @@ public class CoreDatabaseLife extends SafeLifecycle
     private final CoreDownloaderService downloadService;
     private final RecoveryFacade recoveryFacade;
     private final CoreTopologyService topologyService;
+    private final LifeSupport clusterComponentsLife;
+    private final ClusterInternalDbmsOperator clusterInternalOperator;
 
-    public CoreDatabaseLife( RaftMachine raftMachine, Database kernelDatabase, RaftBinder raftBinder,
-            CommandApplicationProcess commandApplicationProcess, LifecycleMessageHandler<?> raftMessageHandler,
-            CoreSnapshotService snapshotService, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
+    public CoreDatabaseLife( RaftMachine raftMachine, Database kernelDatabase, RaftBinder raftBinder, CommandApplicationProcess commandApplicationProcess,
+            LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService, CoreDownloaderService downloadService,
+            RecoveryFacade recoveryFacade, LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator,
             CoreTopologyService topologyService )
     {
         this.raftMachine = raftMachine;
@@ -45,25 +51,30 @@ public class CoreDatabaseLife extends SafeLifecycle
         this.snapshotService = snapshotService;
         this.downloadService = downloadService;
         this.recoveryFacade = recoveryFacade;
+        this.clusterComponentsLife = clusterComponentsLife;
+        this.clusterInternalOperator = clusterInternalOperator;
         this.topologyService = topologyService;
     }
 
     @Override
-    public void init0() throws Exception
+    public void init() throws Exception
     {
+        var signal = clusterInternalOperator.bootstrap( kernelDatabase.getDatabaseId() );
+        clusterComponentsLife.init();
         kernelDatabase.init();
+        bootstrap();
+        signal.bootstrapped();
     }
 
-    @Override
-    public void start0() throws Exception
+    private void bootstrap() throws Exception
     {
+        clusterComponentsLife.start();
         ensureRecovered();
 
         topologyService.onDatabaseStart( kernelDatabase.getDatabaseId() );
         BoundState boundState = raftBinder.bindToRaft();
         raftMessageHandler.start( boundState.raftId() );
 
-        boolean startedByDownloader = false;
         if ( boundState.snapshot().isPresent() )
         {
             // this means that we bootstrapped the cluster
@@ -76,14 +87,14 @@ public class CoreDatabaseLife extends SafeLifecycle
             if ( downloadJob.isPresent() )
             {
                 downloadJob.get().waitTermination();
-                startedByDownloader = true;
             }
         }
+    }
 
-        if ( !startedByDownloader )
-        {
-            kernelDatabase.start();
-        }
+    @Override
+    public void start() throws Exception
+    {
+        kernelDatabase.start();
         applicationProcess.start();
         raftMachine.postRecoveryActions();
     }
@@ -94,7 +105,7 @@ public class CoreDatabaseLife extends SafeLifecycle
     }
 
     @Override
-    public void stop0() throws Exception
+    public void stop() throws Exception
     {
         topologyService.onDatabaseStop( kernelDatabase.getDatabaseId() );
         downloadService.stop();
@@ -102,11 +113,19 @@ public class CoreDatabaseLife extends SafeLifecycle
         raftMessageHandler.stop();
         applicationProcess.stop();
         kernelDatabase.stop();
+        clusterComponentsLife.stop();
     }
 
     @Override
-    public void shutdown0() throws Exception
+    public void shutdown() throws Exception
     {
         kernelDatabase.shutdown();
+        clusterComponentsLife.shutdown();
+    }
+
+    @Override
+    public void add( Lifecycle lifecycledComponent )
+    {
+        clusterComponentsLife.add( lifecycledComponent );
     }
 }

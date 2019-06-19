@@ -53,9 +53,6 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
             return;
         }
 
-        // TODO: At the moment download jobs are issued against both databases every time they are issued at all.
-        // TODO: This is probably fine for 3.5, but should be fixed for 4.0.
-
         try
         {
             ConsensusOutcome outcome = raftMachine.handle( wrappedMessage.message() );

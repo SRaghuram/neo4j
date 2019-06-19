@@ -11,8 +11,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.io.File;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.Monitors;
 
@@ -28,7 +30,13 @@ public interface ClusterMember
 
     boolean isShutdown();
 
+    DatabaseManagementService managementService();
+
     GraphDatabaseFacade defaultDatabase();
+
+    GraphDatabaseFacade systemDatabase();
+
+    GraphDatabaseFacade database( String databaseName );
 
     ClientConnectorAddresses clientConnectorAddresses();
 

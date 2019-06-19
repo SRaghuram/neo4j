@@ -16,8 +16,9 @@ import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.helpers.FakeExecutor;
+import org.neo4j.test.CallingThreadExecutor;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -72,9 +73,9 @@ class CatchupProcessManagerTest
         when( catchupComponents.componentsFor( any( DatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
 
         //Construct the manager under test
-        catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseContext,
+        catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
                 databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults() ) );
+                NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults(), mock( TransactionCommitNotifier.class ) ) );
     }
 
     private ClusteredDatabaseContext getMockDatabase( DatabaseId databaseId )

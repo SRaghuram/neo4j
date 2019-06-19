@@ -13,15 +13,17 @@ import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
 import org.neo4j.kernel.database.DatabaseId;
@@ -47,6 +49,9 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
+        // TODO: Remove need for resolving this dependency? Remove internal operator completely?
+        ClusterInternalDbmsOperator internalDbmsOperator = globalModule.getGlobalDependencies().resolveDependency( ClusterInternalDbmsOperator.class );
+
         LifeSupport coreDatabaseLife = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
@@ -60,33 +65,39 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext(
                 databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService );
 
-        CoreKernelResolvers kernelResolvers = new CoreKernelResolvers();
-        CoreEditionKernelComponents kernelContext = edition.coreDatabaseFactory().createKernelComponents(
-                databaseId, coreDatabaseLife, raftContext, kernelResolvers, coreDatabaseLogService );
+        var databaseConfig = DatabaseConfig.from( config, databaseId );
+        var versionContextSupplier = createVersionContextSupplier( databaseConfig );
+        var kernelResolvers = new CoreKernelResolvers();
+        var kernelContext = edition.coreDatabaseFactory()
+                .createKernelComponents( databaseId, coreDatabaseLife, raftContext, kernelResolvers,
+                        coreDatabaseLogService, versionContextSupplier );
 
-        DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, kernelContext, coreDatabaseDependencies,
-                coreDatabaseMonitors, coreDatabaseLogService );
-        Database kernelDatabase = new Database( databaseCreationContext );
+        log.info( "Creating '%s' database.", databaseId.name() );
+        var databaseCreationContext = newDatabaseCreationContext( databaseId, coreDatabaseDependencies,
+                coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig, coreDatabaseLogService );
+        var kernelDatabase = new Database( databaseCreationContext );
 
-        // TODO: Merge/change these contexts into something better? Perhaps a ReplicatedDatabaseContext again?
-        StoreDownloadContext downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs );
+        var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator );
 
-        edition.coreDatabaseFactory().createDatabase( databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, downloadContext,
-                kernelDatabase, kernelContext, raftContext );
+        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies,
+                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator );
 
-        var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
-                coreDatabaseLife, coreDatabaseMonitors );
+        var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
+                storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors );
 
         kernelResolvers.registerDatabase( ctx.database() );
         return ctx;
     }
 
-    private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, CoreEditionKernelComponents kernelComponents,
-            Dependencies parentDependencies, Monitors parentMonitors, DatabaseLogService databaseLogService )
+    private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, Dependencies parentDependencies, Monitors parentMonitors,
+            CoreEditionKernelComponents kernelComponents, VersionContextSupplier versionContextSupplier,
+            DatabaseConfig databaseConfig, DatabaseLogService databaseLogService )
     {
         Config config = globalModule.getGlobalConfig();
-        CoreDatabaseComponents coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
-        GlobalProcedures globalProcedures = edition.getGlobalProcedures();
-        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors, coreDatabaseComponents, globalProcedures );
+        var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
+        var globalProcedures = edition.getGlobalProcedures();
+        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
+                coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig );
     }
+
 }

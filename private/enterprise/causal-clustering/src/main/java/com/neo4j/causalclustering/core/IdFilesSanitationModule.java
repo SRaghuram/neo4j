@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -28,12 +28,12 @@ import static java.lang.String.format;
 public class IdFilesSanitationModule extends LifecycleAdapter
 {
     private final DatabaseId databaseId;
-    private final ClusteredDatabaseManager databaseManager;
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
     private final StartupCoreStateCheck startupCoreStateCheck;
 
-    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, DatabaseId databaseId, ClusteredDatabaseManager databaseManager,
+    IdFilesSanitationModule( StartupCoreStateCheck startupCoreStateCheck, DatabaseId databaseId, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             FileSystemAbstraction fileSystem, LogProvider logProvider )
     {
         this.startupCoreStateCheck = startupCoreStateCheck;

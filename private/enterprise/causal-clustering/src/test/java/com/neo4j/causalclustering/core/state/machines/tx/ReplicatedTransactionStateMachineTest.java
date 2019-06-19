@@ -6,17 +6,18 @@
 package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -49,7 +50,8 @@ class ReplicatedTransactionStateMachineTest
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
-    private final ClusteredDatabaseManager databaseManager = mock( ClusteredDatabaseManager.class );
+    @SuppressWarnings( "unchecked" )
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager = mock( DatabaseManager.class );
     private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
     private final Database database = mock( Database.class );
     private final int batchSize = 16;
@@ -74,8 +76,8 @@ class ReplicatedTransactionStateMachineTest
         PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
 
         ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine(
-                commandIndexTracker, lockState( lockSessionId ), batchSize, logProvider, () -> cursorTracer,
-                databaseManager );
+                commandIndexTracker, lockState( lockSessionId ), batchSize, logProvider, () -> cursorTracer, EmptyVersionContextSupplier.EMPTY,
+                mock( TransactionCommitNotifier.class ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -101,8 +103,8 @@ class ReplicatedTransactionStateMachineTest
 
         final ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ),
-                        batchSize, logProvider,
-                        PageCursorTracerSupplier.NULL, databaseManager );
+                        batchSize, logProvider, PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY,
+                        mock( TransactionCommitNotifier.class ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -133,7 +135,7 @@ class ReplicatedTransactionStateMachineTest
 
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ), batchSize, logProvider,
-                        PageCursorTracerSupplier.NULL, databaseManager );
+                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -162,7 +164,7 @@ class ReplicatedTransactionStateMachineTest
         // and
         ReplicatedTransactionStateMachine stateMachine =
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( txLockSessionId ), batchSize, logProvider, PageCursorTracerSupplier.NULL,
-                        databaseManager );
+                        EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
 
         ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 

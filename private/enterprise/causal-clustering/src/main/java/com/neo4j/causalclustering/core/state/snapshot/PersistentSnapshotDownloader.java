@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -18,8 +18,6 @@ import java.util.Optional;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
-
-import static java.lang.String.format;
 
 public class PersistentSnapshotDownloader implements Runnable
 {
@@ -81,36 +79,36 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.startedDownloadingSnapshot( databaseId );
             applicationProcess.pauseApplier( OPERATION_NAME );
 
-            context.stopForStoreCopy();
-
-            // iteration over all databases should go away once we have separate database lifecycles
-            // each database will then download its snapshot and store independently from others
+            var restart = context.stopForStoreCopy();
 
             boolean incomplete = false;
             Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( context );
 
             if ( snapshot.isPresent() )
             {
-                log.info( format( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() ) );
+                log.info( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() );
             }
             else
             {
-                log.warn( format( "Core snapshot for database '%s' could not be downloaded", databaseId.name() ) );
+                log.warn( "Core snapshot for database '%s' could not be downloaded", databaseId.name() );
                 incomplete = true;
             }
 
-            if ( incomplete || stopped )
+            if ( incomplete )
             {
-                log.warn( "Not starting databases after store copy." );
+                log.warn( "Not restarting database %s after failed store copy.", databaseId.name() );
+            }
+            else if ( stopped )
+            {
+                log.warn( "Not restarting database %s after store copy as it has been requested to stop in the meantime.", databaseId.name() );
             }
             else
             {
-                /* Temporary until raft groups are separated. */
                 snapshotService.installSnapshot( snapshot.get() );
 
                 /* Starting the databases will invoke the commit process factory in the CoreEditionModule, which has important side-effects. */
                 log.info( "Starting local databases" );
-                context.start();
+                restart.restart();
             }
         }
         catch ( InterruptedException e )

@@ -50,6 +50,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -409,7 +410,7 @@ class ReadReplicaReplicationIT
             return db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
                     .getLastClosedTransactionId();
         }
-        catch ( IllegalStateException | UnsatisfiedDependencyException /* db is shutdown or not available */ ex )
+        catch ( IllegalStateException | UnsatisfiedDependencyException | StoreFileClosedException /* db is shutdown or not available */ ex )
         {
             if ( !fail )
             {

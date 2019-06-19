@@ -9,6 +9,8 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -51,12 +53,8 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
-import com.neo4j.dbms.InternalOperator;
-import com.neo4j.dbms.LocalOperator;
-import com.neo4j.dbms.OperatorConnector;
-import com.neo4j.dbms.OperatorState;
-import com.neo4j.dbms.ReconcilingDatabaseOperator;
-import com.neo4j.dbms.SystemOperator;
+import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
+import com.neo4j.dbms.TransactionEventService;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
@@ -66,7 +64,6 @@ import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphIni
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,7 +73,6 @@ import java.util.stream.Stream;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -102,8 +98,6 @@ import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
@@ -252,11 +246,13 @@ public class CoreEditionModule extends ClusteringEditionModule
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
     {
         // order matters
+        // TODO: Make Panic Service multi-db aware and bring back raft machine, catchup server, backup server and command application process handlers
         panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( globalHealth ) );
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
     }
 
+    /* Component Factories */
     private static RaftMessageLogger<MemberId> createRaftLogger( GlobalModule globalModule, MemberId myself )
     {
         RaftMessageLogger<MemberId> raftMessageLogger;
@@ -274,7 +270,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         return raftMessageLogger;
     }
 
-    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager )
+    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, TransactionEventService txEventService )
     {
         final LifeSupport globalLife = globalModule.getGlobalLife();
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
@@ -296,7 +292,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
                 temporaryDatabaseFactory, databaseInitializerMap, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
-                recoveryFacade, raftLogger, raftSender );
+                recoveryFacade, raftLogger, raftSender, txEventService );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols );
@@ -312,38 +308,24 @@ public class CoreEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule platform, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log log )
     {
-        var databaseManager = new CoreDatabaseManager( platform, this, log, catchupComponentsProvider::createDatabaseComponents,
-                platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig() );
-        createDatabaseManagerDependentModules( databaseManager );
+        var internalOperator = new ClusterInternalDbmsOperator();
+
+        //TODO: Pass internal operator to database manager so it can pass to factories
+        var databaseManager = new CoreDatabaseManager( globalModule, this, log, catchupComponentsProvider::createDatabaseComponents,
+                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig() );
+
+        TransactionEventService txEventService = new SystemDatabaseOnlyTransactionEventService();
+        createDatabaseManagerDependentModules( databaseManager, txEventService );
+
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
+
+        globalModule.getGlobalLife().add( new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService,
+                internalOperator, databaseIdRepository ) );
+
         return databaseManager;
-    }
-
-    @Override
-    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
-    {
-        var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
-
-        initialDatabases.put( databaseIdRepository.systemDatabase(), STOPPED );
-        initialDatabases.put( databaseIdRepository.get( config.get( default_database ) ), STOPPED );
-
-        initialDatabases.keySet().forEach( databaseManager::createDatabase );
-
-        setupDatabaseOperators( databaseManager, initialDatabases );
-    }
-
-    private void setupDatabaseOperators( DatabaseManager<?> databaseManager, Map<DatabaseId,OperatorState> initialDatabases )
-    {
-        var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
-        var connector = new OperatorConnector( reconciler );
-
-        var localOperator = new LocalOperator( connector, databaseIdRepository );
-        var internalOperator = new InternalOperator( connector );
-        var systemOperator = new SystemOperator( connector );
-
-        globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
-        globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
     }
 
     @Override

@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 
 import java.util.function.Supplier;
 
@@ -40,6 +41,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CommandIndexTracker commandIndexTracker;
     private final Log log;
+    private final TransactionCommitNotifier txCommitNotifier;
 
     private TransactionQueue txQueue;
     private TransactionCommitProcess commitProcess;
@@ -47,11 +49,9 @@ public class BatchingTxApplier extends LifecycleAdapter
     private volatile long lastQueuedTxId;
     private volatile boolean stopped;
 
-    public BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier,
-                              Supplier<TransactionCommitProcess> commitProcessSupplier, Monitors monitors,
-                              PageCursorTracerSupplier pageCursorTracerSupplier,
-                              Supplier<VersionContextSupplier> versionContextSupplier, CommandIndexTracker commandIndexTracker,
-                              LogProvider logProvider )
+    BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
+            Monitors monitors, PageCursorTracerSupplier pageCursorTracerSupplier, Supplier<VersionContextSupplier> versionContextSupplier,
+            CommandIndexTracker commandIndexTracker, LogProvider logProvider, TransactionCommitNotifier txCommitNotifier )
     {
         this.maxBatchSize = maxBatchSize;
         this.txIdStoreSupplier = txIdStoreSupplier;
@@ -59,8 +59,10 @@ public class BatchingTxApplier extends LifecycleAdapter
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.log = logProvider.getLog( getClass() );
         this.monitor = monitors.newMonitor( PullRequestMonitor.class );
+        //TODO: Does this have to be a supplier supplier?
         this.versionContextSupplier = versionContextSupplier;
         this.commandIndexTracker = commandIndexTracker;
+        this.txCommitNotifier = txCommitNotifier;
     }
 
     @Override
@@ -106,7 +108,9 @@ public class BatchingTxApplier extends LifecycleAdapter
             return;
         }
 
-        txQueue.queue( new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() ) );
+        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() );
+        toApply.onClose( txCommitNotifier::transactionCommitted );
+        txQueue.queue( toApply );
 
         if ( !stopped )
         {

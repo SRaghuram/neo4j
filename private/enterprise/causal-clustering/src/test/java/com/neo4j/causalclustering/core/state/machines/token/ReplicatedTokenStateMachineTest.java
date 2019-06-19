@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.machines.token;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -83,7 +83,8 @@ public class ReplicatedTokenStateMachineTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final PageCacheRule pageCacheRule = new PageCacheRule();
     private final CleanupRule cleanupRule = new CleanupRule();
-    private final ClusteredDatabaseManager databaseManager = mock( ClusteredDatabaseManager.class );
+    @SuppressWarnings( "unchecked" )
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager = mock( DatabaseManager.class );
     private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
     private final Database database = mock( Database.class );
 

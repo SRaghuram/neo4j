@@ -5,19 +5,17 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 
 import java.util.function.Consumer;
 
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -39,23 +37,23 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     private final int maxBatchSize;
     private final Log log;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
-    private final ClusteredDatabaseManager databaseManager;
+    private final VersionContextSupplier versionContextSupplier;
+    private final TransactionCommitNotifier txCommitNotifier;
 
     private TransactionQueue queue;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTransactionStateMachine( CommandIndexTracker commandIndexTracker,
-                                              ReplicatedLockTokenStateMachine lockStateMachine, int maxBatchSize,
-                                              LogProvider logProvider,
-                                              PageCursorTracerSupplier pageCursorTracerSupplier,
-                                              ClusteredDatabaseManager databaseManager )
+    public ReplicatedTransactionStateMachine( CommandIndexTracker commandIndexTracker, ReplicatedLockTokenStateMachine lockStateMachine, int maxBatchSize,
+            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, VersionContextSupplier versionContextSupplier,
+            TransactionCommitNotifier txCommitNotifier )
     {
         this.commandIndexTracker = commandIndexTracker;
         this.lockTokenStateMachine = lockStateMachine;
         this.maxBatchSize = maxBatchSize;
         this.log = logProvider.getLog( getClass() );
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
-        this.databaseManager = databaseManager;
+        this.versionContextSupplier = versionContextSupplier;
+        this.txCommitNotifier = txCommitNotifier;
     }
 
     public synchronized void installCommitProcess( TransactionCommitProcess commitProcess, long lastCommittedIndex )
@@ -97,9 +95,6 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
         {
             try
             {
-                DatabaseId databaseId = replicatedTx.databaseId();
-                VersionContextSupplier versionContextSupplier = databaseManager.getDatabaseContext( databaseId ).orElseThrow(
-                        () -> new DatabaseNotFoundException( databaseId.name() ) ).database().getVersionContextSupplier();
                 TransactionToApply transaction = new TransactionToApply( tx, versionContextSupplier.getVersionContext() );
                 transaction.onClose( txId ->
                 {
@@ -110,6 +105,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
                     }
 
                     callback.accept( Result.of( txId ) );
+                    txCommitNotifier.transactionCommitted( txId );
                     commandIndexTracker.setAppliedCommandIndex( commandIndex );
                 } );
                 queue.queue( transaction );

@@ -18,6 +18,9 @@ import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.TransactionEventService;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
@@ -30,7 +33,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
-import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
@@ -50,10 +52,11 @@ class ReadReplicaDatabaseFactory
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Health health;
     private final CatchupClientFactory catchupClientFactory;
+    private final TransactionEventService txEventService;
 
-    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, LogService logService, TopologyService topologyService,
+    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
             MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier, Health health,
-            CatchupClientFactory catchupClientFactory )
+            CatchupClientFactory catchupClientFactory, TransactionEventService txEventService )
     {
         this.config = config;
         this.clock = clock;
@@ -64,9 +67,10 @@ class ReadReplicaDatabaseFactory
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.health = health;
         this.catchupClientFactory = catchupClientFactory;
+        this.txEventService = txEventService;
     }
 
-    LifeSupport createDatabase( ReadReplicaDatabaseContext databaseContext )
+    ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
     {
         DatabaseLogService databaseLogService = databaseContext.database().getLogService();
         DatabaseLogProvider internalLogProvider = databaseLogService.getInternalLogProvider();
@@ -83,18 +87,17 @@ class ReadReplicaDatabaseFactory
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
                 myIdentity, config, internalLogProvider, topologyService, defaultStrategy );
 
+        TransactionCommitNotifier txCommitNotifier = txEventService.getCommitNotifier( databaseContext.databaseId() );
         CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, health,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
-                pageCursorTracerSupplier, config );
+                pageCursorTracerSupplier, config, txCommitNotifier );
 
         // TODO: Fix lifecycle issue.
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseContext.databaseId() ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseContext.databaseId().name() ) ) );
 
-        life.add( new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
-                topologyService, catchupComponentsSupplier ) );
-
-        return life;
+        return new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
+                        topologyService, catchupComponentsSupplier, life, clusterInternalOperator );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

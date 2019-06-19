@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
 
@@ -22,15 +23,18 @@ public class StoreDownloadContext
     private final StoreFiles storeFiles;
     private final LogFiles transactionLogs;
     private final Log log;
+    private final ClusterInternalDbmsOperator internalOperator;
 
     private volatile StoreId storeId;
 
-    public StoreDownloadContext( Database database, StoreFiles storeFiles, LogFiles transactionLogs )
+    //TODO: Merge this and ReadReplicaDatabaseContext into StoreCopyContext
+    public StoreDownloadContext( Database database, StoreFiles storeFiles, LogFiles transactionLogs, ClusterInternalDbmsOperator internalOperator )
     {
         this.database = database;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
         this.log = database.getInternalLogProvider().getLog( getClass() );
+        this.internalOperator = internalOperator;
     }
 
     DatabaseId databaseId()
@@ -75,13 +79,8 @@ public class StoreDownloadContext
         storeFiles.delete( databaseLayout(), transactionLogs );
     }
 
-    void start()
+    ClusterInternalDbmsOperator.StoreCopyHandle stopForStoreCopy()
     {
-        database.start();
-    }
-
-    void stopForStoreCopy()
-    {
-        database.stop();
+        return internalOperator.stopForStoreCopy( database.getDatabaseId() );
     }
 }

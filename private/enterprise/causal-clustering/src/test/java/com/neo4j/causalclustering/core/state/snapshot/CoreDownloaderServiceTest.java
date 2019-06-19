@@ -44,7 +44,7 @@ public class CoreDownloaderServiceTest
     private final CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-    private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private JobScheduler centralJobScheduler;
@@ -55,9 +55,9 @@ public class CoreDownloaderServiceTest
     public void create()
     {
         centralJobScheduler = createInitialisedScheduler();
-        databaseService.givenDatabaseWithConfig()
-                .withDatabaseId( new TestDatabaseIdRepository().defaultDatabase() )
-                .register();
+        databaseManager.givenDatabaseWithConfig()
+                       .withDatabaseId( new TestDatabaseIdRepository().defaultDatabase() )
+                       .register();
     }
 
     private CoreDownloaderService createDownloader()

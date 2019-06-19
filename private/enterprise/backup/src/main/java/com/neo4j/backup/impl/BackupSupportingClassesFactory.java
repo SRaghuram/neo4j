@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;

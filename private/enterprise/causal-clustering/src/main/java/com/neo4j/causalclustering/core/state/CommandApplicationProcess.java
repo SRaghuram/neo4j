@@ -287,6 +287,8 @@ public class CommandApplicationProcess implements PanicEventHandler
     private void spawnApplierThread()
     {
         applierState.setKeepRunning( true );
+        //TODO: use a JobScheduler#threadFactory(Group) to create this thread so it doesn't just exist on calling groups (such as DatabaseReconciler and
+        //  CatchupServer)
         applierThread = new Thread( this::applyJob, "core-state-applier" );
         applierThread.start();
     }

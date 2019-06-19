@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import com.neo4j.causalclustering.messaging.SimpleNettyChannel;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;

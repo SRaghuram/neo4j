@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -29,7 +30,7 @@ import org.neo4j.storageengine.api.StoreId;
  *
  * Instances are responsible for exposing per database dependency management, monitoring and io operations.
  *
- * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
+ * Collections of these instances should be managed by a {@link DatabaseManager<ClusteredDatabaseContext>}
  */
 public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 {
@@ -42,13 +43,13 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
     private final CatchupComponents catchupComponents;
-    private final LifeSupport clusterDatabaseLife;
+    private final ClusteredDatabaseLife clusterDatabaseLife;
     private final Monitors clusterDatabaseMonitors;
 
     private volatile StoreId storeId;
 
     DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            CatchupComponentsFactory catchupComponentsFactory, LifeSupport clusterDatabaseLife, Monitors clusterDatabaseMonitors )
+            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabaseLife clusterDatabaseLife, Monitors clusterDatabaseMonitors )
     {
         this.database = database;
         this.facade = facade;
@@ -190,7 +191,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     }
 
     @Override
-    public LifeSupport clusterDatabaseLife()
+    public ClusteredDatabaseLife clusteredDatabaseLife()
     {
         return clusterDatabaseLife;
     }

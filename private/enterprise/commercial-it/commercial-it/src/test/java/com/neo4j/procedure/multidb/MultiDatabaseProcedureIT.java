@@ -17,16 +17,12 @@ import java.util.stream.Stream;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -54,16 +50,13 @@ class MultiDatabaseProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI database;
-    private DatabaseManager<?> databaseManager;
     private DatabaseManagementService managementService;
-    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setUp()
     {
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
         database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
-        databaseManager = getDatabaseManager();
     }
 
     @AfterEach
@@ -78,11 +71,11 @@ class MultiDatabaseProcedureIT
         String firstName = "first";
         String secondName = "second";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( databaseIdRepository.get( firstName ) );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( databaseIdRepository.get( secondName ) );
+        managementService.createDatabase( firstName );
+        managementService.createDatabase( secondName );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
+        GraphDatabaseFacade firstFacade = (GraphDatabaseFacade) managementService.database( firstName );
+        GraphDatabaseFacade secondFacade = (GraphDatabaseFacade) managementService.database( secondName );
 
         createLabel( firstFacade, firstName );
         createLabel( secondFacade, secondName );
@@ -103,11 +96,11 @@ class MultiDatabaseProcedureIT
         String firstName = "mapperFirst";
         String secondName = "mapperSecond";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( databaseIdRepository.get( firstName ) );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( databaseIdRepository.get( secondName ) );
+        managementService.createDatabase( firstName );
+        managementService.createDatabase( secondName );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
+        GraphDatabaseFacade firstFacade = (GraphDatabaseFacade) managementService.database( firstName );
+        GraphDatabaseFacade secondFacade = (GraphDatabaseFacade) managementService.database( secondName );
 
         createMarkerNode( firstFacade );
         createMarkerNode( secondFacade );
@@ -152,11 +145,6 @@ class MultiDatabaseProcedureIT
             facade.execute( "call db.createLabel(\"" + label + "\")" ).close();
             transaction.success();
         }
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return database.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 
     @SuppressWarnings( "WeakerAccess" )

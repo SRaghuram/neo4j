@@ -19,11 +19,9 @@ import java.util.concurrent.CountDownLatch;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -42,9 +40,9 @@ class MultiDatabaseFileWatchIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
-    private DatabaseContext firstContext;
-    private DatabaseContext secondContext;
-    private DatabaseContext thirdContext;
+    private GraphDatabaseFacade firstContext;
+    private GraphDatabaseFacade secondContext;
+    private GraphDatabaseFacade thirdContext;
     private AssertableLogProvider logProvider;
     private DatabaseManagementService managementService;
 
@@ -56,11 +54,12 @@ class MultiDatabaseFileWatchIT
                 .setInternalLogProvider( logProvider )
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        var databaseIdRepository = new TestDatabaseIdRepository();
-        firstContext = databaseManager.createDatabase( databaseIdRepository.get( "first" ) );
-        secondContext = databaseManager.createDatabase( databaseIdRepository.get( "second" ) );
-        thirdContext = databaseManager.createDatabase( databaseIdRepository.get( "third" ) );
+        managementService.createDatabase( "first" );
+        managementService.createDatabase( "second" );
+        managementService.createDatabase( "third" );
+        firstContext  = (GraphDatabaseFacade) managementService.database( "first" );
+        secondContext = (GraphDatabaseFacade) managementService.database( "second" );
+        thirdContext  = (GraphDatabaseFacade) managementService.database( "third" );
     }
 
     @AfterEach
@@ -75,7 +74,7 @@ class MultiDatabaseFileWatchIT
     {
         assertTimeoutPreemptively( ofSeconds( 60 ), () ->
         {
-            File firstDbMetadataStore = firstContext.database().getDatabaseLayout().metadataStore();
+            File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
             FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
             DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getName() );
             fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
@@ -95,9 +94,9 @@ class MultiDatabaseFileWatchIT
     {
         assertTimeoutPreemptively( ofSeconds( 60 ), () ->
         {
-            File firstDbMetadataStore = firstContext.database().getDatabaseLayout().metadataStore();
-            File secondDbNodeStore = secondContext.database().getDatabaseLayout().nodeStore();
-            File thirdDbRelStore = thirdContext.database().getDatabaseLayout().relationshipStore();
+            File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
+            File secondDbNodeStore = secondContext.databaseLayout().nodeStore();
+            File thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
 
             FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
             DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName() );
@@ -120,11 +119,6 @@ class MultiDatabaseFileWatchIT
     private FileSystemWatcherService getFileSystemWatcher()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( FileSystemWatcherService.class );
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 
     private static class DeletionLatchEventListener implements FileWatchEventListener

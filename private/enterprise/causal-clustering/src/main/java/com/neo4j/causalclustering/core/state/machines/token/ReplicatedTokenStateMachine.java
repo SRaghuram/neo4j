@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.function.Consumer;
 
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
@@ -40,10 +41,10 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
     private final TokenRegistry tokenRegistry;
 
     private final Log log;
-    private final ClusteredDatabaseManager databaseManager;
+    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTokenStateMachine( TokenRegistry tokenRegistry, LogProvider logProvider, ClusteredDatabaseManager databaseManager )
+    public ReplicatedTokenStateMachine( TokenRegistry tokenRegistry, LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager )
     {
         this.tokenRegistry = tokenRegistry;
         this.log = logProvider.getLog( getClass() );

@@ -11,41 +11,46 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
-import com.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 
-class ReadReplicaDatabaseLife extends SafeLifecycle
+class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
 {
     private final Lifecycle catchupProcess;
     private final Log debugLog;
     private final Log userLog;
     private final TimeoutStrategy syncRetryStrategy;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
+    private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final TopologyService topologyService;
 
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
+    private final LifeSupport clusterComponentsLife;
 
     ReadReplicaDatabaseLife( ReadReplicaDatabaseContext databaseContext, Lifecycle catchupProcess, UpstreamDatabaseStrategySelector selectionStrategy,
-            LogProvider debugLogProvider, LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier )
+            LogProvider debugLogProvider, LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
+            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -55,18 +60,24 @@ class ReadReplicaDatabaseLife extends SafeLifecycle
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
         this.topologyService = topologyService;
+        this.clusterComponentsLife = clusterComponentsLife;
+        this.clusterInternalOperator = clusterInternalOperator;
     }
 
     @Override
-    public void init0() throws Exception
+    public void init() throws Exception
     {
+        var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
+        clusterComponentsLife.init();
         databaseContext.database().init();
         catchupProcess.init();
+        bootstrap();
+        signal.bootstrapped();
     }
 
-    @Override
-    public void start0() throws Exception
+    private void bootstrap()
     {
+        clusterComponentsLife.start();
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         boolean synced = false;
         while ( !synced )
@@ -97,7 +108,11 @@ class ReadReplicaDatabaseLife extends SafeLifecycle
                 throw new RuntimeException( e );
             }
         }
+    }
 
+    @Override
+    public void start() throws Exception
+    {
         databaseContext.database().start();
         catchupProcess.start();
         topologyService.onDatabaseStart( databaseContext.databaseId() );
@@ -183,17 +198,25 @@ class ReadReplicaDatabaseLife extends SafeLifecycle
     }
 
     @Override
-    public void stop0() throws Exception
+    public void stop() throws Exception
     {
         topologyService.onDatabaseStop( databaseContext.databaseId() );
         catchupProcess.stop();
         databaseContext.database().stop();
+        clusterComponentsLife.stop();
     }
 
     @Override
-    public void shutdown0() throws Exception
+    public void shutdown() throws Exception
     {
         catchupProcess.shutdown();
         databaseContext.database().shutdown();
+        clusterComponentsLife.stop();
+    }
+
+    @Override
+    public void add( Lifecycle lifecycledComponent )
+    {
+        clusterComponentsLife.add( lifecycledComponent );
     }
 }

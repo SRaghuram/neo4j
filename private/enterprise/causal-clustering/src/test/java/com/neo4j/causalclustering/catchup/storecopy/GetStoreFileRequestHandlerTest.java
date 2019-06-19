@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
-import com.neo4j.causalclustering.helpers.FakeJobScheduler;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class GetStoreFileRequestHandlerTest
     private final FakeCheckPointer checkPointer = new FakeCheckPointer();
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
-    private JobScheduler jobScheduler = new FakeJobScheduler();
+    private JobScheduler jobScheduler = new CallingThreadJobScheduler();
 
     @BeforeEach
     void setup()

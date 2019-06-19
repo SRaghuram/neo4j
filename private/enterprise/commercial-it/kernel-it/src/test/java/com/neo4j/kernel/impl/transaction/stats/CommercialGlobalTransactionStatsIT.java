@@ -17,10 +17,8 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -59,8 +57,8 @@ class CommercialGlobalTransactionStatsIT
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         String secondDb = "second";
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( new TestDatabaseIdRepository().get( secondDb ) ).databaseFacade();
+        managementService.createDatabase( secondDb );
+        GraphDatabaseFacade secondFacade = (GraphDatabaseFacade) managementService.database( secondDb );
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
         assertEquals( 0, globalTransactionStats.getNumberOfActiveTransactions() );
@@ -86,10 +84,5 @@ class CommercialGlobalTransactionStatsIT
         {
             transactionExecutor.shutdown();
         }
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

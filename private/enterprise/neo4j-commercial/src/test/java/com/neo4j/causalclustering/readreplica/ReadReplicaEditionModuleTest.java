@@ -5,29 +5,14 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 
-import java.util.UUID;
 import java.util.function.Predicate;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.dbms.api.DatabaseExistsException;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -35,11 +20,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
-import static org.neo4j.kernel.impl.factory.DatabaseInfo.READ_REPLICA;
 
 @SkipThreadLeakageGuard
 @ExtendWith( TestDirectoryExtension.class )
@@ -47,29 +27,6 @@ class ReadReplicaEditionModuleTest
 {
     @Inject
     private TestDirectory testDirectory;
-
-    @Test
-    void editionDatabaseCreationOrder() throws DatabaseExistsException
-    {
-        DatabaseManager<?> manager = mock( DatabaseManager.class );
-        Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
-        DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
-        GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
-        {
-            @Override
-            protected LogService createLogService( LogProvider userLogProvider )
-            {
-                return NullLogService.getInstance();
-            }
-        };
-        ReadReplicaEditionModule editionModule = new ReadReplicaEditionModule( globalModule, new AkkaDiscoveryServiceFactory(),
-                new MemberId( UUID.randomUUID() ) );
-        editionModule.createDatabases( manager, config );
-
-        InOrder order = inOrder( manager );
-        order.verify( manager ).createDatabase( eq( databaseIdRepository.systemDatabase() ) );
-        order.verify( manager ).createDatabase( eq( databaseIdRepository.defaultDatabase() ) );
-    }
 
     @Test
     void fileWatcherFileNameFilter()

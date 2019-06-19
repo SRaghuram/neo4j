@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -24,27 +26,20 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
-import com.neo4j.dbms.InternalOperator;
-import com.neo4j.dbms.LocalOperator;
-import com.neo4j.dbms.OperatorConnector;
-import com.neo4j.dbms.OperatorState;
-import com.neo4j.dbms.ReconcilingDatabaseOperator;
-import com.neo4j.dbms.SystemOperator;
+import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
+import com.neo4j.dbms.TransactionEventService;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -67,9 +62,6 @@ import org.neo4j.monitoring.Health;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
-
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -171,13 +163,25 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log log )
     {
+        var internalOperator = new ClusterInternalDbmsOperator();
+
+        //TODO: Pass internal operator to database manager so it can pass to factories
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, log, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig );
-        createDatabaseManagerDependentModules( databaseManager );
+
+        TransactionEventService txEventService = new SystemDatabaseOnlyTransactionEventService();
+        createDatabaseManagerDependentModules( databaseManager, txEventService );
+
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
+
+        globalModule.getGlobalLife().add( new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService,
+                internalOperator, databaseIdRepository ) );
+
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( ClusteredDatabaseManager databaseManager )
+    private void createDatabaseManagerDependentModules( ReadReplicaDatabaseManager databaseManager, TransactionEventService txEventService )
     {
         var globalLife = globalModule.getGlobalLife();
         var globalDependencies = globalModule.getGlobalDependencies();
@@ -203,35 +207,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         backupServerOptional.ifPresent( globalLife::add );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
-        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler, globalLogService,
-                topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(), globalHealth,
-                catchupClientFactory );
-    }
-
-    @Override
-    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
-    {
-        var initialDatabases = new LinkedHashMap<DatabaseId,OperatorState>();
-
-        initialDatabases.put( databaseIdRepository.systemDatabase(), STOPPED );
-        initialDatabases.put( databaseIdRepository.get( config.get( default_database ) ), STOPPED );
-
-        initialDatabases.keySet().forEach( databaseManager::createDatabase );
-
-        setupDatabaseOperators( databaseManager, initialDatabases );
-    }
-
-    private void setupDatabaseOperators( DatabaseManager<?> databaseManager, Map<DatabaseId,OperatorState> initialDatabases )
-    {
-        var reconciler = new ReconcilingDatabaseOperator( databaseManager, initialDatabases );
-        var connector = new OperatorConnector( reconciler );
-
-        var localOperator = new LocalOperator( connector, databaseIdRepository );
-        var internalOperator = new InternalOperator( connector );
-        var systemOperator = new SystemOperator( connector );
-
-        globalModule.getGlobalDependencies().satisfyDependencies( internalOperator ); // for internal components
-        globalModule.getGlobalDependencies().satisfyDependencies( localOperator ); // for admin procedures
+        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler, topologyService, myIdentity,
+                catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(), globalHealth, catchupClientFactory, txEventService );
     }
 
     @Override
@@ -264,7 +241,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new DefaultNetworkConnectionTracker();
     }
 
-    private TopologyService createTopologyService( ClusteredDatabaseManager databaseManager, LogService logService )
+    private TopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, LogService logService )
     {
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );

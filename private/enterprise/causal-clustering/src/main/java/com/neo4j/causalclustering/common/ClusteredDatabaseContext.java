@@ -6,14 +6,16 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -23,7 +25,7 @@ import org.neo4j.storageengine.api.StoreId;
  * Instances are responsible for the lifecycle management of per-database components, as well as exposing
  * per database dependency management, monitoring and io operations.
  *
- * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
+ * Collections of these instances should be managed by a {@link DatabaseManager<ClusteredDatabaseContext>}
  */
 public interface ClusteredDatabaseContext extends DatabaseContext
 {
@@ -71,5 +73,10 @@ public interface ClusteredDatabaseContext extends DatabaseContext
      */
     CatchupComponents catchupComponents();
 
-    LifeSupport clusterDatabaseLife();
+    /**
+     * Object which encapsulates the lifecycle of all components required by a
+     * clustered database instance, including the {@link RaftMachine} and kernel {@link Database}
+     * @return lifecycle controller for this database and its supporting lifecycled components
+     */
+    ClusteredDatabaseLife clusteredDatabaseLife();
 }

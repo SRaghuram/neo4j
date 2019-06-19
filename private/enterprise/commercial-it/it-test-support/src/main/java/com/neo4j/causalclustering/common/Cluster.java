@@ -381,13 +381,12 @@ public class Cluster
 
     private List<CoreClusterMember> getAllMembersWithAnyRole( String databaseName, Role... roles )
     {
-        Set<Role> roleSet = Arrays.stream( roles ).collect( toSet() );
+        var roleSet = Arrays.stream( roles ).collect( toSet() );
 
-        List<CoreClusterMember> list = new ArrayList<>();
+        var list = new ArrayList<CoreClusterMember>();
         for ( CoreClusterMember m : coreMembers.values() )
         {
             var managementService = m.managementService();
-
             if ( managementService == null )
             {
                 continue;
@@ -511,7 +510,7 @@ public class Cluster
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
         {
             CoreClusterMember member = awaitLeader( databaseName, timeout, timeUnit );
-            GraphDatabaseFacade db = member.defaultDatabase();
+            GraphDatabaseFacade db = (GraphDatabaseFacade) member.managementService().database( databaseName );
             if ( db == null )
             {
                 throw new DatabaseShutdownException();

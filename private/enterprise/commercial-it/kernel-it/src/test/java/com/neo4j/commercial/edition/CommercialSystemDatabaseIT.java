@@ -20,7 +20,6 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -69,7 +68,6 @@ class CommercialSystemDatabaseIT
     void setUp()
     {
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( SystemGraphInitializer.NO_OP );   // disable system graph construction because it will interfere with some tests
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setExternalDependencies( dependencies ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
@@ -109,7 +107,7 @@ class CommercialSystemDatabaseIT
         try ( Transaction ignored = systemDb.beginTx() )
         {
             assertEquals( 1, count( systemDb.findNodes( systemLabel ) ) );
-            assertEquals( 1, count( systemDb.getAllLabels() ) );
+            assertEquals( 2, count( systemDb.getAllLabels() ) );
         }
     }
 
@@ -139,8 +137,8 @@ class CommercialSystemDatabaseIT
             }
         }
 
-        countTransactionInLogicalStore( systemDb, systemDatabaseTransactions * 2 );
-        countTransactionInLogicalStore( defaultDb, defaultDatabaseTransactions * 2);
+        countTransactionInLogicalStore( systemDb, systemDatabaseTransactions * 2 + 11 );
+        countTransactionInLogicalStore( defaultDb, defaultDatabaseTransactions * 2 );
     }
 
     @Test

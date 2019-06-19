@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
@@ -24,16 +26,19 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext> implements ClusteredDatabaseManager
+import static java.lang.String.format;
+
+public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext>
 {
-    protected final ClusteredDatabaseContextFactory contextFactory;
-    protected final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
+    protected final ClusteredDatabaseContextFactory contextFactory;
+    protected final LogProvider logProvider;
     protected final Log log;
-    private final Config config;
+    protected final Config config;
     protected final StoreFiles storeFiles;
     protected final CatchupComponentsFactory catchupComponentsFactory;
+    private final Set<DatabaseId> shouldRecreateContext;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
@@ -46,42 +51,88 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.config = config;
         this.pageCache = pageCache;
         this.catchupComponentsFactory = catchupComponentsFactory;
+        this.shouldRecreateContext = new HashSet<>();
         this.storeFiles = new StoreFiles( fs, pageCache );
     }
 
     @Override
-    protected final void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final ClusteredDatabaseContext startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
+            log.info( "Bootstrapping '%s' database.", databaseId.name() );
+            if ( shouldRecreateContext.contains( databaseId ) )
+            {
+                // Clustering components cannot be reused, so we have to create a new context on each cycle.
+                context = createDatabaseContext( databaseId );
+            }
+            shouldRecreateContext.add( databaseId );
+            context.clusteredDatabaseLife().init();
             log.info( "Starting '%s' database.", databaseId.name() );
-            context.clusterDatabaseLife().start();
+            context.clusteredDatabaseLife().start();
+            return context;
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( "Unable to start database " + databaseId.name(), t );
+            throw new DatabaseManagementException( format( "Unable to start database `%s`", databaseId ), t );
         }
     }
 
     @Override
-    protected final void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final ClusteredDatabaseContext stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
             log.info( "Stopping '%s' database.", databaseId.name() );
-            context.clusterDatabaseLife().shutdown();
+            context.clusteredDatabaseLife().stop();
+            context.clusteredDatabaseLife().shutdown();
+            return context;
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( "Unable to stop database " + databaseId.name(), t );
+            throw new DatabaseManagementException( format( "Unable to stop database `%s`", databaseId ), t );
         }
     }
 
     @Override
-    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
-        // TODO: Should clean up cluster state here for core members.
-        throw new UnsupportedOperationException();
+        //TODO: Should clean up cluster state here for core members
+        throw new UnsupportedOperationException( "Not implemented" );
+    }
+
+    public void stopDatabaseBeforeStoreCopy( DatabaseId databaseId )
+    {
+        forSingleDatabase( databaseId, ( id, context ) ->
+        {
+            try
+            {
+                log.info( "Stopping '%s' database for store copy.", databaseId.name() );
+                context.database().stop();
+                return context;
+            }
+            catch ( Throwable t )
+            {
+                throw new DatabaseManagementException( format( "Unable to stop database '%s' for store copy.", databaseId.name() ), t );
+            }
+        } );
+    }
+
+    public void startDatabaseAfterStoreCopy( DatabaseId databaseId )
+    {
+        forSingleDatabase( databaseId, ( id, context ) ->
+        {
+            try
+            {
+                log.info( "Starting '%s' database after store copy.", databaseId.name() );
+                context.database().start();
+                return context;
+            }
+            catch ( Throwable t )
+            {
+                throw new DatabaseManagementException( format( "Unable to start database '%s' after store copy.", databaseId.name() ), t );
+            }
+        } );
     }
 
     protected final LogFiles buildTransactionLogs( DatabaseLayout dbLayout )

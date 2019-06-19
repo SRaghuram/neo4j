@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -71,6 +72,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
     private final Health databaseHealth;
+    private final TransactionCommitNotifier txCommitNotifier;
 
     private CatchupPollingProcess catchupProcess;
     private volatile boolean isPanicked;
@@ -79,13 +81,12 @@ public class CatchupProcessManager extends SafeLifecycle
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext, Health databaseHealth,
             TopologyService topologyService, CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline,
             TimerService timerService, CommandIndexTracker commandIndexTracker, LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier,
-            Config config )
+            Config config, TransactionCommitNotifier txCommitNotifier )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.config = config;
-
         this.commandIndexTracker = commandIndexTracker;
         this.timerService = timerService;
         this.executor = executor;
@@ -96,6 +97,7 @@ public class CatchupProcessManager extends SafeLifecycle
         this.catchupClient = catchUpClient;
         this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
+        this.txCommitNotifier = txCommitNotifier;
         this.txPulling = new LifeSupport();
         this.isPanicked = false;
     }
@@ -108,7 +110,8 @@ public class CatchupProcessManager extends SafeLifecycle
         txPulling.start();
         initTimer();
 
-        waitForUpToDateStore( catchupProcess );
+        // TODO: Commenting this out since it is problematic to have it in the lifecycle.
+        // waitForUpToDateStore( catchupProcess );
     }
 
     private void waitForUpToDateStore( CatchupPollingProcess catchupProcess ) throws InterruptedException, ExecutionException
@@ -157,10 +160,10 @@ public class CatchupProcessManager extends SafeLifecycle
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
                 databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
-                logProvider );
+                logProvider, txCommitNotifier );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient, batchingTxApplier,
-                dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
+        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,
+                batchingTxApplier, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
                 new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         databaseContext.dependencies().satisfyDependencies( catchupProcess );

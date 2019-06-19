@@ -13,12 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotInTransactionException;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -52,8 +49,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     void globalCompositeGuardUsedInTransactionBridge() throws DatabaseExistsException
     {
         ThreadToStatementContextBridge bridge = getTransactionBridge();
-        DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new TestDatabaseIdRepository().get( "second" ) ).databaseFacade();
+        managementService.createDatabase( "second" );
         managementService.shutdown();
 
         assertThrows( NotInTransactionException.class, bridge::assertInUnterminatedTransaction );
@@ -62,10 +58,5 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     private ThreadToStatementContextBridge getTransactionBridge()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-    }
-
-    private DatabaseManager<?> getDatabaseManager()
-    {
-        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

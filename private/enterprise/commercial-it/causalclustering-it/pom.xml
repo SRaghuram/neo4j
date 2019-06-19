@@ -37,6 +37,7 @@
     </licenses>
 
     <dependencies>
+
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>commercial-it-test-support</artifactId>

@@ -25,10 +25,8 @@ import org.neo4j.bolt.v4.runtime.AutoCommitState;
 import org.neo4j.bolt.v4.runtime.FailedState;
 import org.neo4j.bolt.v4.runtime.InTransactionState;
 import org.neo4j.bolt.v4.runtime.ReadyState;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.ValueUtils;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -49,15 +47,13 @@ import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 
 class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTestBase
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-
     @Test
     void shouldAllowSessionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.createDatabase( databaseIdRepository.get( "first" ) );
-        databaseManager.createDatabase( databaseIdRepository.get( "second" ) );
+        DatabaseManagementService managementService = managementService();
+        managementService.createDatabase( "first" );
+        managementService.createDatabase( "second" );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When
@@ -75,9 +71,9 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     void shouldAllowTransactionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.createDatabase( databaseIdRepository.get( "first" ) );
-        databaseManager.createDatabase( databaseIdRepository.get( "second" ) );
+        DatabaseManagementService managementService = managementService();
+        managementService.createDatabase( "first" );
+        managementService.createDatabase( "second" );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When
