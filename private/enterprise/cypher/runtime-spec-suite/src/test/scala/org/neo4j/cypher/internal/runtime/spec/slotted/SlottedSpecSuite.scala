@@ -51,4 +51,5 @@ class SlottedProfileDbHitsTest extends ProfileDbHitsTestBase(ENTERPRISE.SINGLE_T
                                                              SlottedRuntime,
                                                              SIZE_HINT,
                                                              costOfLabelScan = 2,
-                                                             costOfProperty = 1)
+                                                             costOfProperty = 1,
+                                                             costOfExpand = 1)

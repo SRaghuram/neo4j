@@ -133,4 +133,5 @@ class ParallelRuntimeProfileNoFusingDbHitsTest extends ProfileDbHitsTestBase(ENT
                                                                              PARALLEL,
                                                                              SIZE_HINT,
                                                                              costOfLabelScan = 1,
-                                                                             costOfProperty = 2)
+                                                                             costOfProperty = 2,
+                                                                             costOfExpand = 2)

@@ -123,5 +123,6 @@ class MorselProfileNoFusingDbHitsTest extends ProfileDbHitsTestBase(SINGLE_THREA
                                                                     MORSEL,
                                                                     SIZE_HINT,
                                                                     costOfLabelScan = 1,
-                                                                    costOfProperty = 2)
+                                                                    costOfProperty = 2,
+                                                                    costOfExpand = 2)
 
