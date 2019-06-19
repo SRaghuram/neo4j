@@ -6,7 +6,7 @@
 package com.neo4j.tools.dump;
 
 import com.neo4j.tools.dump.InconsistentRecords.Type;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -27,14 +27,14 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.storageengine.api.StorageIndexReference;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.common.TokenNameLookup.idTokenNameLookup;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
 
-public class InconsistencyReportReaderTest
+class InconsistencyReportReaderTest
 {
     @Test
-    public void shouldReadBasicEntities() throws Exception
+    void shouldReadBasicEntities() throws Exception
     {
         // GIVEN
         ByteArrayOutputStream out = new ByteArrayOutputStream( 1_000 );
@@ -82,7 +82,7 @@ public class InconsistencyReportReaderTest
     }
 
     @Test
-    public void shouldParseRelationshipGroupInconsistencies() throws Exception
+    void shouldParseRelationshipGroupInconsistencies() throws Exception
     {
         // Given
         InconsistentRecords inconsistencies = new InconsistentRecords();

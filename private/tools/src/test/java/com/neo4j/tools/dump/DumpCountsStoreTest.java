@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.dump;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -27,16 +27,19 @@ import org.neo4j.kernel.impl.store.kvstore.Headers;
 import org.neo4j.kernel.impl.store.kvstore.ReadableBuffer;
 import org.neo4j.kernel.impl.store.kvstore.WritableBuffer;
 import org.neo4j.storageengine.api.StorageIndexReference;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.token.api.NamedToken;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class DumpCountsStoreTest
+@ExtendWith( SuppressOutputExtension.class )
+class DumpCountsStoreTest
 {
     private static final int START_LABEL_ID = 1;
     private static final int END_LABEL_ID = 2;
@@ -56,11 +59,11 @@ public class DumpCountsStoreTest
     private static final long indexId = 0;
     private static final IndexDescriptor descriptor = TestIndexDescriptorFactory.forLabel( INDEX_LABEL_ID, INDEX_PROPERTY_KEY_ID );
 
-    @Rule
-    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private SuppressOutput suppressOutput;
 
     @Test
-    public void dumpMetadata()
+    void dumpMetadata()
     {
         DumpCountsStore countsStore = getCountStore();
 
@@ -80,7 +83,7 @@ public class DumpCountsStoreTest
     }
 
     @Test
-    public void dumpNodeCount()
+    void dumpNodeCount()
     {
         DumpCountsStore countsStore = getCountStore();
         countsStore.visitNodeCount( NODE_LABEL_ID, 70 );
@@ -89,7 +92,7 @@ public class DumpCountsStoreTest
     }
 
     @Test
-    public void dumpRelationshipCount()
+    void dumpRelationshipCount()
     {
         DumpCountsStore countsStore = getCountStore();
         countsStore.visitRelationshipCount( START_LABEL_ID, TYPE_ID, END_LABEL_ID, 5 );
@@ -99,7 +102,7 @@ public class DumpCountsStoreTest
     }
 
     @Test
-    public void dumpUnknownKey()
+    void dumpUnknownKey()
     {
         DumpCountsStore countsStore = getCountStore();
         countsStore.visitUnknownKey( new BigEndianByteArrayBuffer( "unknownKey".getBytes() ),

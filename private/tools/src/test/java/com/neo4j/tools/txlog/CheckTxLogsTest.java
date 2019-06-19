@@ -5,8 +5,8 @@
  */
 package com.neo4j.tools.txlog;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -41,8 +41,11 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
-import org.neo4j.test.rule.SuppressOutput;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.CHECK_TYPES;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.NEO_STORE;
@@ -50,24 +53,24 @@ import static com.neo4j.tools.txlog.checktypes.CheckTypes.NODE;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.PROPERTY;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.RELATIONSHIP;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.RELATIONSHIP_GROUP;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 
-public class CheckTxLogsTest
+@ExtendWith( {SuppressOutputExtension.class, EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+class CheckTxLogsTest
 {
-    @Rule
-    public final SuppressOutput mute = SuppressOutput.suppressAll();
-    @Rule
-    public final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
-    private final File storeDirectory = new File( "db" );
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void shouldReportNoInconsistenciesFromValidLog() throws Exception
+    void shouldReportNoInconsistenciesFromValidLog() throws Exception
     {
         // Given
         File log = logFile( 1 );
@@ -98,7 +101,7 @@ public class CheckTxLogsTest
                 )
         );
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         boolean success = checker.scan( getLogFiles(), handler, NODE );
@@ -111,11 +114,11 @@ public class CheckTxLogsTest
 
     private LogFiles getLogFiles() throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirectory, fsRule.get() ).build();
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( testDirectory.databaseDir(), fs ).build();
     }
 
     @Test
-    public void shouldReportNodeInconsistenciesFromSingleLog() throws IOException
+    void shouldReportNodeInconsistenciesFromSingleLog() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -147,7 +150,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         boolean success = checker.scan( getLogFiles(), handler, NODE );
@@ -166,7 +169,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportTransactionIdAndInconsistencyCount() throws IOException
+    void shouldReportTransactionIdAndInconsistencyCount() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -211,7 +214,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, NODE );
@@ -227,7 +230,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportNodeInconsistenciesFromDifferentLogs() throws IOException
+    void shouldReportNodeInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
         File log1 = logFile( 1 );
@@ -268,7 +271,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         boolean success = checker.scan( getLogFiles(), handler, NODE );
@@ -295,7 +298,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportPropertyInconsistenciesFromSingleLog() throws IOException
+    void shouldReportPropertyInconsistenciesFromSingleLog() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -323,7 +326,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
@@ -342,7 +345,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportPropertyInconsistenciesFromDifferentLogs() throws IOException
+    void shouldReportPropertyInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
         File log1 = logFile( 1 );
@@ -387,7 +390,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
@@ -421,7 +424,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportRelationshipInconsistenciesFromSingleLog() throws IOException
+    void shouldReportRelationshipInconsistenciesFromSingleLog() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -453,7 +456,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, RELATIONSHIP );
@@ -471,7 +474,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportRelationshipInconsistenciesFromDifferentLogs() throws IOException
+    void shouldReportRelationshipInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
         File log1 = logFile( 1 );
@@ -512,7 +515,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, RELATIONSHIP );
@@ -540,7 +543,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportRelationshipGroupInconsistenciesFromSingleLog() throws IOException
+    void shouldReportRelationshipGroupInconsistenciesFromSingleLog() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -572,7 +575,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
@@ -592,7 +595,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportRelationshipGroupInconsistenciesFromDifferentLogs() throws IOException
+    void shouldReportRelationshipGroupInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
         File log1 = logFile( 1 );
@@ -633,7 +636,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
@@ -663,7 +666,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportNeoStoreInconsistenciesFromSingleLog() throws IOException
+    void shouldReportNeoStoreInconsistenciesFromSingleLog() throws IOException
     {
         // Given
         File log = logFile( 1 );
@@ -691,7 +694,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, NEO_STORE );
@@ -707,7 +710,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportNeoStoreInconsistenciesFromDifferentLogs() throws IOException
+    void shouldReportNeoStoreInconsistenciesFromDifferentLogs() throws IOException
     {
         // Given
         File log1 = logFile( 1 );
@@ -744,7 +747,7 @@ public class CheckTxLogsTest
         );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
         checker.scan( getLogFiles(), handler, NEO_STORE );
@@ -766,14 +769,14 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldDetectAnInconsistentCheckPointPointingToALogFileGreaterThanMaxLogVersion() throws Exception
+    void shouldDetectAnInconsistentCheckPointPointingToALogFileGreaterThanMaxLogVersion() throws Exception
     {
         // given
         File log = logFile( 1 );
         writeCheckPoint( log, 2, LOG_HEADER_SIZE );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.validateCheckPoints( getLogFiles(), handler );
@@ -787,14 +790,14 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldDetectAnInconsistentCheckPointPointingToAByteOffsetNotInTheFile() throws Exception
+    void shouldDetectAnInconsistentCheckPointPointingToAByteOffsetNotInTheFile() throws Exception
     {
         // given
         ensureLogExists( logFile( 1 ) );
         writeCheckPoint( logFile( 2 ), 1, 42 );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.validateCheckPoints( getLogFiles(), handler );
@@ -808,7 +811,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldNotReportInconsistencyIfTheCheckPointAreValidOrTheyReferToPrunedLogs() throws Exception
+    void shouldNotReportInconsistencyIfTheCheckPointAreValidOrTheyReferToPrunedLogs() throws Exception
     {
         // given
         writeCheckPoint( logFile( 1 ), 0, LOG_HEADER_SIZE );
@@ -816,7 +819,7 @@ public class CheckTxLogsTest
         writeCheckPoint( logFile( 3 ), 3, LOG_HEADER_SIZE );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.validateCheckPoints( getLogFiles(), handler );
@@ -826,7 +829,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportAnInconsistencyIfTxIdSequenceIsNotStrictlyIncreasing() throws Exception
+    void shouldReportAnInconsistencyIfTxIdSequenceIsNotStrictlyIncreasing() throws Exception
     {
         // given
         LongFunction<Command.NodeCommand> newNodeCommandFunction =
@@ -839,7 +842,7 @@ public class CheckTxLogsTest
         writeTxContent( logFile( 2 ), 43L, newNodeCommandFunction.apply( 5L ) );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.scan( getLogFiles(), handler, CHECK_TYPES );
@@ -851,7 +854,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportAnInconsistencyIfTxIdSequenceHasGaps() throws Exception
+    void shouldReportAnInconsistencyIfTxIdSequenceHasGaps() throws Exception
     {
         // given
         LongFunction<Command.NodeCommand> newNodeCommandFunction =
@@ -864,7 +867,7 @@ public class CheckTxLogsTest
         writeTxContent( logFile( 2 ), 45L, newNodeCommandFunction.apply( 5L ) );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.scan( getLogFiles(), handler, CHECK_TYPES );
@@ -876,7 +879,7 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void shouldReportNoInconsistenciesIfTxIdSequenceIsStrictlyIncreasingAndHasNoGaps() throws Exception
+    void shouldReportNoInconsistenciesIfTxIdSequenceIsStrictlyIncreasingAndHasNoGaps() throws Exception
     {
         // given
 
@@ -891,7 +894,7 @@ public class CheckTxLogsTest
         writeTxContent( logFile( 2 ), 45L, newNodeCommandFunction.apply( 6L ) );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fsRule.get() );
+        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // when
         checker.scan( getLogFiles(), handler, CHECK_TYPES );
@@ -901,26 +904,25 @@ public class CheckTxLogsTest
     }
 
     @Test
-    public void closeLogEntryCursorAfterValidation() throws IOException
+    void closeLogEntryCursorAfterValidation() throws IOException
     {
         ensureLogExists( logFile( 1 ) );
         writeCheckPoint( logFile( 2 ), 1, 42 );
         LogEntryCursor entryCursor = Mockito.mock( LogEntryCursor.class );
 
         CheckTxLogsWithCustomLogEntryCursor checkTxLogs =
-                new CheckTxLogsWithCustomLogEntryCursor( System.out, fsRule.get(), entryCursor );
+                new CheckTxLogsWithCustomLogEntryCursor( System.out, fs, entryCursor );
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         LogFiles logFiles = getLogFiles();
         boolean logsValidity = checkTxLogs.validateCheckPoints( logFiles, handler );
 
-        assertTrue("empty logs should be valid", logsValidity);
+        assertTrue( logsValidity, "empty logs should be valid" );
         verify( entryCursor ).close();
     }
 
     private File logFile( long version )
     {
-        fsRule.get().mkdirs( storeDirectory );
-        return new File( storeDirectory, TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
+        return new File( testDirectory.databaseDir(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
     private static PropertyRecord propertyRecord( long id, boolean inUse, long prevProp, long nextProp, long... blocks )
@@ -964,7 +966,7 @@ public class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
-        try ( StoreChannel channel = fsRule.write( log );
+        try ( StoreChannel channel = fs.write( log );
               LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0 );
               PhysicalFlushableChannel writableLogChannel = new PhysicalFlushableChannel( versionedChannel ) )
         {
@@ -977,14 +979,13 @@ public class CheckTxLogsTest
 
     private void ensureLogExists( File logFile ) throws IOException
     {
-        FileSystemAbstraction fs = fsRule.get();
         if ( !fs.fileExists( logFile ) )
         {
             LogHeaderWriter.writeLogHeader( fs, logFile, getLogFiles().getLogVersion( logFile ), 0 );
         }
     }
 
-    private class CheckTxLogsWithCustomLogEntryCursor extends CheckTxLogs
+    private static class CheckTxLogsWithCustomLogEntryCursor extends CheckTxLogs
     {
 
         private final LogEntryCursor logEntryCursor;

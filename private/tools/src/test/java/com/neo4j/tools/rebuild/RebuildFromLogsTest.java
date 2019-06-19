@@ -5,12 +5,10 @@
  */
 package com.neo4j.tools.rebuild;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,70 +34,81 @@ import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@RunWith( Parameterized.class )
-public class RebuildFromLogsTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class RebuildFromLogsTest
 {
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    private final ExpectedException expectedException = ExpectedException.none();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private FileSystemAbstraction fileSystem;
 
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( testDirectory )
-            .around( suppressOutput ).around( fileSystemRule ).around( expectedException );
+    private DatabaseManagementService managementService;
 
-    private final Transaction[] work;
-    private static DatabaseManagementService managementService;
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<WorkLog> commands()
+    private static Collection<WorkLog> commands()
     {
         return WorkLog.combinations();
     }
 
-    @Test
-    public void shouldRebuildFromLog() throws Exception, InconsistentStoreException
+    @AfterEach
+    void tearDown()
+    {
+        if ( managementService != null )
+        {
+            managementService.shutdown();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource( value = "commands" )
+    void shouldRebuildFromLog( WorkLog workLog ) throws Exception, InconsistentStoreException
     {
         // given
         var prototypeLayout = testDirectory.databaseLayout( testDirectory.storeDir( "prototype" ) );
         var rebuildLayout = testDirectory.databaseLayout( testDirectory.storeDir( "rebuild" ) );
-        populatePrototype( prototypeLayout );
+        populatePrototype( prototypeLayout, workLog );
 
         // when
-        new RebuildFromLogs( fileSystemRule.get() ).rebuild( prototypeLayout, rebuildLayout, BASE_TX_ID );
+        new RebuildFromLogs( fileSystem ).rebuild( prototypeLayout, rebuildLayout, BASE_TX_ID );
 
         // then
         assertEquals( DbRepresentation.of( prototypeLayout ), DbRepresentation.of( rebuildLayout ) );
     }
 
-    @Test
-    public void failRebuildFromLogIfStoreIsInconsistentAfterRebuild() throws InconsistentStoreException, Exception
+    @ParameterizedTest
+    @MethodSource( value = "commands" )
+    void failRebuildFromLogIfStoreIsInconsistentAfterRebuild( WorkLog workLog )
     {
         var prototypeLayout = testDirectory.databaseLayout( "prototype" );
         var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
-        populatePrototype( prototypeLayout );
+        populatePrototype( prototypeLayout, workLog );
 
         // when
-        expectedException.expect( InconsistentStoreException.class );
-        RebuildFromLogs rebuildFromLogs = new TestRebuildFromLogs( fileSystemRule.get() );
-        rebuildFromLogs.rebuild( prototypeLayout, rebuildLayout, BASE_TX_ID );
+        assertThrows( InconsistentStoreException.class, () ->
+        {
+            var rebuildFromLogs = new TestRebuildFromLogs( fileSystem );
+            rebuildFromLogs.rebuild( prototypeLayout, rebuildLayout, BASE_TX_ID );
+        } );
     }
 
-    @Test
-    public void shouldRebuildFromLogUpToATx() throws Exception, InconsistentStoreException
+    @ParameterizedTest
+    @MethodSource( value = "commands" )
+    void shouldRebuildFromLogUpToATx( WorkLog workLog ) throws Exception, InconsistentStoreException
     {
         // given
         var prototypeLayout = testDirectory.databaseLayout( "prototype" );
         var copyLayout = testDirectory.databaseLayout( "copy" );
         var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
-        long txId = populatePrototype( prototypeLayout );
+        long txId = populatePrototype( prototypeLayout, workLog );
 
         FileUtils.copyRecursively( prototypeLayout.databaseDirectory(), copyLayout.databaseDirectory() );
         FileUtils.copyRecursively( prototypeLayout.getTransactionLogsDirectory(), copyLayout.getTransactionLogsDirectory() );
@@ -115,19 +124,19 @@ public class RebuildFromLogsTest
         }
 
         // when
-        new RebuildFromLogs( fileSystemRule.get() ).rebuild( copyLayout, rebuildLayout, txId );
+        new RebuildFromLogs( fileSystem ).rebuild( copyLayout, rebuildLayout, txId );
 
         // then
         assertEquals( DbRepresentation.of( prototypeLayout ), DbRepresentation.of( rebuildLayout ) );
     }
 
-    private long populatePrototype( DatabaseLayout databaseLayout )
+    private long populatePrototype( DatabaseLayout databaseLayout, WorkLog workLog )
     {
         GraphDatabaseAPI prototype = db( databaseLayout );
         long txId;
         try
         {
-            for ( Transaction transaction : work )
+            for ( Transaction transaction : workLog.transactions() )
             {
                 transaction.applyTo( prototype );
             }
@@ -140,7 +149,7 @@ public class RebuildFromLogsTest
         return txId;
     }
 
-    private static GraphDatabaseAPI db( DatabaseLayout databaseLayout )
+    private GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
         managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
@@ -283,12 +292,7 @@ public class RebuildFromLogsTest
         }
     }
 
-    public RebuildFromLogsTest( WorkLog work )
-    {
-        this.work = work.transactions();
-    }
-
-    private class TestRebuildFromLogs extends RebuildFromLogs
+    private static class TestRebuildFromLogs extends RebuildFromLogs
     {
         TestRebuildFromLogs( FileSystemAbstraction fs )
         {

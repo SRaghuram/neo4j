@@ -5,7 +5,7 @@
  */
 package com.neo4j.tools.dump.log;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,12 +16,12 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.impl.transaction.log.ArrayIOCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.CHECK_POINT;
@@ -29,10 +29,10 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.COMM
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.TX_COMMIT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.TX_START;
 
-public class TransactionLogEntryCursorTest
+class TransactionLogEntryCursorTest
 {
     @Test
-    public void shouldDeliverIntactTransactions() throws IOException
+    void shouldDeliverIntactTransactions() throws IOException
     {
         // GIVEN
         // tx 1
@@ -60,7 +60,7 @@ public class TransactionLogEntryCursorTest
     }
 
     @Test
-    public void deliverTransactionsWithoutEnd() throws IOException
+    void deliverTransactionsWithoutEnd() throws IOException
     {
         // GIVEN
         // tx 1
@@ -79,7 +79,7 @@ public class TransactionLogEntryCursorTest
     }
 
     @Test
-    public void readNonTransactionalEntries() throws IOException
+    void readNonTransactionalEntries() throws IOException
     {
         List<LogEntry> recordSet1 = makeTransaction( CHECK_POINT, CHECK_POINT, CHECK_POINT );
         List<LogEntry> recordSet2 = makeTransaction( CHECK_POINT );

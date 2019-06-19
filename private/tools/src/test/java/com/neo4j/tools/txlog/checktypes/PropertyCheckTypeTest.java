@@ -5,16 +5,16 @@
  */
 package com.neo4j.tools.txlog.checktypes;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PropertyCheckTypeTest
+class PropertyCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality() throws CloneNotSupportedException
+    void inUseRecordEquality() throws CloneNotSupportedException
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( true, 1, 2 );
@@ -28,7 +28,7 @@ public class PropertyCheckTypeTest
     }
 
     @Test
-    public void notInUseRecordEquality()
+    void notInUseRecordEquality()
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( false, 1, 2 );

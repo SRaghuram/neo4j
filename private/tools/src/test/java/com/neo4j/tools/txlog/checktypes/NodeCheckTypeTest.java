@@ -5,16 +5,16 @@
  */
 package com.neo4j.tools.txlog.checktypes;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class NodeCheckTypeTest
+class NodeCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality() throws CloneNotSupportedException
+    void inUseRecordEquality() throws CloneNotSupportedException
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( true, 1, false, 2, 3 );
@@ -28,7 +28,7 @@ public class NodeCheckTypeTest
     }
 
     @Test
-    public void notInUseRecordEquality()
+    void notInUseRecordEquality()
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( false, 1, true, 2, 3 );
