@@ -14,13 +14,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Optional;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -100,9 +100,11 @@ class MultiDatabaseManagerIT
         {
             managementService.createDatabase( "database" + i );
         }
-        TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
+        DatabaseLimitReachedException exception = assertThrows( DatabaseLimitReachedException.class,
+                () -> managementService.createDatabase( "any" ) );
         assertThat( rootCause( exception ).getMessage(),
-                containsString( "Reached maximum number of active databases. Fail to create new database `any`." ) );
+                containsString( "The total limit of databases is already reached. To create more you need to either drop databases or change the" +
+                        " limit via the config setting 'dbms.max_databases'" ) );
     }
 
     @Test
@@ -112,7 +114,7 @@ class MultiDatabaseManagerIT
         {
             managementService.createDatabase( "database" + i );
         }
-        TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
+        assertThrows( DatabaseLimitReachedException.class, () -> managementService.createDatabase( "any" ) );
         managementService.dropDatabase( "database0" );
 
         assertDoesNotThrow( () -> managementService.createDatabase( "any" ) );
@@ -130,7 +132,7 @@ class MultiDatabaseManagerIT
         {
             managementService.shutdownDatabase( "database" + i );
         }
-        assertThrows( TransactionFailureException.class, () -> managementService.createDatabase( "any" ) );
+        assertThrows( DatabaseLimitReachedException.class, () -> managementService.createDatabase( "any" ) );
     }
 
     @Test
