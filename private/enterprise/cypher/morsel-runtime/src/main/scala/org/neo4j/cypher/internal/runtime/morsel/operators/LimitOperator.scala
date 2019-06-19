@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
 import org.neo4j.values.storable.NumberValue
 
 /**
@@ -58,6 +58,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                            (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
                                            (x, morsel) => x.next())
     }
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {}
   }
 
   /**

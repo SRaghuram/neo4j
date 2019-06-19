@@ -119,3 +119,9 @@ class MorselNoFusingWorkloadTest extends WorkloadTestBase(SINGLE_THREADED_NO_FUS
 class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 class MorselProfileRowsTest extends ProfileRowsTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+class MorselProfileNoFusingDbHitsTest extends ProfileDbHitsTestBase(SINGLE_THREADED_NO_FUSING,
+                                                                    MORSEL,
+                                                                    SIZE_HINT,
+                                                                    costOfLabelScan = 1,
+                                                                    costOfProperty = 2)
+

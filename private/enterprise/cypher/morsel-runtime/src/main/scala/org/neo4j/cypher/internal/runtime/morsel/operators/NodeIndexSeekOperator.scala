@@ -61,7 +61,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
 
-    private var nodeCursors: Iterator[Seq[IndexQuery]] = _
+    private var indexQueries: Iterator[Seq[IndexQuery]] = _
     private var nodeCursor: NodeValueIndexCursor = _
     private var exactSeekValues: Array[Value] = _
 
@@ -80,7 +80,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                          resources.expressionVariables(state.nExpressionSlots),
                                          state.subscriber)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-      nodeCursors = indexQueries(queryState, initExecutionContext)
+      indexQueries = computeIndexQueries(queryState, initExecutionContext)
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       true
     }
@@ -104,8 +104,14 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       }
     }
 
+    override def setTracer(tracer: KernelReadTracer): Unit = {
+      if (nodeCursor != null) {
+        nodeCursor.setTracer(tracer)
+      }
+    }
+
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      nodeCursors = null
+      indexQueries = null
       resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursor)
       nodeCursor = null
     }
@@ -116,8 +122,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       while (true) {
         if (nodeCursor != null && nodeCursor.next()) {
           return true
-        } else if (nodeCursors.hasNext) {
-          val indexQuery = nodeCursors.next()
+        } else if (indexQueries.hasNext) {
+          val indexQuery = indexQueries.next()
           seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQuery)
         } else {
           return false
@@ -156,8 +162,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   }
 
   // index seek
-  protected def indexQueries[RESULT <: AnyRef](state: OldQueryState,
-                                               baseContext: ExecutionContext): Iterator[Seq[IndexQuery]] =
+  protected def computeIndexQueries[RESULT <: AnyRef](state: OldQueryState,
+                                                      baseContext: ExecutionContext): Iterator[Seq[IndexQuery]] =
     indexMode match {
       case _: ExactSeek |
            _: SeekByRange =>

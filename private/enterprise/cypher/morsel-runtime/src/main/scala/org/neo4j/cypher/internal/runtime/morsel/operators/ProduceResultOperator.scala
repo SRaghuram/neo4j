@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulatio
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
@@ -67,6 +67,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {}
 
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }

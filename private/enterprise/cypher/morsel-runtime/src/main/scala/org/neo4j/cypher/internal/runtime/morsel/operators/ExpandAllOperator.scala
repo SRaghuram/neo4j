@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOM
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
 import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
-import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor, TokenRead}
+import org.neo4j.internal.kernel.api._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -85,6 +85,14 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         outputRow.setLongAt(relOffset, relId)
         outputRow.setLongAt(toOffset, otherSide)
         outputRow.moveToNextRow()
+      }
+    }
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {
+      if (relationships != null) {
+        nodeCursor.setTracer(tracer)
+        groupCursor.setTracer(tracer)
+        traversalCursor.setTracer(tracer)
       }
     }
 

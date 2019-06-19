@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNo
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.AnyValue
@@ -68,6 +69,8 @@ class InputOperator(val workIdentity: WorkIdentity,
     }
 
     override def canContinue: Boolean = input.canContinue
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {}
 
     override protected def closeCursors(resources: QueryResources): Unit = input.close()
   }

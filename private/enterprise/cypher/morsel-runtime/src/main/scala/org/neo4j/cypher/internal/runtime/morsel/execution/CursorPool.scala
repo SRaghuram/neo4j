@@ -23,6 +23,14 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
   val nodeLabelIndexCursorPool = new CursorPool[NodeLabelIndexCursor](
     () => cursorFactory.allocateNodeLabelIndexCursor())
 
+  def setKernelTracer(tracer: KernelReadTracer): Unit = {
+    nodeCursorPool.setKernelTracer(tracer)
+    relationshipGroupCursorPool.setKernelTracer(tracer)
+    relationshipTraversalCursorPool.setKernelTracer(tracer)
+    nodeValueIndexCursorPool.setKernelTracer(tracer)
+    nodeLabelIndexCursorPool.setKernelTracer(tracer)
+  }
+
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool,
                      relationshipGroupCursorPool,
@@ -71,6 +79,11 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
 
   @volatile private var liveCount: Long = 0L
   private var cached: CURSOR = _
+  private var tracer: KernelReadTracer = KernelReadTracer.NONE
+
+  def setKernelTracer(tracer: KernelReadTracer): Unit = {
+    this.tracer = tracer
+  }
 
   /**
     * Allocate a cursor of type `CURSOR`.
@@ -78,13 +91,16 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   def allocate(): CURSOR = {
     liveCount += 1
     DebugSupport.logCursors(stackTraceSlice(4, 5).mkString("+ allocate\n        ", "\n        ", ""))
-    if (cached != null) {
-      val temp = cached
-      cached = null.asInstanceOf[CURSOR]
-      temp
-    } else {
-      cursorFactory()
-    }
+    val cursor =
+      if (cached != null) {
+        val temp = cached
+        cached = null.asInstanceOf[CURSOR]
+        temp
+      } else {
+        cursorFactory()
+      }
+    cursor.setTracer(tracer)
+    cursor
   }
 
   /**

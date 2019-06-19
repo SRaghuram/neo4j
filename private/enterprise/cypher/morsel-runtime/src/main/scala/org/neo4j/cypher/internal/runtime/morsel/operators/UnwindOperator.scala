@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, QueryContext}
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
 import org.neo4j.values.AnyValue
 
 class UnwindOperator(val workIdentity: WorkIdentity,
@@ -62,6 +62,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
         outputRow.moveToNextRow()
       }
     }
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {}
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
       unwoundValues = null

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.{CursorFactory, KernelReadTracer}
 import org.neo4j.io.IOUtils
 import org.neo4j.values.AnyValue
 
@@ -23,6 +23,13 @@ class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
     if (_expressionVariables.length < nExpressionSlots)
       _expressionVariables = new Array[AnyValue](nExpressionSlots)
     _expressionVariables
+  }
+
+  def setKernelTracer(tracer: KernelReadTracer): Unit = {
+    expressionCursors.nodeCursor.setTracer(tracer)
+    expressionCursors.relationshipScanCursor.setTracer(tracer)
+    expressionCursors.propertyCursor.setTracer(tracer)
+    cursorPools.setKernelTracer(tracer)
   }
 
   override def close(): Unit = {

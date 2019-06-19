@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
-import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueIndexCursor}
+import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, KernelReadTracer, NodeValueIndexCursor}
 
 class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                             nodeOffset: Int,
@@ -50,6 +50,12 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       iterate(inputMorsel, outputRow, cursor, argumentSize)
+    }
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {
+      if (cursor != null) {
+        cursor.setTracer(tracer)
+      }
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {

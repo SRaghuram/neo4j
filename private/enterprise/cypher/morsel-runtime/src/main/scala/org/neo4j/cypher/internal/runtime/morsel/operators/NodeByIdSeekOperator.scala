@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryS
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.{IndexReadSession, Read}
+import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, Read}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
 import org.neo4j.values.virtual.ListValue
@@ -85,6 +85,8 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
         }
       }
     }
+
+    override def setTracer(tracer: KernelReadTracer): Unit = {}
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
      //nothing to do here

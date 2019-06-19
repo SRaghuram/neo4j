@@ -43,9 +43,9 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   private var innerLoop: Boolean = false
 
   override final def operate(outputRow: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState,
-                       resources: QueryResources): Unit = {
+                             context: QueryContext,
+                             state: QueryState,
+                             resources: QueryResources): Unit = {
 
     while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
       if (!innerLoop) {

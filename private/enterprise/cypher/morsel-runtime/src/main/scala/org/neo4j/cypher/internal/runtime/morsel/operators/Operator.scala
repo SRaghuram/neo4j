@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.Accumulato
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, SchedulingInputException}
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.internal.kernel.api.KernelReadTracer
 
 /**
   * Input to use for starting an operator task.
@@ -194,6 +195,9 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
                                 queryContext: QueryContext,
                                 state: QueryState,
                                 resources: QueryResources): OperatorTask = this
+
+  // stateless operators by definition do not hold cursors
+  final override def setTracer(tracer: KernelReadTracer): Unit = {}
 }
 
 /**
@@ -208,13 +212,19 @@ trait OperatorTask extends HasWorkIdentity {
                          queryProfiler: QueryProfiler): Unit = {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    resources.setKernelTracer(operatorExecutionEvent)
+    setTracer(operatorExecutionEvent)
     try {
       operate(output, context, state, resources)
       operatorExecutionEvent.rows(output.getValidRows)
     } finally {
+      setTracer(KernelReadTracer.NONE)
+      resources.setKernelTracer(KernelReadTracer.NONE)
       operatorExecutionEvent.close()
     }
   }
+
+  def setTracer(tracer: KernelReadTracer): Unit
 
   def operate(output: MorselExecutionContext,
               context: QueryContext,
@@ -271,6 +281,10 @@ trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumu
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = null
+
+  // These operators have no cursors
+  override def setTracer(tracer: KernelReadTracer): Unit = {}
+  override protected def closeCursors(resources: QueryResources): Unit = {}
 }
 
 trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]]

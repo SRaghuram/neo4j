@@ -46,3 +46,9 @@ class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.SINGL
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedProfileDbHitsTest extends ProfileDbHitsTestBase(ENTERPRISE.SINGLE_THREADED,
+                                                             SlottedRuntime,
+                                                             SIZE_HINT,
+                                                             costOfLabelScan = 2,
+                                                             costOfProperty = 1)

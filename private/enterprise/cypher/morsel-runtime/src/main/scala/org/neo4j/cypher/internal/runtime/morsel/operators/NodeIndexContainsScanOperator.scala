@@ -76,6 +76,12 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       iterate(inputMorsel, outputRow, cursor, argumentSize)
     }
 
+    override def setTracer(tracer: KernelReadTracer): Unit = {
+      if (cursor != null) {
+        cursor.setTracer(tracer)
+      }
+    }
+
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
       resources.cursorPools.nodeValueIndexCursorPool.free(cursor)
       cursor = null

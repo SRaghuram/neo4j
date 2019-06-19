@@ -129,4 +129,8 @@ class ParallelRuntimeNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.PA
 class ParallelRuntimeProfileNoFusingRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-
+class ParallelRuntimeProfileNoFusingDbHitsTest extends ProfileDbHitsTestBase(ENTERPRISE.PARALLEL_NO_FUSING,
+                                                                             PARALLEL,
+                                                                             SIZE_HINT,
+                                                                             costOfLabelScan = 1,
+                                                                             costOfProperty = 2)
