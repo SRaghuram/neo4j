@@ -28,4 +28,5 @@ aws --region eu-north-1 s3 cp "${workerArtifactUri}" /work/benchmark-worker.jar
 
 cd /work
 
+# shellcheck disable=SC2086
 java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}"
