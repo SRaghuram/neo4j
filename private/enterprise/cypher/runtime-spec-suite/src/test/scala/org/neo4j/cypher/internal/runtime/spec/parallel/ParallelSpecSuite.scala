@@ -98,9 +98,7 @@ class ParallelRuntimeUnwindStressTest extends UnwindStressTestBase(PARALLEL)
 class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
 // AGGREGATION
-class ParallelRuntimeSingleThreadedAggregationTest extends AggregationTestBase(ENTERPRISE.SINGLE_THREADED, PARALLEL, SIZE_HINT)
-// TODO Uncomment after parallel keeps input order
-//class ParallelRuntimeParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PARALLEL)
 
 // NODE HASH JOIN
