@@ -17,7 +17,7 @@ class SlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests {
   // If you want to only run a specific feature or scenario, go to the BaseTCKTests
 
   @TestFactory
-  def runCostSlotted(): util.Collection[DynamicTest] = {
+  def runCostSlottedWithCompiledExpressions(): util.Collection[DynamicTest] = {
     createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
   }
 
