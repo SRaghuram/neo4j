@@ -5,8 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state.machines.id;
 
+import java.io.IOException;
+
 import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
 
+import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -64,14 +67,12 @@ public class BarrierAwareIdGenerator implements IdGenerator
     @Override
     public ReuseMarker reuseMarker()
     {
-//        barrierState.ensureHoldingToken();
         return delegate.reuseMarker();
     }
 
     @Override
     public CommitMarker commitMarker()
     {
-//        barrierState.ensureHoldingToken();
         return delegate.commitMarker();
     }
 
@@ -106,9 +107,9 @@ public class BarrierAwareIdGenerator implements IdGenerator
     }
 
     @Override
-    public void start()
+    public void start( FreeIds freeIdsForRebuild ) throws IOException
     {
-        delegate.start();
+        delegate.start( freeIdsForRebuild );
     }
 
     @Override

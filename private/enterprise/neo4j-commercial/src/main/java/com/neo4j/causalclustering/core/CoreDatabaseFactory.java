@@ -206,12 +206,6 @@ class CoreDatabaseFactory
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        // Must be constructed before storage is touched by other modules.
-        StartupCoreStateCheck startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, storageFactory.layout(), databaseId );
-
-        // TODO: Remove this when ID-files are transactional.
-        life.add( new IdFilesSanitationModule( startupCoreStateCheck, databaseId, databaseManager, fileSystem, debugLog ) );
-
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( databaseId, NO_INITIALIZATION );
         RaftBinder raftBinder = createRaftBinder(
                 databaseId, config, monitors, storageFactory, bootstrapContext, temporaryDatabaseFactory, databaseInitializer, debugLog );
