@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.{KernelReadTracer, Read}
 import org.neo4j.values.AnyValue
 
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
@@ -73,7 +73,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
     try {
       compiledOperate(output, context, state, resources, queryProfiler)
     } finally {
-      closeProfileEvents()
+      closeProfileEvents(resources)
     }
   }
 
@@ -95,7 +95,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
   /**
     * Generated code that closes all events for profiling.
     */
-  def closeProfileEvents(): Unit
+  def closeProfileEvents(resources: QueryResources): Unit
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
@@ -146,8 +146,7 @@ trait OperatorTaskTemplate {
   def genCloseProfileEvents: IntermediateRepresentation = {
     block(
       genSetExecutionEvent(NO_OPERATOR_PROFILE_EVENT),
-      // note: We do not generate resources.setTracer(KernelReadTracer.NONE) here, because that does not play nice with
-      //       fused operators. Instead each template has to call setTracer when it frees it's cursor.
+      invokeSideEffect(QUERY_RESOURCES, method[QueryResources, Unit, KernelReadTracer]("setKernelTracer"), NO_KERNEL_TRACER),
       invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("close")),
       inner.genCloseProfileEvents
     )
@@ -252,7 +251,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         MethodDeclaration("closeProfileEvents",
                           owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],
-                          parameters = Seq.empty,
+                          parameters = Seq(QUERY_RESOURCE_PARAMETER),
                           body = genCloseProfileEvents
         ),
         MethodDeclaration("canContinue",

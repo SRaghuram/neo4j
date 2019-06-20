@@ -2701,13 +2701,13 @@ object ExpressionCompiler {
   private val CURSORS = load("cursors")
 
   private val NODE_CURSOR = load("nodeCursor")
-  private val vNODE_CURSOR = cursorVariable[NodeCursor]("nodeCursor")
+  val vNODE_CURSOR: LocalVariable = cursorVariable[NodeCursor]("nodeCursor")
 
   private val RELATIONSHIP_CURSOR = load("relationshipScanCursor")
-  private val vRELATIONSHIP_CURSOR = cursorVariable[RelationshipScanCursor]("relationshipScanCursor")
+  val vRELATIONSHIP_CURSOR: LocalVariable = cursorVariable[RelationshipScanCursor]("relationshipScanCursor")
 
   private val PROPERTY_CURSOR = load("propertyCursor")
-  private val vPROPERTY_CURSOR = cursorVariable[PropertyCursor]("propertyCursor")
+  val vPROPERTY_CURSOR: LocalVariable = cursorVariable[PropertyCursor]("propertyCursor")
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
