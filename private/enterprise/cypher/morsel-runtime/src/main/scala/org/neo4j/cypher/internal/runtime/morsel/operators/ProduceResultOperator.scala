@@ -253,6 +253,8 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record

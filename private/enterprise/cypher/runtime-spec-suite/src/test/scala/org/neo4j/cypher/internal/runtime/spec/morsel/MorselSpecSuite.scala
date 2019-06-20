@@ -120,4 +120,4 @@ class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(SINGLE_THREADED_
 class MorselProfileRowsTest extends ProfileRowsTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 class MorselProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
-
+class MorselProfileDbHitsTest extends MorselDbHitsTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)

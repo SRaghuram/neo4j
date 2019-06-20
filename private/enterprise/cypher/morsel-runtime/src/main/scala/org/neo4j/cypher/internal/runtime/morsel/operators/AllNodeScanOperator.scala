@@ -198,7 +198,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
       * }}}
       */
     block(
-      setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
+      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allNodeScan(loadField(nodeCursorField)),
       setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
       constant(true)
@@ -240,8 +240,6 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
       )
   }
 
-
-
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     //resources.cursorPools.nodeCursorPool.free(cursor)
     //cursor = null
@@ -251,4 +249,12 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
     )
   }
 
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      condition(not(isNull(loadField(nodeCursorField))))(
+        invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
+      ),
+      inner.genSetExecutionEvent(event)
+    )
+  }
 }

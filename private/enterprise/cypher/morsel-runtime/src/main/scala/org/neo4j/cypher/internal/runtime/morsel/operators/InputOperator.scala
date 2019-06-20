@@ -187,4 +187,6 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genFields: Seq[Field] = inputCursorField +: canContinue +: inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] = inner.genLocalVariables
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }

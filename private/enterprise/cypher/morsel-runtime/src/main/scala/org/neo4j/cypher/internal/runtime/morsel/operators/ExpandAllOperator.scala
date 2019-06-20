@@ -198,9 +198,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       condition(notEqual(codeGen.getLongAt(fromOffset), constant(-1L))){
        block(
          loadTypes,
-         setField(nodeCursorField, ALLOCATE_NODE_CURSOR),
-         setField(groupCursorField, ALLOCATE_GROUP_CURSOR),
-         setField(traversalCursorField, ALLOCATE_TRAVERSAL_CURSOR),
+         allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
+         allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
+         allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
          singleNode(codeGen.getLongAt(fromOffset), loadField(nodeCursorField)),
          setField(relationshipsField,
                   ///node.next() ? getRelCursor : EMPTY
@@ -289,6 +289,19 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
      setField(traversalCursorField, constant(null)),
      setField(relationshipsField, constant(null))
    )
+  }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      condition(not(isNull(loadField(relationshipsField))))(
+        block(
+          invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          invokeSideEffect(loadField(groupCursorField), method[RelationshipGroupCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          invokeSideEffect(loadField(traversalCursorField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
+        )
+      ),
+      inner.genSetExecutionEvent(event)
+    )
   }
 }
 

@@ -97,6 +97,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
     */
   def closeProfileEvents(): Unit
 
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
+
   override def operate(output: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
@@ -123,19 +125,29 @@ trait OperatorTaskTemplate {
 
   def genInit: IntermediateRepresentation = noop()
 
+  def executionEventField: InstanceField = field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)
+
   def genProfileEventFields: Seq[Field] = {
-    field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x) +: inner.genProfileEventFields
+    executionEventField +: inner.genProfileEventFields
   }
 
   def genInitializeProfileEvents: IntermediateRepresentation = {
     block(
-      setField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x),
+      setField(executionEventField,
         invoke(QUERY_PROFILER, method[QueryProfiler, OperatorProfileEvent, Int, Boolean]("executeOperator"), constant(id.x), constant(false))),
+      // note: We do not generate resources.setTracer(...) here, because that does not play nice with
+      //       fused operators. Instead each template has to call setTracer when it allocates it's cursor.
+      genSetExecutionEvent(loadField(executionEventField)),
       inner.genInitializeProfileEvents)
   }
 
+  def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation
+
   def genCloseProfileEvents: IntermediateRepresentation = {
     block(
+      genSetExecutionEvent(NO_OPERATOR_PROFILE_EVENT),
+      // note: We do not generate resources.setTracer(KernelReadTracer.NONE) here, because that does not play nice with
+      //       fused operators. Instead each template has to call setTracer when it frees it's cursor.
       invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("close")),
       inner.genCloseProfileEvents
     )
@@ -287,6 +299,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
   override def genInitializeProfileEvents: IntermediateRepresentation = noop()
 
   override def genProfileEventFields: Seq[Field] = Seq.empty
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 
   override def genCloseProfileEvents: IntermediateRepresentation = noop()
 

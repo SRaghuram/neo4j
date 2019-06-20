@@ -105,6 +105,10 @@ object OperatorCodeGenHelperTemplates {
 
   val NO_TOKEN: GetStatic = getStatic[TokenConstants, Int]("NO_TOKEN")
 
+  val SET_TRACER: Method = method[Cursor, Unit, KernelReadTracer]("setTracer")
+  val NO_KERNEL_TRACER: GetStatic = getStatic[KernelReadTracer, KernelReadTracer]("NONE")
+  val NO_OPERATOR_PROFILE_EVENT: GetStatic = getStatic[OperatorProfileEvent, OperatorProfileEvent]("NONE")
+
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(
       invoke(CURSOR_POOL, method[CursorPools, CursorPool[_]](cursorPools.name)),
@@ -141,6 +145,12 @@ object OperatorCodeGenHelperTemplates {
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
+
+  def allocateAndTraceCursor(cursorField: InstanceField, executionEventField: InstanceField, allocate: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      setField(cursorField, allocate),
+      invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField))
+    )
 
   def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
     invokeSideEffect(

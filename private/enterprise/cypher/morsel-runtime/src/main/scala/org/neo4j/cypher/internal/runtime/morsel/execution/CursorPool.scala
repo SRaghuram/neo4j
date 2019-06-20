@@ -109,6 +109,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
       DebugSupport.logCursors(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
+      cursor.setTracer(KernelReadTracer.NONE)
       liveCount -= 1
       if (cached != null)
         cached.close()

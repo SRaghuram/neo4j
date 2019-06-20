@@ -119,7 +119,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
           * }}}
           */
         block(
-          setField(nodeLabelCursorField, ALLOCATE_NODE_LABEL_CURSOR),
+          allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
           nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField)),
           setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
           constant(true)
@@ -148,7 +148,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
           declareAndAssign(typeRefOf[Boolean], hasInnerLoop, notEqual(loadField(labelField), NO_TOKEN)),
           condition(load(hasInnerLoop)) {
             block(
-              setField(nodeLabelCursorField, ALLOCATE_NODE_LABEL_CURSOR),
+              allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
               setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
             )
@@ -196,6 +196,15 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
     block(
       freeCursor[NodeLabelIndexCursor](loadField(nodeLabelCursorField), NodeLabelIndexCursorPool),
       setField(nodeLabelCursorField, constant(null))
+    )
+  }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      condition(not(isNull(loadField(nodeLabelCursorField))))(
+        invokeSideEffect(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
+      ),
+      inner.genSetExecutionEvent(event)
     )
   }
 }
