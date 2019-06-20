@@ -127,7 +127,7 @@ public class CheckTxLogs
                 LogEntry logEntry = logEntryCursor.get();
                 if ( logEntry instanceof CheckPoint )
                 {
-                    LogPosition logPosition = logEntry.<CheckPoint>as().getLogPosition();
+                    LogPosition logPosition = ((CheckPoint) logEntry).getLogPosition();
                     // if the file has been pruned we cannot validate the check point
                     if ( logPosition.getLogVersion() >= lowestLogVersion )
                     {
@@ -164,7 +164,7 @@ public class CheckTxLogs
         return success;
     }
 
-    private class CommandAndLogVersion
+    private static class CommandAndLogVersion
     {
         StorageCommand command;
         long logVersion;

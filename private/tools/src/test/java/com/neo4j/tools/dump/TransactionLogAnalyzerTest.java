@@ -234,10 +234,10 @@ class TransactionLogAnalyzerTest
     {
         assertTrue( transactionEntries[0] instanceof LogEntryStart, Arrays.toString( transactionEntries ) );
         assertTrue( transactionEntries[1] instanceof LogEntryCommand );
-        LogEntryCommand command = transactionEntries[1].as();
+        LogEntryCommand command = (LogEntryCommand) transactionEntries[1];
         assertEquals( expectedId, ((Command.NodeCommand)command.getCommand()).getKey() );
         assertTrue( transactionEntries[2] instanceof LogEntryCommit );
-        LogEntryCommit commit = transactionEntries[2].as();
+        LogEntryCommit commit = (LogEntryCommit) transactionEntries[2];
         assertEquals( expectedId, commit.getTxId() );
     }
 

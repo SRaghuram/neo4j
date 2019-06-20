@@ -34,7 +34,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.CHECK_POINT;
 
 /**
  * Merely a utility which, given a store directory or log file, reads the transaction log(s) as a stream of transactions
@@ -154,9 +153,9 @@ public class TransactionLogAnalyzer
             while ( cursor.next() )
             {
                 LogEntry[] tx = cursor.get();
-                if ( tx.length == 1 && tx[0].getType() == CHECK_POINT )
+                if ( tx.length == 1 && tx[0] instanceof CheckPoint )
                 {
-                    monitor.checkpoint( tx[0].as(), positionMarker.newPosition() );
+                    monitor.checkpoint( (CheckPoint) tx[0], positionMarker.newPosition() );
                 }
                 else
                 {
