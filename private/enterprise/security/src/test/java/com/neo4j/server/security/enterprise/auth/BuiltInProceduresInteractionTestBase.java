@@ -53,6 +53,7 @@ import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
 import static java.time.OffsetDateTime.from;
 import static java.time.OffsetDateTime.now;
@@ -1116,15 +1117,16 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
     {
         userManager = neo.getLocalUserManager();
-        userManager.newUser( "nopermission", password( "abc" ), false );
+        userManager.newUser( "notAllowedToWrite", password( "abc" ), false );
         userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "nopermission" );
+        userManager.addRoleToUser( "role1", "notAllowedToWrite" );
+        userManager.addRoleToUser( READER, "notAllowedToWrite" );
         // should be able to invoke allowed procedure
-        assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.allowedWriteProcedure()",
+        assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
                 itr -> assertEquals( itr.stream().collect( toList() ).size(), 2 ) );
         // should not be able to do writes
-        assertFail( neo.login( "nopermission", "abc" ),
-                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
+        assertFail( neo.login( "notAllowedToWrite", "abc" ),
+                "CALL test.allowedWriteProcedure() YIELD value CREATE (n)", WRITE_OPS_NOT_ALLOWED );
     }
 
     @Test

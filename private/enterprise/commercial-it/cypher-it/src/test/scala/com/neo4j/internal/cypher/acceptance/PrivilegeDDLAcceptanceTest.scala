@@ -1118,7 +1118,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should revoke correct write privilege different databases") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
@@ -1369,7 +1369,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail when revoking WRITE privilege with missing database") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
 

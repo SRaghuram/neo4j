@@ -23,6 +23,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -931,7 +932,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction" );
         latch.finishAndWaitForAllToFinish();
         assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 1 ) );
-        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(), containsString( WRITE_OPS_NOT_ALLOWED ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(),
+                anyOf( containsString( WRITE_OPS_NOT_ALLOWED ), containsString( TOKEN_CREATE_OPS_NOT_ALLOWED ) ) );
         assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "0" ) );
     }
