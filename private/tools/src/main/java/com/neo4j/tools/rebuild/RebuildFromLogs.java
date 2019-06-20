@@ -260,10 +260,10 @@ class RebuildFromLogs
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
             DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders );
             FullCheck fullCheck = new FullCheck( ConsistencyFlags.DEFAULT, tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
-                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), false );
+                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
             ConsistencySummaryStatistics summaryStatistics =
-                    fullCheck.execute( stores, (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
+                    fullCheck.execute( stores, () -> (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );
