@@ -42,7 +42,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
 
   override def clearAll(f: STATE => Unit): Unit = {
     controllers.forEach((_, controller) => {
-      if (controller.take) {
+      if (controller.take()) {
         // We do not remove the controller from controllers here in case there
         // is some outstanding work unit that wants to update count of accumulator
         f(controller.state)
@@ -74,7 +74,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
 
     while(iterator.hasNext) {
       val controller: ConcurrentStateController[STATE] = iterator.next()
-      if (controller.take) {
+      if (controller.tryTake()) {
         controllers.remove(controller.state.argumentRowId)
         debug("ASM %s take %03d".format(argumentStateMapId, controller.state.argumentRowId))
         return controller.state
@@ -165,7 +165,17 @@ object ConcurrentArgumentStateMap {
 
     def decrement(): Long = count.decrementAndGet()
 
-    def take: Boolean = count.compareAndSet(0, TAKEN)
+    /**
+      * Tries to take a controller, if the count has reached zero.
+      * @return `true` if this call took the controller, `false` if it was already taken or the count was not zero.
+      */
+    def tryTake(): Boolean = count.compareAndSet(0, TAKEN)
+
+    /**
+      * Tries to take a controller.
+      * @return `true` if this call took the controller, `false` if it was already taken.
+      */
+    def take(): Boolean = count.getAndSet(TAKEN) >= 0
 
     def isZero: Boolean = count.get() == 0
 
