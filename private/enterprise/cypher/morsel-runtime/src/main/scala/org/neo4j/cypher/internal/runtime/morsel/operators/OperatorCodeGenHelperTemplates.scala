@@ -11,13 +11,14 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.operations.CypherCoercions
+import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
+import org.neo4j.values.virtual.ListValue
 
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
@@ -118,8 +119,8 @@ object OperatorCodeGenHelperTemplates {
 
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
-                    indexOrder: IndexOrder,
-                    query: IntermediateRepresentation): IntermediateRepresentation = {
+                    query: IntermediateRepresentation,
+                    indexOrder: IndexOrder = IndexOrder.NONE): IntermediateRepresentation = {
     val order = indexOrder match {
       case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
       case IndexOrder.DESCENDING => getStatic[IndexOrder, IndexOrder]("DESCENDING")
@@ -159,5 +160,6 @@ object OperatorCodeGenHelperTemplates {
   def indexReadSession(offset: Int): IntermediateRepresentation =
     arrayLoad(invoke(QUERY_STATE, method[QueryState, Array[IndexReadSession]]("queryIndexes")), offset)
 
-  def asValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherCoercions, Value, AnyValue]("asStorableValue"), in)
+  def asStorableValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherCoercions, Value, AnyValue]("asStorableValue"), in)
+  def asListValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), in)
 }
