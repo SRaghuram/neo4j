@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -49,6 +50,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
     override def toString: String = "RelationshipFromCountStoreTask"
 
     private var hasNext = false
+    private var executionEvent: OperatorProfileEvent = OperatorProfileEvent.NONE
 
     override def workIdentity: WorkIdentity = RelationshipCountFromCountStoreOperator.this.workIdentity
 
@@ -89,17 +91,23 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     private def countOneDirection(context: QueryContext, startLabelId: Int, endLabelId: Int): Long = {
       val relationshipTypeIds: Array[Int] = relationshipTypes.types(context)
-      if (relationshipTypeIds == null)
+      if (relationshipTypeIds == null) {
+        executionEvent.dbHit()
         context.relationshipCountByCountStore(startLabelId, NameId.WILDCARD, endLabelId)
-      else {
+      } else {
         var i = 0
         var count = 0L
         while (i < relationshipTypeIds.length) {
+          executionEvent.dbHit()
           count += context.relationshipCountByCountStore(startLabelId, relationshipTypeIds(i), endLabelId)
           i += 1
         }
         count
       }
+    }
+
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+      this.executionEvent = event
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {

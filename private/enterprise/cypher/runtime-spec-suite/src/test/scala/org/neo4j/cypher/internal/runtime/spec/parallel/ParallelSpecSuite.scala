@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.parallel
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.{MORSEL, PARALLEL}
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.morsel.{ParallelInputTestBase, SchedulerTracerTestBase}
+import org.neo4j.cypher.internal.runtime.spec.morsel.{MorselDbHitsTestBase, ParallelInputTestBase, SchedulerTracerTestBase}
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
@@ -129,9 +129,4 @@ class ParallelRuntimeNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.PA
 class ParallelRuntimeProfileNoFusingRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeProfileNoFusingDbHitsTest extends ProfileDbHitsTestBase(ENTERPRISE.PARALLEL_NO_FUSING,
-                                                                             PARALLEL,
-                                                                             SIZE_HINT,
-                                                                             costOfLabelScan = 1,
-                                                                             costOfProperty = 2,
-                                                                             costOfExpand = 2)
+class ParallelRuntimeProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)

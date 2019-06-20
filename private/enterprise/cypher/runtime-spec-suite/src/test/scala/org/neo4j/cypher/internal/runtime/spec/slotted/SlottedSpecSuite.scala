@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
+import org.neo4j.cypher.internal.runtime.spec.interpreted.LegacyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
@@ -47,9 +48,4 @@ class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTE
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
-class SlottedProfileDbHitsTest extends ProfileDbHitsTestBase(ENTERPRISE.SINGLE_THREADED,
-                                                             SlottedRuntime,
-                                                             SIZE_HINT,
-                                                             costOfLabelScan = 2,
-                                                             costOfProperty = 1,
-                                                             costOfExpand = 1)
+class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)

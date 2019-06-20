@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.morsel._
@@ -59,7 +60,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                            (x, morsel) => x.next())
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   }
 
   /**

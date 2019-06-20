@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -75,9 +76,9 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (cursor != null) {
-        cursor.setTracer(tracer)
+        cursor.setTracer(event)
       }
     }
 
@@ -154,9 +155,9 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = _canContinue
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (cursor != null) {
-        cursor.setTracer(tracer)
+        cursor.setTracer(event)
       }
     }
 

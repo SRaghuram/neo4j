@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -88,11 +89,11 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (relationships != null) {
-        nodeCursor.setTracer(tracer)
-        groupCursor.setTracer(tracer)
-        traversalCursor.setTracer(tracer)
+        nodeCursor.setTracer(event)
+        groupCursor.setTracer(event)
+        traversalCursor.setTracer(event)
       }
     }
 

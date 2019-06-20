@@ -6,18 +6,15 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNoValue
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.KernelReadTracer
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualNodeValue
@@ -70,7 +67,7 @@ class InputOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = input.canContinue
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
     override protected def closeCursors(resources: QueryResources): Unit = input.close()
   }

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -37,6 +38,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
     override def toString: String = "NodeFromCountStoreTask"
 
     private var hasNext = false
+    private var executionEvent: OperatorProfileEvent = OperatorProfileEvent.NONE
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
@@ -58,12 +60,14 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
           if (idOfLabel == LazyLabel.UNKNOWN) {
             count = 0
           } else {
+            executionEvent.dbHit()
             count = count * context.nodeCountByCountStore(idOfLabel)
           }
           i += 1
         }
         i = 0
         while (i < wildCards) {
+          executionEvent.dbHit()
           count *= context.nodeCountByCountStore(NameId.WILDCARD)
           i += 1
         }
@@ -73,6 +77,10 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
         outputRow.moveToNextRow()
         hasNext = false
       }
+    }
+
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+      this.executionEvent = event
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {

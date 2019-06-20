@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
@@ -197,7 +197,7 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
                                 resources: QueryResources): OperatorTask = this
 
   // stateless operators by definition do not hold cursors
-  final override def setTracer(tracer: KernelReadTracer): Unit = {}
+  final override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 }
 
 /**
@@ -213,18 +213,18 @@ trait OperatorTask extends HasWorkIdentity {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
     resources.setKernelTracer(operatorExecutionEvent)
-    setTracer(operatorExecutionEvent)
+    setExecutionEvent(operatorExecutionEvent)
     try {
       operate(output, context, state, resources)
       operatorExecutionEvent.rows(output.getValidRows)
     } finally {
-      setTracer(KernelReadTracer.NONE)
+      setExecutionEvent(OperatorProfileEvent.NONE)
       resources.setKernelTracer(KernelReadTracer.NONE)
       operatorExecutionEvent.close()
     }
   }
 
-  def setTracer(tracer: KernelReadTracer): Unit
+  def setExecutionEvent(event: OperatorProfileEvent): Unit
 
   def operate(output: MorselExecutionContext,
               context: QueryContext,
@@ -283,7 +283,7 @@ trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumu
   override def producingWorkUnitEvent: WorkUnitEvent = null
 
   // These operators have no cursors
-  override def setTracer(tracer: KernelReadTracer): Unit = {}
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   override protected def closeCursors(resources: QueryResources): Unit = {}
 }
 

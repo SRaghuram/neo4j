@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -52,9 +53,9 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
       iterate(inputMorsel, outputRow, cursor, argumentSize)
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (cursor != null) {
-        cursor.setTracer(tracer)
+        cursor.setTracer(event)
       }
     }
 

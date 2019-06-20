@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -46,7 +47,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = false
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 }

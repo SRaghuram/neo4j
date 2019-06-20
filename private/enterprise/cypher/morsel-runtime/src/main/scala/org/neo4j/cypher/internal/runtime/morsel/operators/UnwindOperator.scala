@@ -5,13 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, QueryContext}
-import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
 class UnwindOperator(val workIdentity: WorkIdentity,
@@ -63,7 +64,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
       unwoundValues = null

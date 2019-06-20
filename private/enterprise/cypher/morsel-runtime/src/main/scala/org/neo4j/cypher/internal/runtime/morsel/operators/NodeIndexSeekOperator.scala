@@ -12,6 +12,7 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -108,9 +109,9 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (nodeCursor != null) {
-        nodeCursor.setTracer(tracer)
+        nodeCursor.setTracer(event)
       }
     }
 

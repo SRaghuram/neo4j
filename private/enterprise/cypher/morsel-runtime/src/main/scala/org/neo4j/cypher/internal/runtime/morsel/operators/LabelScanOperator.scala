@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
@@ -69,9 +70,9 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
       if (cursor != null) {
-        cursor.setTracer(tracer)
+        cursor.setTracer(event)
       }
     }
 
