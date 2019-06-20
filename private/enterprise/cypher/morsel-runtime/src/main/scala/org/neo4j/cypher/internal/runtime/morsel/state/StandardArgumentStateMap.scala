@@ -44,12 +44,6 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     }
   }
 
-  override def isEmpty: Boolean = {
-    controllers.forall {
-      case (_, controller) => controller.isZero
-    }
-  }
-
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
@@ -126,6 +120,18 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     debug("ASM %s decr %03d to %s".format(argumentStateMapId, argument, controller.count))
     controller.isZero
   }
+
+  override def toString: String = {
+    val sb = new StringBuilder
+    sb ++= "StandardArgumentStateMap(\n"
+    controllers.foreach { case
+      (argumentRowId, controller) =>
+      sb ++= s"$argumentRowId -> $controller\n"
+    }
+    sb += ')'
+    sb.result()
+  }
+
 }
 
 object StandardArgumentStateMap {
@@ -143,5 +149,9 @@ object StandardArgumentStateMap {
     def decrement(): Unit = _count -= 1
 
     def count: Long = _count
+
+   override def toString: String = {
+     s"[count: $count, state: $state]"
+   }
   }
 }

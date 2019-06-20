@@ -278,14 +278,6 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       }
       i += 1
     }
-    i = 0
-    while (i < argumentStateMaps.length) {
-      val asm = argumentStateMaps(i)
-      if (!asm.isEmpty) {
-        throw new RuntimeResourceLeakException(s"Argument State Map $asm is not empty after query completion.")
-      }
-      i += 1
-    }
   }
 
   // used by join operator, to create thread-safe argument states in its RHS ASM

@@ -50,16 +50,6 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
     })
   }
 
-  override def isEmpty: Boolean = {
-    controllers.values().forEach {
-      controller =>
-        if (!controller.isZero) {
-        return false
-      }
-    }
-    true
-  }
-
   override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
