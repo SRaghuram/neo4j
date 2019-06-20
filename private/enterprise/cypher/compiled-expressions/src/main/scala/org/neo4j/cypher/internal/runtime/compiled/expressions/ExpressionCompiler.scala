@@ -1469,9 +1469,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
+      val loadRef = getRefAt(offset)
       val nullCheck = slots.get(name).filter(_.nullable).map(_ => equal(getRefAt(offset), noValue)).toSet
-      val loadRef =  getRefAt(offset)
-      Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck))
+      Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck, requireNullCheck = false))
 
     case IdFromSlot(offset) =>
       val nameOfSlot = slots.nameOfLongSlot(offset)

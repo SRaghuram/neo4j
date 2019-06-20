@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
@@ -185,7 +186,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
 
   import OperatorCodeGenHelperTemplates._
   private var query: IntermediateExpression = _
-  private val queryVariable = codeGen.namer.nextVariableName()
+  private val queryVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
@@ -194,12 +195,12 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   }
 
   override def genLocalVariables: Seq[LocalVariable] = {
-    query.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
+    query.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V :+ queryVariable
   }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val compiled = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
-    query = compiled.copy(ir = asStorableValue(compiled.ir))
+    query = compiled.copy(ir = asStorableValue(nullCheckIfRequired(compiled)))
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
 
     /**
@@ -217,7 +218,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * }}}
       */
     block(
-      declareAndAssign(typeRefOf[Value], queryVariable, query.ir),
+      assign(queryVariable, query.ir),
       declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, notEqual(load(queryVariable), noValue)),
       condition(load(hasInnerLoopVar))(
         block(
@@ -319,7 +320,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * }}}
       */
     block(
-      declareAndAssign(typeRefOf[ListValue], queryVariable, queries.ir),
+      declareAndAssign(typeRefOf[ListValue], queryVariable, nullCheckIfRequired(queries)),
       setField(queryIteratorField,
                invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), load(queryVariable))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
