@@ -42,4 +42,18 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<!--  force junit5 for this modules and submodules -->
+					<version>2.22.0</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
 </project>
