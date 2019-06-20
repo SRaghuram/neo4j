@@ -530,3 +530,6 @@ Feature "WithAcceptance": Scenario "Null handling"
 Feature "WithAcceptance": Scenario "ORDER BY a DISTINCT column"
 Feature "WithAcceptance": Scenario "ORDER BY and LIMIT can be used"
 Feature "WithAcceptance": Scenario "WHERE on a DISTINCT column"
+
+// Bug in TCK parser
+Feature "LargeCreateQuery": Scenario "Generate the movie graph correctly"
