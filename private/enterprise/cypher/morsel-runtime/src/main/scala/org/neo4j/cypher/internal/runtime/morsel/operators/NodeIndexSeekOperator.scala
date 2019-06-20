@@ -42,6 +42,10 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             override val indexMode: IndexSeekMode = IndexSeek)
   extends StreamingOperator with NodeIndexSeeker {
 
+  if (indexMode == LockingUniqueIndexSeek) {
+    throw new CantCompileQueryException("NodeUniqueIndexSeek(Locking) is not supported in runtime=morsel/parallel.")
+  }
+
   private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
@@ -80,7 +84,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                          resources.expressionVariables(state.nExpressionSlots),
                                          state.subscriber)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-      indexQueries = computeIndexQueries(queryState, initExecutionContext)
+      indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       true
     }
@@ -160,18 +164,6 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       read.nodeIndexSeek(index, nodeCursor, indexOrder, needsValuesFromIndexSeek, predicates: _*)
     }
   }
-
-  // index seek
-  protected def computeIndexQueries[RESULT <: AnyRef](state: OldQueryState,
-                                                      baseContext: ExecutionContext): Iterator[Seq[IndexQuery]] =
-    indexMode match {
-      case _: ExactSeek |
-           _: SeekByRange =>
-        computeIndexQueries(state, baseContext).toIterator
-
-      case LockingUniqueIndexSeek =>
-        throw new UnsupportedOperationException("not implemented")
-    }
 }
 
 class NodeWithValues(val nodeId: Long, val values: Array[Value])

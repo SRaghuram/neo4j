@@ -50,6 +50,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
     override def toString: String = "NodeByIdTask"
 
     private var ids: java.util.Iterator[AnyValue] = _
+    private var tracer: KernelReadTracer = KernelReadTracer.NONE
 
     /**
       * Initialize the inner loop for the current input row.
@@ -79,6 +80,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
       while (outputRow.isValidRow && ids.hasNext) {
         val nextId = asId(ids.next())
         if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
+          tracer.onNode(nextId)
           outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
           outputRow.setLongAt(offset, nextId)
           outputRow.moveToNextRow()
@@ -86,10 +88,12 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def setTracer(tracer: KernelReadTracer): Unit = {}
+    override def setTracer(tracer: KernelReadTracer): Unit = {
+      this.tracer = tracer
+    }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
-     //nothing to do here
+      //nothing to do here
     }
   }
 }
