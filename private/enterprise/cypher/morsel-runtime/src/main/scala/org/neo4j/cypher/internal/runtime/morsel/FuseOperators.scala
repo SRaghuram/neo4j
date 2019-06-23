@@ -15,8 +15,9 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
+import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -165,6 +166,29 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
               case _ => cantHandle(acc, nextPlan)
             }
+
+          case plan@plans.NodeByIdSeek(node, nodeIds, _) => nodeIds match {
+            case SingleSeekableArg(expr) =>
+              val newTemplate = new SingleNodeByIdSeekTaskTemplate(acc.template,
+                                                 plan.id,
+                                                 innermostTemplate,
+                                                 node,
+                                                 slots.getLongOffsetFor(node),
+                                                 expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+              acc.copy(
+                template = newTemplate,
+                fusedPlans = nextPlan :: acc.fusedPlans)
+            case ManySeekableArgs(expr) => expr match {
+              case coll: ListLiteral =>
+                ZeroOneOrMany(coll.expressions) match {
+                  case Zero => ???
+                  case One(value) => ???
+                  case Many(_) => ???
+                }
+
+              case _ => ???
+            }
+          }
 
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)

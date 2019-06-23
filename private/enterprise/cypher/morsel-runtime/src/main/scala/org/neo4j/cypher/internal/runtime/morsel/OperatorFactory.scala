@@ -125,7 +125,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                                     maybeEndLabel,
                                                     physicalPlan.argumentSizes(id))
 
-      case plans.Expand(lhs, fromName, dir, types, to, relName, plans.ExpandAll) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromOffset = slots.getLongOffsetFor(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
@@ -178,7 +178,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           refsToCopy,
           cachedPropertiesToCopy)
 
-      case plans.UnwindCollection(src, variable, collection) =>
+      case plans.UnwindCollection(_, variable, collection) =>
         val offset = slots.get(variable) match {
           case Some(RefSlot(idx, _, _)) => idx
           case _ =>
