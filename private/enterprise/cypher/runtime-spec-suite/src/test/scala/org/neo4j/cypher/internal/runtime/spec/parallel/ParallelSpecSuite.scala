@@ -46,8 +46,10 @@ class ParallelRuntimeLabelScanStressTest extends LabelScanStressTestBase(PARALLE
 // INDEX SEEK
 class ParallelRuntimeNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+  with ArrayIndexSupport[EnterpriseRuntimeContext]
 class ParallelRuntimeNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+  with ArrayIndexSupport[EnterpriseRuntimeContext]
 
 class ParallelRuntimeIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(PARALLEL)
 class ParallelRuntimeIndexSeekExactStressTest extends IndexSeekExactStressTest(PARALLEL)

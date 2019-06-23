@@ -28,6 +28,7 @@ class SlottedNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENT
 class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
                                with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
+                               with ArrayIndexSupport[EnterpriseRuntimeContext]
 class SlottedInputTest extends InputTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialSortTest extends PartialSortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedSortTest extends SortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)

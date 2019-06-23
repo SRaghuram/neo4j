@@ -42,9 +42,11 @@ class MorselLabelScanNoFusingTest extends LabelScanTestBase(SINGLE_THREADED_NO_F
 // INDEX SEEK
 class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+  with ArrayIndexSupport[EnterpriseRuntimeContext]
+
 class MorselNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
-
+  with ArrayIndexSupport[EnterpriseRuntimeContext]
 
 // INDEX SCAN
 class MorselNodeIndexScanTest extends NodeIndexScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
