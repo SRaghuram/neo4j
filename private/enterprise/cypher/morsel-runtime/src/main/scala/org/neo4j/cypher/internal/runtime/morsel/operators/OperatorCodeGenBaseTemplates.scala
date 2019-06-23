@@ -175,6 +175,18 @@ trait OperatorTaskTemplate {
   def genCloseCursors: IntermediateRepresentation
 }
 
+object OperatorTaskTemplate {
+  def empty(withId: Id): OperatorTaskTemplate = new OperatorTaskTemplate {
+    override def inner: OperatorTaskTemplate = null
+    override def id: Id = withId
+    override def genOperate: IntermediateRepresentation = noop()
+    override def genFields: Seq[Field] = Seq.empty
+    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+    override def genCanContinue: Option[IntermediateRepresentation] = None
+    override def genCloseCursors: IntermediateRepresentation = noop()
+  }
+}
+
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._

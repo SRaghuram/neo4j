@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
-import org.neo4j.cypher.internal.runtime.morsel.operators.{SingleThreadedAllNodeScanTaskTemplate, _}
+import org.neo4j.cypher.internal.runtime.morsel.operators.{OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
@@ -167,27 +167,46 @@ class FuseOperators(operatorFactory: OperatorFactory,
               case _ => cantHandle(acc, nextPlan)
             }
 
-          case plan@plans.NodeByIdSeek(node, nodeIds, _) => nodeIds match {
-            case SingleSeekableArg(expr) =>
-              val newTemplate = new SingleNodeByIdSeekTaskTemplate(acc.template,
-                                                 plan.id,
-                                                 innermostTemplate,
-                                                 node,
-                                                 slots.getLongOffsetFor(node),
-                                                 expr, physicalPlan.argumentSizes(id))(expressionCompiler)
-              acc.copy(
-                template = newTemplate,
-                fusedPlans = nextPlan :: acc.fusedPlans)
-            case ManySeekableArgs(expr) => expr match {
-              case coll: ListLiteral =>
-                ZeroOneOrMany(coll.expressions) match {
-                  case Zero => ???
-                  case One(value) => ???
-                  case Many(_) => ???
-                }
+          case plan@plans.NodeByIdSeek(node, nodeIds, _) => {
+            val newTemplate = nodeIds match {
+              case SingleSeekableArg(expr) =>
+                new SingleNodeByIdSeekTaskTemplate(acc.template,
+                                                   plan.id,
+                                                   innermostTemplate,
+                                                   node,
+                                                   slots.getLongOffsetFor(node),
+                                                   expr, physicalPlan.argumentSizes(id))(expressionCompiler)
 
-              case _ => ???
+              case ManySeekableArgs(expr) => expr match {
+                case coll: ListLiteral =>
+                  ZeroOneOrMany(coll.expressions) match {
+                    case Zero => OperatorTaskTemplate.empty(plan.id)
+                    case One(value) => new SingleNodeByIdSeekTaskTemplate(acc.template,
+                                                                          plan.id,
+                                                                          innermostTemplate,
+                                                                          node,
+                                                                          slots.getLongOffsetFor(node),
+                                                                          value, physicalPlan.argumentSizes(id))(expressionCompiler)
+                    case Many(_) => new ManyNodeByIdsSeekTaskTemplate(acc.template,
+                                                                          plan.id,
+                                                                          innermostTemplate,
+                                                                          node,
+                                                                          slots.getLongOffsetFor(node),
+                                                                          expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+                  }
+
+                case _ => new ManyNodeByIdsSeekTaskTemplate(acc.template,
+                                                            plan.id,
+                                                            innermostTemplate,
+                                                            node,
+                                                            slots.getLongOffsetFor(node),
+                                                            expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+              }
             }
+
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
           }
 
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>

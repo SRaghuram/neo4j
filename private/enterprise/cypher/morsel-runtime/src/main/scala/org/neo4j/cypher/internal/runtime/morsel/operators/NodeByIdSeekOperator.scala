@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import java.util
+
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
@@ -14,7 +16,8 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.NodeByIdSeekOperator.{asId, asIdMethod}
+import org.neo4j.cypher.internal.runtime.morsel.operators.NodeByIdSeekOperator.{asId, asIdMethod, isValidNode}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -24,6 +27,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.{IndexReadSession, Read}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
+import org.neo4j.values.virtual.ListValue
 
 
 class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
@@ -95,15 +99,20 @@ object NodeByIdSeekOperator {
   }
 
   val asIdMethod: Method = method[NodeByIdSeekOperator, Long, AnyValue]("asId")
+
+  def isValidNode(idVariable: String): IntermediateRepresentation =
+    and(greaterThanOrEqual(load(idVariable), constant(0L)),
+        invoke(loadField(DATA_READ), method[Read, Boolean, Long]("nodeExists"),
+               load(idVariable)))
 }
 
-class SingleNodeByIdSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
                                      id: Id,
-                                     val innermost: DelegateOperatorTaskTemplate,
-                                     val nodeVarName: String,
-                                     val offset: Int,
+                                     innermost: DelegateOperatorTaskTemplate,
+                                     nodeVarName: String,
+                                     offset: Int,
                                      nodeIdExpr: Expression,
-                                     val argumentSize: SlotConfiguration.Size)
+                                     argumentSize: SlotConfiguration.Size)
                                          (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
   import OperatorCodeGenHelperTemplates._
@@ -131,9 +140,7 @@ class SingleNodeByIdSeekTaskTemplate(override val inner: OperatorTaskTemplate,
       */
     block(
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(nodeId))),
-      setField(canContinue, and(greaterThanOrEqual(load(idVariable), constant(0L)),
-                                invoke(loadField(DATA_READ), method[Read, Boolean, Long]("nodeExists"),
-                                       load(idVariable)))),
+      setField(canContinue, isValidNode(idVariable.name)),
       constant(true))
   }
 
@@ -160,6 +167,87 @@ class SingleNodeByIdSeekTaskTemplate(override val inner: OperatorTaskTemplate,
         profileRow(id),
         inner.genOperate,
         setField(canContinue, constant(false)))
+      )
+  }
+
+  //nothing to close
+  override protected def genCloseInnerLoop: IntermediateRepresentation = noop()
+}
+
+class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
+                                    id: Id,
+                                    innermost: DelegateOperatorTaskTemplate,
+                                    nodeVarName: String,
+                                    offset: Int,
+                                    nodeIdsExpr: Expression,
+                                    argumentSize: SlotConfiguration.Size)
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private val idIterator = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
+  private var nodeIds: IntermediateExpression= _
+
+  override def genFields: Seq[Field] = {
+    nodeIds.fields ++ super.genFields ++ inner.genFields :+ idIterator
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    nodeIds.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
+  }
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    nodeIds = codeGen.intermediateCompileExpression(nodeIdsExpr).getOrElse(throw new CantCompileQueryException())
+
+    /**
+      * {{{
+      *   this.idIterator = ((ListValue) <<nodeIdExpr>>)).iterator()
+      *   this.canContinue = idIterator.hasNext
+      *   true
+      * }}}
+      */
+    block(
+      setField(idIterator,
+               invoke(cast[ListValue](nullCheckIfRequired(nodeIds)), method[ListValue, util.Iterator[AnyValue]]("iterator"))),
+      setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))),
+      constant(true))
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+   val idVariable = codeGen.namer.nextVariableName()
+    /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     val id = asId(idIterator.next())
+      *     if (id >= 0 && read.nodeExists(id)) {
+      *       setLongAt(offset, id)
+      *       << inner.genOperate >>
+      *      }
+      *      this.canContinue = itIterator.hasNext()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        declareAndAssign(typeRefOf[Long], idVariable,
+                         invokeStatic(asIdMethod, cast[AnyValue](
+                           invoke(loadField(idIterator),
+                                  method[java.util.Iterator[AnyValue], Object]("next"))))),
+
+        condition(isValidNode(idVariable))(
+          block(
+            if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+              invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                               loadField(INPUT_MORSEL), constant(argumentSize.nLongs),
+                               constant(argumentSize.nReferences))
+            } else {
+              noop()
+            },
+            codeGen.setLongAt(offset, load(idVariable)),
+            profileRow(id),
+            inner.genOperate
+            )),
+        setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))))
       )
   }
 
