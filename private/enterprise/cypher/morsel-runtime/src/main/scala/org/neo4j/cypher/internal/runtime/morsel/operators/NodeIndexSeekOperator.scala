@@ -132,7 +132,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
       val impossiblePredicate =
         predicates.exists {
-          case p: ExactPredicate => p.value() == Values.NO_VALUE
+          case p: ExactPredicate => p.value() eq Values.NO_VALUE
           case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
           case p: IndexQuery =>
             !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
@@ -236,9 +236,9 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     ...
-      *     << inner.genOperate >>
       *     setLongAt(offset, nodeIndexCursor.nodeReference())
       *     setCachedPropertyAt(offset, value)
+      *     << inner.genOperate >>
       *     this.canContinue = this.nodeIndexCursor.next()
       *   }
       * }}}
@@ -293,7 +293,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
 
   import OperatorCodeGenHelperTemplates._
   private var queries: IntermediateExpression = _
-  private val queryVariable = codeGen.namer.nextVariableName()
+  private val queriesVariable = codeGen.namer.nextVariableName()
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val queryIteratorField = field[ExactPredicateIterator](codeGen.namer.nextVariableName())
@@ -320,9 +320,9 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * }}}
       */
     block(
-      declareAndAssign(typeRefOf[ListValue], queryVariable, nullCheckIfRequired(queries)),
+      declareAndAssign(typeRefOf[ListValue], queriesVariable, nullCheckIfRequired(queries)),
       setField(queryIteratorField,
-               invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), load(queryVariable))),
+               invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), load(queriesVariable))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
       setField(canContinue,
                invokeStatic(nextMethod,
@@ -338,9 +338,9 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     ...
-      *     << inner.genOperate >>
       *     setLongAt(offset, nodeIndexCursor.nodeReference())
       *     setCachedPropertyAt(offset, queryIterator.current)//only if applicable
+      *     << inner.genOperate >>
       *     this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
       *   }
       * }}}

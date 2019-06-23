@@ -1469,6 +1469,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
+      //NOTE we must call getRefAt before using it in the nullcheck because of how getRefAt might be extended
+      //and have side effects, if it happens that we never use the nullcheck later things may not have been properly
+      //initialized
       val loadRef = getRefAt(offset)
       val nullCheck = slots.get(name).filter(_.nullable).map(_ => equal(getRefAt(offset), noValue)).toSet
       Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck, requireNullCheck = false))

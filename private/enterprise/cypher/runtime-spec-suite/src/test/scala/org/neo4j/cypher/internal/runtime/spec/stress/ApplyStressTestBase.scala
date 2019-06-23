@@ -20,7 +20,7 @@ abstract class ApplyStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeConte
       .produceResults("a", "b", "c")
       .apply()
       .|.apply()
-      .|.|.nodeIndexOperator("c:Label(prop < ???)",paramExpr = Some(prop("b", "prop")) , argumentIds = Set("a", "b"))
+      .|.|.nodeIndexOperator("c:Label(prop < ???)", paramExpr = Some(prop("b", "prop")), argumentIds = Set("a", "b"))
       .|.nodeIndexOperator("b:Label(prop < ???)", paramExpr = Some(prop("a", "prop")), argumentIds = Set("a"))
       .nodeIndexOperator("a:Label(prop <= 40)")
       .build()
