@@ -697,7 +697,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     result.toList should equal(List())
   }
 
-  test("multiple patterns in inner MATCH without introducing new variables should be supported") {
+  test("multiple patterns in inner MATCH with WHERE clause should be supported") {
     val query =
       """
         |MATCH (person:Person)
@@ -712,7 +712,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     result.toList should equal(List(Map("person.name" -> "Bosse")))
   }
 
-  test("multiple patterns in inner MATCH with introducing new variables should be supported") {
+  test("multiple patterns in inner MATCH without external variables should be supported") {
     val query =
       """
         |MATCH (person:Person)
