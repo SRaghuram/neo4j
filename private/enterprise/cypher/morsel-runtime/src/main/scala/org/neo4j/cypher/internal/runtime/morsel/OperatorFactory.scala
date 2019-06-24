@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generat
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
@@ -253,9 +254,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
       case plans.Projection(_, expressions) =>
-        val projectionOps = expressions.map {
-          case (key, e) => slots(key) -> converters.toCommandExpression(id, e)
-        }
+        val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
         Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
 
       case _: plans.Argument => None

@@ -11,21 +11,17 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 class ProjectOperator(val workIdentity: WorkIdentity,
-                      val projectionOps: Map[Slot, Expression]) extends StatelessOperator {
+                      val projectionOps: CommandProjection) extends StatelessOperator {
 
-  private val project = projectionOps.map {
-    case (LongSlot(_, _, _),_) =>
-      // We just pass along Long slot expressions without evaluation
-      (_: ExecutionContext, _: OldQueryState) =>
 
-    case (RefSlot(offset, _, _), expression) =>
-      (ctx: ExecutionContext, state: OldQueryState) =>
-        val result = expression(ctx, state)
-        ctx.setRefAt(offset, result)
-  }.toArray
 
   override def operate(currentRow: MorselExecutionContext,
                        context: QueryContext,
@@ -41,7 +37,7 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                                        state.subscriber)
 
     while (currentRow.isValidRow) {
-      project.foreach(p => p(currentRow, queryState))
+      projectionOps.project(currentRow, queryState)
       currentRow.moveToNextRow()
     }
   }
