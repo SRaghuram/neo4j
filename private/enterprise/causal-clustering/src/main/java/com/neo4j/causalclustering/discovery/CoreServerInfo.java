@@ -11,19 +11,19 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreServerInfo implements DiscoveryServerInfo
 {
-    private final AdvertisedSocketAddress raftServer;
-    private final AdvertisedSocketAddress catchupServer;
+    private final SocketAddress raftServer;
+    private final SocketAddress catchupServer;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
     private final Set<DatabaseId> databaseIds;
     private final boolean refuseToBeLeader;
 
-    public CoreServerInfo( AdvertisedSocketAddress raftServer, AdvertisedSocketAddress catchupServer,
+    public CoreServerInfo( SocketAddress raftServer, SocketAddress catchupServer,
             ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, Set<DatabaseId> databaseIds, boolean refuseToBeLeader )
     {
         this.raftServer = raftServer;
@@ -50,13 +50,13 @@ public class CoreServerInfo implements DiscoveryServerInfo
         return databaseIds;
     }
 
-    public AdvertisedSocketAddress getRaftServer()
+    public SocketAddress getRaftServer()
     {
         return raftServer;
     }
 
     @Override
-    public AdvertisedSocketAddress catchupServer()
+    public SocketAddress catchupServer()
     {
         return catchupServer;
     }

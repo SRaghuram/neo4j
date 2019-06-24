@@ -39,8 +39,8 @@ import java.util.Optional;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.v1.AuthToken;
@@ -49,6 +49,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class Neo4jDb extends Db
 {
@@ -432,7 +433,7 @@ public class Neo4jDb extends Db
     {
         try
         {
-            Map<String,String> importerConfig = MapUtils.loadPropertiesToMap( importerPropertiesFile );
+            Config importerConfig = Config.defaults( MapUtils.loadPropertiesToMap( importerPropertiesFile ) );
             File txLogsDir = new File( storeDir, "data/tx-logs/" );
             DatabaseLayout layout = DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
             return BatchInserters.inserter( layout, importerConfig );
@@ -475,15 +476,14 @@ public class Neo4jDb extends Db
     public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
-                .setConfig( Neo4jDb.boltConnector().enabled, "true" )
-                .setConfig( Neo4jDb.boltConnector().type, Connector.ConnectorType.BOLT.name() )
+                .setConfig( Neo4jDb.boltConnector().enabled, TRUE )
                 .setConfig( Neo4jDb.boltConnector().encryption_level, BoltConnector.EncryptionLevel.DISABLED.name() )
                 .setConfig( Neo4jDb.boltConnector().listen_address, uriString + ":" + port );
     }
 
     private static BoltConnector boltConnector()
     {
-        return new BoltConnector( "bolt" );
+        return BoltConnector.group( "bolt" );
     }
 
     public static String configToString( File configFile )

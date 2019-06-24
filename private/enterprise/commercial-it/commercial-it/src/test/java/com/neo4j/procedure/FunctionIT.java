@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -77,6 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -354,7 +354,7 @@ class FunctionIT
         managementService.shutdown();
         managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).impermanent()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
@@ -855,7 +855,7 @@ class FunctionIT
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestDatabaseManagementServiceBuilder().impermanent()
                 .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

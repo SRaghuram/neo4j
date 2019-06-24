@@ -15,7 +15,10 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.v1.transport.integration.AuthenticationIT;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class EnterpriseAuthenticationIT extends AuthenticationIT
 {
@@ -26,7 +29,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     }
 
     @Override
-    protected Consumer<Map<String, String>> getSettingsFunction()
+    protected Consumer<Map<Setting<?>, String>> getSettingsFunction()
     {
         final Path homeDir;
         try
@@ -40,8 +43,8 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
         return settings ->
         {
-            settings.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
-            settings.put( GraphDatabaseSettings.logs_directory.name(), homeDir.toAbsolutePath().toString() );
+            settings.put( GraphDatabaseSettings.auth_enabled, TRUE );
+            settings.put( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString() );
         };
     }
 

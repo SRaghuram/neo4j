@@ -22,7 +22,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -38,12 +37,13 @@ import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @RunWith( Parameterized.class )
 public class ConsistencyCheckServiceRecordFormatIT
 {
     private final DbmsRule db = new EmbeddedDbmsRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+            .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
             .startLazily();
 
     @Rule
@@ -69,7 +69,7 @@ public class ConsistencyCheckServiceRecordFormatIT
     {
         db.ensureStarted();
         createLinkedList( db, 1_000 );
-        db.shutdownAndKeepStore();
+        db.shutdown();
 
         assertConsistentStore( db );
     }

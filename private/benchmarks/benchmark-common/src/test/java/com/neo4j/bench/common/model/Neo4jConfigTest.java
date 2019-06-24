@@ -22,6 +22,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+
+
 @ExtendWith( TestDirectoryExtension.class )
 public class Neo4jConfigTest
 {

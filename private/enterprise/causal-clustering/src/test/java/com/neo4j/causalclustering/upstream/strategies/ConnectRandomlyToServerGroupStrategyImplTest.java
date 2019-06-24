@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -123,7 +123,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         {
             readReplicas.put( memberId, new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
-                            new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
+                            new SocketAddress( "localhost", 11000 + offset ) ) ) ), new SocketAddress( "localhost", 10000 + offset ),
                     Set.copyOf( wanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;
@@ -133,7 +133,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         {
             readReplicas.put( new MemberId( UUID.randomUUID() ), new ReadReplicaInfo( new ClientConnectorAddresses( List.of(
                     new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt,
-                            new AdvertisedSocketAddress( "localhost", 11000 + offset ) ) ) ), new AdvertisedSocketAddress( "localhost", 10000 + offset ),
+                            new SocketAddress( "localhost", 11000 + offset ) ) ) ), new SocketAddress( "localhost", 10000 + offset ),
                     Set.copyOf( unwanted ), Set.of( DATABASE_ID ) ) );
 
             offset++;

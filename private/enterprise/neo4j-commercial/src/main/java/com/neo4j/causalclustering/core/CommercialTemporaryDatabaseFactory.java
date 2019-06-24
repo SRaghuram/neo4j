@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -17,15 +18,13 @@ import java.util.Map;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.setting;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFactory
 {
@@ -44,7 +43,8 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( rootDirectory )
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies )
-                .setConfig( augmentConfig( originalConfig, rootDirectory ) ).build();
+                .setConfig( augmentConfig( originalConfig, rootDirectory ) )
+                .build();
         return new TemporaryDatabase( managementService );
     }
 
@@ -62,8 +62,9 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
         /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
         augmentedParams.put( GraphDatabaseSettings.pagecache_warmup_enabled, FALSE );
         augmentedParams.put( OnlineBackupSettings.online_backup_enabled, FALSE );
-        augmentedParams.put( setting( "metrics.enabled", Settings.BOOLEAN, "" ), Settings.FALSE );
-        augmentedParams.put( setting( "metrics.csv.enabled", Settings.BOOLEAN, "" ), Settings.FALSE );
+
+        augmentedParams.put( MetricsSettings.metricsEnabled, FALSE );
+        augmentedParams.put( MetricsSettings.csvEnabled, FALSE );
 
         return augmentedParams;
     }

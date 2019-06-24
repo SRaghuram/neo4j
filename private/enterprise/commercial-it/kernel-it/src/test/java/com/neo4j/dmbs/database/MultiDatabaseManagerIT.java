@@ -19,7 +19,6 @@ import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.AssertableLogProvider;
@@ -86,7 +85,7 @@ class MultiDatabaseManagerIT
     @Test
     void disallowMaxNumberOfDatabaseLowerThanTwo()
     {
-        InvalidSettingException exception = assertThrows( InvalidSettingException.class, () ->
+        IllegalArgumentException exception = assertThrows( IllegalArgumentException.class, () ->
         {
             new TestCommercialDatabaseManagementServiceBuilder( new File( "testFileForMaxDbTest" ) )
                     .setInternalLogProvider( logProvider )
@@ -95,7 +94,7 @@ class MultiDatabaseManagerIT
                     .build();
         } );
 
-        assertThat( exception.getMessage(), containsString( "Bad value '1' for setting 'dbms.max_databases': minimum allowed value is: 2" ) );
+        assertThat( exception.getMessage(), containsString( "Error evaluate setting 'dbms.max_databases' minimum allowed value is 2" ) );
     }
 
     @Test

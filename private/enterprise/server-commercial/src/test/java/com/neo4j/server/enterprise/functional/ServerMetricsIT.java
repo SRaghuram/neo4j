@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise.functional;
 
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +35,7 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -50,8 +51,8 @@ class ServerMetricsIT
         File metrics = directory.file( "metrics" );
         NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
                 .usingDataDir( directory.storeDir().getAbsolutePath() )
-                .withProperty( MetricsSettings.metricsEnabled.name(), "true" )
-                .withProperty( MetricsSettings.csvEnabled.name(), "true" )
+                .withProperty( MetricsSettings.metricsEnabled.name(), TRUE )
+                .withProperty( MetricsSettings.csvEnabled.name(), TRUE )
                 .withProperty( MetricsSettings.csvPath.name(), metrics.getPath() )
                 .withProperty( MetricsSettings.csvInterval.name(), "100ms" )
                 .persistent()
@@ -62,7 +63,7 @@ class ServerMetricsIT
             server.start();
 
             String endpoint = "http://localhost:" + server.baseUri().getPort() +
-                              ServerSettings.rest_api_path.getDefaultValue() + "/data/transaction/commit";
+                              ServerSettings.rest_api_path.defaultValue() + "/data/transaction/commit";
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder( URI.create( endpoint ) )

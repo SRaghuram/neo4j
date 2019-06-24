@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
@@ -62,8 +62,8 @@ public class KubernetesResolver implements RemoteMembersResolver
         SslContextFactory sslContextFactory = createSslContextFactory( config );
         this.httpClient = new HttpClient( sslContextFactory );
 
-        String token = read( config.get( CausalClusteringSettings.kubernetes_token ) );
-        String namespace = read( config.get( CausalClusteringSettings.kubernetes_namespace ) );
+        String token = read( config.get( CausalClusteringSettings.kubernetes_token ).toFile() );
+        String namespace = read( config.get( CausalClusteringSettings.kubernetes_namespace ).toFile() );
 
         this.kubernetesClient = new KubernetesClient( logService, httpClient, token, namespace, config,
                 RetryingHostnameResolver.defaultRetryStrategy( config ) );
@@ -76,7 +76,7 @@ public class KubernetesResolver implements RemoteMembersResolver
 
     private SslContextFactory createSslContextFactory( Config config )
     {
-        File caCert = config.get( CausalClusteringSettings.kubernetes_ca_crt );
+        File caCert = config.get( CausalClusteringSettings.kubernetes_ca_crt ).toFile();
         try (
                 SecurePassword password = new SecurePassword( 16, new SecureRandom() );
                 InputStream caCertStream = Files.newInputStream( caCert.toPath(), StandardOpenOption.READ )
@@ -135,7 +135,7 @@ public class KubernetesResolver implements RemoteMembersResolver
     }
 
     @Override
-    public <C extends Collection<T>,T> C resolve( Function<AdvertisedSocketAddress,T> transform, Supplier<C> collectionFactory )
+    public <C extends Collection<T>,T> C resolve( Function<SocketAddress,T> transform, Supplier<C> collectionFactory )
     {
         try
         {
@@ -181,7 +181,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         private final String labelSelector;
         private final ObjectMapper objectMapper;
         private final String portName;
-        private final AdvertisedSocketAddress kubernetesAddress;
+        private final SocketAddress kubernetesAddress;
 
         KubernetesClient( LogService logService, HttpClient httpClient, String token, String namespace,
                 Config config, RetryStrategy retryStrategy )
@@ -201,7 +201,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         }
 
         @Override
-        protected Collection<AdvertisedSocketAddress> resolveOnce( AdvertisedSocketAddress ignored )
+        protected Collection<SocketAddress> resolveOnce( SocketAddress ignored )
         {
             try
             {
@@ -219,7 +219,7 @@ public class KubernetesResolver implements RemoteMembersResolver
 
                 KubernetesType serviceList = objectMapper.readValue( response.getContent(), KubernetesType.class );
 
-                Collection<AdvertisedSocketAddress> addresses = serviceList.handle( new Parser( portName, namespace ) );
+                Collection<SocketAddress> addresses = serviceList.handle( new Parser( portName, namespace ) );
 
                 userLog.info( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s",
                         addresses, kubernetesAddress, namespace, labelSelector );
@@ -248,7 +248,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         }
     }
 
-    private static class Parser implements KubernetesType.Visitor<Collection<AdvertisedSocketAddress>>
+    private static class Parser implements KubernetesType.Visitor<Collection<SocketAddress>>
     {
         private final String portName;
         private final String namespace;
@@ -260,14 +260,14 @@ public class KubernetesResolver implements RemoteMembersResolver
         }
 
         @Override
-        public Collection<AdvertisedSocketAddress> visit( Status status )
+        public Collection<SocketAddress> visit( Status status )
         {
             String message = String.format( "Unable to contact Kubernetes API. Status: %s", status );
             throw new IllegalStateException( message );
         }
 
         @Override
-        public Collection<AdvertisedSocketAddress> visit( ServiceList serviceList )
+        public Collection<SocketAddress> visit( ServiceList serviceList )
         {
             Stream<Pair<String,ServiceList.Service.ServiceSpec.ServicePort>> serviceNamePortStream = serviceList
                     .items()
@@ -276,7 +276,7 @@ public class KubernetesResolver implements RemoteMembersResolver
                     .flatMap( this::extractServicePort );
 
             return serviceNamePortStream
-                    .map( serviceNamePort -> new AdvertisedSocketAddress(
+                    .map( serviceNamePort -> new SocketAddress(
                             String.format( "%s.%s.svc.cluster.local", serviceNamePort.first(), namespace ),
                             serviceNamePort.other().port() ) )
                     .collect( Collectors.toSet() );

@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -39,7 +39,7 @@ public class StoreDownloader
      *
      * @return true if successful.
      */
-    boolean bringUpToDate( StoreDownloadContext context, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider addressProvider )
+    boolean bringUpToDate( StoreDownloadContext context, SocketAddress primaryAddress, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
         CatchupComponents components = getCatchupComponents( context.databaseId() );
@@ -70,7 +70,7 @@ public class StoreDownloader
      * is valid either because it matches between the local and the upstream or because the local database
      * is empty anyway so it should be overridden by the remote store ID when the remote database is copied.
      */
-    private Optional<StoreId> validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, AdvertisedSocketAddress address )
+    private Optional<StoreId> validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, SocketAddress address )
     {
         StoreId remoteStoreId;
         try

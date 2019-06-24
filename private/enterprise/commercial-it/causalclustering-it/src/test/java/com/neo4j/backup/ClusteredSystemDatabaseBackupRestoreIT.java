@@ -45,10 +45,12 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ClusteredSystemDatabaseBackupRestoreIT
@@ -60,7 +62,6 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private Cluster cluster;
     private File backupLocation;
-    private String backupAddress = OnlineBackupSettings.online_backup_listen_address.name();
     private File clusterLocation;
 
     @BeforeEach
@@ -86,7 +87,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         String databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
         CoreClusterMember leader = cluster.awaitLeader();
-        String leaderAddress = leader.settingValue( backupAddress );
+        String leaderAddress = leader.settingValue( online_backup_listen_address ).toString();
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
         DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName );
@@ -109,7 +110,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String preBackupUsername = "preBackup";
         String postBackupUsername = "postBackup";
         CoreClusterMember leader = cluster.awaitLeader();
-        String leaderAddress = leader.settingValue( backupAddress );
+        String leaderAddress = leader.settingValue( online_backup_listen_address ).toString();
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -170,8 +171,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private static void runRestore( FileSystemAbstraction fs, File backupLocation, Config memberConfig ) throws Exception
     {
-        Config restoreCommandConfig = Config.defaults();
-        restoreCommandConfig.augment( memberConfig );
+        Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
         var databaseId = new TestDatabaseIdRepository().systemDatabase();
         new RestoreDatabaseCommand( fs, new File( backupLocation, databaseId.name() ), restoreCommandConfig,
                 databaseId, true ).execute();
@@ -201,8 +201,8 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private static Map<String,String> getConfigMap()
     {
         Map<String,String> configMap = new HashMap<>();
-        configMap.put( OnlineBackupSettings.online_backup_enabled.name(), "true" );
-        configMap.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
+        configMap.put( OnlineBackupSettings.online_backup_enabled.name(), TRUE );
+        configMap.put( GraphDatabaseSettings.auth_enabled.name(), TRUE );
         configMap.put( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
         configMap.put( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
         return configMap;

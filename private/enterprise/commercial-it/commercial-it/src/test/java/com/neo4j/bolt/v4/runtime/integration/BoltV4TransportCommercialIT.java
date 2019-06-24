@@ -51,6 +51,7 @@ import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventual
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newMessageEncoder;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newNeo4jPack;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
@@ -63,7 +64,7 @@ public class BoltV4TransportCommercialIT
 
     @Rule
     public final Neo4jWithSocket server =
-            new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), settings -> settings.put( auth_enabled.name(), "false" ) );
+            new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), settings -> settings.put( auth_enabled, FALSE ) );
 
     private HostnamePort address;
     private TransportConnection connection;

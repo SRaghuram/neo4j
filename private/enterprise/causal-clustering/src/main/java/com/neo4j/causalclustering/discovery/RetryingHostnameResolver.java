@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 public abstract class RetryingHostnameResolver implements HostnameResolver
 {
@@ -33,7 +33,7 @@ public abstract class RetryingHostnameResolver implements HostnameResolver
     }
 
     @Override
-    public final Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddress )
+    public final Collection<SocketAddress> resolve( SocketAddress advertisedSocketAddress )
     {
         try
         {
@@ -46,5 +46,5 @@ public abstract class RetryingHostnameResolver implements HostnameResolver
         }
     }
 
-    protected abstract Collection<AdvertisedSocketAddress> resolveOnce( AdvertisedSocketAddress advertisedSocketAddress );
+    protected abstract Collection<SocketAddress> resolveOnce( SocketAddress advertisedSocketAddress );
 }

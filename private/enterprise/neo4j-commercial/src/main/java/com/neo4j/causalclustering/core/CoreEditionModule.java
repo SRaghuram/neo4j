@@ -73,6 +73,8 @@ import java.util.stream.Stream;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -82,7 +84,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
-import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
@@ -148,7 +149,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
-        final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
+        final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
         storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
@@ -258,7 +259,7 @@ public class CoreEditionModule extends ClusteringEditionModule
         var config = globalModule.getGlobalConfig();
         if ( config.get( CausalClusteringSettings.raft_messages_log_enable ) )
         {
-            var logFile = config.get( CausalClusteringSettings.raft_messages_log_path );
+            var logFile = config.get( CausalClusteringSettings.raft_messages_log_path ).toFile();
             var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
             raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 @ExtendWith( SuppressOutputExtension.class )
@@ -26,7 +27,7 @@ public class RESTUserManagementProceduresInteractionIT extends AuthProceduresInt
     }
 
     @Override
-    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<String,String> config ) throws Throwable
+    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>,String> config ) throws Throwable
     {
         return new RESTInteraction( config );
     }

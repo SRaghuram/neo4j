@@ -89,6 +89,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -97,7 +98,6 @@ import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
@@ -164,14 +164,14 @@ class CoreDatabaseFactory
 
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final RecoveryFacade recoveryFacade;
-    private final Outbound<AdvertisedSocketAddress,Message> raftSender;
+    private final Outbound<SocketAddress,Message> raftSender;
     private final TransactionEventService txEventService;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<DatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<AdvertisedSocketAddress,Message> raftSender, TransactionEventService txEventService )
+            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, TransactionEventService txEventService )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();
@@ -439,7 +439,7 @@ class CoreDatabaseFactory
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging, BarrierState barrierTokenState )
     {
-        LocksFactory lockFactory = createLockFactory( config, logging );
+        LocksFactory lockFactory = createLockFactory( config );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
         return new LeaderOnlyLockManager( localLocks, barrierTokenState );
     }

@@ -47,7 +47,7 @@ import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Secret;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
@@ -60,6 +60,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
 import org.neo4j.logging.Logger;
+import org.neo4j.string.SecureString;
 import org.neo4j.test.DoubleLatch;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -71,6 +72,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @SuppressWarnings( "deprecation" )
 @RunWith( FrameworkRunner.class )
@@ -133,16 +136,16 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
         settings.put( SecuritySettings.ldap_server, "0.0.0.0:" + ldapPort );
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
-        settings.put( SecuritySettings.ldap_authentication_cache_enabled, "true" );
+        settings.put( SecuritySettings.ldap_authentication_cache_enabled, TRUE );
         settings.put( SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system" );
         settings.put( SecuritySettings.ldap_authorization_system_password, "secret" );
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
         settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "gidnumber" );
         settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin" );
-        settings.put( SecuritySettings.procedure_roles, "test.staticReadProcedure:role1" );
+        settings.put( GraphDatabaseSettings.procedure_roles, "test.staticReadProcedure:role1" );
         settings.put( SecuritySettings.ldap_read_timeout, "1s" );
-        settings.put( SecuritySettings.ldap_authorization_use_system_account, "false" );
+        settings.put( SecuritySettings.ldap_authorization_use_system_account, FALSE );
         return settings;
     }
 
@@ -168,7 +171,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldBeAbleToLoginAndAuthorizeNoPermissionUserWithLdapOnlyAndNoGroupToRoleMapping() throws IOException
     {
-        restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), null );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "" ) );
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
@@ -234,7 +237,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldKeepAuthorizationForLifetimeOfTransactionWithProcedureAllowed() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), "503=admin;504=role1" );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
                 tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
@@ -288,7 +291,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldFailIfInvalidLdapServer() throws IOException
     {
         // When
-        restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldap://127.0.0.1" );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldap://127.0.0.1" ) );
         try
         {
             connectDriver( "neo", "abc123" );
@@ -306,11 +309,11 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
-            restartServerWithOverriddenSettings(
-                    SecuritySettings.ldap_read_timeout.name(), "1s",
-                    SecuritySettings.ldap_authorization_connection_pooling.name(), "true",
-                    SecuritySettings.ldap_authorization_use_system_account.name(), "true"
-            );
+            restartServerWithOverriddenSettings( Map.of(
+                    SecuritySettings.ldap_read_timeout, "1s",
+                    SecuritySettings.ldap_authorization_connection_pooling, TRUE,
+                    SecuritySettings.ldap_authorization_use_system_account, TRUE
+            ) );
 
             assertReadFails( "neo", "abc123" );
         }
@@ -322,12 +325,12 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
-            restartServerWithOverriddenSettings(
+            restartServerWithOverriddenSettings( Map.of(
                     // NOTE: Pooled connections from previous test runs will not be affected by this read timeout setting
-                    SecuritySettings.ldap_read_timeout.name(), "1s",
-                    SecuritySettings.ldap_authorization_connection_pooling.name(), "false",
-                    SecuritySettings.ldap_authorization_use_system_account.name(), "true"
-            );
+                    SecuritySettings.ldap_read_timeout, "1s",
+                    SecuritySettings.ldap_authorization_connection_pooling, FALSE,
+                    SecuritySettings.ldap_authorization_use_system_account, TRUE
+            ) );
 
             assertReadFails( "neo", "abc123" );
         }
@@ -339,10 +342,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     {
         try ( DirectoryServiceFailOnSearch ignore = new DirectoryServiceFailOnSearch() )
         {
-            restartServerWithOverriddenSettings(
-                    SecuritySettings.ldap_read_timeout.name(), "1s",
-                    SecuritySettings.ldap_authorization_use_system_account.name(), "true"
-            );
+            restartServerWithOverriddenSettings( Map.of(
+                    SecuritySettings.ldap_read_timeout, "1s",
+                    SecuritySettings.ldap_authorization_use_system_account, TRUE
+            ) );
 
             assertReadFails( "neo", "abc123" );
         }
@@ -355,7 +358,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
             // When
-            restartServerWithOverriddenSettings( SecuritySettings.ldap_read_timeout.name(), "1s" );
+            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_read_timeout, "1s" ) );
 
             try
             {
@@ -373,11 +376,11 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldGetCombinedAuthorization() throws Throwable
     {
-        restartServerWithOverriddenSettings(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
-        );
+        restartServerWithOverriddenSettings( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.ldap_authorization_use_system_account, TRUE
+        ) );
 
         // Given
         // we have a native 'tank' that is read only, and ldap 'tank' that is publisher
@@ -404,10 +407,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
+        restartServerWithOverriddenSettings( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.ldap_authorization_use_system_account, TRUE )
         );
 
         // Given
@@ -426,10 +429,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
+        restartServerWithOverriddenSettings( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.ldap_authorization_use_system_account, TRUE )
         );
 
         // Given
@@ -459,10 +462,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws Throwable
     {
-        restartServerWithOverriddenSettings(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
+        restartServerWithOverriddenSettings( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.ldap_authorization_use_system_account, TRUE )
         );
 
         // Given
@@ -481,7 +484,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogConnectionRefusedFromLdapRealm() throws Throwable
     {
         // When
-        restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldap://" + REFUSED_IP );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldap://" + REFUSED_IP ) );
 
         try
         {
@@ -502,11 +505,11 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws Throwable
     {
-        restartServerWithOverriddenSettings(
-            SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-            SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
-            SecuritySettings.ldap_authorization_use_system_account.name(), "true",
-            SecuritySettings.ldap_server.name(), "ldap://" + REFUSED_IP
+        restartServerWithOverriddenSettings( Map.of(
+            SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+            SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+            SecuritySettings.ldap_authorization_use_system_account, TRUE,
+            SecuritySettings.ldap_server, "ldap://" + REFUSED_IP )
         );
 
         assertAuthFail( "neo", "abc123" );
@@ -525,7 +528,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
+            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
 
             // Then
             assertAuth( "tank", "abc123" );
@@ -555,7 +558,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
+            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
 
             // Then
             try ( Driver driver = connectDriver( "tank", "abc123" ) )
@@ -590,24 +593,27 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @DisabledOnOs( OS.WINDOWS )
     public void shouldNotSeeSystemPassword()
     {
+        String ldapSettingName = SecuritySettings.ldap_authorization_system_password.name();
+        String value = new SecureString( "" ).toString();
+        String expected = String.format( "%s=%s", ldapSettingName, value );
+
         Config config = dbRule.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( Config.class );
-        String expected = "dbms.security.ldap.authorization.system_password=" + Secret.OBFUSCATED;
         assertThat( "Should see obfuscated password in config.toString", config.toString(), containsString( expected ) );
         String password = config.get( SecuritySettings.ldap_authorization_system_password ).getString();
-        assertThat( "Normal access should not be obfuscated", password, not( containsString( Secret.OBFUSCATED ) ) );
+        assertThat( "Normal access should not be obfuscated", password, not( containsString( value ) ) );
 
         Logger log = mock( Logger.class );
         new ConfigDiagnostics( config ).dump( log );
-        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", Secret.OBFUSCATED );
+        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", value );
     }
 
     @Test
     @DisabledOnOs( OS.WINDOWS )
     public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(),
-                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name(), SecuritySettings.authorization_providers.name(),
-                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name() );
+        restartServerWithOverriddenSettings( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name(),
+                SecuritySettings.authorization_providers, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name() ) );
 
         Map<String,Object> parameters = MapUtil.map( "port", ldapServer.getPort() );
 

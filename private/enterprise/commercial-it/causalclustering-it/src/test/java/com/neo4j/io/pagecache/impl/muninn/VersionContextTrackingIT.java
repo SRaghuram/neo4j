@@ -29,7 +29,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.core.Is.is;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class VersionContextTrackingIT

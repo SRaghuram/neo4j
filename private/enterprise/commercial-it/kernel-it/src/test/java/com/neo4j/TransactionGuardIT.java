@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -75,6 +75,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_timeout;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionNotFound;
@@ -460,13 +462,12 @@ public class TransactionGuardIT
         if ( neoServer == null )
         {
             GuardingServerBuilder serverBuilder = new GuardingServerBuilder( databaseManagementService );
-            BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
-            serverBuilder.withProperty( boltConnector.type.name(), "BOLT" )
-                    .withProperty( boltConnector.enabled.name(), Settings.TRUE )
+            BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
+            serverBuilder.withProperty( boltConnector.enabled.name(), TRUE )
                     .withProperty( boltConnector.encryption_level.name(),
                             BoltConnector.EncryptionLevel.DISABLED.name() )
-                    .withProperty( GraphDatabaseSettings.auth_enabled.name(), Settings.FALSE );
-            serverBuilder.withProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
+                    .withProperty( GraphDatabaseSettings.auth_enabled.name(), FALSE );
+            serverBuilder.withProperty( HttpConnector.group( "http" ).listen_address.name(), "localhost:0" );
             neoServer = serverBuilder.build();
             cleanupRule.add( neoServer );
             neoServer.start();
@@ -476,15 +477,14 @@ public class TransactionGuardIT
 
     private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
     {
-        BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
+        BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
         return MapUtil.genericMap(
                 transaction_timeout, DEFAULT_TIMEOUT,
-                boltConnector.address, "localhost:0",
-                boltConnector.type, "BOLT",
-                boltConnector.enabled, "true",
+                boltConnector.advertised_address, "localhost:0",
+                boltConnector.enabled, TRUE,
                 boltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
-                OnlineBackupSettings.online_backup_enabled, Settings.FALSE,
-                GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+                OnlineBackupSettings.online_backup_enabled, FALSE,
+                GraphDatabaseSettings.auth_enabled, FALSE );
     }
 
     private static Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
@@ -536,8 +536,7 @@ public class TransactionGuardIT
 
     private IdContextFactory createIdContextFactory( Map<Setting<?>,String> configMap, FileSystemAbstraction fileSystem, PageCache pageCache )
     {
-        Config config = Config.defaults();
-        configMap.forEach( config::augment );
+        Config config = Config.defaults( configMap.entrySet().stream().collect( Collectors.toMap( e -> e.getKey().name(), Map.Entry::getValue ) ) );
 
         return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(

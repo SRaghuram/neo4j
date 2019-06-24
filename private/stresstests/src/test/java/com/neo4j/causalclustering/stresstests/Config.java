@@ -65,7 +65,7 @@ public class Config
         shutdownDurationMinutes = envOrDefault( "SHUTDOWN_DURATION_MINUTES", 5 );
 
         txPrune = envOrDefault( "TX_PRUNE", "50 files" );
-        checkpointPolicy = envOrDefault( "CHECKPOINT_POLICY", GraphDatabaseSettings.check_point_policy.getDefaultValue() );
+        checkpointPolicy = envOrDefault( "CHECKPOINT_POLICY", GraphDatabaseSettings.check_point_policy.defaultValue().name() );
 
         preparations = envOrDefault( Preparations.class, "PREPARATIONS" );
         workloads = envOrDefault( Workloads.class, "WORKLOADS" );

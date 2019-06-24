@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -60,12 +60,12 @@ public class CoreDownloader
     Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( context.databaseId(), addressProvider );
+        Optional<SocketAddress> primaryOpt = lookupPrimary( context.databaseId(), addressProvider );
         if ( primaryOpt.isEmpty() )
         {
             return Optional.empty();
         }
-        AdvertisedSocketAddress primaryAddress = primaryOpt.get();
+        SocketAddress primaryAddress = primaryOpt.get();
 
         Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( context.databaseId(), primaryAddress );
         if ( coreSnapshot.isEmpty() )
@@ -81,7 +81,7 @@ public class CoreDownloader
         return coreSnapshot;
     }
 
-    private Optional<AdvertisedSocketAddress> lookupPrimary( DatabaseId databaseId, CatchupAddressProvider addressProvider )
+    private Optional<SocketAddress> lookupPrimary( DatabaseId databaseId, CatchupAddressProvider addressProvider )
     {
         try
         {

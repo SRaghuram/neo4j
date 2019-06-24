@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
@@ -66,6 +65,7 @@ import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class EndToEndIT extends AnnotationsFixture
@@ -74,7 +74,7 @@ class EndToEndIT extends AnnotationsFixture
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension =
-            CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).build();
+            CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, FALSE ).build();
 
     @Inject
     private TestDirectory temporaryFolder;

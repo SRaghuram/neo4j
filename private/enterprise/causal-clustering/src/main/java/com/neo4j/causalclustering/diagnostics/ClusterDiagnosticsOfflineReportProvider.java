@@ -43,7 +43,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     public void init( FileSystemAbstraction fs, DatabaseIdRepository databaseIdRepository, Config config, File storeDirectory )
     {
         this.fs = fs;
-        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
+        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() );
         this.defaultDatabaseId = databaseIdRepository.defaultDatabase();
     }
 

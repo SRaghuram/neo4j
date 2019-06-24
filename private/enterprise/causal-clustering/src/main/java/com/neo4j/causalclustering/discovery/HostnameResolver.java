@@ -7,11 +7,11 @@ package com.neo4j.causalclustering.discovery;
 
 import java.util.Collection;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 public interface HostnameResolver
 {
-    Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddresses );
+    Collection<SocketAddress> resolve( SocketAddress advertisedSocketAddresses );
 
     default boolean useOverrides()
     {

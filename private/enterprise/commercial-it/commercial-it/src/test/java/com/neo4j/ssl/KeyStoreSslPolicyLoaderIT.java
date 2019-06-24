@@ -25,8 +25,11 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.ssl.ClientAuth;
+import org.neo4j.configuration.ssl.JksSslPolicyConfig;
 import org.neo4j.configuration.ssl.KeyStoreSslPolicyConfig;
+import org.neo4j.configuration.ssl.Pkcs12SslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -34,6 +37,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.ssl.PemSslPolicyLoaderIT.clientCanCommunicateWithServer;
 import static com.neo4j.ssl.PemSslPolicyLoaderIT.clientCannotCommunicateWithServer;
+import static org.junit.Assert.fail;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @RunWith( Parameterized.class )
 public class KeyStoreSslPolicyLoaderIT
@@ -46,7 +52,7 @@ public class KeyStoreSslPolicyLoaderIT
     private static final String TLSV1_3 = "TLSv1.3";
     private static final String TRUSTED_ALIAS = "trusted";
     private static final String POLICY_NAME = "fakePolicy";
-    private static final KeyStoreSslPolicyConfig SSL_POLICY_CONFIG = new KeyStoreSslPolicyConfig( POLICY_NAME );
+    private final KeyStoreSslPolicyConfig SSL_POLICY_CONFIG;
     private static final String KEYPAIR_ALIAS = "test";
     private static final String KEYSTORE = "keystore";
     private static final String KEYSTORE_PASS = "foobar";
@@ -71,8 +77,27 @@ public class KeyStoreSslPolicyLoaderIT
 
     public KeyStoreSslPolicyLoaderIT( String format )
     {
+        String keyPass = null;
+        KeyStoreSslPolicyConfig policyConfig = null;
+        if ( format.equals( PKCS12 ) )
+        {
+            keyPass = KEYSTORE_PASS;
+            policyConfig = Pkcs12SslPolicyConfig.group( POLICY_NAME );
+        }
+        else if ( format.equals( JKS ) )
+        {
+            keyPass = "barquux";
+            policyConfig = JksSslPolicyConfig.group( POLICY_NAME );
+
+        }
+        else
+        {
+            fail( "Unknown format: " + format );
+        }
+
+        this.SSL_POLICY_CONFIG = policyConfig;
+        this.keyPass = keyPass;
         this.format = format;
-        this.keyPass = format.equals( PKCS12 ) ? KEYSTORE_PASS : "barquux";
     }
 
     @Before
@@ -117,8 +142,8 @@ public class KeyStoreSslPolicyLoaderIT
         // and client
         String trustStoreFile = clientDir.toPath().resolve( TRUSTSTORE ).toString();
         Config clientConfig = aConfig( clientDir, "localhost" )
-                .withSetting( SSL_POLICY_CONFIG.truststore, trustStoreFile )
-                .withSetting( SSL_POLICY_CONFIG.truststore_pass, TRUSTSTORE_PASS )
+                .set( SSL_POLICY_CONFIG.truststore, trustStoreFile )
+                .set( SSL_POLICY_CONFIG.truststore_pass, TRUSTSTORE_PASS )
                 .build();
 
         // and trust
@@ -181,10 +206,10 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldConnectWithTrustAllAndNoTrustedCerts() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.trust_all, "true" ).build();
+        Config serverConfig = aConfig( serverDir, "localhost" ).set( SSL_POLICY_CONFIG.trust_all, TRUE ).build();
 
         // and client
-        Config clientConfig = aConfig( clientDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.trust_all, "true" ).build();
+        Config clientConfig = aConfig( clientDir, "localhost" ).set( SSL_POLICY_CONFIG.trust_all, TRUE ).build();
 
         // and setup
         SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
@@ -224,10 +249,10 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldConnectIfHostnameValidationOffAndHostsDoNotMatch() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "something" ).withSetting( SSL_POLICY_CONFIG.verify_hostname, "false" ).build();
+        Config serverConfig = aConfig( serverDir, "something" ).set( SSL_POLICY_CONFIG.verify_hostname, FALSE ).build();
 
         // and client
-        Config clientConfig = aConfig( clientDir, "somewhere" ).withSetting( SSL_POLICY_CONFIG.verify_hostname, "false" ).build();
+        Config clientConfig = aConfig( clientDir, "somewhere" ).set( SSL_POLICY_CONFIG.verify_hostname, FALSE ).build();
 
         // and trust
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
@@ -247,7 +272,7 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldNotConnectWithClientAuthIfClientDoesNotTrustServer() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
+        Config serverConfig = aConfig( serverDir, "localhost" ).set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
 
         // and client
         Config clientConfig = aConfig( clientDir, "localhost" ).build();
@@ -270,7 +295,7 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldConnectWithClientAuthAndMutuallyTrustedCerts() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
+        Config serverConfig = aConfig( serverDir, "localhost" ).set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE.name() ).build();
 
         // and client
         Config clientConfig = aConfig( clientDir, "localhost" ).build();
@@ -293,10 +318,10 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldNotCommunicateIfCiphersDoNotMatch() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.ciphers, "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" ).build();
+        Config serverConfig = aConfig( serverDir, "localhost" ).set( SSL_POLICY_CONFIG.ciphers, "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" ).build();
 
         // and client
-        Config clientConfig = aConfig( clientDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.ciphers, "TLS_RSA_WITH_AES_128_CBC_SHA" ).build();
+        Config clientConfig = aConfig( clientDir, "localhost" ).set( SSL_POLICY_CONFIG.ciphers, "TLS_RSA_WITH_AES_128_CBC_SHA" ).build();
 
         // and trust
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
@@ -316,10 +341,10 @@ public class KeyStoreSslPolicyLoaderIT
     public void shouldNotCommunicateIfTlsVersionsDoNotMatch() throws Throwable
     {
         // given server
-        Config serverConfig = aConfig( serverDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.tls_versions, TLSV1_2 ).build();
+        Config serverConfig = aConfig( serverDir, "localhost" ).set( SSL_POLICY_CONFIG.tls_versions, TLSV1_2 ).build();
 
         // and client
-        Config clientConfig = aConfig( clientDir, "localhost" ).withSetting( SSL_POLICY_CONFIG.tls_versions, TLSV1_1 ).build();
+        Config clientConfig = aConfig( clientDir, "localhost" ).set( SSL_POLICY_CONFIG.tls_versions, TLSV1_1 ).build();
 
         // and trust
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
@@ -343,23 +368,21 @@ public class KeyStoreSslPolicyLoaderIT
         File revoked = new File( baseDirectory, "revoked" );
         revoked.mkdirs();
 
-        return Config.builder()
-                .withSetting( SSL_POLICY_CONFIG.format, format )
+        return Config.newBuilder()
+                .set( GraphDatabaseSettings.neo4j_home, baseDirectory.getAbsolutePath() )
+                .set( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
+                .set( SSL_POLICY_CONFIG.keystore, baseDirectory.toPath().resolve( KEYSTORE ).toString() )
+                .set( SSL_POLICY_CONFIG.keystore_pass, KEYSTORE_PASS )
+                .set( SSL_POLICY_CONFIG.entry_pass, keyPass )
+                .set( SSL_POLICY_CONFIG.entry_alias, KEYPAIR_ALIAS )
 
-                .withSetting( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
+                .set( SSL_POLICY_CONFIG.tls_versions, TLSV1_2 )
 
-                .withSetting( SSL_POLICY_CONFIG.keystore, baseDirectory.toPath().resolve( KEYSTORE ).toString() )
-                .withSetting( SSL_POLICY_CONFIG.keystore_pass, KEYSTORE_PASS )
-                .withSetting( SSL_POLICY_CONFIG.entry_pass, keyPass )
-                .withSetting( SSL_POLICY_CONFIG.entry_alias, KEYPAIR_ALIAS )
-
-                .withSetting( SSL_POLICY_CONFIG.tls_versions, TLSV1_2 )
-
-                .withSetting( SSL_POLICY_CONFIG.client_auth, ClientAuth.NONE.name() )
+                .set( SSL_POLICY_CONFIG.client_auth, ClientAuth.NONE.name() )
 
                 // Even if we trust all, certs should be rejected if don't match Common Name (CA) or Subject Alternative Name
-                .withSetting( SSL_POLICY_CONFIG.trust_all, "false" )
-                .withSetting( SSL_POLICY_CONFIG.verify_hostname, "true" );
+                .set( SSL_POLICY_CONFIG.trust_all, FALSE )
+                .set( SSL_POLICY_CONFIG.verify_hostname, TRUE );
     }
 
     private static String getKeyToolPath()

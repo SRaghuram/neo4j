@@ -17,7 +17,7 @@ import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.time.Clocks;
@@ -25,7 +25,7 @@ import org.neo4j.time.Clocks;
 public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
 {
     private final CoreTopologyService coreTopologyService;
-    private final Outbound<AdvertisedSocketAddress,Message> outbound;
+    private final Outbound<SocketAddress,Message> outbound;
     private final Supplier<Optional<RaftId>> boundRaftId;
     private final UnknownAddressMonitor unknownAddressMonitor;
     private final Log log;
@@ -33,7 +33,7 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     private final Clock clock;
     private final MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler;
 
-    public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<AdvertisedSocketAddress,Message> outbound,
+    public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<SocketAddress,Message> outbound,
             MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
             LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {

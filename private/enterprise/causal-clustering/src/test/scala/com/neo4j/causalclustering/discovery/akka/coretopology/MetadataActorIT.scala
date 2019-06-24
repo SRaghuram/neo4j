@@ -134,8 +134,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val coreServerInfo = TestTopology.addressesForCore(0, false, databaseIds.asJava)
 
     val config = {
-      val conf = Config.defaults()
-      conf.augment(TestTopology.configFor(coreServerInfo))
+      val conf = Config.newBuilder().fromConfig(TestTopology.configFor(coreServerInfo)).build();
       conf
     }
 

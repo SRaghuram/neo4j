@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -162,7 +162,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private void pullTransactions()
     {
-        AdvertisedSocketAddress address;
+        SocketAddress address;
         try
         {
             address = catchupAddressProvider.primary( databaseContext.databaseId() );
@@ -218,7 +218,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private boolean pullAndApplyBatchOfTransactions( AdvertisedSocketAddress address, int batchCount, StoreId localStoreId )
+    private boolean pullAndApplyBatchOfTransactions( SocketAddress address, int batchCount, StoreId localStoreId )
     {
         long lastQueuedTxId = applier.lastQueuedTxId();
         pullRequestMonitor.txPullRequest( lastQueuedTxId );

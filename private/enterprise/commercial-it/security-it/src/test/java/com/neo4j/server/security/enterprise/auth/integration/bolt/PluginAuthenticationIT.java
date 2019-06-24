@@ -23,6 +23,8 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.graphdb.config.Setting;
 
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.PLUGIN_REALM_NAME_PREFIX;
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authentication_providers;
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authorization_providers;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -49,8 +51,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Override
     protected Map<Setting<?>,String> getSettings()
     {
-        return Map.of( SecuritySettings.authentication_providers, DEFAULT_TEST_PLUGIN_REALMS,
-                SecuritySettings.authorization_providers, DEFAULT_TEST_PLUGIN_REALMS);
+        return Map.of( authentication_providers, DEFAULT_TEST_PLUGIN_REALMS,
+                authorization_providers, DEFAULT_TEST_PLUGIN_REALMS);
     }
 
     @Test
@@ -62,7 +64,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateWithTestCacheableAuthenticationPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.auth_cache_ttl.name(), "60m" );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, "60m" ) );
 
         TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
 
@@ -85,7 +87,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     {
         TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
 
-        restartServerWithOverriddenSettings( SecuritySettings.auth_cache_ttl.name(), "60m" );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, "60m" ) );
 
         // When we log in the first time our plugin should get a call
         assertAuth( "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
@@ -126,7 +128,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     {
         TestCacheableAuthPlugin.getAuthInfoCallCount.set( 0 );
 
-        restartServerWithOverriddenSettings( SecuritySettings.auth_cache_ttl.name(), "60m" );
+        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, "60m" ) );
 
         // When we log in the first time our plugin should get a call
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
@@ -153,8 +155,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateAndAuthorizeWithTestCombinedAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCombinedAuthPlugin",
-                SecuritySettings.authorization_providers.name(), "plugin-TestCombinedAuthPlugin" );
+        restartServerWithOverriddenSettings( Map.of(  authentication_providers, "plugin-TestCombinedAuthPlugin",
+                authorization_providers, "plugin-TestCombinedAuthPlugin" ) );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCombinedAuthPlugin" ) )
         {
@@ -166,8 +168,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateAndAuthorizeWithTwoSeparateTestPlugins() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin",
-                SecuritySettings.authorization_providers.name(), "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin" );
+        restartServerWithOverriddenSettings( Map.of(  authentication_providers, "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin",
+                authorization_providers, "plugin-TestAuthenticationPlugin,plugin-TestAuthorizationPlugin" ) );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j" ) )
         {
@@ -179,8 +181,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldFailIfAuthorizationExpiredWithAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCacheableAdminAuthPlugin",
-                SecuritySettings.authorization_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
+        restartServerWithOverriddenSettings( Map.of(  authentication_providers, "plugin-TestCacheableAdminAuthPlugin",
+                authorization_providers, "plugin-TestCacheableAdminAuthPlugin" ) );
 
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" ) )
         {
@@ -197,8 +199,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithAuthPlugin() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCacheableAdminAuthPlugin",
-                SecuritySettings.authorization_providers.name(), "plugin-TestCacheableAdminAuthPlugin" );
+        restartServerWithOverriddenSettings( Map.of(  authentication_providers, "plugin-TestCacheableAdminAuthPlugin",
+                authorization_providers, "plugin-TestCacheableAdminAuthPlugin" ) );
 
         // Then
         try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
@@ -224,8 +226,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldPassOnAuthorizationExpiredException() throws Throwable
     {
-        restartServerWithOverriddenSettings( SecuritySettings.authentication_providers.name(), "plugin-TestCombinedAuthPlugin",
-                SecuritySettings.authorization_providers.name(), "plugin-TestCombinedAuthPlugin" );
+        restartServerWithOverriddenSettings( Map.of(  authentication_providers, "plugin-TestCombinedAuthPlugin",
+                authorization_providers, "plugin-TestCombinedAuthPlugin" ) );
 
         try ( Driver driver = connectDriver( "authorization_expired_user", "neo4j" ) )
         {

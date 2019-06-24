@@ -34,8 +34,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.Settings.TRUE;
-import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @CommercialDbmsExtension( configurationCallback = "enableBolt" )
 class ProcedureResourcesIT
@@ -51,10 +50,9 @@ class ProcedureResourcesIT
     @ExtensionCallback
     static void enableBolt( TestDatabaseManagementServiceBuilder builder )
     {
-        var connector = new BoltConnector( "bolt" );
+        var connector = BoltConnector.group( "bolt" );
 
-        builder.setConfig( connector.type, BOLT.toString() )
-                .setConfig( connector.enabled, TRUE )
+        builder.setConfig( connector.enabled, TRUE )
                 .setConfig( connector.listen_address, "localhost:0" );
     }
 

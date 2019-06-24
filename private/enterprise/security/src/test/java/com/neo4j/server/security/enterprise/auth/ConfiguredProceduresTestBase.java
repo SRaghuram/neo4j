@@ -5,10 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,10 +15,6 @@ import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
-import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
-import org.neo4j.internal.kernel.api.procs.QualifiedName;
-import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -31,14 +25,12 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.internal.util.collections.Sets.newSet;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.genericMap;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteractionTestBase<S>
 {
@@ -52,106 +44,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout() throws Throwable
     {
-        configuredSetup( stringMap( GraphDatabaseSettings.transaction_timeout.name(), "4s" ) );
-
-        assertFail( adminSubject, "CALL test.loop", PROCEDURE_TIMEOUT_ERROR );
-
-        Result result = neo.getLocalGraph().execute(
-                "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
-
-        assertFalse( result.hasNext() );
-        result.close();
-    }
-
-    @Test
-    void shouldSetAllowedToConfigSetting() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
-        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-
-        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
-        assertThat( Arrays.asList( numNodes.allowed() ), containsInAnyOrder( "nonEmpty" ) );
-    }
-
-    @Test
-    void shouldSetAllowedToDefaultValueAndRunningWorks() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
-
-        userManager.newRole( "role1", "noneSubject" );
-        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "3" ) );
-    }
-
-    @Test
-    void shouldRunProcedureWithMatchingWildcardAllowed() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:role1" ) );
-
-        userManager.newRole( "role1", "noneSubject" );
-        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "3" ) );
-    }
-
-    @Test
-    void shouldNotRunProcedureWithMismatchingWildCardAllowed() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "tes.*:role1" ) );
-
-        userManager.newRole( "role1", "noneSubject" );
-        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-
-        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
-        assertThat( Arrays.asList( numNodes.allowed() ), empty() );
-        assertFail( noneSubject, "CALL test.numNodes", "Read operations are not allowed" );
-    }
-
-    @Test
-    void shouldNotSetProcedureAllowedIfSettingNotSet() throws Throwable
-    {
-        configuredSetup( defaultConfiguration() );
-        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-
-        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
-        assertThat( Arrays.asList( numNodes.allowed() ), empty() );
-    }
-
-    @SuppressWarnings( "OptionalGetWithoutIsPresent" )
-    @Test
-    void shouldSetAllowedToConfigSettingForUDF() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
-        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-
-        UserFunctionSignature funcSig = globalProcedures.function(
-                new QualifiedName( new String[]{"test"}, "nonAllowedFunc" ) ).signature();
-        assertThat( Arrays.asList( funcSig.allowed() ), containsInAnyOrder( "nonEmpty" ) );
-    }
-
-    @Test
-    void shouldSetAllowedToDefaultValueAndRunningWorksForUDF() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
-
-        userManager.newRole( "role1", "noneSubject" );
-        assertSuccess( neo.login( "noneSubject", "abc" ), "RETURN test.allowedFunc() AS c",
-                itr -> assertKeyIs( itr, "c", "success for role1" ) );
-    }
-
-    @SuppressWarnings( "OptionalGetWithoutIsPresent" )
-    @Test
-    void shouldNotSetProcedureAllowedIfSettingNotSetForUDF() throws Throwable
-    {
-        configuredSetup( defaultConfiguration() );
-        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-
-        UserFunctionSignature funcSig = globalProcedures.function(
-                new QualifiedName( new String[]{"test"}, "nonAllowedFunc" ) ).signature();
-        assertThat( Arrays.asList( funcSig.allowed() ), empty() );
-    }
-
-    @Test
-    void shouldSetWildcardRoleConfigOnlyIfNotAnnotated() throws Throwable
-    {
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester" ) );
 
         userManager.newRole( "tester", "noneSubject" );
 
@@ -161,7 +54,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldSetAllMatchingWildcardRoleConfigs() throws Throwable
     {
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester;test.create*:other" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ) );
 
         userManager.newRole( "tester", "noneSubject" );
         userManager.newRole( "other", "readSubject" );
@@ -175,8 +68,8 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs() throws Throwable
     {
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester;test.create*:other",
-                SecuritySettings.default_allowed.name(), "default" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other",
+                GraphDatabaseSettings.default_allowed, "default" ) );
 
         userManager.newRole( "tester", "noneSubject" );
         userManager.newRole( "default", "noneSubject" );
@@ -190,7 +83,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldHandleWriteAfterAllowedReadProcedureWithAuthDisabled() throws Throwable
     {
-        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
 
         neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class )
                 .registerProcedure( ClassWithProcedures.class );
@@ -203,7 +96,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldHandleMultipleRolesSpecifiedForMapping() throws Throwable
     {
         // Given
-        configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester, other" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester, other" ) );
 
         // When
         userManager.newRole( "tester", "noneSubject" );
@@ -252,9 +145,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldShowAllowedRolesWhenListingProcedures() throws Throwable
     {
-        configuredSetup( stringMap(
-                SecuritySettings.procedure_roles.name(), "test.numNodes:counter,user",
-                SecuritySettings.default_allowed.name(), "default" ) );
+        configuredSetup( Map.of(
+                GraphDatabaseSettings.procedure_roles, "test.numNodes:counter,user",
+                GraphDatabaseSettings.default_allowed, "default" ) );
 
         Map<String,Set<String>> expected = genericMap(
                 "test.staticReadProcedure", newSet( "default", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
@@ -279,9 +172,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldShowAllowedRolesWhenListingFunctions() throws Throwable
     {
-        configuredSetup( stringMap(
-                SecuritySettings.procedure_roles.name(), "test.allowedFunc:counter,user",
-                SecuritySettings.default_allowed.name(), "default" ) );
+        configuredSetup( Map.of(
+                GraphDatabaseSettings.procedure_roles, "test.allowedFunc:counter,user",
+                GraphDatabaseSettings.default_allowed, "default" ) );
 
         Map<String,Set<String>> expected = genericMap(
                 "test.annotatedFunction", newSet( "annotated", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
@@ -298,7 +191,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
     {
-        configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "true" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, TRUE ) );
 
         String query = "CALL dbms.killQuery('query-9999999999')";
         Map<String,Object> expected = new HashMap<>();
@@ -311,7 +204,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldNotGiveNiceMessageAtFailWhenTryingToKillWhenConfigured() throws Throwable
     {
-        configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "false" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, FALSE ) );
         String query = "CALL dbms.killQuery('query-9999999999')";
         assertSuccess( adminSubject, query, r ->
 
@@ -322,7 +215,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne() throws Throwable
     {
         //Given
-        configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "true" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, TRUE ) );
         String query = "CALL dbms.killQueries(['query-9999999999', 'query-9999999989'])";
 
         //Expect

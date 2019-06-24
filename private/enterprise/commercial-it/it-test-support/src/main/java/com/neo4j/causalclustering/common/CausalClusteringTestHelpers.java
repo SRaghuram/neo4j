@@ -27,8 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -76,7 +75,7 @@ public final class CausalClusteringTestHelpers
                 .build();
     }
 
-    public static Server getCatchupServer( CatchupServerHandler catchupServerHandler, ListenSocketAddress listenAddress, JobScheduler scheduler )
+    public static Server getCatchupServer( CatchupServerHandler catchupServerHandler, SocketAddress listenAddress, JobScheduler scheduler )
     {
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( catchupServerHandler )
@@ -112,7 +111,7 @@ public final class CausalClusteringTestHelpers
 
     public static String transactionAddress( GraphDatabaseAPI graphDatabase )
     {
-        AdvertisedSocketAddress hostnamePort = graphDatabase
+        SocketAddress hostnamePort = graphDatabase
                 .getDependencyResolver()
                 .resolveDependency( Config.class )
                 .get( CausalClusteringSettings.transaction_advertised_address );

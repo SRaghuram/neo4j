@@ -724,7 +724,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
-        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( 1 ) );
+        dbConfig.set( GraphDatabaseSettings.dense_node_threshold, 1 );
         Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(
                 Neo4jDb.layoutWithTxLogLocation( storeDir ),

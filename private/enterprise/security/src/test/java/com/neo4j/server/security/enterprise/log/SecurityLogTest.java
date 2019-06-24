@@ -47,7 +47,7 @@ public class SecurityLogTest
 
         FileSystemAbstraction fs = fileSystemRule.get();
 
-        File activeLogFile = config.get( SecuritySettings.security_log_filename );
+        File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
         assertThat( fs.fileExists( activeLogFile ), equalTo( true ) );
         assertThat( fs.fileExists( archive( 1 ) ), equalTo( true ) );
         assertThat( fs.fileExists( archive( 2 ) ), equalTo( false ) );
@@ -82,7 +82,7 @@ public class SecurityLogTest
         securityLog.info( "line 1" );
 
         FileSystemAbstraction fs = fileSystemRule.get();
-        File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename );
+        File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines, array( containsString( timeZoneSuffix ) ) );
         fileSystemRule.clear();
@@ -97,7 +97,7 @@ public class SecurityLogTest
         writeAllLevelsAndShutdown( withLogLevel( Level.ERROR ), "error" );
 
         FileSystemAbstraction fs = fileSystemRule.get();
-        File activeLogFile = config.get( SecuritySettings.security_log_filename );
+        File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines, array(
                 containsString( "debug: debug line" ),

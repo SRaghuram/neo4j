@@ -27,7 +27,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.Is.isA;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class SecurityLogIT

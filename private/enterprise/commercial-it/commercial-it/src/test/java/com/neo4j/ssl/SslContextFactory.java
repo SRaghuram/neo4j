@@ -19,7 +19,7 @@ import org.neo4j.ssl.SslResource;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.ssl.config.SslSystemSettings;
 
-import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class SslContextFactory
 {
@@ -86,18 +86,17 @@ public class SslContextFactory
         Map<String,String> config = new HashMap<>();
         config.put( SslSystemSettings.netty_ssl_provider.name(), sslProvider.name() );
 
-        PemSslPolicyConfig policyConfig = new PemSslPolicyConfig( "default" );
+        PemSslPolicyConfig policyConfig = PemSslPolicyConfig.group( "default" );
         File baseDirectory = sslResource.privateKey().getParentFile();
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
 
-        config.put( policyConfig.format.name(), PEM.name() );
         config.put( policyConfig.base_directory.name(), baseDirectory.getPath() );
         config.put( policyConfig.private_key.name(), sslResource.privateKey().getPath() );
         config.put( policyConfig.public_certificate.name(), sslResource.publicCertificate().getPath() );
         config.put( policyConfig.trusted_dir.name(), sslResource.trustedDirectory().getPath() );
         config.put( policyConfig.revoked_dir.name(), sslResource.revokedDirectory().getPath() );
-        config.put( policyConfig.verify_hostname.name(), "false" );
+        config.put( policyConfig.verify_hostname.name(), FALSE );
 
         if ( protocols != null )
         {
@@ -110,7 +109,7 @@ public class SslContextFactory
         }
 
         SslPolicyLoader sslPolicyFactory =
-                SslPolicyLoader.create( Config.fromSettings( config ).build(), NullLogProvider.getInstance() );
+                SslPolicyLoader.create( Config.defaults( config ), NullLogProvider.getInstance() );
 
         return sslPolicyFactory.getPolicy( "default" );
     }

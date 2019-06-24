@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -34,7 +34,7 @@ class DefaultBackupStrategyTest
 {
     private BackupDelegator backupDelegator = mock( BackupDelegator.class );
     private DatabaseLayout desiredBackupLayout = mock( DatabaseLayout.class );
-    private AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
+    private SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
     private StoreFiles storeFiles = mock( StoreFiles.class );
     private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
     private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );

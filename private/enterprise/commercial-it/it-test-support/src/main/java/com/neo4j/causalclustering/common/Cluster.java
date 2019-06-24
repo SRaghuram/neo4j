@@ -52,6 +52,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
@@ -61,7 +62,6 @@ import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseId;
@@ -120,16 +120,16 @@ public class Cluster
         this.recordFormat = recordFormat;
         listenAddress = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
         advertisedAddress = ipFamily.localhostName();
-        List<AdvertisedSocketAddress> initialHosts = initialHosts( noOfCoreMembers );
+        List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
     }
 
-    private List<AdvertisedSocketAddress> initialHosts( int noOfCoreMembers )
+    private List<SocketAddress> initialHosts( int noOfCoreMembers )
     {
         return IntStream.range( 0, noOfCoreMembers )
                 .mapToObj( ignored -> PortAuthority.allocatePort() )
-                .map( port -> new AdvertisedSocketAddress( advertisedAddress, port ) )
+                .map( port -> new SocketAddress( advertisedAddress, port ) )
                 .collect( toList() );
     }
 
@@ -176,7 +176,7 @@ public class Cluster
     private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
             String recordFormat )
     {
-        List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
+        List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
         CoreClusterMember coreClusterMember = createCoreClusterMember( memberId, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat,
                 extraParams, instanceExtraParams );
 
@@ -215,7 +215,7 @@ public class Cluster
 
     private ReadReplica addReadReplica( int memberId, String recordFormat, Monitors monitors )
     {
-        List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
+        List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
         ReadReplica member = createReadReplica( memberId, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
 
         readReplicas.put( memberId, member );
@@ -254,7 +254,6 @@ public class Cluster
         }
     }
 
-    @SuppressWarnings( "unchecked" )
     private static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers, ErrorHandler errorHandler )
     {
         errorHandler.execute( () -> combine( invokeAll( "cluster-shutdown", clusterMembers, cm ->
@@ -565,16 +564,16 @@ public class Cluster
                LockSessionExpired;
     }
 
-    private List<AdvertisedSocketAddress> extractInitialHosts( Map<Integer,CoreClusterMember> coreMembers )
+    private List<SocketAddress> extractInitialHosts( Map<Integer,CoreClusterMember> coreMembers )
     {
         return coreMembers.values().stream()
                 .map( CoreClusterMember::discoveryPort )
-                .map( port -> new AdvertisedSocketAddress( advertisedAddress, port ) )
+                .map( port -> new SocketAddress( advertisedAddress, port ) )
                 .collect( toList() );
     }
 
     private void createCoreMembers( final int noOfCoreMembers,
-            List<AdvertisedSocketAddress> initialHosts, Map<String,String> extraParams,
+            List<SocketAddress> initialHosts, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat )
     {
         for ( int i = 0; i < initialHosts.size(); i++ )
@@ -597,7 +596,7 @@ public class Cluster
     private CoreClusterMember createCoreClusterMember( int serverId,
             int discoveryPort,
             int clusterSize,
-            List<AdvertisedSocketAddress> initialHosts,
+            List<SocketAddress> initialHosts,
             String recordFormat,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams )
@@ -631,7 +630,7 @@ public class Cluster
     }
 
     private ReadReplica createReadReplica( int serverId,
-            List<AdvertisedSocketAddress> initialHosts,
+            List<SocketAddress> initialHosts,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams,
             String recordFormat,
@@ -675,7 +674,7 @@ public class Cluster
     }
 
     private void createReadReplicas( int noOfReadReplicas,
-            final List<AdvertisedSocketAddress> initialHosts,
+            final List<SocketAddress> initialHosts,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams,
             String recordFormat )

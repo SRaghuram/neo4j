@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiPredicate;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -26,10 +25,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.metrics.MetricsSettings.csvInterval;
-import static com.neo4j.metrics.MetricsSettings.csvMaxArchives;
-import static com.neo4j.metrics.MetricsSettings.csvPath;
-import static com.neo4j.metrics.MetricsSettings.csvRotationThreshold;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvInterval;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvMaxArchives;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvPath;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvRotationThreshold;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.time.Duration.ofMinutes;
 import static java.util.Objects.requireNonNull;
@@ -38,6 +37,7 @@ import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -60,7 +60,7 @@ class RotatableCsvOutputIT
                 .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
                 .setConfig( csvInterval, "100ms" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

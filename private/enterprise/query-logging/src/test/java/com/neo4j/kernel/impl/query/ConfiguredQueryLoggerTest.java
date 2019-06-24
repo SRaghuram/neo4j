@@ -7,6 +7,7 @@ package com.neo4j.kernel.impl.query;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +40,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
@@ -168,7 +171,7 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, TRUE ) );
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
@@ -191,7 +194,7 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, TRUE ) );
         RuntimeException failure = new RuntimeException();
 
         // when
@@ -410,7 +413,7 @@ class ConfiguredQueryLoggerTest
     {
         logProvider.clear();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, TRUE ) );
 
         // when
         ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "neo", inputQuery, params, emptyMap() );
@@ -429,7 +432,7 @@ class ConfiguredQueryLoggerTest
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled, TRUE ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
@@ -447,7 +450,7 @@ class ConfiguredQueryLoggerTest
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, TRUE ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
@@ -465,7 +468,7 @@ class ConfiguredQueryLoggerTest
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_page_detail_logging_enabled, "true" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_page_detail_logging_enabled, TRUE ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
@@ -486,8 +489,8 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
         Config config = Config.defaults();
-        config.augment( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" );
-        config.augment( GraphDatabaseSettings.log_queries_runtime_logging_enabled, "true" );
+        config.set( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true );
+        config.set( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
         QueryLogger queryLogger = queryLogger( logProvider, config );
 
         // when
@@ -529,12 +532,12 @@ class ConfiguredQueryLoggerTest
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )
     {
         return queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "false" ) );
+                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE ) );
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider, Config config )
     {
-        config.augment( GraphDatabaseSettings.log_queries_threshold, thresholdInMillis + "ms" );
+        config.set( GraphDatabaseSettings.log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
         return new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
     }
 

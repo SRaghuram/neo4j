@@ -24,8 +24,8 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
-import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -131,13 +131,13 @@ class ServerStateTest
 
     private Server createServer( String name, ConnectorPortRegister portRegister )
     {
-        return new Server( channel -> {}, null, logProvider, logProvider, new ListenSocketAddress( "localhost", 0 ), name, executor, portRegister,
+        return new Server( channel -> {}, null, logProvider, logProvider, new SocketAddress( "localhost", 0 ), name, executor, portRegister,
                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
     private boolean canConnect() throws InterruptedException
     {
-        ListenSocketAddress socketAddress = server.address();
+        SocketAddress socketAddress = server.address();
         ChannelFuture channelFuture = bootstrap.connect( socketAddress.getHostname(), socketAddress.getPort() );
         channel = channelFuture.channel();
         return channelFuture.await().isSuccess();

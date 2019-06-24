@@ -49,6 +49,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
@@ -70,10 +71,10 @@ class PropertyLevelSecurityIT
     void setUp() throws Throwable
     {
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
-                .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
+                .setConfig( SecuritySettings.property_level_authorization_enabled, TRUE )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
-                .setConfig( SecuritySettings.procedure_roles, "test.*:procRole" )
-                .setConfig( GraphDatabaseSettings.auth_enabled, "true" ).build();
+                .setConfig( GraphDatabaseSettings.procedure_roles, "test.*:procRole" )
+                .setConfig( GraphDatabaseSettings.auth_enabled, TRUE ).build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         CommercialAuthAndUserManager authManager = (CommercialAuthAndUserManager) db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );

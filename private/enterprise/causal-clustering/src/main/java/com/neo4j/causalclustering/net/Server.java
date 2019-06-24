@@ -14,12 +14,11 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -40,10 +39,10 @@ public class Server extends LifecycleAdapter
 
     private EventLoopGroup workerGroup;
     private Channel channel;
-    private ListenSocketAddress listenAddress;
+    private SocketAddress listenAddress;
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-            ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
+            SocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
             BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
         this.childInitializer = childInitializer;
@@ -137,7 +136,7 @@ public class Server extends LifecycleAdapter
         return serverName;
     }
 
-    public ListenSocketAddress address()
+    public SocketAddress address()
     {
         return listenAddress;
     }
@@ -148,13 +147,13 @@ public class Server extends LifecycleAdapter
         return format( "Server[%s]", serverName );
     }
 
-    private ListenSocketAddress actualListenAddress( Channel channel )
+    private SocketAddress actualListenAddress( Channel channel )
     {
-        SocketAddress address = channel.localAddress();
+        var address = channel.localAddress();
         if ( address instanceof InetSocketAddress )
         {
             InetSocketAddress inetAddress = (InetSocketAddress) address;
-            return new ListenSocketAddress( inetAddress.getHostString(), inetAddress.getPort() );
+            return new SocketAddress( inetAddress.getHostString(), inetAddress.getPort() );
         }
         return listenAddress;
     }

@@ -19,12 +19,13 @@ import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.ssl.PkiUtils;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class HostnameVerificationHelper
 {
     public static final String POLICY_NAME = "fakePolicy";
-    public static final PemSslPolicyConfig SSL_POLICY_CONFIG = new PemSslPolicyConfig( POLICY_NAME );
+    public static final PemSslPolicyConfig SSL_POLICY_CONFIG = PemSslPolicyConfig.group( POLICY_NAME );
     private static final PkiUtils PKI_UTILS = new PkiUtils();
 
     public static Config aConfig( String hostname, TestDirectory testDirectory ) throws GeneralSecurityException, IOException, OperatorCreationException
@@ -38,32 +39,31 @@ public class HostnameVerificationHelper
         trusted.mkdirs();
         revoked.mkdirs();
         PKI_UTILS.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
-        return Config.builder()
-                .withSetting( SSL_POLICY_CONFIG.format, PEM.name() )
-                .withSetting( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
-                .withSetting( SSL_POLICY_CONFIG.trusted_dir, trusted.toString() )
-                .withSetting( SSL_POLICY_CONFIG.revoked_dir, revoked.toString() )
-                .withSetting( SSL_POLICY_CONFIG.private_key, validPrivateKeyPath.toString() )
-                .withSetting( SSL_POLICY_CONFIG.public_certificate, validCertificatePath.toString() )
+        return Config.newBuilder()
+                .set( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
+                .set( SSL_POLICY_CONFIG.trusted_dir, trusted.toString() )
+                .set( SSL_POLICY_CONFIG.revoked_dir, revoked.toString() )
+                .set( SSL_POLICY_CONFIG.private_key, validPrivateKeyPath.toString() )
+                .set( SSL_POLICY_CONFIG.public_certificate, validCertificatePath.toString() )
 
-                .withSetting( SSL_POLICY_CONFIG.tls_versions, "TLSv1.2" )
-                .withSetting( SSL_POLICY_CONFIG.ciphers, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" )
+                .set( SSL_POLICY_CONFIG.tls_versions, "TLSv1.2" )
+                .set( SSL_POLICY_CONFIG.ciphers, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" )
 
-                .withSetting( SSL_POLICY_CONFIG.client_auth, "none" )
-                .withSetting( SSL_POLICY_CONFIG.allow_key_generation, "false" )
+                .set( SSL_POLICY_CONFIG.client_auth, "none" )
+                .set( SSL_POLICY_CONFIG.allow_key_generation, FALSE )
 
                 // Even if we trust all, certs should be rejected if don't match Common Name (CA) or Subject Alternative Name
-                .withSetting( SSL_POLICY_CONFIG.trust_all, "false" )
-                .withSetting( SSL_POLICY_CONFIG.verify_hostname, "true" )
+                .set( SSL_POLICY_CONFIG.trust_all, FALSE )
+                .set( SSL_POLICY_CONFIG.verify_hostname, TRUE )
                 .build();
     }
 
     public static void trust( Config target, Config subject ) throws IOException
     {
-        PemSslPolicyConfig sslPolicyConfig = new PemSslPolicyConfig( POLICY_NAME );
-        File trustedDirectory = target.get( sslPolicyConfig.trusted_dir );
-        File certificate = subject.get( sslPolicyConfig.public_certificate );
-        Path trustedCertFilePath = trustedDirectory.toPath().resolve( certificate.getName() );
+        PemSslPolicyConfig sslPolicyConfig = PemSslPolicyConfig.group( POLICY_NAME );
+        Path trustedDirectory = target.get( sslPolicyConfig.trusted_dir );
+        File certificate = subject.get( sslPolicyConfig.public_certificate ).toFile();
+        Path trustedCertFilePath = trustedDirectory.resolve( certificate.getName() );
         Files.copy( certificate.toPath(), trustedCertFilePath );
     }
 }

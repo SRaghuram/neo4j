@@ -10,13 +10,14 @@ import java.io.File
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
+import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.graphdb.DatabaseShutdownException
-import org.neo4j.graphdb.config.InvalidSettingException
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -30,58 +31,55 @@ import scala.collection.Map
 class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
-  private val defaultConfig = Config.defaults()
-  defaultConfig.augment(GraphDatabaseSettings.auth_enabled, "true")
+  private val defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
   private val databaseIdRepository = new TestDatabaseIdRepository()
 
   test("should fail at startup when config setting for default database name is invalid") {
     // GIVEN
-    val config = Config.defaults()
-    def startOfError( dbName: String ): String = s"Bad value '$dbName' for setting 'dbms.default_database': "
+    val startOfError = "Error evaluate setting 'dbms.default_database' "
 
     // Empty name
-    the[InvalidSettingException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, "")
+      Config.defaults(default_database, "")
       // THEN
-    } should have message (startOfError("") + "The provided database name is empty.")
+    } should have message startOfError + "The provided database name is empty."
 
-    // Starting on invalid character
-    the[InvalidSettingException] thrownBy {
+    // Starting on invalid characterN
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, "_default")
+      Config.defaults(default_database, "_default")
       // THEN
-    } should have message (startOfError("_default") + "Database name '_default' is not starting with an ASCII alphabetic character.")
+    } should have message startOfError + "Database name '_default' is not starting with an ASCII alphabetic character."
 
     // Has prefix 'system'
-    the[InvalidSettingException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, "system-mine")
+      Config.defaults(default_database, "system-mine")
       // THEN
-    } should have message (startOfError("system-mine") + "Database name 'system-mine' is invalid, due to the prefix 'system'.")
+    } should have message startOfError + "Database name 'system-mine' is invalid, due to the prefix 'system'."
 
     // Contains invalid characters
-    the[InvalidSettingException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, "mydbwith_and%")
+      Config.defaults(default_database, "mydbwith_and%")
       // THEN
-    } should have message (startOfError("mydbwith_and%") +
-      "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes.")
+    } should have message startOfError + "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes."
 
     // Too short name
-    the[InvalidSettingException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, "me")
+      Config.defaults(default_database, "me")
       // THEN
-    } should have message (startOfError("me") + "The provided database name must have a length between 3 and 63 characters.")
+    } should have message startOfError + "The provided database name must have a length between 3 and 63 characters."
 
     // Too long name
     val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
-    the[InvalidSettingException] thrownBy {
+    the[IllegalArgumentException] thrownBy {
       // WHEN
-      config.augment(default_database, name)
+      Config.defaults(default_database, name)
       // THEN
-    } should have message (startOfError(name) + "The provided database name must have a length between 3 and 63 characters.")
+    } should have message startOfError + "The provided database name must have a length between 3 and 63 characters."
   }
 
   // Tests for showing databases
@@ -100,7 +98,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should show custom default database") {
     // GIVEN
     val config = Config.defaults()
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     setup(config)
 
     // WHEN
@@ -131,7 +129,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     initSystemGraph(config)
 
     // WHEN
@@ -158,7 +156,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(db("foo", offlineStatus)))
 
     // GIVEN
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     initSystemGraph(config)
 
     // WHEN
@@ -225,7 +223,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should show custom default and system databases") {
     // GIVEN
     val config = Config.defaults()
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     setup(config)
 
     // WHEN
@@ -248,7 +246,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
 
     // GIVEN
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     initSystemGraph(config)
 
     // WHEN
@@ -283,7 +281,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should show custom default database using show default database command") {
     // GIVEN
     val config = Config.defaults()
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     setup(config)
 
     // WHEN
@@ -313,7 +311,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // GIVEN
     execute("CREATE database foo")
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     initSystemGraph(config)
 
     // WHEN
@@ -350,7 +348,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should create database in systemdb when max number of databases is not reached") {
 
     val config = Config.defaults()
-    config.augment(CommercialEditionSettings.maxNumberOfDatabases, "3")
+    config.set(CommercialEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L) )
     setup(config)
     execute("SHOW DATABASES").toList.size should equal(2)
 
@@ -365,7 +363,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail to create database in systemdb when max number of databases is already reached") {
 
     val config = Config.defaults()
-    config.augment(CommercialEditionSettings.maxNumberOfDatabases, "2")
+    config.set(CommercialEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L) )
     setup(config)
     execute("SHOW DATABASES").toList.size should equal(2)
 
@@ -752,7 +750,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should drop custom default database") {
     // GIVEN
     val config = Config.defaults()
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     setup(config)
     execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
 
@@ -1059,7 +1057,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should stop custom default database") {
     // GIVEN
     val config = Config.defaults()
-    config.augment(default_database, "foo")
+    config.set(default_database, "foo")
     setup(config)
 
     // WHEN
@@ -1130,7 +1128,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   override protected def initTest() {}
 
   private def setup(config: Config): Unit = {
-    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfigRaw(config.getRaw).setInternalLogProvider(logProvider).build()
+    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
     graphOps = managementService.database(SYSTEM_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
 
@@ -1151,4 +1149,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private def threadToStatementContextBridge(): ThreadToStatementContextBridge = {
     graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
+
+  // Use the default value instead of the new value in DDLAcceptanceTestBase
+  override def databaseConfig(): Map[Setting[_], String] = Map()
 }

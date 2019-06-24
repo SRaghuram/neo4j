@@ -14,7 +14,6 @@ import org.junit.Test;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -33,6 +32,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
 @Ignore // currently does not run because deferred locks also take effect on system graph?
@@ -57,7 +57,7 @@ public class DeferringLocksIT
     @Before
     public void initDb()
     {
-        dbRule.withSetting( deferred_locks_enabled, Settings.TRUE );
+        dbRule.withSetting( deferred_locks_enabled, TRUE );
         db = dbRule.getGraphDatabaseAPI();
     }
 

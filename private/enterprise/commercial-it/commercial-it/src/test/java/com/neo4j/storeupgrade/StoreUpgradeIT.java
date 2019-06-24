@@ -28,9 +28,9 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -85,6 +85,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
@@ -161,7 +163,7 @@ public class StoreUpgradeIT
             store.prepareDirectory( testDir.databaseDir() );
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
-            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, TRUE );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -194,13 +196,12 @@ public class StoreUpgradeIT
             props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
-            props.setProperty( allow_upgrade.name(), "true" );
+            props.setProperty( allow_upgrade.name(), TRUE );
             props.setProperty( pagecache_memory.name(), "8m" );
-            props.setProperty( new HttpConnector( "http" ).type.name(), "HTTP" );
-            props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
-            props.setProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
-            props.setProperty( new HttpConnector( "https" ).enabled.name(), Settings.FALSE );
-            props.setProperty( new BoltConnector( "bolt" ).enabled.name(), Settings.FALSE );
+            props.setProperty( HttpConnector.group( "http" ).enabled.name(), TRUE );
+            props.setProperty( HttpConnector.group( "http" ).listen_address.name(), "localhost:0" );
+            props.setProperty( HttpsConnector.group( "https" ).enabled.name(), FALSE );
+            props.setProperty( BoltConnector.group( "bolt" ).enabled.name(), FALSE );
             try ( FileWriter writer = new FileWriter( configFile ) )
             {
                 props.store( writer, "" );
@@ -232,7 +233,7 @@ public class StoreUpgradeIT
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
-            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, TRUE );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
@@ -257,8 +258,8 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
-            builder.setConfig( allow_upgrade, "true" );
+            TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
+            builder.setConfig( allow_upgrade, TRUE );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
             builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
@@ -327,7 +328,7 @@ public class StoreUpgradeIT
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
-            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, TRUE );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
@@ -375,7 +376,7 @@ public class StoreUpgradeIT
             }
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
-            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, TRUE );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

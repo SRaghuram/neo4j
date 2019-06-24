@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 public interface ClientConnector
 {
     ClientConnectorAddresses connectors();
 
-    default AdvertisedSocketAddress boltAddress()
+    default SocketAddress boltAddress()
     {
         return connectors().boltAddress();
     }

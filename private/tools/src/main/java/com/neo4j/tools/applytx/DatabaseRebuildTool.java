@@ -20,6 +20,8 @@ import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingImpl;
+import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -151,7 +153,7 @@ public class DatabaseRebuildTool
             {
                 String key = entry.getKey().substring( 1 );
                 String value = entry.getValue();
-                builder = builder.setConfig( key, value );
+                builder = builder.setConfig( SettingImpl.newBuilder( key, SettingValueParsers.STRING, null ).build(), value );
             }
         }
         return builder;

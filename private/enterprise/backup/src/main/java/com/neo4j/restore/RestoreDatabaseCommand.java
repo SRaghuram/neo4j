@@ -34,7 +34,7 @@ public class RestoreDatabaseCommand
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
-        this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).getAbsoluteFile(), of( config ), databaseId.name() );
+        this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).toFile().getAbsoluteFile(), of( config ), databaseId.name() );
     }
 
     public void execute() throws IOException

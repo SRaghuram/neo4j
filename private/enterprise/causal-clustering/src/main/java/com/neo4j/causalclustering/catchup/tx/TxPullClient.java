@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -35,7 +35,7 @@ public class TxPullClient
         this.logProvider = logProvider;
     }
 
-    public TxStreamFinishedResponse pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
+    public TxStreamFinishedResponse pullTransactions( SocketAddress fromAddress, StoreId storeId, long previousTxId,
                                                  TxPullResponseListener txPullResponseListener ) throws Exception
     {
         CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()

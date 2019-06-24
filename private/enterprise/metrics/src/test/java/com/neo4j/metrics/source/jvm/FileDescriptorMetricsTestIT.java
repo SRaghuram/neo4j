@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.source.jvm;
 
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.apache.commons.lang3.SystemUtils;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -31,6 +31,7 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -48,8 +49,8 @@ class FileDescriptorMetricsTestIT
         metricsFolder = testDirectory.directory( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( MetricsSettings.metricsEnabled, "true" )
-                .setConfig( MetricsSettings.jvmFileDescriptorsEnabled, "true" )
+                .setConfig( MetricsSettings.metricsEnabled, TRUE )
+                .setConfig( MetricsSettings.jvmFileDescriptorsEnabled, TRUE )
                 .build();
     }
 

@@ -12,7 +12,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.io.fs.FileUtils
-import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings
+import org.neo4j.kernel.impl.index.schema.config.{CrsConfig, SpatialIndexSettings}
 import org.neo4j.test.rule.TestDirectory
 import org.neo4j.values.storable._
 
@@ -154,8 +154,8 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
 
   test("Should not get new index configuration on database settings changes of WGS84 minimum x extent") {
     // remove the entire western hemisphere
-    val wgs84_x_min = SpatialIndexSettings.makeCRSRangeSetting(CoordinateReferenceSystem.WGS84, 0, "min")
-    testIndexRestartWithSettingsChanges(Map(wgs84_x_min -> "0"))
+    val wgs84_x_min = CrsConfig.group(CoordinateReferenceSystem.WGS84).min
+    testIndexRestartWithSettingsChanges(Map(wgs84_x_min -> "0,0"))
   }
 
   private def testIndexRestartWithSettingsChanges(settings: Map[Setting[_], String]): Unit = {

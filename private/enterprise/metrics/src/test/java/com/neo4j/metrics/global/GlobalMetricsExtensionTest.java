@@ -5,14 +5,13 @@
  */
 package com.neo4j.metrics.global;
 
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -33,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class GlobalMetricsExtensionTest
@@ -50,7 +50,7 @@ class GlobalMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, Settings.FALSE );
+        Config config = Config.defaults( MetricsSettings.csvEnabled, FALSE );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 
@@ -66,7 +66,9 @@ class GlobalMetricsExtensionTest
     @Test
     void extensionCanBeStartedWhenMetricsDisabled()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, Settings.FALSE );
+        Config config = Config.newBuilder()
+                .set( MetricsSettings.metricsEnabled, FALSE )
+                .build();
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 
@@ -82,7 +84,7 @@ class GlobalMetricsExtensionTest
     @Test
     void globalExtensionProvideMetricsRegistryAndReporter()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, Settings.FALSE );
+        Config config = Config.defaults( MetricsSettings.metricsEnabled, FALSE );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 

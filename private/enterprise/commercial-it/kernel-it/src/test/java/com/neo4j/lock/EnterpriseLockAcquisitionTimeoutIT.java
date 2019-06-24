@@ -7,15 +7,25 @@ package com.neo4j.lock;
 
 import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiClient;
 import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
 import java.util.function.Predicate;
 
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.locking.CommunityLockAcquisitionTimeoutIT;
 import org.neo4j.test.OtherThreadExecutor;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.rule.TestDirectory;
 
 public class EnterpriseLockAcquisitionTimeoutIT extends CommunityLockAcquisitionTimeoutIT
 {
+
+    @Override
+    protected TestDatabaseManagementServiceBuilder getDbmsb( TestDirectory directory )
+    {
+        return new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() );
+    }
+
     @Override
     protected Predicate<OtherThreadExecutor.WaitDetails> exclusiveLockWaitingPredicate()
     {

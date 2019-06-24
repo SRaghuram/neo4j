@@ -23,7 +23,6 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.Runner;
@@ -51,6 +50,7 @@ import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.common.util.Args.concatArgs;
 import static com.neo4j.bench.common.util.Args.splitArgs;
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunExportCommand implements Runnable
@@ -209,7 +209,7 @@ public class RunExportCommand implements Runnable
              title = "Error Policy",
              required = false,
              allowedValues = {"SKIP", "FAIL"} )
-    private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
+    private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
@@ -228,9 +228,9 @@ public class RunExportCommand implements Runnable
     private String triggeredBy;
 
     static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfigBuilder.empty()
-                                                                   .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-                                                                   .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                                   .withSetting( new HttpConnector( "https" ).enabled, "false" )
+                                                                   .withSetting( BoltConnector.group( "bolt" ).enabled, FALSE )
+                                                                   .withSetting( HttpConnector.group( "http" ).enabled, FALSE )
+                                                                   .withSetting( HttpConnector.group( "https" ).enabled, FALSE )
                                                                    .build();
 
     @Override
@@ -339,7 +339,7 @@ public class RunExportCommand implements Runnable
             String jmhArgs,
             Path profilesDir,
             Path storesDir,
-            ErrorPolicy errorPolicy,
+            ErrorReporter.ErrorPolicy errorPolicy,
             Jvm jvm,
             String triggeredBy,
             List<ProfilerType> profilers )

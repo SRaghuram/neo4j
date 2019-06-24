@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import java.util.Collection;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 import static java.util.Collections.singleton;
 
@@ -20,7 +20,7 @@ public class NoOpHostnameResolver implements HostnameResolver
     }
 
     @Override
-    public Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddresses )
+    public Collection<SocketAddress> resolve( SocketAddress advertisedSocketAddresses )
     {
         return singleton(advertisedSocketAddresses);
     }

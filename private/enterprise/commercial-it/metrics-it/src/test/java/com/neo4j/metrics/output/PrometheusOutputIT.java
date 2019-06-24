@@ -17,7 +17,6 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -25,12 +24,13 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.metrics.MetricsSettings.prometheusEnabled;
-import static com.neo4j.metrics.MetricsSettings.prometheusEndpoint;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEnabled;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEndpoint;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.PortUtils.getConnectorAddress;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -45,7 +45,7 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( prometheusEnabled, Settings.TRUE )
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( prometheusEnabled, TRUE )
                 .setConfig( prometheusEndpoint, "localhost:0" ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }

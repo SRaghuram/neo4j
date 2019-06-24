@@ -56,9 +56,9 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.auth.SecureString;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
+import org.neo4j.string.SecureString;
 
 import static java.lang.String.format;
 

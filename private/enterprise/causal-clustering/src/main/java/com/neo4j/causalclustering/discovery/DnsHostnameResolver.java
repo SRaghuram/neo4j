@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 
@@ -37,9 +37,9 @@ public class DnsHostnameResolver extends RetryingHostnameResolver
     }
 
     @Override
-    protected Collection<AdvertisedSocketAddress> resolveOnce( AdvertisedSocketAddress initialAddress )
+    protected Collection<SocketAddress> resolveOnce( SocketAddress initialAddress )
     {
-        Set<AdvertisedSocketAddress> addresses = new HashSet<>();
+        Set<SocketAddress> addresses = new HashSet<>();
         InetAddress[] ipAddresses;
         ipAddresses = domainNameResolver.resolveDomainName( initialAddress.getHostname() );
         if ( ipAddresses.length == 0 )
@@ -49,7 +49,7 @@ public class DnsHostnameResolver extends RetryingHostnameResolver
 
         for ( InetAddress ipAddress : ipAddresses )
         {
-            addresses.add( new AdvertisedSocketAddress( ipAddress.getHostAddress(), initialAddress.getPort() ) );
+            addresses.add( new SocketAddress( ipAddress.getHostAddress(), initialAddress.getPort() ) );
         }
 
         userLog.info( "Resolved initial host '%s' to %s", initialAddress, addresses );

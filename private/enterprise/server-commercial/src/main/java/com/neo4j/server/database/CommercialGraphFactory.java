@@ -29,7 +29,7 @@ public class CommercialGraphFactory implements GraphFactory
     public DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
         CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
-        File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
+        File storeDir = config.get( GraphDatabaseSettings.databases_root_path ).toFile();
 
         switch ( mode )
         {

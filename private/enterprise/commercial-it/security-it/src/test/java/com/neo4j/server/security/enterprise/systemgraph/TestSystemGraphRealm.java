@@ -33,8 +33,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
     static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
     {
-        Config config = Config.defaults();
-        config.augment(  DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString()  );
+        Config config = Config.defaults( DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toString() );
         LogProvider logProvider = mock(LogProvider.class);
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
 

@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.enterprise.helpers;
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.metrics.MetricsSettings;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 
 import java.io.File;
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -22,6 +21,8 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.helpers.CommunityServerBuilder;
+
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class CommercialServerBuilder extends CommunityServerBuilder
 {
@@ -39,9 +40,9 @@ public class CommercialServerBuilder extends CommunityServerBuilder
     {
         CommercialServerBuilder server = server();
         server.onRandomPorts();
-        server.withProperty( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" );
+        server.withProperty( BoltConnector.group( "bolt" ).listen_address.name(), "localhost:0" );
         server.withProperty( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
-        server.withProperty( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
+        server.withProperty( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
         return server;
     }
 
@@ -99,7 +100,7 @@ public class CommercialServerBuilder extends CommunityServerBuilder
 
         configuration.put( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         configuration.putIfAbsent( MetricsSettings.csvPath.name(), new File( temporaryFolder, "metrics" ).getAbsolutePath() );
-        configuration.put( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
+        configuration.put( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
 
         return configuration;
     }

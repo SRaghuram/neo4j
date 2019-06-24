@@ -20,6 +20,7 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
 
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
 public class ReadReplicaHierarchicalCatchupIT
@@ -30,8 +31,8 @@ public class ReadReplicaHierarchicalCatchupIT
     public ClusterRule clusterRule =
             new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
                     .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" );
+                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
 
     @Test
     public void shouldCatchupThroughHierarchy() throws Throwable

@@ -20,8 +20,8 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
 
 class PersistentSnapshotDownloaderTest
 {
-    private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "localhost", 1234 );
+    private final SocketAddress fromAddress = new SocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( fromAddress );
     private final Panicker panicker = mock( Panicker.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );

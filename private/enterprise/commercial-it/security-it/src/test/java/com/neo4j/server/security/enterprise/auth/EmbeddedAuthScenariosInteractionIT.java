@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.config.Setting;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -26,7 +28,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     private static final String PASSWORD = "foo";
 
     @Override
-    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

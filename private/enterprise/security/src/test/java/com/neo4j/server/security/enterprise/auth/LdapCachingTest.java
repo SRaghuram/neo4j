@@ -33,6 +33,7 @@ import org.neo4j.server.security.auth.SecureHasher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
@@ -63,7 +64,7 @@ class LdapCachingTest
         return Config.defaults( stringMap(
                 SecuritySettings.ldap_authorization_user_search_base.name(), "dc=example,dc=com",
                 SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "gidnumber",
-                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
+                SecuritySettings.ldap_authorization_use_system_account.name(), TRUE
             ) );
     }
 

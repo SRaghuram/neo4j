@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
@@ -70,7 +70,7 @@ class BackupHelper
      */
     Optional<File> backup( ClusterMember member ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        AdvertisedSocketAddress address = member.config().get( transaction_advertised_address );
+        SocketAddress address = member.config().get( transaction_advertised_address );
         Path backupDir = createBackupDir( DB_NAME );
 
         try

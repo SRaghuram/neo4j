@@ -18,7 +18,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -91,7 +91,7 @@ class TxPuller
     {
         try
         {
-            AdvertisedSocketAddress fromAddress = addressProvider.get( currentState );
+            SocketAddress fromAddress = addressProvider.get( currentState );
             try
             {
                 log.info( "Pulling transactions from %s starting with txId: %d", fromAddress, fromTxId );
@@ -195,7 +195,7 @@ class TxPuller
             this.catchupAddressProvider = catchupAddressProvider;
         }
 
-        public AdvertisedSocketAddress get( State state ) throws CatchupAddressResolutionException
+        public SocketAddress get( State state ) throws CatchupAddressResolutionException
         {
             switch ( state )
             {

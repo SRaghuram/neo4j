@@ -21,7 +21,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
 class VersionContextIT

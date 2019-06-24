@@ -12,6 +12,7 @@ import akka.cluster.Cluster
 import akka.cluster.ddata.{Key, ReplicatedData, Replicator}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
+import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
@@ -29,8 +30,7 @@ object BaseAkkaIT {
 
   def config: TSConf = {
     val discoveryListenPort = 0
-    val config = Config.defaults()
-    config.augment("causal_clustering.discovery_listen_address", s":$discoveryListenPort")
+    val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, s"localhost:$discoveryListenPort")
 
     new TypesafeConfigService(ArteryTransport.TCP, config).generate()
   }

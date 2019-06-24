@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -78,13 +77,14 @@ import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( TestDirectoryExtension.class )
 public class SubmitTestRunsAndPlansIT
 {
     @RegisterExtension
     static final Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-                                                                         .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+                                                                         .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
                                                                          .build();
 
     private static final String USERNAME = "neo4j";

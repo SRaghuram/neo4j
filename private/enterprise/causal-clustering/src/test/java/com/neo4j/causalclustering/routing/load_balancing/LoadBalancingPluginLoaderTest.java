@@ -6,16 +6,16 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.LoadBalancingPluginGroup;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
@@ -28,9 +28,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.SettingImpl.newBuilder;
+import static org.neo4j.configuration.SettingValueParsers.BOOL;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class LoadBalancingPluginLoaderTest
 {
+    public static final class DummyPlugin extends LoadBalancingPluginGroup
+    {
+        public final Setting<Boolean> value = getBuilder( BOOL, true ).build();
+        public static DummyPlugin group( String name )
+        {
+            return new DummyPlugin( name );
+        }
+        private DummyPlugin( String name )
+        {
+            super( name, DUMMY_PLUGIN_NAME );
+        }
+    }
+
     private static final String DUMMY_PLUGIN_NAME = "dummy";
     private static final String DOES_NOT_EXIST = "does_not_exist";
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
@@ -39,9 +56,9 @@ public class LoadBalancingPluginLoaderTest
     void shouldReturnSelectedPlugin() throws Throwable
     {
         // given
-        Config config = Config.builder()
-                .withSetting( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
-                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "false" ).build();
+        Config config = Config.newBuilder()
+                .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
+                .set( CausalClusteringSettings.load_balancing_shuffle, FALSE ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -59,9 +76,9 @@ public class LoadBalancingPluginLoaderTest
     void shouldEnableShufflingOfDelegate() throws Throwable
     {
         // given
-        Config config = Config.builder()
-                .withSetting( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
-                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "true" ).build();
+        Config config = Config.newBuilder()
+                .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
+                .set( CausalClusteringSettings.load_balancing_shuffle, TRUE ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -78,9 +95,9 @@ public class LoadBalancingPluginLoaderTest
     void shouldFindServerPoliciesPlugin() throws Throwable
     {
         // given
-        Config config = Config.builder()
-                .withSetting( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
-                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "false" ).build();
+        Config config = Config.newBuilder()
+                .set( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
+                .set( CausalClusteringSettings.load_balancing_shuffle, FALSE ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -97,9 +114,9 @@ public class LoadBalancingPluginLoaderTest
     void serverPoliciesPluginShouldShuffleSelf() throws Throwable
     {
         // given
-        Config config = Config.builder()
-                .withSetting( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
-                .withSetting( CausalClusteringSettings.load_balancing_shuffle, "true" ).build();
+        Config config = Config.newBuilder()
+                .set( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
+                .set( CausalClusteringSettings.load_balancing_shuffle, TRUE ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -117,22 +134,22 @@ public class LoadBalancingPluginLoaderTest
     {
         Config config = Config.defaults( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST );
 
-        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
+        assertThrows( IllegalArgumentException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
     }
 
     @Test
     void shouldNotAcceptInvalidSetting()
     {
-        Config config = Config.builder()
-                .withSetting( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), "true")
-                .withSetting( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME ).build();
-
-        assertThrows( InvalidSettingException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
+        assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
+                .set( GraphDatabaseSettings.strict_config_validation, TRUE )
+                .set( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), TRUE )
+                .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME ).build() );
     }
 
-    private static String settingFor( String pluginName, String settingName )
+    private static Setting<Boolean> settingFor( String pluginName, String settingName )
     {
-        return String.format( "%s.%s.%s", CausalClusteringSettings.load_balancing_config.name(), pluginName, settingName );
+        String name = String.format( "%s.%s.%s", "causal_clustering.load_balancing.config", pluginName, settingName );
+        return newBuilder( name, BOOL, null ).build();
     }
 
     @ServiceProvider
@@ -146,13 +163,12 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void validate( Config config, Log log ) throws InvalidSettingException
+        public void validate( Config config, Log log )
         {
-            Optional<String> invalidSetting = config.getRaw( settingFor( DUMMY_PLUGIN_NAME, DO_NOT_USE_THIS_CONFIG ) );
-            invalidSetting.ifPresent( s ->
+            if ( config.isExplicitlySet( settingFor( DUMMY_PLUGIN_NAME, DO_NOT_USE_THIS_CONFIG ) ) )
             {
-                throw new InvalidSettingException( "Do not use this setting" );
-            } );
+                throw new IllegalArgumentException( "Do not use this setting" );
+            }
         }
 
         @Override

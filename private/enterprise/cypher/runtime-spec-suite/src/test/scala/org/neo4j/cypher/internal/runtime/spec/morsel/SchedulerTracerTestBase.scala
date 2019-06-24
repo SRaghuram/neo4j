@@ -9,6 +9,7 @@ import java.lang.management.ManagementFactory
 import java.nio.file.{Files, Path}
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
@@ -28,7 +29,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
   extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.PARALLEL_NO_FUSING.copyWith(
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
-    GraphDatabaseSettings.enable_morsel_runtime_trace -> "true",
+    GraphDatabaseSettings.enable_morsel_runtime_trace -> TRUE,
     GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath.toString
   ), runtime) {
 

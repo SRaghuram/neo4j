@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
@@ -55,7 +55,7 @@ public final class CatchupServerBuilder
         private ApplicationSupportedProtocols catchupProtocols;
         private Collection<ModifierSupportedProtocols> modifierProtocols;
         private ChannelInboundHandler parentHandler;
-        private ListenSocketAddress listenAddress;
+        private SocketAddress listenAddress;
         private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
@@ -104,7 +104,7 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public NeedsScheduler listenAddress( ListenSocketAddress listenAddress )
+        public NeedsScheduler listenAddress( SocketAddress listenAddress )
         {
             this.listenAddress = listenAddress;
             return this;
@@ -211,7 +211,7 @@ public final class CatchupServerBuilder
 
     public interface NeedsListenAddress
     {
-        NeedsScheduler listenAddress( ListenSocketAddress listenAddress );
+        NeedsScheduler listenAddress( SocketAddress listenAddress );
     }
 
     public interface NeedsScheduler

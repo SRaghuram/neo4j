@@ -9,11 +9,13 @@ import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 
 import java.util.Map;
 
+import org.neo4j.graphdb.config.Setting;
+
 public class EmbeddedConfiguredProceduresIT extends ConfiguredProceduresTestBase<CommercialLoginContext>
 {
 
     @Override
-    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

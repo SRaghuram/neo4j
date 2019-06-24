@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup.tx;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -82,21 +81,19 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private static Config configWithoutSpecificStoreFormat( Config config )
     {
-        Map<String,String> raw = config.getRaw();
-        raw.remove( GraphDatabaseSettings.record_format.name() );
-        return Config.defaults( raw );
+        return Config.newBuilder().fromConfig( config ).set( GraphDatabaseSettings.record_format, null ).build();
     }
 
     private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
     {
-        Config.Builder builder = Config.builder();
-        if ( !keepTxLogsInStoreDir && original.isConfigured( transaction_logs_root_path ) )
+        Config.Builder builder = Config.newBuilder();
+        if ( !keepTxLogsInStoreDir && original.isExplicitlySet( transaction_logs_root_path ) )
         {
-            builder.withSetting( transaction_logs_root_path, original.get( transaction_logs_root_path ).toString() );
+            builder.set( transaction_logs_root_path, original.get( transaction_logs_root_path ).toString() );
         }
-        if ( forceTransactionRotations && original.isConfigured( logical_log_rotation_threshold ) )
+        if ( forceTransactionRotations && original.isExplicitlySet( logical_log_rotation_threshold ) )
         {
-            builder.withSetting( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ).toString() );
+            builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ).toString() );
         }
         return builder.build();
     }

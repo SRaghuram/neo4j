@@ -24,6 +24,7 @@ import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @Command( name = "upgrade-store", description = "Upgrades a Neo4j store, including rebuilding of indexes." )
 public class UpgradeStoreCommand implements Runnable
@@ -93,7 +94,7 @@ public class UpgradeStoreCommand implements Runnable
             {
                 neo4jConfigPath = Paths.get( "neo4j.conf" );
                 Neo4jConfigBuilder.empty()
-                                  .withSetting( allow_upgrade, "true" )
+                                  .withSetting( allow_upgrade, TRUE )
                                   .withSetting( record_format, "high_limit" )
                                   .writeToFile( neo4jConfigPath );
             }

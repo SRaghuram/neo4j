@@ -5,8 +5,8 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,9 +15,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -40,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class DefaultDatabaseSelectionIT
@@ -197,10 +196,10 @@ class DefaultDatabaseSelectionIT
         return managementService.database( databaseName );
     }
 
-    private DatabaseManagementServiceBuilder getDatabaseBuilder()
+    private TestCommercialDatabaseManagementServiceBuilder getDatabaseBuilder()
     {
-        return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+        return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
     }
 
     private static DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )
