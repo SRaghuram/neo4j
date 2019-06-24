@@ -29,7 +29,7 @@ object ENTERPRISE {
         runtimeConfig,
         RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge, lifeSupport),
         kernel.cursors(),
-        () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler),
+        () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
                                            new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> "true",

@@ -26,11 +26,19 @@ class Worker(val workerId: Int,
              val sleeper: Sleeper,
              val resources: QueryResources) extends Runnable {
 
+  @volatile
+  private var isTimeToStop = false
+
   def isSleeping: Boolean = sleeper.isSleeping
+
+  def stop(): Unit = {
+    isTimeToStop = true
+  }
 
   override def run(): Unit = {
     DebugSupport.logWorker(s"Worker($workerId) started")
-    while (!Thread.interrupted()) {
+    isTimeToStop = false
+    while (!isTimeToStop) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {

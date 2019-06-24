@@ -27,7 +27,7 @@ object RuntimeEnvironment {
 
     new RuntimeEnvironment(config,
                            createQueryExecutor(config, jobScheduler, cursors, txBridge, lifeSupport),
-                           createTracer(config, jobScheduler),
+                           createTracer(config, jobScheduler, lifeSupport),
                            cursors)
   }
 
@@ -40,7 +40,7 @@ object RuntimeEnvironment {
       case SingleThreaded =>
         new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER, cursors)
       case Simple | LockFree =>
-        val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
+        val threadFactory = jobScheduler.threadFactory(Group.CYPHER_WORKER)
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val txBinder = new TxBridgeTransactionBinder(txBridge)
         val queryExecutor = new FixedWorkersQueryExecutor(config.morselSize, threadFactory, numberOfThreads, txBinder, () => new QueryResources(cursors))
@@ -48,7 +48,9 @@ object RuntimeEnvironment {
         queryExecutor
     }
 
-  def createTracer(config: CypherRuntimeConfiguration, jobScheduler: JobScheduler): SchedulerTracer = {
+  def createTracer(config: CypherRuntimeConfiguration,
+                   jobScheduler: JobScheduler,
+                   lifeSupport: LifeSupport): SchedulerTracer = {
     if (config.schedulerTracing == NoSchedulerTracing)
       SchedulerTracer.NoSchedulerTracer
     else {
@@ -61,8 +63,9 @@ object RuntimeEnvironment {
 
       val dataTracer = new SingleConsumerDataBuffers()
 
-      val runnable = new SchedulerTracerOutputWorker(dataWriter, dataTracer)
-      jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
+      val tracerWorker = new SchedulerTracerOutputWorker(dataWriter, dataTracer)
+      lifeSupport.add(tracerWorker)
+      jobScheduler.threadFactory(Group.CYPHER_WORKER).newThread(tracerWorker).start()
 
       new DataPointSchedulerTracer(dataTracer)
     }
