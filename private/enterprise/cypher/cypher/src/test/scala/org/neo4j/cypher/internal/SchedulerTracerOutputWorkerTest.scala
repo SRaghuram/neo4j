@@ -15,11 +15,11 @@ class SchedulerTracerOutputWorkerTest extends CypherFunSuite {
     val dataPointFlusher = mock[DataPointFlusher]
     val dataBuffers = new SingleConsumerDataBuffers()
 
-    val thread = new Thread(new SchedulerTracerOutputWorker(dataPointFlusher, dataBuffers))
-    thread.start()
-    thread.interrupt()
-    thread.join()
-
+    val tracerWorker = new SchedulerTracerOutputWorker(dataPointFlusher,
+                                                       dataBuffers,
+                                                       runnable => new Thread(runnable))
+    tracerWorker.start()
+    tracerWorker.stop()
     verify(dataPointFlusher).close()
   }
 }

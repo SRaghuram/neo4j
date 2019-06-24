@@ -62,10 +62,9 @@ object RuntimeEnvironment {
         }
 
       val dataTracer = new SingleConsumerDataBuffers()
-
-      val tracerWorker = new SchedulerTracerOutputWorker(dataWriter, dataTracer)
+      val threadFactory = jobScheduler.threadFactory(Group.CYPHER_WORKER)
+      val tracerWorker = new SchedulerTracerOutputWorker(dataWriter, dataTracer, threadFactory)
       lifeSupport.add(tracerWorker)
-      jobScheduler.threadFactory(Group.CYPHER_WORKER).newThread(tracerWorker).start()
 
       new DataPointSchedulerTracer(dataTracer)
     }

@@ -5,20 +5,26 @@
  */
 package org.neo4j.cypher.internal
 
+import java.util.concurrent.ThreadFactory
+
 import org.neo4j.cypher.internal.runtime.morsel.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
-import org.neo4j.kernel.lifecycle.Lifecycle
+import org.neo4j.kernel.lifecycle.LifecycleAdapter
 
 /**
   * Worker which polls scheduler tracer data and writes it to a [[DataPointFlusher]]. Makes sure to close
   * the flusher when interrupted.
   */
 class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
-                                  dataBuffers: SingleConsumerDataBuffers) extends Runnable with Lifecycle {
+                                  dataBuffers: SingleConsumerDataBuffers,
+                                  threadFactory: ThreadFactory) extends LifecycleAdapter {
 
   @volatile
   private var isTimeToStop = false
 
-  override def run(): Unit =
+  @volatile
+  private var thread: Thread = _
+
+  private def run(): Unit =
     try {
       while (!isTimeToStop) {
         dataBuffers.consume(dataWriter)
@@ -26,21 +32,20 @@ class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
       }
     } catch {
       case e: InterruptedException =>
-        // expected
+      // expected
     } finally {
       dataBuffers.consume(dataWriter)
       dataWriter.close()
     }
 
-  override def init(): Unit = {}
-
   override def start(): Unit = {
     isTimeToStop = false
+    thread = threadFactory.newThread(() => run())
+    thread.start()
   }
 
   override def stop(): Unit = {
     isTimeToStop = true
+    thread.join(1000)
   }
-
-  override def shutdown(): Unit = {}
 }
