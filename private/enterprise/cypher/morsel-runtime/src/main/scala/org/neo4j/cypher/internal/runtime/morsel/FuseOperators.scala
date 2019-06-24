@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -253,6 +254,23 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                         variables.map(v => slots.getReferenceOffsetFor(v)), nullable)(expressionCompiler)
             acc.copy(template = newTemplate,
                      fusedPlans = nextPlan :: acc.fusedPlans)
+
+          case plan@plans.UnwindCollection(_, variable, collection) =>
+            val offset = slots.get(variable) match {
+              case Some(RefSlot(idx, _, _)) => idx
+              case _ =>
+                throw new InternalException("Weird slot found for UNWIND")
+            }
+            val newTemplate = new UnwindOperatorTaskTemplate(
+              acc.template,
+              plan.id,
+              innermostTemplate,
+              collection,
+              offset)(expressionCompiler)
+
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
 
           case _ =>
             cantHandle(acc, nextPlan)
