@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -65,7 +65,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
-        case x if x eq Values.NO_VALUE =>
+        case IsNoValue() =>
           false // CONTAINS null does not produce any rows
 
         case x => throw new CypherTypeException(s"Expected a string value, but got $x")
