@@ -7,7 +7,6 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compiler.PlannerUnsupportedNotification
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
 import org.neo4j.graphdb.config.Setting
@@ -181,26 +180,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
-  test("do not warn for cost unsupported on update query if planner not explicitly requested") {
-    val result = executeSingle("EXPLAIN MATCH (n:Movie) SET n.title = 'The Movie'", Map.empty)
-    result.notifications should not contain PlannerUnsupportedNotification
-  }
-
-  test("do not warn for cost unsupported when requesting COST on a supported update query") {
-    val result = executeSingle("EXPLAIN CYPHER planner=cost MATCH (n:Movie) SET n:Seen", Map.empty)
-    result.notifications should not contain PlannerUnsupportedNotification
-  }
-
-  test("do not warn for cost unsupported when requesting IDP on a supported update query") {
-    val result = executeSingle("EXPLAIN CYPHER planner=idp MATCH (n:Movie) SET n:Seen", Map.empty)
-    result.notifications should not contain PlannerUnsupportedNotification
-  }
-
-  test("do not warn for cost unsupported when requesting DP on a supported update query") {
-    val result = executeSingle("EXPLAIN CYPHER planner=dp MATCH (n:Movie) SET n:Seen", Map.empty)
-    result.notifications should not contain PlannerUnsupportedNotification
-  }
-
   test("warn when requesting runtime=compiled on an unsupported query") {
     val result = executeSingle("EXPLAIN CYPHER runtime=compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
     result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty))
@@ -227,18 +206,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       INDEX_HINT_UNFULFILLABLE.notification(graphdb.InputPosition.empty, index("Party", "city")))
     result.notifications should contain(
       INDEX_HINT_UNFULFILLABLE.notification(graphdb.InputPosition.empty, index("Animal", "species")))
-  }
-
-  test("should not warn when join hint is used with COST planner") {
-    val result = executeSingle( """CYPHER planner=cost EXPLAIN MATCH (a)-->(b) USING JOIN ON b RETURN a, b""", Map.empty)
-
-    result.notifications should not contain "Neo.Status.Statement.JoinHintUnsupportedWarning"
-  }
-
-  test("should not warn when join hint is used with COST planner with EXPLAIN") {
-    val result = executeSingle( """CYPHER planner=cost EXPLAIN MATCH (a)-->(x)<--(b) USING JOIN ON x RETURN a, b""", Map.empty)
-
-    result.notifications.map(_.getCode) should not contain "Neo.Status.Statement.JoinHintUnsupportedWarning"
   }
 
   test("Warnings should work on potentially cached queries") {
