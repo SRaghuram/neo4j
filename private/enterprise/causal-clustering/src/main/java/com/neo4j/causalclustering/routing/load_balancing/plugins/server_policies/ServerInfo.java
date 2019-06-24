@@ -10,18 +10,18 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Objects;
 import java.util.Set;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 /**
  * Hold the server information that is interesting for load balancing purposes.
  */
 public class ServerInfo
 {
-    private final AdvertisedSocketAddress boltAddress;
+    private final SocketAddress boltAddress;
     private MemberId memberId;
     private Set<String> groups;
 
-    public ServerInfo( AdvertisedSocketAddress boltAddress, MemberId memberId, Set<String> groups )
+    public ServerInfo( SocketAddress boltAddress, MemberId memberId, Set<String> groups )
     {
         this.boltAddress = boltAddress;
         this.memberId = memberId;
@@ -33,7 +33,7 @@ public class ServerInfo
         return memberId;
     }
 
-    AdvertisedSocketAddress boltAddress()
+    SocketAddress boltAddress()
     {
         return boltAddress;
     }

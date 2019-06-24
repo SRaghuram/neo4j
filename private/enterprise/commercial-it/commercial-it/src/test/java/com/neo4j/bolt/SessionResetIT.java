@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -56,6 +55,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
@@ -76,7 +76,7 @@ public class SessionResetIT
     private final VerboseTimeout timeout = VerboseTimeout.builder().withTimeout( 6, MINUTES ).build();
     private final Neo4jRule db = new CommercialNeo4jRule()
             .withConfig( GraphDatabaseSettings.load_csv_file_url_root, "import" )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
             .dumpLogsOnFailure( System.out );
 
     @Rule

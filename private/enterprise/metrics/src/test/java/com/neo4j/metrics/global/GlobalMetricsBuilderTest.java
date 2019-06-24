@@ -6,7 +6,7 @@
 package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.source.server.ServerMetrics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -71,9 +71,9 @@ class GlobalMetricsBuilderTest
 
     private static Config configWithServerMetrics( boolean enabled )
     {
-        return Config.builder()
-                .withSetting( new HttpConnector( "http" ).enabled, Boolean.toString( enabled ) )
-                .withSetting( MetricsSettings.neoServerEnabled, TRUE )
+        return Config.newBuilder()
+                .set( HttpConnector.group( "http" ).enabled, Boolean.toString( enabled ) )
+                .set( MetricsSettings.neoServerEnabled, TRUE )
                 .build();
     }
 }

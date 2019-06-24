@@ -11,18 +11,18 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfo implements DiscoveryServerInfo
 {
-    private final AdvertisedSocketAddress catchupServerAddress;
+    private final SocketAddress catchupServerAddress;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
     private final Set<DatabaseId> databaseIds;
 
     public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
-            AdvertisedSocketAddress catchupServerAddress, Set<String> groups, Set<DatabaseId> databaseIds )
+            SocketAddress catchupServerAddress, Set<String> groups, Set<DatabaseId> databaseIds )
     {
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.catchupServerAddress = catchupServerAddress;
@@ -51,7 +51,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public AdvertisedSocketAddress catchupServer()
+    public SocketAddress catchupServer()
     {
         return catchupServerAddress;
     }

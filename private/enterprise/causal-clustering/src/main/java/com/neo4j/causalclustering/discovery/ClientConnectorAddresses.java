@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -19,10 +20,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.HttpConnector.Encryption;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.SocketAddressParser;
+import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.configuration.helpers.SocketAddressParser;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 
@@ -43,24 +44,25 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
     {
         List<ConnectorUri> connectorUris = new ArrayList<>();
 
-        List<BoltConnector> boltConnectors = config.enabledBoltConnectors();
+        Collection<BoltConnector> boltConnectors = ConfigUtils.getEnabledBoltConnectors( config );
 
         if ( boltConnectors.isEmpty() )
         {
             throw new IllegalArgumentException( "A Bolt connector must be configured to run a cluster" );
         }
 
-        boltConnectors
-                .forEach( c -> connectorUris.add( new ConnectorUri( bolt, config.get( c.advertised_address ) ) ) );
+        boltConnectors.forEach( c -> connectorUris.add( new ConnectorUri( bolt, config.get( c.advertised_address ) ) ) );
 
-        config.enabledHttpConnectors()
-                .forEach( c -> connectorUris.add( new ConnectorUri( Encryption.NONE.equals(c.encryptionLevel() ) ?
-                        http : https, config.get( c.advertised_address ) ) ) );
+        ConfigUtils.getEnabledHttpConnectors( config )
+                .forEach( c -> connectorUris.add( new ConnectorUri( http, config.get( c.advertised_address ) ) ) );
+
+        ConfigUtils.getEnabledHttpsConnectors( config )
+                .forEach( c -> connectorUris.add( new ConnectorUri( https, config.get( c.advertised_address ) ) ) );
 
         return new ClientConnectorAddresses( connectorUris );
     }
 
-    public AdvertisedSocketAddress boltAddress()
+    public SocketAddress boltAddress()
     {
         return connectorUris.stream().filter( connectorUri -> connectorUri.scheme == bolt ).findFirst().orElseThrow(
                 () -> new IllegalArgumentException( "A Bolt connector must be configured to run a cluster" ) )
@@ -119,9 +121,9 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
     public static class ConnectorUri
     {
         private final Scheme scheme;
-        private final AdvertisedSocketAddress socketAddress;
+        private final SocketAddress socketAddress;
 
-        public ConnectorUri( Scheme scheme, AdvertisedSocketAddress socketAddress )
+        public ConnectorUri( Scheme scheme, SocketAddress socketAddress )
         {
             this.scheme = scheme;
             this.socketAddress = socketAddress;
@@ -149,7 +151,7 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
         private static ConnectorUri fromString( String string )
         {
             URI uri = URI.create( string );
-            AdvertisedSocketAddress advertisedSocketAddress = SocketAddressParser.socketAddress( uri.getAuthority(), AdvertisedSocketAddress::new );
+            SocketAddress advertisedSocketAddress = SocketAddressParser.socketAddress( uri.getAuthority(), SocketAddress::new );
             return new ConnectorUri( Scheme.valueOf( uri.getScheme() ), advertisedSocketAddress );
         }
 
@@ -188,7 +190,7 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
                 String schemeName = StringMarshal.unmarshal( channel );
                 String hostName = StringMarshal.unmarshal( channel );
                 int port = channel.getInt();
-                connectorUris.add( new ConnectorUri( Scheme.valueOf( schemeName ), new AdvertisedSocketAddress( hostName, port ) ) );
+                connectorUris.add( new ConnectorUri( Scheme.valueOf( schemeName ), new SocketAddress( hostName, port ) ) );
             }
             return new ClientConnectorAddresses( connectorUris );
         }

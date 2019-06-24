@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -46,6 +45,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
@@ -64,7 +64,7 @@ class SystemGraphSecurityReplicationIT
     void setup() throws Exception
     {
         Map<String,String> params = stringMap(
-                GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
+                GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME
         );

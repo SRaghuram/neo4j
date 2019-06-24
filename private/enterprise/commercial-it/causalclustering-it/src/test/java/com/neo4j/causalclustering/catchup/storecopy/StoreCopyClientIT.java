@@ -36,8 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -112,7 +111,7 @@ class StoreCopyClientIT
         writeContents( fs, relative( fileA.getFilename() ), fileA.getContent() );
         writeContents( fs, relative( fileB.getFilename() ), fileB.getContent() );
 
-        ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
+        SocketAddress listenAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
         catchupServer = CausalClusteringTestHelpers.getCatchupServer( serverHandler, listenAddress, scheduler );
         catchupServer.start();
 
@@ -257,12 +256,12 @@ class StoreCopyClientIT
         try
         {
             // when
-            ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
+            SocketAddress listenAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
             halfWayFailingServer = CausalClusteringTestHelpers.getCatchupServer( halfWayFailingServerHandler, listenAddress, scheduler );
             halfWayFailingServer.start();
 
             CatchupAddressProvider addressProvider =
-                    new SingleAddressProvider( new AdvertisedSocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
+                    new SingleAddressProvider( new SocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
             StoreId storeId = halfWayFailingServerHandler.getStoreId();
             File databaseDir = testDirectory.storeDir();
@@ -300,16 +299,16 @@ class StoreCopyClientIT
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {
             @Override
-            public AdvertisedSocketAddress primary( DatabaseId databaseId )
+            public SocketAddress primary( DatabaseId databaseId )
             {
                 return from( catchupServer.address().getPort() );
             }
 
             @Override
-            public AdvertisedSocketAddress secondary( DatabaseId databaseId )
+            public SocketAddress secondary( DatabaseId databaseId )
             {
 
-                return new AdvertisedSocketAddress( "localhost", port );
+                return new SocketAddress( "localhost", port );
             }
         };
 
@@ -329,13 +328,13 @@ class StoreCopyClientIT
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {
             @Override
-            public AdvertisedSocketAddress primary( DatabaseId databaseId )
+            public SocketAddress primary( DatabaseId databaseId )
             {
                 return from( catchupServer.address().getPort() );
             }
 
             @Override
-            public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+            public SocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
             {
                 throw catchupAddressResolutionException;
             }
@@ -358,9 +357,9 @@ class StoreCopyClientIT
         return CausalClusteringTestHelpers.fileContent( file, fs );
     }
 
-    private static AdvertisedSocketAddress from( int port )
+    private static SocketAddress from( int port )
     {
-        return new AdvertisedSocketAddress( "localhost", port );
+        return new SocketAddress( "localhost", port );
     }
 
     private static String clientFileContents( InMemoryStoreStreamProvider storeFileStreamsProvider, String filename )

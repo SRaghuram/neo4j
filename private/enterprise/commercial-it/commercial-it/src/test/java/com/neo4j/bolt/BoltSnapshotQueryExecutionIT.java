@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -42,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BoltSnapshotQueryExecutionIT
@@ -66,22 +66,21 @@ class BoltSnapshotQueryExecutionIT
     @Test
     void executeQueryWithSnapshotEngine()
     {
-        executeQuery( "withSnapshotEngine", Settings.TRUE );
+        executeQuery( "withSnapshotEngine", "true" );
     }
 
     @Test
     void executeQueryWithoutSnapshotEngine()
     {
-        executeQuery( "withoutSnapshotEngine", Settings.FALSE );
+        executeQuery( "withoutSnapshotEngine", "false" );
     }
 
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
         managementService =
                 new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) )
-                .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
-                .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
-                .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();

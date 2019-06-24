@@ -35,8 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.SocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.scheduler.Group;
 import org.neo4j.test.ports.PortAuthority;
@@ -55,9 +54,9 @@ class ChannelPoolServiceIT
     private static final int DEFAULT_TIME_OUT = 30;
     private final ProtocolStack protocolStackRaft = new ProtocolStack( TestApplicationProtocols.RAFT_2, emptyList() );
     private ChannelPoolService pool;
-    private AdvertisedSocketAddress to1;
-    private AdvertisedSocketAddress to2;
-    private final AdvertisedSocketAddress serverlessAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
+    private SocketAddress to1;
+    private SocketAddress to2;
+    private final SocketAddress serverlessAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
     private ExecutorService executor;
     private EventLoopGroup serverEventExecutor;
     private PoolEventsMonitor poolEventsMonitor;
@@ -236,16 +235,16 @@ class ChannelPoolServiceIT
         server1.get();
         server2.get();
 
-        AdvertisedSocketAddress server1Address = getLocalAddress( server1 );
-        to1 = new AdvertisedSocketAddress( server1Address.getHostname(), server1Address.getPort() );
-        AdvertisedSocketAddress server2Address = getLocalAddress( server2 );
-        to2 = new AdvertisedSocketAddress( server2Address.getHostname(), server2Address.getPort() );
+        SocketAddress server1Address = getLocalAddress( server1 );
+        to1 = new SocketAddress( server1Address.getHostname(), server1Address.getPort() );
+        SocketAddress server2Address = getLocalAddress( server2 );
+        to2 = new SocketAddress( server2Address.getHostname(), server2Address.getPort() );
     }
 
-    private AdvertisedSocketAddress getLocalAddress( ChannelFuture server1 )
+    private SocketAddress getLocalAddress( ChannelFuture server1 )
     {
         InetSocketAddress inetSocketAddress = (InetSocketAddress) server1.channel().localAddress();
-        return new AdvertisedSocketAddress( inetSocketAddress.getHostName(), inetSocketAddress.getPort() );
+        return new SocketAddress( inetSocketAddress.getHostName(), inetSocketAddress.getPort() );
     }
 
     private void closeServers() throws ExecutionException, InterruptedException

@@ -11,7 +11,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -31,11 +31,11 @@ public class ClientConnectorAddressesMarshalTest extends BaseMarshalTest<ClientC
         return asList(
                 new ClientConnectorAddresses( emptyList() ),
                 new ClientConnectorAddresses( singletonList(
-                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt, new AdvertisedSocketAddress( "host", 27 ) ) ) ),
+                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt, new SocketAddress( "host", 27 ) ) ) ),
                 new ClientConnectorAddresses( asList(
-                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt, new AdvertisedSocketAddress( "host1", 27 ) ),
-                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.https, new AdvertisedSocketAddress( "host3", 798 ) ),
-                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.http, new AdvertisedSocketAddress( "host2", 37 ) ) ) )
+                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.bolt, new SocketAddress( "host1", 27 ) ),
+                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.https, new SocketAddress( "host3", 798 ) ),
+                        new ClientConnectorAddresses.ConnectorUri( ClientConnectorAddresses.Scheme.http, new SocketAddress( "host2", 37 ) ) ) )
         );
 
     }

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -26,7 +27,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
@@ -40,7 +40,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     @Test
     void shouldAllowRoleCallCreateNewTokensProceduresWhenConfigured() throws Throwable
     {
-        configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
+        configuredSetup( Map.of( GraphDatabaseSettings.default_allowed, "role1" ) );
         userManager.newRole( "role1", "noneSubject" );
         assertEmpty( noneSubject, "CALL db.createLabel('MySpecialLabel')" );
         assertEmpty( noneSubject, "CALL db.createRelationshipType('MySpecialRelationship')" );
@@ -50,9 +50,9 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     @Test
     void shouldWarnWhenUsingInternalAndOtherProvider() throws Throwable
     {
-        configuredSetup( stringMap(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME )
+        configuredSetup( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME )
         );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
@@ -71,9 +71,9 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     @Test
     void shouldNotWarnWhenOnlyUsingInternalProvider() throws Throwable
     {
-        configuredSetup( stringMap(
-                SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME
+        configuredSetup( Map.of(
+                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME
         ) );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );

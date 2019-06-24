@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -133,9 +133,7 @@ class BootstrapStateTest
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage, MetadataMessage metadataMessage,
             UniqueAddress uniqueAddress, boolean refuseToBeLeader )
     {
-        var config = Config.builder()
-                .withSetting( refuse_to_be_leader, Boolean.toString( refuseToBeLeader ) )
-                .build();
+        var config = Config.defaults(refuse_to_be_leader, Boolean.toString( refuseToBeLeader ) );
 
         return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config );
     }
@@ -182,8 +180,8 @@ class BootstrapStateTest
 
     private static CoreServerInfo newCoreInfo( DatabaseId databaseId, boolean refuseToBeLeader )
     {
-        var raftAddress = new AdvertisedSocketAddress( "neo4j.com", 1 );
-        var catchupAddress = new AdvertisedSocketAddress( "neo4j.com", 2 );
+        var raftAddress = new SocketAddress( "neo4j.com", 1 );
+        var catchupAddress = new SocketAddress( "neo4j.com", 2 );
         var connectorAddresses = new ClientConnectorAddresses( List.of() );
         return new CoreServerInfo( raftAddress, catchupAddress, connectorAddresses, Set.of(), Set.of( databaseId ), refuseToBeLeader );
     }

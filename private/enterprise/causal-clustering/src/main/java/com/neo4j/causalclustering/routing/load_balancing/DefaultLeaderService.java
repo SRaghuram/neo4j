@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 import java.util.Optional;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class DefaultLeaderService implements LeaderService
@@ -49,7 +49,7 @@ public class DefaultLeaderService implements LeaderService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> getLeaderBoltAddress( DatabaseId databaseId )
+    public Optional<SocketAddress> getLeaderBoltAddress( DatabaseId databaseId )
     {
         return getLeaderId( databaseId ).flatMap( this::resolveBoltAddress );
     }
@@ -76,7 +76,7 @@ public class DefaultLeaderService implements LeaderService
                 .findFirst();
     }
 
-    private Optional<AdvertisedSocketAddress> resolveBoltAddress( MemberId memberId )
+    private Optional<SocketAddress> resolveBoltAddress( MemberId memberId )
     {
         Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
         return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );

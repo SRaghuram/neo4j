@@ -36,7 +36,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.ssl.SslPolicy;
@@ -66,15 +66,14 @@ public class KubernetesResolverIT
     private final String testNamespace = "test-namespace";
     private final String testLabelSelector = "test-label-selector";
     private final String testAuthToken = "Oh go on then";
-    private final Config config = Config
-            .builder()
-            .withSetting( CausalClusteringSettings.kubernetes_address, "localhost:" + port )
-            .withSetting( CausalClusteringSettings.kubernetes_label_selector, testLabelSelector )
-            .withSetting( CausalClusteringSettings.kubernetes_service_port_name, testPortName )
+    private final Config config = Config.newBuilder()
+            .set( CausalClusteringSettings.kubernetes_address, "localhost:" + port )
+            .set( CausalClusteringSettings.kubernetes_label_selector, testLabelSelector )
+            .set( CausalClusteringSettings.kubernetes_service_port_name, testPortName )
             .build();
 
-    private AdvertisedSocketAddress expectedAddress =
-            new AdvertisedSocketAddress( String.format( "%s.%s.svc.cluster.local", testServiceName, testNamespace ), testPortNumber );
+    private SocketAddress expectedAddress =
+            new SocketAddress( String.format( "%s.%s.svc.cluster.local", testServiceName, testNamespace ), testPortNumber );
 
     private final HttpClient httpClient = new HttpClient( new SslContextFactory( true ) );
 
@@ -90,7 +89,7 @@ public class KubernetesResolverIT
     public void shouldResolveAddressesFromApiReturningShortJson() throws Throwable
     {
         withServer( shortJson(), () -> {
-            Collection<AdvertisedSocketAddress> addresses = resolver.resolve( null );
+            Collection<SocketAddress> addresses = resolver.resolve( null );
 
             assertThat( addresses, contains( expectedAddress ) );
         } );
@@ -100,7 +99,7 @@ public class KubernetesResolverIT
     public void shouldResolveAddressesFromApiReturningLongJson() throws Throwable
     {
         withServer( longJson(), () -> {
-            Collection<AdvertisedSocketAddress> addresses = resolver.resolve( null );
+            Collection<SocketAddress> addresses = resolver.resolve( null );
 
             assertThat( addresses, contains( expectedAddress ) );
         } );

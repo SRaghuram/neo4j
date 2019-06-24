@@ -6,7 +6,7 @@
 package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import com.neo4j.metrics.source.db.BoltMetrics;
 import com.neo4j.metrics.source.db.PageCacheMetrics;
@@ -18,6 +18,7 @@ import com.neo4j.metrics.source.jvm.ThreadMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
@@ -80,7 +81,7 @@ public class GlobalMetricsExporter
             life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
         }
 
-        boolean httpOrHttpsEnabled = !config.enabledHttpConnectors().isEmpty();
+        boolean httpOrHttpsEnabled = !ConfigUtils.getEnabledHttpConnectors( config ).isEmpty() || !ConfigUtils.getEnabledHttpsConnectors( config ).isEmpty();
         if ( httpOrHttpsEnabled && config.get( MetricsSettings.neoServerEnabled ) )
         {
             life.add( new ServerMetrics( globalMetricsPrefix, registry, logService, context.dependencySatisfier() ) );

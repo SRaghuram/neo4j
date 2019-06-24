@@ -52,6 +52,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.driver.AuthTokens.basic;
 import static org.neo4j.driver.AuthTokens.custom;
@@ -73,11 +74,10 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     public void setup() throws Exception
     {
         String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
-        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, "true" )
-              .withSetting( new BoltConnector( "bolt" ).type, "BOLT" )
-              .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
-              .withSetting( new BoltConnector( "bolt" ).encryption_level, OPTIONAL.name() )
-              .withSetting( new BoltConnector( "bolt" ).listen_address, host );
+        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, TRUE )
+              .withSetting( BoltConnector.group( "bolt" ).enabled, TRUE )
+              .withSetting( BoltConnector.group( "bolt" ).encryption_level, OPTIONAL.name() )
+              .withSetting( BoltConnector.group( "bolt" ).listen_address, host );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
@@ -85,7 +85,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     protected abstract Map<Setting<?>,String> getSettings();
 
-    void restartServerWithOverriddenSettings( String... configChanges ) throws IOException
+    void restartServerWithOverriddenSettings( Map<Setting<?>,String> configChanges ) throws IOException
     {
         dbRule.restartDatabase( configChanges );
     }
@@ -100,7 +100,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     private boolean portIsReachable( String host, int port, int timeOutMS )
     {
-        try ( Socket serverSocket = new Socket(); )
+        try ( Socket serverSocket = new Socket() )
         {
             serverSocket.connect( new InetSocketAddress( host, port ), timeOutMS );
             return true;

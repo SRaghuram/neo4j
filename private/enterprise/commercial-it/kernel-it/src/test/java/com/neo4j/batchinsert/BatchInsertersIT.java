@@ -8,12 +8,10 @@ package com.neo4j.batchinsert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Map;
-
 import org.neo4j.batchinsert.BatchInserter;
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProviderFactory;
 import org.neo4j.test.extension.Inject;
@@ -37,9 +35,9 @@ class BatchInsertersIT
         inserter.shutdown();
     }
 
-    private static Map<String,String> getConfig()
+    private static Config getConfig()
     {
-        return MapUtil.stringMap( default_schema_provider.name(), GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName() );
+        return Config.defaults( default_schema_provider, GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName() );
     }
 
     private static Iterable<ExtensionFactory<?>> getExtensions()

@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
@@ -33,7 +34,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("morsel profile should include expected profiling data with non-fused operators") {
-    restartWithConfig(Map(GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false"))
+    restartWithConfig(Map(GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE))
 
     createNode()
     val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN n")

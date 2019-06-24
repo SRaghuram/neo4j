@@ -23,6 +23,7 @@ import org.neo4j.configuration.Config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 class BootstrapConfigurationTest
 {
@@ -68,7 +69,7 @@ class BootstrapConfigurationTest
     @Test
     void shouldChooseNioIfNativeIsNotPrefered()
     {
-        Config config = Config.builder().withSetting( CausalClusteringSettings.use_native_transport, "false" ).build();
+        Config config = Config.defaults( CausalClusteringSettings.use_native_transport, FALSE );
         BootstrapConfiguration<? extends SocketChannel> cConfig = BootstrapConfiguration.clientConfig( config );
         BootstrapConfiguration<? extends ServerSocketChannel> sConfig = BootstrapConfiguration.serverConfig( config );
 

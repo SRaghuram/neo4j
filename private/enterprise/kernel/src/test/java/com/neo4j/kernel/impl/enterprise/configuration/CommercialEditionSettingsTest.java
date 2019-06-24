@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.internal.id.IdType;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.idTypesToReuse;
@@ -63,7 +62,7 @@ class CommercialEditionSettingsTest
 
     private static void assertIdTypesToReuseDisallows( IdType type, IdType... otherTypes )
     {
-        assertThrows( InvalidSettingException.class, () ->
+        assertThrows( IllegalArgumentException.class, () ->
         {
             Config config = configWithIdTypes( type, otherTypes );
             config.get( idTypesToReuse );
@@ -72,8 +71,7 @@ class CommercialEditionSettingsTest
 
     private static Config configWithIdTypes( IdType type, IdType... otherTypes )
     {
-        String value = stringList( type, otherTypes );
-        return Config.defaults( idTypesToReuse, value );
+        return Config.defaults( idTypesToReuse, stringList( type, otherTypes ) );
     }
 
     @SafeVarargs

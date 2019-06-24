@@ -16,187 +16,187 @@ import java.time.Duration;
 import java.util.List;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Internal;
-import org.neo4j.configuration.LoadableConfig;
-import org.neo4j.configuration.Migrator;
-import org.neo4j.configuration.ReplacedBy;
-import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.SettingValueParser;
+import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
-import static org.neo4j.configuration.Settings.ADVERTISED_SOCKET_ADDRESS;
-import static org.neo4j.configuration.Settings.BOOLEAN;
-import static org.neo4j.configuration.Settings.BYTES;
-import static org.neo4j.configuration.Settings.DOUBLE;
-import static org.neo4j.configuration.Settings.DURATION;
-import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.INTEGER;
-import static org.neo4j.configuration.Settings.NO_DEFAULT;
-import static org.neo4j.configuration.Settings.PATH;
-import static org.neo4j.configuration.Settings.STRING;
-import static org.neo4j.configuration.Settings.STRING_LIST;
-import static org.neo4j.configuration.Settings.TRUE;
-import static org.neo4j.configuration.Settings.advertisedAddress;
-import static org.neo4j.configuration.Settings.buildSetting;
-import static org.neo4j.configuration.Settings.derivedSetting;
-import static org.neo4j.configuration.Settings.list;
-import static org.neo4j.configuration.Settings.listenAddress;
-import static org.neo4j.configuration.Settings.max;
-import static org.neo4j.configuration.Settings.min;
-import static org.neo4j.configuration.Settings.optionsIgnoreCase;
-import static org.neo4j.configuration.Settings.optionsObeyCase;
-import static org.neo4j.configuration.Settings.prefixSetting;
-import static org.neo4j.configuration.Settings.setting;
+import static java.time.Duration.ofMinutes;
+import static java.time.Duration.ofSeconds;
+import static java.util.Collections.emptyList;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
+import static org.neo4j.configuration.SettingConstraints.min;
+import static org.neo4j.configuration.SettingConstraints.range;
+import static org.neo4j.configuration.SettingImpl.newBuilder;
+import static org.neo4j.configuration.SettingValueParsers.BOOL;
+import static org.neo4j.configuration.SettingValueParsers.BYTES;
+import static org.neo4j.configuration.SettingValueParsers.DOUBLE;
+import static org.neo4j.configuration.SettingValueParsers.DURATION;
+import static org.neo4j.configuration.SettingValueParsers.INT;
+import static org.neo4j.configuration.SettingValueParsers.PATH;
+import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
+import static org.neo4j.configuration.SettingValueParsers.STRING;
+import static org.neo4j.configuration.SettingValueParsers.listOf;
+import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 @Description( "Settings for Causal Clustering" )
 @ServiceProvider
-public class CausalClusteringSettings implements LoadableConfig
+public class CausalClusteringSettings implements SettingsDeclaration
 {
     public static final String TEMP_STORE_COPY_DIRECTORY_NAME = "temp-copy";
     public static final String TEMP_BOOTSTRAP_DIRECTORY_NAME = "temp-bootstrap";
 
     @Description( "Time out for a new member to catch up" )
     public static final Setting<Duration> join_catch_up_timeout =
-            setting( "causal_clustering.join_catch_up_timeout", DURATION, "10m" );
+            newBuilder( "causal_clustering.join_catch_up_timeout", DURATION, ofMinutes( 10 ) ).build();
 
     @Description( "The time limit within which a new leader election will occur if no messages are received." )
     public static final Setting<Duration> leader_election_timeout =
-            setting( "causal_clustering.leader_election_timeout", DURATION, "7s" );
+            newBuilder( "causal_clustering.leader_election_timeout", DURATION, ofSeconds( 7 ) ).build();
 
     @Internal
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
-    public static final Setting<Duration> cluster_binding_timeout = setting( "causal_clustering.cluster_binding_timeout", DURATION, "5m" );
+    public static final Setting<Duration> cluster_binding_timeout =
+            newBuilder( "causal_clustering.cluster_binding_timeout", DURATION, ofMinutes( 5 ) ).build();
 
     @Internal
     @Description( "Configures the time after which we retry binding to a cluster. Only applies to Akka discovery. " +
             "A discovery type of DNS/SRV/K8S will be queried again on retry." )
-    public static final Setting<Duration> cluster_binding_retry_timeout = setting( "causal_clustering.cluster_binding_retry_timeout", DURATION, "1m" );
+    public static final Setting<Duration> cluster_binding_retry_timeout =
+            newBuilder( "causal_clustering.cluster_binding_retry_timeout", DURATION, ofMinutes( 1 ) ).build();
 
     @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
             "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
             "availability for the cluster." )
     public static final Setting<Boolean> refuse_to_be_leader =
-            setting( "causal_clustering.refuse_to_be_leader", BOOLEAN, FALSE );
+            newBuilder( "causal_clustering.refuse_to_be_leader", BOOL, false ).build();
 
     @Description( "Enable pre-voting extension to the Raft protocol (this is breaking and must match between the core cluster members)" )
     public static final Setting<Boolean> enable_pre_voting =
-            setting( "causal_clustering.enable_pre_voting", BOOLEAN, TRUE );
+            newBuilder( "causal_clustering.enable_pre_voting", BOOL, true ).build();
 
     @Description( "The maximum batch size when catching up (in unit of entries)" )
     public static final Setting<Integer> catchup_batch_size =
-            setting( "causal_clustering.catchup_batch_size", INTEGER, "64" );
+            newBuilder( "causal_clustering.catchup_batch_size", INT, 64 ).build();
 
     @Description( "The maximum lag allowed before log shipping pauses (in unit of entries)" )
     public static final Setting<Integer> log_shipping_max_lag =
-            setting( "causal_clustering.log_shipping_max_lag", INTEGER, "256" );
+            newBuilder( "causal_clustering.log_shipping_max_lag", INT, 256 ).build();
 
     @Internal
     @Description( "Maximum number of entries in the RAFT in-queue" )
     public static final Setting<Integer> raft_in_queue_size =
-            setting( "causal_clustering.raft_in_queue_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.raft_in_queue_size", INT, 1024 ).build();
 
     @Description( "Maximum number of bytes in the RAFT in-queue" )
     public static final Setting<Long> raft_in_queue_max_bytes =
-            setting( "causal_clustering.raft_in_queue_max_bytes", BYTES, "2G" );
+            newBuilder( "causal_clustering.raft_in_queue_max_bytes", BYTES, ByteUnit.gibiBytes( 2 ) ).build();
 
     @Internal
     @Description( "Largest batch processed by RAFT in number of entries" )
     public static final Setting<Integer> raft_in_queue_max_batch =
-            setting( "causal_clustering.raft_in_queue_max_batch", INTEGER, "128" );
+            newBuilder( "causal_clustering.raft_in_queue_max_batch", INT, 128 ).build();
 
     @Description( "Largest batch processed by RAFT in bytes" )
     public static final Setting<Long> raft_in_queue_max_batch_bytes =
-            setting( "causal_clustering.raft_in_queue_max_batch_bytes", BYTES, "8M" );
-
-    @Description( "Expected number of Core machines in the cluster before startup" )
-    @Deprecated
-    @ReplacedBy( "causal_clustering.minimum_core_cluster_size_at_formation and causal_clustering.minimum_core_cluster_size_at_runtime" )
-    public static final Setting<Integer> expected_core_cluster_size =
-            setting( "causal_clustering.expected_core_cluster_size", INTEGER, "3" );
+            newBuilder( "causal_clustering.raft_in_queue_max_batch_bytes", BYTES, ByteUnit.mebiBytes( 8 ) ).build();
 
     @Description( "Minimum number of Core machines initially required to form a cluster. " +
-                  "The cluster will form when at least this many Core members have discovered each other." )
+            "The cluster will form when at least this many Core members have discovered each other." )
     public static final Setting<Integer> minimum_core_cluster_size_at_formation =
-            buildSetting( "causal_clustering.minimum_core_cluster_size_at_formation", INTEGER, expected_core_cluster_size.getDefaultValue() )
-                    .constraint( min( 2 ) ).build();
+            newBuilder( "causal_clustering.minimum_core_cluster_size_at_formation", INT, 3 ).addConstraint( min( 2 ) ).build();
 
     @Description( "The minimum size of the dynamically adjusted voting set (which only core members may be a part of). " +
-                  "Adjustments to the voting set happen automatically as the availability of core members changes, " +
-                  "due to explicit operations such as starting or stopping a member, " +
-                  "or unintended issues such as network partitions. " +
-                  "Note that this dynamic scaling of the voting set is generally desirable as under some circumstances " +
-                  "it can increase the number of instance failures which may be tolerated. " +
-                  "A majority of the voting set must be available before voting in or out members." )
+            "Adjustments to the voting set happen automatically as the availability of core members changes, " +
+            "due to explicit operations such as starting or stopping a member, " +
+            "or unintended issues such as network partitions. " +
+            "Note that this dynamic scaling of the voting set is generally desirable as under some circumstances " +
+            "it can increase the number of instance failures which may be tolerated. " +
+            "A majority of the voting set must be available before voting in or out members." )
     public static final Setting<Integer> minimum_core_cluster_size_at_runtime =
-            buildSetting( "causal_clustering.minimum_core_cluster_size_at_runtime", INTEGER, "3" ).constraint( min( 2 ) ).build();
+            newBuilder( "causal_clustering.minimum_core_cluster_size_at_runtime", INT, 3 ).addConstraint( min( 2 ) ).build();
 
     @Description( "Network interface and port for the transaction shipping server to listen on. Please note that it is also possible to run the backup " +
             "client against this port so always limit access to it via the firewall and configure an ssl policy." )
-    public static final Setting<ListenSocketAddress> transaction_listen_address =
-            listenAddress( "causal_clustering.transaction_listen_address", 6000 );
+    public static final Setting<SocketAddress> transaction_listen_address =
+            newBuilder( "causal_clustering.transaction_listen_address", SOCKET_ADDRESS, new SocketAddress( 6000 ) )
+                    .setDependency( default_listen_address )
+                    .immutable()
+                    .build();
 
     @Description( "Advertised hostname/IP address and port for the transaction shipping server." )
-    public static final Setting<AdvertisedSocketAddress> transaction_advertised_address =
-            advertisedAddress( "causal_clustering.transaction_advertised_address", transaction_listen_address );
+    public static final Setting<SocketAddress> transaction_advertised_address =
+            newBuilder( "causal_clustering.transaction_advertised_address", SOCKET_ADDRESS, null )
+                    .setDependency( transaction_listen_address )
+                    .build();
 
     @Description( "Network interface and port for the RAFT server to listen on." )
-    public static final Setting<ListenSocketAddress> raft_listen_address =
-            listenAddress( "causal_clustering.raft_listen_address", 7000 );
+    public static final Setting<SocketAddress> raft_listen_address =
+            newBuilder( "causal_clustering.raft_listen_address", SOCKET_ADDRESS, new SocketAddress( 7000 ) )
+                    .setDependency( default_listen_address )
+                    .immutable()
+                    .build();
 
     @Description( "Advertised hostname/IP address and port for the RAFT server." )
-    public static final Setting<AdvertisedSocketAddress> raft_advertised_address =
-            advertisedAddress( "causal_clustering.raft_advertised_address", raft_listen_address );
+    public static final Setting<SocketAddress> raft_advertised_address =
+            newBuilder( "causal_clustering.raft_advertised_address", SOCKET_ADDRESS, null )
+                    .setDependency( raft_listen_address )
+                    .build();
 
     @Description( "Host and port to bind the cluster member discovery management communication." )
-    public static final Setting<ListenSocketAddress> discovery_listen_address =
-            listenAddress( "causal_clustering.discovery_listen_address", 5000 );
+    public static final Setting<SocketAddress> discovery_listen_address =
+            newBuilder( "causal_clustering.discovery_listen_address", SOCKET_ADDRESS, new SocketAddress( 5000 ) )
+                    .setDependency( default_listen_address )
+                    .immutable()
+                    .build();
 
     @Description( "Advertised cluster member discovery management communication." )
-    public static final Setting<AdvertisedSocketAddress> discovery_advertised_address =
-            advertisedAddress( "causal_clustering.discovery_advertised_address", discovery_listen_address );
+    public static final Setting<SocketAddress> discovery_advertised_address =
+            newBuilder( "causal_clustering.discovery_advertised_address", SOCKET_ADDRESS, null )
+                    .setDependency( discovery_listen_address )
+                    .build();
 
     @Description( "A comma-separated list of other members of the cluster to join." )
-    public static final Setting<List<AdvertisedSocketAddress>> initial_discovery_members =
-            setting( "causal_clustering.initial_discovery_members", list( ",", ADVERTISED_SOCKET_ADDRESS ),
-                    NO_DEFAULT );
+    public static final Setting<List<SocketAddress>> initial_discovery_members =
+            newBuilder( "causal_clustering.initial_discovery_members", listOf( SOCKET_ADDRESS ), null ).build();
 
     @Internal
     @Description( "Use native transport if available. Epoll for Linux or Kqueue for MacOS/BSD. If this setting is set to false, or if native transport is " +
             "not available, Nio transport will be used." )
-    public static final Setting<Boolean> use_native_transport = setting( "causal_clustering.use_native_transport", BOOLEAN, TRUE );
+    public static final Setting<Boolean> use_native_transport =
+            newBuilder( "causal_clustering.use_native_transport", BOOL,  true  ).build();
 
     @Description( "Type of in-flight cache." )
     public static final Setting<InFlightCacheFactory.Type> in_flight_cache_type =
-            setting( "causal_clustering.in_flight_cache.type", Settings.optionsIgnoreCase( InFlightCacheFactory.Type.class ),
-                    InFlightCacheFactory.Type.CONSECUTIVE.name() );
+            newBuilder( "causal_clustering.in_flight_cache.type", ofEnum( InFlightCacheFactory.Type.class ), InFlightCacheFactory.Type.CONSECUTIVE ).build();
 
     @Description( "The maximum number of entries in the in-flight cache." )
     public static final Setting<Integer> in_flight_cache_max_entries =
-            setting( "causal_clustering.in_flight_cache.max_entries", INTEGER, "1024" );
+            newBuilder( "causal_clustering.in_flight_cache.max_entries", INT, 1024 ).build();
 
     @Description( "The maximum number of bytes in the in-flight cache." )
     public static final Setting<Long> in_flight_cache_max_bytes =
-            setting( "causal_clustering.in_flight_cache.max_bytes", BYTES, "2G" );
+            newBuilder( "causal_clustering.in_flight_cache.max_bytes", BYTES, ByteUnit.gibiBytes( 2 ) ).build();
 
     @Description( "Address for Kubernetes API" )
-    public static final Setting<AdvertisedSocketAddress> kubernetes_address =
-            setting( "causal_clustering.kubernetes.address", ADVERTISED_SOCKET_ADDRESS, "kubernetes.default.svc:443" );
+    public static final Setting<SocketAddress> kubernetes_address =
+            newBuilder( "causal_clustering.kubernetes.address", SOCKET_ADDRESS, new SocketAddress( "kubernetes.default.svc", 443 ) ).build();
 
     @Description( "File location of token for Kubernetes API" )
-    public static final Setting<File> kubernetes_token =
+    public static final Setting<Path> kubernetes_token =
             pathUnixAbsolute( "causal_clustering.kubernetes.token", "/var/run/secrets/kubernetes.io/serviceaccount/token" );
 
     @Description( "File location of namespace for Kubernetes API" )
-    public static final Setting<File> kubernetes_namespace =
+    public static final Setting<Path> kubernetes_namespace =
             pathUnixAbsolute( "causal_clustering.kubernetes.namespace", "/var/run/secrets/kubernetes.io/serviceaccount/namespace" );
 
     @Description( "File location of CA certificate for Kubernetes API" )
-    public static final Setting<File> kubernetes_ca_crt =
+    public static final Setting<Path> kubernetes_ca_crt =
             pathUnixAbsolute( "causal_clustering.kubernetes.ca_crt", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" );
 
     /**
@@ -204,63 +204,63 @@ public class CausalClusteringSettings implements LoadableConfig
      * If filesystem roots cannot be listed then `//` will be used - this will be resolved to `/` on Unix and `\\` (a UNC network path) on Windows.
      * An absolute path is always needed for validation, even though we only care about a path on Linux.
      */
-    private static Setting<File> pathUnixAbsolute( String name, String path )
+    private static Setting<Path> pathUnixAbsolute( String name, String path )
     {
         File[] roots = File.listRoots();
         Path root = roots.length > 0 ? roots[0].toPath() : Paths.get( "//" );
-        return setting( name, PATH, root.resolve( path ).toString() );
+        return newBuilder( name, PATH,  root.resolve( path  ) ).build();
     }
 
     @Description( "LabelSelector for Kubernetes API" )
     public static final Setting<String> kubernetes_label_selector =
-            setting( "causal_clustering.kubernetes.label_selector", STRING, NO_DEFAULT );
+            newBuilder( "causal_clustering.kubernetes.label_selector", STRING, null ).build();
 
     @Description( "Service port name for discovery for Kubernetes API" )
     public static final Setting<String> kubernetes_service_port_name =
-            setting( "causal_clustering.kubernetes.service_port_name", STRING, NO_DEFAULT );
+            newBuilder( "causal_clustering.kubernetes.service_port_name", STRING, null ).build();
 
     @Internal
     @Description( "The polling interval when attempting to resolve initial_discovery_members from DNS and SRV records." )
     public static final Setting<Duration> discovery_resolution_retry_interval =
-            setting( "causal_clustering.discovery_resolution_retry_interval", DURATION, "5s" );
+            newBuilder( "causal_clustering.discovery_resolution_retry_interval", DURATION, ofSeconds( 5 ) ).build();
 
     @Internal
     @Description( "Configures the time after which we give up trying to resolve a DNS/SRV record into a list of initial discovery members." )
     public static final Setting<Duration> discovery_resolution_timeout =
-            setting( "causal_clustering.discovery_resolution_timeout", DURATION, "5m" );
+            newBuilder( "causal_clustering.discovery_resolution_timeout", DURATION, ofMinutes( 5 ) ).build();
 
     @Description( "Configure the discovery type used for cluster name resolution" )
     public static final Setting<DiscoveryType> discovery_type =
-            setting( "causal_clustering.discovery_type", optionsIgnoreCase( DiscoveryType.class ), DiscoveryType.LIST.name() );
+            newBuilder( "causal_clustering.discovery_type", ofEnum( DiscoveryType.class ), DiscoveryType.LIST ).build();
 
     @Description( "The level of middleware logging" )
     public static final Setting<Level> middleware_logging_level =
-            setting( "causal_clustering.middleware_logging.level", optionsObeyCase( Level.class ), Level.NONE.toString() );
+            newBuilder( "causal_clustering.middleware_logging.level", ofEnum( Level.class ), Level.NONE ).build();
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
     public static final Setting<Integer> middleware_akka_default_parallelism_level =
-            setting( "causal_clustering.middleware.akka.default-parallelism", INTEGER, Integer.toString( 4 ) );
+            newBuilder( "causal_clustering.middleware.akka.default-parallelism", INT, 4 ).build();
 
     @Internal
     @Description( "Parallelism level of dispatcher used for communication from Akka based cluster topology discovery " )
     public static final Setting<Integer> middleware_akka_sink_parallelism_level =
-            setting( "causal_clustering.middleware.akka.sink-parallelism", INTEGER, Integer.toString( 2 ) );
+            newBuilder( "causal_clustering.middleware.akka.sink-parallelism", INT, 2 ).build();
 
     @Internal
     @Description( "Timeout for Akka socket binding" )
     public static final Setting<Duration> akka_bind_timeout =
-            setting( "causal_clustering.middleware.akka.bind-timeout", DURATION, "10s");
+            newBuilder( "causal_clustering.middleware.akka.bind-timeout", DURATION,  ofSeconds( 10 ) ).build();
 
     @Internal
     @Description( "Timeout for Akka connection" )
     public static final Setting<Duration> akka_connection_timeout =
-            setting( "causal_clustering.middleware.akka.connection-timeout", DURATION, "10s");
+            newBuilder( "causal_clustering.middleware.akka.connection-timeout", DURATION,  ofSeconds( 10 ) ).build();
 
     @Internal
     @Description( "Timeout for Akka handshake" )
     public static final Setting<Duration> akka_handshake_timeout =
-            setting( "causal_clustering.middleware.akka.handshake-timeout", DURATION, "30s");
+            newBuilder( "causal_clustering.middleware.akka.handshake-timeout", DURATION,  ofSeconds( 30 ) ).build();
 
     /*
         Begin akka failure detector
@@ -270,7 +270,7 @@ public class CausalClusteringSettings implements LoadableConfig
     @Description( "Akka cluster phi accrual failure detector. " +
             "How often keep-alive heartbeat messages should be sent to each connection." )
     public static final Setting<Duration> akka_failure_detector_heartbeat_interval =
-            setting( "causal_clustering.middleware.akka.failure_detector.heartbeat_interval", DURATION, "1s" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.heartbeat_interval", DURATION, ofSeconds( 1 ) ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
@@ -279,14 +279,14 @@ public class CausalClusteringSettings implements LoadableConfig
             "a quick detection in the event of a real crash. Conversely, a high " +
             "threshold generates fewer mistakes but needs more time to detect actual crashes." )
     public static final Setting<Double> akka_failure_detector_threshold =
-            setting( "causal_clustering.middleware.akka.failure_detector.threshold", DOUBLE, "10.0" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.threshold", DOUBLE, 10.0 ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
             "Number of the samples of inter-heartbeat arrival times to adaptively " +
             "calculate the failure timeout for connections." )
     public static final Setting<Integer> akka_failure_detector_max_sample_size =
-            setting( "causal_clustering.middleware.akka.failure_detector.max_sample_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.max_sample_size", INT, 1000 ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
@@ -294,7 +294,7 @@ public class CausalClusteringSettings implements LoadableConfig
             "AccrualFailureDetector. Too low standard deviation might result in " +
             "too much sensitivity for sudden, but normal, deviations in heartbeat inter arrival times." )
     public static final Setting<Duration> akka_failure_detector_min_std_deviation =
-            setting( "causal_clustering.middleware.akka.failure_detector.min_std_deviation", DURATION, "100ms" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.min_std_deviation", DURATION, Duration.ofMillis( 100 ) ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
@@ -303,311 +303,317 @@ public class CausalClusteringSettings implements LoadableConfig
             "This margin is important to be able to survive sudden, occasional, " +
             "pauses in heartbeat arrivals, due to for example garbage collect or network drop." )
     public static final Setting<Duration> akka_failure_detector_acceptable_heartbeat_pause =
-            setting( "causal_clustering.middleware.akka.failure_detector.acceptable_heartbeat_pause", DURATION, "4s" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.acceptable_heartbeat_pause", DURATION, ofSeconds( 4 ) ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
             "Number of member nodes that each member will send heartbeat messages to, " +
             "i.e. each node will be monitored by this number of other nodes." )
     public static final Setting<Integer> akka_failure_detector_monitored_by_nr_of_members =
-            setting( "causal_clustering.middleware.akka.failure_detector.monitored_by_nr_of_members", INTEGER, "5" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.monitored_by_nr_of_members", INT, 5 ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. " +
             "After the heartbeat request has been sent the first failure detection " +
             "will start after this period, even though no heartbeat message has been received." )
     public static final Setting<Duration> akka_failure_detector_expected_response_after =
-            setting( "causal_clustering.middleware.akka.failure_detector.expected_response_after", DURATION, "1s" );
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.expected_response_after", DURATION, ofSeconds( 1 ) ).build();
     /*
         End akka failure detector
      */
 
     @Description( "The maximum file size before the storage file is rotated (in unit of entries)" )
     public static final Setting<Integer> last_flushed_state_size =
-            setting( "causal_clustering.last_applied_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.last_applied_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the ID allocation file is rotated (in unit of entries)" )
     public static final Setting<Integer> id_alloc_state_size =
-            setting( "causal_clustering.id_alloc_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.id_alloc_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the membership state file is rotated (in unit of entries)" )
     public static final Setting<Integer> raft_membership_state_size =
-            setting( "causal_clustering.raft_membership_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.raft_membership_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the vote state file is rotated (in unit of entries)" )
     public static final Setting<Integer> vote_state_size =
-            setting( "causal_clustering.raft_vote_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.raft_vote_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the term state file is rotated (in unit of entries)" )
     public static final Setting<Integer> term_state_size =
-            setting( "causal_clustering.raft_term_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.raft_term_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the global session tracker state file is rotated (in unit of entries)" )
     public static final Setting<Integer> global_session_tracker_state_size =
-            setting( "causal_clustering.global_session_tracker_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.global_session_tracker_state_size", INT, 1000 ).build();
 
     @Description( "The maximum file size before the replicated lock token state file is rotated (in unit of entries)" )
     public static final Setting<Integer> replicated_lock_token_state_size =
-            setting( "causal_clustering.replicated_lock_token_state_size", INTEGER, "1000" );
+            newBuilder( "causal_clustering.replicated_lock_token_state_size", INT, 1000 ).build();
 
     @Description( "The initial timeout until replication is retried. The timeout will increase exponentially." )
     public static final Setting<Duration> replication_retry_timeout_base =
-            setting( "causal_clustering.replication_retry_timeout_base", DURATION, "10s" );
+            newBuilder( "causal_clustering.replication_retry_timeout_base", DURATION, ofSeconds( 10 ) ).build();
 
     @Description( "The upper limit for the exponentially incremented retry timeout." )
     public static final Setting<Duration> replication_retry_timeout_limit =
-            setting( "causal_clustering.replication_retry_timeout_limit", DURATION, "60s" );
+            newBuilder( "causal_clustering.replication_retry_timeout_limit", DURATION, ofSeconds( 60 ) ).build();
 
     @Description( "The duration for which the replicator will await a new leader." )
     public static final Setting<Duration> replication_leader_await_timeout =
-            setting( "causal_clustering.replication_leader_await_timeout", DURATION, "10s" );
+            newBuilder( "causal_clustering.replication_leader_await_timeout", DURATION, ofSeconds( 10 ) ).build();
 
     @Description( "The number of operations to be processed before the state machines flush to disk" )
     public static final Setting<Integer> state_machine_flush_window_size =
-            setting( "causal_clustering.state_machine_flush_window_size", INTEGER, "4096" );
+            newBuilder( "causal_clustering.state_machine_flush_window_size", INT, 4096 ).build();
 
     @Description( "The maximum number of operations to be batched during applications of operations in the state machines" )
     public static final Setting<Integer> state_machine_apply_max_batch_size =
-            setting( "causal_clustering.state_machine_apply_max_batch_size", INTEGER, "16" );
+            newBuilder( "causal_clustering.state_machine_apply_max_batch_size", INT, 16 ).build();
 
     @Description( "RAFT log pruning strategy" )
     public static final Setting<String> raft_log_pruning_strategy =
-            setting( "causal_clustering.raft_log_prune_strategy", STRING, "1g size" );
+            newBuilder( "causal_clustering.raft_log_prune_strategy", STRING,  "1g size"  ).build();
 
     @Description( "RAFT log implementation" )
     public static final Setting<String> raft_log_implementation =
-            setting( "causal_clustering.raft_log_implementation", STRING, "SEGMENTED" );
+            newBuilder( "causal_clustering.raft_log_implementation", STRING, "SEGMENTED" ).build();
 
     @Description( "RAFT log rotation size" )
     public static final Setting<Long> raft_log_rotation_size =
-            buildSetting( "causal_clustering.raft_log_rotation_size", BYTES, "250M" ).constraint( min( 1024L ) ).build();
+            newBuilder( "causal_clustering.raft_log_rotation_size", BYTES, ByteUnit.mebiBytes( 250 ) ).addConstraint( min( 1024L ) ).build();
 
     @Description( "RAFT log reader pool size" )
     public static final Setting<Integer> raft_log_reader_pool_size =
-            setting( "causal_clustering.raft_log_reader_pool_size", INTEGER, "8" );
+            newBuilder( "causal_clustering.raft_log_reader_pool_size", INT, 8 ).build();
 
     @Description( "RAFT log pruning frequency" )
     public static final Setting<Duration> raft_log_pruning_frequency =
-            setting( "causal_clustering.raft_log_pruning_frequency", DURATION, "10m" );
+            newBuilder( "causal_clustering.raft_log_pruning_frequency", DURATION, ofMinutes( 10 ) ).build();
 
     @Description( "Enable or disable the dump of all network messages pertaining to the RAFT protocol" )
     @Internal
     public static final Setting<Boolean> raft_messages_log_enable =
-            setting( "causal_clustering.raft_messages_log_enable", BOOLEAN, FALSE );
+            newBuilder( "causal_clustering.raft_messages_log_enable", BOOL,  false  ).build();
 
     @Description( "Path to RAFT messages log." )
     @Internal
-    public static final Setting<File> raft_messages_log_path =
-            derivedSetting( "causal_clustering.raft_messages_log_path", logs_directory,
-                    logs -> new File( logs, "raft-messages.log" ), PATH );
+    public static final Setting<Path> raft_messages_log_path =
+            newBuilder( "causal_clustering.raft_messages_log_path", PATH, Path.of( "raft-messages.log" ) )
+                    .setDependency( GraphDatabaseSettings.logs_directory ).immutable().build();
 
     @Description( "Interval of pulling updates from cores." )
-    public static final Setting<Duration> pull_interval = setting( "causal_clustering.pull_interval", DURATION, "1s" );
+    public static final Setting<Duration> pull_interval = newBuilder( "causal_clustering.pull_interval", DURATION, ofSeconds( 1 ) ).build();
 
     @Description( "The catch up protocol times out if the given duration elapses with no network activity. " +
             "Every message received by the client from the server extends the time out duration." )
     public static final Setting<Duration> catch_up_client_inactivity_timeout =
-            setting( "causal_clustering.catch_up_client_inactivity_timeout", DURATION, "10m" );
+            newBuilder( "causal_clustering.catch_up_client_inactivity_timeout", DURATION, ofMinutes( 10 ) ).build();
 
     @Description( "Maximum retry time per request during store copy. Regular store files and indexes are downloaded in separate requests during store copy." +
             " This configures the maximum time failed requests are allowed to resend. " )
     public static final Setting<Duration> store_copy_max_retry_time_per_request =
-            setting( "causal_clustering.store_copy_max_retry_time_per_request", DURATION, "20m" );
+            newBuilder( "causal_clustering.store_copy_max_retry_time_per_request", DURATION, ofMinutes( 20 ) ).build();
 
     @Description( "Maximum backoff timeout for store copy requests" )
     @Internal
-    public static final Setting<Duration> store_copy_backoff_max_wait = setting( "causal_clustering.store_copy_backoff_max_wait", DURATION, "5s" );
+    public static final Setting<Duration> store_copy_backoff_max_wait =
+            newBuilder( "causal_clustering.store_copy_backoff_max_wait", DURATION, ofSeconds( 5 ) ).build();
 
     @Description( "Throttle limit for logging unknown cluster member address" )
     public static final Setting<Duration> unknown_address_logging_throttle =
-            setting( "causal_clustering.unknown_address_logging_throttle", DURATION, "10000ms" );
+            newBuilder( "causal_clustering.unknown_address_logging_throttle", DURATION, Duration.ofMillis( 10000 ) ).build();
 
     @Description( "Maximum transaction batch size for read replicas when applying transactions pulled from core " +
             "servers." )
     @Internal
     public static final Setting<Integer> read_replica_transaction_applier_batch_size =
-            setting( "causal_clustering.read_replica_transaction_applier_batch_size", INTEGER, "64" );
+            newBuilder( "causal_clustering.read_replica_transaction_applier_batch_size", INT, 64 ).build();
 
     @Description( "Configure if the `dbms.routing.getRoutingTable()` procedure should include followers as read " +
-                  "endpoints or return only read replicas. Note: if there are no read replicas in the cluster, followers " +
-                  "are returned as read end points regardless the value of this setting. Defaults to true so that followers " +
-                  "are available for read-only queries in a typical heterogeneous setup." )
+            "endpoints or return only read replicas. Note: if there are no read replicas in the cluster, followers " +
+            "are returned as read end points regardless the value of this setting. Defaults to true so that followers " +
+            "are available for read-only queries in a typical heterogeneous setup." )
     public static final Setting<Boolean> cluster_allow_reads_on_followers =
-            setting( "causal_clustering.cluster_allow_reads_on_followers", BOOLEAN, TRUE );
+            newBuilder( "causal_clustering.cluster_allow_reads_on_followers", BOOL,  true  ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out of NODE IDs. " +
             "Larger values mean less frequent requests but also result in more unused IDs (and unused disk space) " +
             "in the event of a crash." )
     public static final Setting<Integer> node_id_allocation_size =
-            setting( "causal_clustering.node_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.node_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of RELATIONSHIP IDs. Larger values mean less frequent requests but also result in more unused IDs " +
             "(and unused disk space) in the event of a crash." )
     public static final Setting<Integer> relationship_id_allocation_size =
-            setting( "causal_clustering.relationship_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.relationship_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of PROPERTY IDs. Larger values mean less frequent requests but also result in more unused IDs " +
             "(and unused disk space) in the event of a crash." )
     public static final Setting<Integer> property_id_allocation_size =
-            setting( "causal_clustering.property_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.property_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of STRING_BLOCK IDs. Larger values mean less frequent requests but also result in more unused IDs " +
             "(and unused disk space) in the event of a crash." )
     public static final Setting<Integer> string_block_id_allocation_size =
-            setting( "causal_clustering.string_block_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.string_block_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of ARRAY_BLOCK IDs. Larger values mean less frequent requests but also result in more unused IDs " +
             "(and unused disk space) in the event of a crash." )
     public static final Setting<Integer> array_block_id_allocation_size =
-            setting( "causal_clustering.array_block_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.array_block_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of PROPERTY_KEY_TOKEN IDs. Larger values mean less frequent requests but also result in more unused IDs " +
             "(and unused disk space) in the event of a crash." )
     public static final Setting<Integer> property_key_token_id_allocation_size =
-            setting( "causal_clustering.property_key_token_id_allocation_size", INTEGER, "32" );
+            newBuilder( "causal_clustering.property_key_token_id_allocation_size", INT, 32 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of PROPERTY_KEY_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> property_key_token_name_id_allocation_size =
-            setting( "causal_clustering.property_key_token_name_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.property_key_token_name_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of RELATIONSHIP_TYPE_TOKEN IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> relationship_type_token_id_allocation_size =
-            setting( "causal_clustering.relationship_type_token_id_allocation_size", INTEGER, "32" );
+            newBuilder( "causal_clustering.relationship_type_token_id_allocation_size", INT, 32 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of RELATIONSHIP_TYPE_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> relationship_type_token_name_id_allocation_size =
-            setting( "causal_clustering.relationship_type_token_name_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.relationship_type_token_name_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of LABEL_TOKEN IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> label_token_id_allocation_size =
-            setting( "causal_clustering.label_token_id_allocation_size", INTEGER, "32" );
+            newBuilder( "causal_clustering.label_token_id_allocation_size", INT, 32 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of LABEL_TOKEN_NAME IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> label_token_name_id_allocation_size =
-            setting( "causal_clustering.label_token_name_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.label_token_name_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of NEOSTORE_BLOCK IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> neostore_block_id_allocation_size =
-            setting( "causal_clustering.neostore_block_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.neostore_block_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of SCHEMA IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> schema_id_allocation_size =
-            setting( "causal_clustering.schema_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.schema_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of NODE_LABELS IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> node_labels_id_allocation_size =
-            setting( "causal_clustering.node_labels_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.node_labels_id_allocation_size", INT, 1024 ).build();
 
     @Description( "The size of the ID allocation requests Core servers will make when they run out " +
             "of RELATIONSHIP_GROUP IDs. Larger values mean less frequent requests but also result in more " +
             "unused IDs (and unused disk space) in the event of a crash." )
     public static final Setting<Integer> relationship_group_id_allocation_size =
-            setting( "causal_clustering.relationship_group_id_allocation_size", INTEGER, "1024" );
+            newBuilder( "causal_clustering.relationship_group_id_allocation_size", INT, 1024 ).build();
 
     @Description( "Time between scanning the cluster to refresh current server's view of topology" )
     public static final Setting<Duration> cluster_topology_refresh =
-            buildSetting( "causal_clustering.cluster_topology_refresh", DURATION, "5s" ).constraint( min( Duration.ofSeconds( 1 ) ) ).build();
+            newBuilder( "causal_clustering.cluster_topology_refresh", DURATION, ofSeconds( 5 ) ).addConstraint( min( ofSeconds( 1 ) ) ).build();
 
     @Description( "An ordered list in descending preference of the strategy which read replicas use to choose " +
             "the upstream server from which to pull transactional updates." )
     public static final Setting<List<String>> upstream_selection_strategy =
-            setting( "causal_clustering.upstream_selection_strategy", list( ",", STRING ), "default" );
+            newBuilder( "causal_clustering.upstream_selection_strategy", listOf( STRING ), List.of("default") ).build();
 
     @Description( "Configuration of a user-defined upstream selection strategy. " +
             "The user-defined strategy is used if the list of strategies (`causal_clustering.upstream_selection_strategy`) " +
             "includes the value `user_defined`. " )
     public static final Setting<String> user_defined_upstream_selection_strategy =
-            setting( "causal_clustering.user_defined_upstream_strategy", STRING, "" );
+            newBuilder( "causal_clustering.user_defined_upstream_strategy", STRING, "" ).build();
 
     @Description( "Comma separated list of groups to be used by the connect-randomly-to-server-group selection strategy. " +
             "The connect-randomly-to-server-group strategy is used if the list of strategies (`causal_clustering.upstream_selection_strategy`) " +
             "includes the value `connect-randomly-to-server-group`. " )
     public static final Setting<List<String>> connect_randomly_to_server_group_strategy =
-            setting( "causal_clustering.connect-randomly-to-server-group", list( ",", STRING ), "" );
+            newBuilder( "causal_clustering.connect-randomly-to-server-group", listOf( STRING ), emptyList() ).build();
 
     @Description( "A list of group names for the server used when configuring load balancing and replication policies." )
     public static final Setting<List<String>> server_groups =
-            setting( "causal_clustering.server_groups", list( ",", STRING ), "" );
+            newBuilder( "causal_clustering.server_groups", listOf( STRING ), emptyList() ).build();
 
     @Description( "The load balancing plugin to use." )
     public static final Setting<String> load_balancing_plugin =
-            setting( "causal_clustering.load_balancing.plugin", STRING, "server_policies" );
+            newBuilder( "causal_clustering.load_balancing.plugin", STRING, "server_policies" ).build();
 
     @Description( "Time out for protocol negotiation handshake" )
-    public static final Setting<Duration> handshake_timeout = setting( "causal_clustering.handshake_timeout", DURATION, "20s" );
-
-    @Description( "The configuration must be valid for the configured plugin and usually exists" +
-            "under matching subkeys, e.g. ..config.server_policies.*" +
-            "This is just a top-level placeholder for the plugin-specific configuration." )
-    public static final Setting<String> load_balancing_config =
-            prefixSetting( "causal_clustering.load_balancing.config", STRING, "" );
+    public static final Setting<Duration> handshake_timeout =
+            newBuilder( "causal_clustering.handshake_timeout", DURATION, ofSeconds( 20 ) ).build();
 
     @Description( "Enables shuffling of the returned load balancing result." )
     public static final Setting<Boolean> load_balancing_shuffle =
-            setting( "causal_clustering.load_balancing.shuffle", BOOLEAN, TRUE );
+            newBuilder( "causal_clustering.load_balancing.shuffle", BOOL,  true  ).build();
 
     @Description( "Require authorization for access to the Causal Clustering status endpoints." )
     public static final Setting<Boolean> status_auth_enabled =
-            setting( "dbms.security.causal_clustering_status_auth_enabled", BOOLEAN, TRUE );
+            newBuilder( "dbms.security.causal_clustering_status_auth_enabled", BOOL,  true  ).build();
 
     @Description( "Sampling window for throughput estimate reported in the status endpoint." )
     public static final Setting<Duration> status_throughput_window =
-            buildSetting( "causal_clustering.status_throughput_window", DURATION, "5s" )
-                    .constraint( min( Duration.ofSeconds( 1 ) ) )
-                    .constraint( max( Duration.ofMinutes( 5 ) ) )
+            newBuilder( "causal_clustering.status_throughput_window", DURATION, ofSeconds( 5 ) )
+                    .addConstraint( range( ofSeconds( 1 ), ofMinutes( 5 ) ) )
                     .build();
 
     @Description( "Enable multi-data center features. Requires appropriate licensing." )
     public static final Setting<Boolean> multi_dc_license =
-            setting( "causal_clustering.multi_dc_license", BOOLEAN, FALSE );
+            newBuilder( "causal_clustering.multi_dc_license", BOOL,  false  ).build();
 
     @Description( "Name of the SSL policy to be used by the clustering, as defined under the dbms.ssl.policy.* settings." +
-                  " If no policy is configured then the communication will not be secured." )
-    public static final Setting<String> ssl_policy =
-            prefixSetting( "causal_clustering.ssl_policy", STRING, NO_DEFAULT );
+            " If no policy is configured then the communication will not be secured." )
+    public static final Setting<String> ssl_policy = newBuilder( "causal_clustering.ssl_policy", STRING, null ).build();
+
+    private static SettingValueParser<ApplicationProtocolVersion> APP_PROTOCOL_VER = new SettingValueParser<>()
+    {
+
+        @Override
+        public ApplicationProtocolVersion parse( String value )
+        {
+            return ApplicationProtocolVersion.parse( value );
+        }
+
+        @Override
+        public String getDescription()
+        {
+            return "an application protocol version";
+        }
+    };
 
     @Description( "Raft protocol implementation versions that this instance will allow in negotiation as a comma-separated list. " +
-                  "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
-                  "Example value: \"1.0, 1.3, 2.0, 2.1\"" )
+            "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
+            "Example value: \"1.0, 1.3, 2.0, 2.1\"" )
     public static final Setting<List<ApplicationProtocolVersion>> raft_implementations =
-            setting( "causal_clustering.protocol_implementations.raft", list( ",", ApplicationProtocolVersion::parse ), "" );
+            newBuilder( "causal_clustering.protocol_implementations.raft", listOf( APP_PROTOCOL_VER ), emptyList() ).build();
 
     @Description( "Catchup protocol implementation versions that this instance will allow in negotiation as a comma-separated list. " +
-                  "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
-                  "Example value: \"1.1, 1.2, 2.1, 2.2\"" )
+            "Order is not relevant: the greatest value will be preferred. An empty list will allow all supported versions. " +
+            "Example value: \"1.1, 1.2, 2.1, 2.2\"" )
     public static final Setting<List<ApplicationProtocolVersion>> catchup_implementations =
-            setting( "causal_clustering.protocol_implementations.catchup", list( ",", ApplicationProtocolVersion::parse ), "" );
+            newBuilder( "causal_clustering.protocol_implementations.catchup", listOf( APP_PROTOCOL_VER ), emptyList() ).build();
 
     @Description( "Network compression algorithms that this instance will allow in negotiation as a comma-separated list." +
-                  " Listed in descending order of preference for incoming connections. An empty list implies no compression." +
-                  " For outgoing connections this merely specifies the allowed set of algorithms and the preference of the " +
-                  " remote peer will be used for making the decision." +
-                  " Allowable values: " + ModifierProtocols.ALLOWED_VALUES_STRING )
+            " Listed in descending order of preference for incoming connections. An empty list implies no compression." +
+            " For outgoing connections this merely specifies the allowed set of algorithms and the preference of the " +
+            " remote peer will be used for making the decision." +
+            " Allowable values: " + ModifierProtocols.ALLOWED_VALUES_STRING )
     public static final Setting<List<String>> compression_implementations =
-            setting( "causal_clustering.protocol_implementations.compression", STRING_LIST, "" );
-
-    @SuppressWarnings( "unused" ) // accessed by reflection
-    @Migrator
-    private static final ConfigurationMigrator migrator = new CausalClusteringSettingsMigrator();
+            newBuilder( "causal_clustering.protocol_implementations.compression", listOf( STRING ), emptyList() ).build();
 }

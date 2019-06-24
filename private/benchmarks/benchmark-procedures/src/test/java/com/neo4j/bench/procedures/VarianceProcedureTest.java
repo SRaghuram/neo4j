@@ -24,7 +24,6 @@ import com.neo4j.common.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuil
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -40,6 +39,7 @@ import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class VarianceProcedureTest
 {
@@ -51,7 +51,7 @@ public class VarianceProcedureTest
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
             .withProcedure( VarianceProcedure.class )
             .withFunction( VarianceProcedure.class )
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+            .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
             .build();
 
     private URI boltUri;

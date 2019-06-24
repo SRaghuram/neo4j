@@ -19,7 +19,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Optional;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
@@ -49,7 +49,7 @@ public class SnapshotDownloaderTest
     public ApplicationProtocol protocol;
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
-    private final AdvertisedSocketAddress remoteAddress = new AdvertisedSocketAddress( "localhost", 1234 );
+    private final SocketAddress remoteAddress = new SocketAddress( "localhost", 1234 );
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test

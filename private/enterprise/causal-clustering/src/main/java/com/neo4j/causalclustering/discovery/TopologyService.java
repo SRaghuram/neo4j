@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
@@ -31,7 +31,7 @@ public interface TopologyService extends Lifecycle
 
     DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
 
-    AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
+    SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
     RoleInfo coreRole( DatabaseId databaseId, MemberId memberId );
 

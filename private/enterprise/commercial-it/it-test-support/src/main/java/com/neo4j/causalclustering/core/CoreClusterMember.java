@@ -26,13 +26,13 @@ import java.util.function.IntFunction;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.configuration.connectors.HttpConnector.Encryption;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -46,9 +46,9 @@ import org.neo4j.monitoring.Monitors;
 import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.internal.helpers.AdvertisedSocketAddress.advertisedAddress;
-import static org.neo4j.internal.helpers.ListenSocketAddress.listenAddress;
+import static org.neo4j.configuration.helpers.SocketAddress.format;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class CoreClusterMember implements ClusterMember
@@ -65,7 +65,7 @@ public class CoreClusterMember implements ClusterMember
     private final ClusterStateLayout clusterStateLayout;
     private final Map<String,String> config = stringMap();
     private final int serverId;
-    private final String boltAdvertisedSocketAddress;
+    private final String boltSocketAddress;
     private final int discoveryPort;
     private final String raftListenAddress;
     private CoreGraphDatabase coreGraphDatabase;
@@ -87,7 +87,7 @@ public class CoreClusterMember implements ClusterMember
                               int httpPort,
                               int backupPort,
                               int clusterSize,
-                              List<AdvertisedSocketAddress> addresses,
+                              List<SocketAddress> addresses,
                               DiscoveryServiceFactory discoveryServiceFactory,
                               String recordFormat,
                               File parentDir,
@@ -101,35 +101,33 @@ public class CoreClusterMember implements ClusterMember
 
         this.discoveryPort = discoveryPort;
 
-        String initialMembers = addresses.stream().map( AdvertisedSocketAddress::toString ).collect( joining( "," ) );
-        boltAdvertisedSocketAddress = advertisedAddress( advertisedAddress, boltPort );
-        raftListenAddress = listenAddress( listenAddress, raftPort );
+        String initialMembers = addresses.stream().map( SocketAddress::toString ).collect( joining( "," ) );
+        boltSocketAddress = format( advertisedAddress, boltPort );
+        raftListenAddress = format( listenAddress, raftPort );
 
         config.put( GraphDatabaseSettings.default_database.name(), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         config.put( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.CORE.name() );
         config.put( GraphDatabaseSettings.default_advertised_address.name(), advertisedAddress );
         config.put( CausalClusteringSettings.initial_discovery_members.name(), initialMembers );
-        config.put( CausalClusteringSettings.discovery_listen_address.name(), listenAddress( listenAddress, discoveryPort ) );
-        config.put( CausalClusteringSettings.discovery_advertised_address.name(), advertisedAddress( advertisedAddress, discoveryPort ) );
-        config.put( CausalClusteringSettings.transaction_listen_address.name(), listenAddress( listenAddress, txPort ) );
+        config.put( CausalClusteringSettings.discovery_listen_address.name(), format( listenAddress, discoveryPort ) );
+        config.put( CausalClusteringSettings.discovery_advertised_address.name(), format( advertisedAddress, discoveryPort ) );
+        config.put( CausalClusteringSettings.transaction_listen_address.name(), format( listenAddress, txPort ) );
         config.put( CausalClusteringSettings.raft_listen_address.name(), raftListenAddress );
         config.put( CausalClusteringSettings.cluster_topology_refresh.name(), "1000ms" );
         config.put( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), String.valueOf( clusterSize ) );
         config.put( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), String.valueOf( clusterSize ) );
         config.put( CausalClusteringSettings.leader_election_timeout.name(), "500ms" );
-        config.put( CausalClusteringSettings.raft_messages_log_enable.name(), Settings.TRUE );
+        config.put( CausalClusteringSettings.raft_messages_log_enable.name(), TRUE );
         config.put( GraphDatabaseSettings.store_internal_log_level.name(), Level.DEBUG.name() );
         config.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        config.put( new BoltConnector( "bolt" ).type.name(), "BOLT" );
-        config.put( new BoltConnector( "bolt" ).enabled.name(), "true" );
-        config.put( new BoltConnector( "bolt" ).listen_address.name(), listenAddress( listenAddress, boltPort ) );
-        config.put( new BoltConnector( "bolt" ).advertised_address.name(), boltAdvertisedSocketAddress );
-        config.put( new BoltConnector( "bolt" ).encryption_level.name(), DISABLED.name() );
-        config.put( new HttpConnector( "http", Encryption.NONE ).type.name(), "HTTP" );
-        config.put( new HttpConnector( "http", Encryption.NONE ).enabled.name(), "true" );
-        config.put( new HttpConnector( "http", Encryption.NONE ).listen_address.name(), listenAddress( listenAddress, httpPort ) );
-        config.put( new HttpConnector( "http", Encryption.NONE ).advertised_address.name(), advertisedAddress( advertisedAddress, httpPort ) );
-        config.put( OnlineBackupSettings.online_backup_listen_address.name(), listenAddress( listenAddress, backupPort ) );
+        config.put( BoltConnector.group( "bolt" ).enabled.name(), TRUE );
+        config.put( BoltConnector.group( "bolt" ).listen_address.name(), format( listenAddress, boltPort ) );
+        config.put( BoltConnector.group( "bolt" ).advertised_address.name(), boltSocketAddress );
+        config.put( BoltConnector.group( "bolt" ).encryption_level.name(), DISABLED.name() );
+        config.put( HttpConnector.group( "http").enabled.name(), TRUE );
+        config.put( HttpConnector.group( "http").listen_address.name(), format( listenAddress, httpPort ) );
+        config.put( HttpConnector.group( "http").advertised_address.name(), format( advertisedAddress, httpPort ) );
+        config.put( OnlineBackupSettings.online_backup_listen_address.name(), format( listenAddress, backupPort ) );
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
         config.put( GraphDatabaseSettings.auth_store.name(), new File( parentDir, "auth" ).getAbsolutePath() );
         config.putAll( extraParams );
@@ -159,17 +157,17 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public String boltAdvertisedAddress()
     {
-        return boltAdvertisedSocketAddress;
+        return boltSocketAddress;
     }
 
     public String routingURI()
     {
-        return String.format( "neo4j://%s", boltAdvertisedSocketAddress );
+        return String.format( "neo4j://%s", boltSocketAddress );
     }
 
     public String directURI()
     {
-        return String.format( "bolt://%s", boltAdvertisedSocketAddress );
+        return String.format( "bolt://%s", boltSocketAddress );
     }
 
     public String raftListenAddress()
@@ -302,9 +300,9 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public String settingValue( String settingName )
+    public <T> T settingValue( Setting<T> setting )
     {
-        return config.get(settingName);
+        return ((SettingImpl<T>) setting).parse( config.get( setting.name() ) );
     }
 
     @Override

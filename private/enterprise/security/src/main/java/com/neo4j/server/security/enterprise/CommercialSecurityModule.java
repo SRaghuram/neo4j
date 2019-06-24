@@ -466,12 +466,12 @@ public class CommercialSecurityModule extends SecurityModule
 
     public static File getRoleRepositoryFile( Config config )
     {
-        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ), ROLE_STORE_FILENAME );
+        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile(), ROLE_STORE_FILENAME );
     }
 
     private static File getDefaultAdminRepositoryFile( Config config )
     {
-        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ),
+        return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile(),
                 DEFAULT_ADMIN_STORE_FILENAME );
     }
 

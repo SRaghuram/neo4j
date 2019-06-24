@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -122,7 +122,7 @@ public class RemoteStore
         return LongRange.range( context.startTxIdExclusive() + 1, context.fallbackStartId().orElse( context.startTxIdExclusive() ) + 1 );
     }
 
-    public StoreId getStoreId( AdvertisedSocketAddress from ) throws StoreIdDownloadFailedException
+    public StoreId getStoreId( SocketAddress from ) throws StoreIdDownloadFailedException
     {
         return storeCopyClient.fetchStoreId( from );
     }

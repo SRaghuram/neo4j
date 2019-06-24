@@ -124,7 +124,7 @@ class NettyInstalledProtocolsIT
         NettyPipelineBuilderFactory serverPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
         NettyPipelineBuilderFactory clientPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
 
-        Config config = Config.builder().withSetting( handshake_timeout, TIMEOUT_SECONDS + "s" ).build();
+        Config config = Config.defaults( handshake_timeout, TIMEOUT_SECONDS + "s" );
 
         server = new Server( serverPipelineBuilderFactory, config );
         server.start( applicationProtocolRepository, modifierProtocolRepository, logProvider );

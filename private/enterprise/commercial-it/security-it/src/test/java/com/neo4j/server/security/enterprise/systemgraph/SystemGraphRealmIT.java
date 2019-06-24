@@ -399,7 +399,7 @@ class SystemGraphRealmIT
     void shouldHandleCustomDefaultDatabase() throws Throwable
     {
         dbManager.getManagementService().createDatabase( "foo" );
-        defaultConfig.augment( default_database, "foo" );
+        defaultConfig.set( default_database, "foo" );
 
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
@@ -440,7 +440,7 @@ class SystemGraphRealmIT
 
         // Create a new database 'foo' and set it to default db in config
         dbManager.getManagementService().createDatabase( "foo" );
-        defaultConfig.augment( default_database, "foo" );
+        defaultConfig.set( default_database, "foo" );
 
         realm.start();
 
@@ -458,7 +458,7 @@ class SystemGraphRealmIT
         realm.stop();
 
         // Switch back default db to 'neo4j'
-        defaultConfig.augment( default_database, DEFAULT_DATABASE_NAME );
+        defaultConfig.set( default_database, DEFAULT_DATABASE_NAME );
 
         realm.start();
 

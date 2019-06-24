@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -55,6 +54,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class RecordFormatsMigrationIT
@@ -160,8 +161,8 @@ class RecordFormatsMigrationIT
 
     private DatabaseManagementServiceBuilder getGraphDatabaseBuilder()
     {
-        return new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+        return new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, TRUE )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
     }
 
     private void assertLatestStandardStore() throws Exception

@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import java.io.IOException;
 import java.util.Set;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
@@ -21,13 +21,13 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadReplicaInfo>
 {
     private final ChannelMarshal<ClientConnectorAddresses> clientConnectorAddressesMarshal = new ClientConnectorAddresses.Marshal();
-    private final ChannelMarshal<AdvertisedSocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
+    private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
 
     @Override
     protected ReadReplicaInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
-        AdvertisedSocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
+        SocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
         Set<String> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseIds );

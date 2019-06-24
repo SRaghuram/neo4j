@@ -5,6 +5,7 @@
  */
 package com.neo4j.metrics;
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
 import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -32,6 +32,8 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.PortUtils.getBoltPort;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -53,16 +55,15 @@ class BoltMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         metricsFolder = testDirectory.directory( "metrics" );
-        builder.setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
-            .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
-            .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
-            .setConfig( GraphDatabaseSettings.auth_enabled, "false" )
-            .setConfig( MetricsSettings.metricsEnabled, "true" )
-            .setConfig( MetricsSettings.boltMessagesEnabled, "true" )
-            .setConfig( MetricsSettings.csvEnabled, "true" )
+        builder.setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
+            .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+            .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
+            .setConfig( MetricsSettings.metricsEnabled, TRUE )
+            .setConfig( MetricsSettings.boltMessagesEnabled, TRUE )
+            .setConfig( MetricsSettings.csvEnabled, TRUE )
             .setConfig( MetricsSettings.csvInterval, "100ms" )
             .setConfig( MetricsSettings.csvPath, metricsFolder.getAbsolutePath() )
-            .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+            .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
     }
 
     @AfterEach

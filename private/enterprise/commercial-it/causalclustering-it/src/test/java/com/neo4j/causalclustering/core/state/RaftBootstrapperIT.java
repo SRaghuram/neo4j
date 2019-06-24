@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
@@ -49,7 +50,6 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
-import static java.lang.Integer.parseInt;
 import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -106,7 +106,7 @@ class RaftBootstrapperIT
         this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
         this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
-        this.defaultConfig = Config.builder().withHome( neo4jHome ).build();
+        this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() );
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
     }
 
@@ -187,9 +187,10 @@ class RaftBootstrapperIT
                 .transactionLogsRootDirectory( customTransactionLogsRootDirectory )
                 .build();
 
-        Config config = Config.builder().withHome( neo4jHome )
-                              .withSetting( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
-                              .build();
+        Config config = Config.newBuilder()
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
+                .build();
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( database.layout() );
@@ -278,10 +279,9 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        Config config = Config
-                .builder()
-                .withHome( neo4jHome )
-                .withSetting( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
+        Config config = Config.newBuilder()
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
@@ -346,7 +346,7 @@ class RaftBootstrapperIT
 
     private int recordIdBatchSize()
     {
-        return parseInt( record_id_batch_size.getDefaultValue() );
+        return record_id_batch_size.defaultValue();
     }
 
     private LogFiles buildLogFiles( DatabaseLayout databaseLayout ) throws IOException

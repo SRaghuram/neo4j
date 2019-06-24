@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Result;
@@ -56,16 +55,17 @@ import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_allocation;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_cpu_time;
-import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
 public class ListQueriesProcedureTest
 {
     private final DbmsRule db = new CommercialDbmsRule()
-            .withSetting( cypher_hints_error, Settings.TRUE )
-            .withSetting( GraphDatabaseSettings.track_query_allocation, Settings.TRUE )
-            .withSetting( track_query_cpu_time, Settings.TRUE )
+            .withSetting( cypher_hints_error, TRUE )
+            .withSetting( GraphDatabaseSettings.track_query_allocation, TRUE )
+            .withSetting( track_query_cpu_time, TRUE )
             .startLazily();
 
     private final ThreadingRule threads = new ThreadingRule();

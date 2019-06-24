@@ -46,7 +46,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
@@ -326,7 +326,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         try
         {

@@ -11,6 +11,7 @@ import org.hamcrest.TypeSafeMatcher;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -23,7 +24,6 @@ import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -39,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.driver.AccessMode.WRITE;
-import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -173,9 +173,9 @@ abstract class BaseRoutingProcedureIT
         List<Map<String,Object>> servers = (List<Map<String,Object>>) record.get( "servers" );
         assertNotNull( servers );
 
-        List<AdvertisedSocketAddress> readers = findAddresses( servers, Role.READ );
-        List<AdvertisedSocketAddress> writers = findAddresses( servers, Role.WRITE );
-        List<AdvertisedSocketAddress> routers = findAddresses( servers, Role.ROUTE );
+        List<SocketAddress> readers = findAddresses( servers, Role.READ );
+        List<SocketAddress> writers = findAddresses( servers, Role.WRITE );
+        List<SocketAddress> routers = findAddresses( servers, Role.ROUTE );
 
         long ttlMillis = (long) record.get( "ttl" );
 
@@ -183,7 +183,7 @@ abstract class BaseRoutingProcedureIT
     }
 
     @SuppressWarnings( "unchecked" )
-    private static List<AdvertisedSocketAddress> findAddresses( List<Map<String,Object>> servers, Role role )
+    private static List<SocketAddress> findAddresses( List<Map<String,Object>> servers, Role role )
     {
         for ( Map<String,Object> entry : servers )
         {
@@ -194,7 +194,7 @@ abstract class BaseRoutingProcedureIT
                 assertNotNull( addresses );
 
                 return addresses.stream()
-                        .map( address -> socketAddress( address, AdvertisedSocketAddress::new ) )
+                        .map( address -> socketAddress( address, SocketAddress::new ) )
                         .collect( toList() );
             }
         }

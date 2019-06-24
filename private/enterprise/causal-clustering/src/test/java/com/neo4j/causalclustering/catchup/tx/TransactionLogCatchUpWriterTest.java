@@ -117,8 +117,7 @@ public class TransactionLogCatchUpWriterTest
     public void pullRotatesWhenThresholdCrossedAndExplicitlySet() throws IOException
     {
         // given
-        Config config = defaults();
-        config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
+        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and
         StoreId storeId = simulateStoreCopy();
@@ -149,8 +148,7 @@ public class TransactionLogCatchUpWriterTest
     public void pullDoesNotRotateWhenThresholdCrossedAndExplicitlyOff() throws IOException
     {
         // given
-        Config config = defaults();
-        config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
+        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and
         StoreId storeId = simulateStoreCopy();

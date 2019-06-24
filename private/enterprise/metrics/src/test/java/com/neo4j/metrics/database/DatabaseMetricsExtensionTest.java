@@ -7,7 +7,7 @@ package com.neo4j.metrics.database;
 
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.metrics.global.MetricsManager;
@@ -19,7 +19,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -53,6 +52,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.function.Suppliers.singleton;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -71,7 +71,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, Settings.FALSE );
+        Config config = Config.defaults( MetricsSettings.csvEnabled, FALSE );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 
@@ -87,7 +87,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWhenMetricsDisabled()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, Settings.FALSE );
+        Config config = Config.defaults( MetricsSettings.metricsEnabled, FALSE );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 

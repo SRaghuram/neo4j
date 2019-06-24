@@ -21,7 +21,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
@@ -50,13 +49,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class BoltProceduresIT
 {
     @ClassRule
     public static final Neo4jRule db = new Neo4jRule()
             .withProcedure( BoltTestProcedures.class )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
 
     private static Driver driver;
 

@@ -29,6 +29,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -39,8 +40,8 @@ public class ReadReplicaToReadReplicaCatchupIT
     public final ClusterRule clusterRule =
             new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
                     .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" )
-                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, "true" );
+                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
 
     @Test
     public void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable

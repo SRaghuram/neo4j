@@ -6,14 +6,18 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -30,9 +34,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.legacy_certificates_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
-import static org.neo4j.configuration.ssl.LegacySslPolicyConfig.certificates_directory;
 import static org.neo4j.internal.helpers.collection.MapUtil.store;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
@@ -52,6 +56,13 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         return new CommercialBootstrapper();
     }
 
+    @Override
+    protected String[] getAdditionalArguments() throws IOException
+    {
+        String[] args = new String[]{"-c", OnlineBackupSettings.online_backup_enabled.name() + "=false"};
+        return Stream.concat( Arrays.stream( super.getAdditionalArguments() ), Arrays.stream( args ) ).toArray( String[]::new );
+    }
+
     @Test
     public void shouldBeAbleToStartInSingleMode() throws Exception
     {
@@ -61,7 +72,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
                 "-c", configOption( CommercialEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );
+                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.getRoot(), legacy_certificates_directory ) ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );

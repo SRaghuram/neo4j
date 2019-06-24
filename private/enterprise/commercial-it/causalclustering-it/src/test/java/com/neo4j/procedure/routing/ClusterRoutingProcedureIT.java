@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
@@ -31,7 +31,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.internal.helpers.SocketAddressParser.socketAddress;
+import static org.neo4j.configuration.helpers.SocketAddressParser.socketAddress;
 
 @ClusterExtension
 class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
@@ -147,14 +147,14 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         {
             CoreClusterMember leader = cluster.awaitLeader();
 
-            List<AdvertisedSocketAddress> writers = singletonList( boltAddress( leader ) );
+            List<SocketAddress> writers = singletonList( boltAddress( leader ) );
 
-            List<AdvertisedSocketAddress> readers = Stream.concat( cluster.coreMembers().stream(), cluster.readReplicas().stream() )
+            List<SocketAddress> readers = Stream.concat( cluster.coreMembers().stream(), cluster.readReplicas().stream() )
                     .filter( member -> !member.equals( leader ) ) // leader is a writer and router, not a reader
                     .map( this::boltAddress )
                     .collect( toList() );
 
-            List<AdvertisedSocketAddress> routers = cluster.coreMembers()
+            List<SocketAddress> routers = cluster.coreMembers()
                     .stream()
                     .map( this::boltAddress )
                     .collect( toList() );
@@ -182,7 +182,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         return () ->
         {
-            AdvertisedSocketAddress address = boltAddress( readReplica );
+            SocketAddress address = boltAddress( readReplica );
 
             Duration ttl = Config.defaults().get( routing_ttl );
             RoutingResult expectedResult = new RoutingResult( singletonList( address ), emptyList(), singletonList( address ), ttl.getSeconds() );
@@ -198,8 +198,8 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         };
     }
 
-    private AdvertisedSocketAddress boltAddress( ClusterMember member )
+    private SocketAddress boltAddress( ClusterMember member )
     {
-        return socketAddress( member.boltAdvertisedAddress(), AdvertisedSocketAddress::new );
+        return socketAddress( member.boltAdvertisedAddress(), SocketAddress::new );
     }
 }

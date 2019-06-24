@@ -20,7 +20,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import java.net.URI;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
@@ -32,13 +31,14 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class DeleteAnnotationsTest
 {
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-        .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+        .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
         .withProcedure( CreateAnnotation.class )
         .withProcedure( DeleteAnnotation.class )
         .build();

@@ -10,16 +10,16 @@ import java.util.Collection;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 public interface RemoteMembersResolver
 {
-    default <REMOTE> Collection<REMOTE> resolve( Function<AdvertisedSocketAddress,REMOTE> transform )
+    default <REMOTE> Collection<REMOTE> resolve( Function<SocketAddress,REMOTE> transform )
     {
         return resolve( transform, ArrayList::new );
     }
 
-    <COLL extends Collection<REMOTE>,REMOTE> COLL resolve( Function<AdvertisedSocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory );
+    <COLL extends Collection<REMOTE>,REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory );
 
     boolean useOverrides();
 }

@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -107,7 +107,7 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
         getTimers().startSingleTimer( TIMER, message, retry );
     }
 
-    private Address toAkkaAddress( AdvertisedSocketAddress resolvedAddress )
+    private Address toAkkaAddress( SocketAddress resolvedAddress )
     {
         return new Address( AKKA_SCHEME, getContext().getSystem().name(), hostname( resolvedAddress ), resolvedAddress.getPort() );
     }

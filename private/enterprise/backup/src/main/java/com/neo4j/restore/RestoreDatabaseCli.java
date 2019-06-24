@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -40,9 +41,11 @@ class RestoreDatabaseCli extends AbstractCommand
 
     private static Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
-        return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .withHome( homeDir )
-                .withConnectorsDisabled().build();
+        Config cfg = Config.newBuilder()
+                .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
+                .set( GraphDatabaseSettings.neo4j_home, homeDir.toString() ).build();
+        ConfigUtils.disableAllConnectors( cfg );
+        return cfg;
     }
 
     @Override

@@ -8,19 +8,19 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.{ZoneId, ZonedDateTime}
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.storable.DurationValue
-import org.neo4j.values.utils.TemporalParseException
 
 abstract class TimeZoneAcceptanceTest(timezone: String) extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   override def databaseConfig(): Map[Setting[_], String] = {
     Map(
-      GraphDatabaseSettings.cypher_hints_error -> "true",
+      GraphDatabaseSettings.cypher_hints_error -> TRUE,
       GraphDatabaseSettings.db_temporal_timezone -> timezone)
   }
 
@@ -98,7 +98,7 @@ class InvalidTimeZoneConfigTest extends CypherFunSuite with GraphIcing {
 
   test("invalid timezone should fail startup") {
     val invalidConfig: Map[Setting[_], String] = Map(GraphDatabaseSettings.db_temporal_timezone -> "Europe/Satia")
-    a[TemporalParseException] should be thrownBy {
+    a[IllegalArgumentException] should be thrownBy {
       new TestDatabaseManagementServiceBuilder().impermanent().setConfig(invalidConfig.asJava).build()
     }
   }

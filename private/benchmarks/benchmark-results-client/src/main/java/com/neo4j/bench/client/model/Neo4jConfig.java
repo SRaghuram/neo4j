@@ -7,6 +7,7 @@ package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

@@ -7,18 +7,19 @@ package com.neo4j.kernel.impl.proc;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.procedure.impl.ProcedureConfig;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.default_allowed;
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.procedure_roles;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_allowed;
+import static org.neo4j.configuration.GraphDatabaseSettings.procedure_roles;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_whitelist;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
-import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
+
 
 class ProcedureConfigTest
 {
@@ -48,8 +49,8 @@ class ProcedureConfigTest
     @Test
     void shouldHaveConfigsWithExactMatchProcedureAllowed()
     {
-        Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "role1",
-                PROC_ALLOWED_SETTING_ROLES, "xyz:anotherRole" ) );
+        Config config = Config.defaults( Map.of( default_allowed.name(), "role1",
+                procedure_roles.name(), "xyz:anotherRole" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
         assertThat( procConfig.rolesFor( "xyz" ), equalTo( arrayOf( "anotherRole" ) ) );
         assertThat( procConfig.rolesFor( "abc" ), equalTo( arrayOf( "role1" ) ) );
@@ -79,15 +80,15 @@ class ProcedureConfigTest
     @Test
     void shouldNotFailOnEmptyStringBoth()
     {
-        Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "",
-                        PROC_ALLOWED_SETTING_ROLES, "" ) );
+        Config config = Config.defaults( stringMap( default_allowed.name(), "",
+                        procedure_roles.name(), "" ) );
         new ProcedureConfig( config );
     }
 
     @Test
     void shouldHaveConfigsWithWildcardProcedureAllowed()
     {
-        Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "role1", PROC_ALLOWED_SETTING_ROLES,
+        Config config = Config.defaults( stringMap( default_allowed.name(), "role1", procedure_roles.name(),
                         "xyz*:anotherRole" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
         assertThat( procConfig.rolesFor( "xyzabc" ), equalTo( arrayOf( "anotherRole" ) ) );
@@ -124,7 +125,7 @@ class ProcedureConfigTest
     @Test
     void shouldHaveConfigsWithOverlappingMatchingWildcards()
     {
-        Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "default", PROC_ALLOWED_SETTING_ROLES,
+        Config config = Config.defaults( stringMap( default_allowed.name(), "default", procedure_roles.name(),
                         "apoc.*:apoc;apoc.load.*:loader;apoc.trigger.*:trigger;apoc.trigger.add:TriggerHappy" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
         assertThat( procConfig.rolesFor( "xyz" ), equalTo( arrayOf( "default" ) ) );

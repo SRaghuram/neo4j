@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -40,6 +39,7 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.System.getProperty;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
@@ -83,7 +83,7 @@ public class CheckPointingLogRotationStressTesting
         DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( storeDir );
         DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
-                .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.keep_logical_logs, FALSE )
                 .setConfig( GraphDatabaseSettings.check_point_interval_time, CHECK_POINT_INTERVAL_MINUTES + "m" )
                 .setConfig( GraphDatabaseSettings.tracer, "timer" ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );

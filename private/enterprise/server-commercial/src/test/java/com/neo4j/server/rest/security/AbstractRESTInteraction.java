@@ -20,6 +20,7 @@ import org.codehaus.jackson.node.TextNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,8 +31,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -52,6 +53,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
@@ -70,20 +72,22 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
     protected abstract HTTP.Response authenticate( String principalCredentials );
 
-    AbstractRESTInteraction( Map<String,String> config ) throws IOException
+    AbstractRESTInteraction( Map<Setting<?>,String> config ) throws IOException
     {
+        Map<String,String> stringMap = new HashMap<>( config.size() );
+        config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
+
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
         builder = builder
-                .withProperty( new BoltConnector( "bolt" ).type.name(), "BOLT" )
-                .withProperty( new BoltConnector( "bolt" ).enabled.name(), "true" )
-                .withProperty( new BoltConnector( "bolt" ).encryption_level.name(), OPTIONAL.name() )
-                .withProperty( LegacySslPolicyConfig.tls_key_file.name(),
+                .withProperty( BoltConnector.group( "bolt" ).enabled.name(), TRUE )
+                .withProperty( BoltConnector.group( "bolt" ).encryption_level.name(), OPTIONAL.name() )
+                .withProperty( GraphDatabaseSettings.tls_key_file.name(),
                         NeoInteractionLevel.tempPath( "key", ".key" ) )
-                .withProperty( LegacySslPolicyConfig.tls_certificate_file.name(),
+                .withProperty( GraphDatabaseSettings.tls_certificate_file.name(),
                         NeoInteractionLevel.tempPath( "cert", ".cert" ) )
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( true ) );
 
-        for ( Map.Entry<String,String> entry : config.entrySet() )
+        for ( Map.Entry<String,String> entry : stringMap.entrySet() )
         {
             builder = builder.withProperty( entry.getKey(), entry.getValue() );
         }

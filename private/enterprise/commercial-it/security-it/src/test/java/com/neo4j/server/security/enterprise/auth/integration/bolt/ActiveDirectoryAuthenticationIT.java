@@ -35,6 +35,8 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgFailure;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 /*
@@ -62,7 +64,7 @@ public class ActiveDirectoryAuthenticationIT
         server.ensureDatabase( asSettings( overrideSettingsFunction ) );
     }
 
-    private Consumer<Map<String,String>> asSettings( Consumer<Map<Setting<?>,String>> overrideSettingsFunction )
+    private Consumer<Map<Setting<?>,String>> asSettings( Consumer<Map<Setting<?>,String>> overrideSettingsFunction )
     {
         return settings ->
         {
@@ -70,7 +72,7 @@ public class ActiveDirectoryAuthenticationIT
             overrideSettingsFunction.accept( o );
             for ( Setting key : o.keySet() )
             {
-                settings.put( key.name(), o.get( key ) );
+                settings.put( key, o.get( key ) );
             }
         };
     }
@@ -84,12 +86,12 @@ public class ActiveDirectoryAuthenticationIT
     {
         return settings ->
         {
-            settings.put( GraphDatabaseSettings.auth_enabled, "true" );
+            settings.put( GraphDatabaseSettings.auth_enabled, TRUE );
             settings.put( SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME );
             settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
             settings.put( SecuritySettings.ldap_server, "activedirectory.neohq.net" );
             settings.put( SecuritySettings.ldap_authentication_user_dn_template, "CN={0},CN=Users,DC=neo4j,DC=com" );
-            settings.put( SecuritySettings.ldap_authorization_use_system_account, "false" );
+            settings.put( SecuritySettings.ldap_authorization_use_system_account, FALSE );
             settings.put( SecuritySettings.ldap_authorization_user_search_base, "cn=Users,dc=neo4j,dc=com" );
             settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(CN={0}))" );
             settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "memberOf" );
@@ -103,7 +105,7 @@ public class ActiveDirectoryAuthenticationIT
 
     private Consumer<Map<Setting<?>,String>> useSystemAccountSettings = settings ->
     {
-        settings.put( SecuritySettings.ldap_authorization_use_system_account, "true" );
+        settings.put( SecuritySettings.ldap_authorization_use_system_account, TRUE );
         settings.put( SecuritySettings.ldap_authorization_system_username, "Neo4j System" );
         settings.put( SecuritySettings.ldap_authorization_system_password, "ProudListingsMedia1" );
     };
@@ -225,7 +227,7 @@ public class ActiveDirectoryAuthenticationIT
     public void shouldBeAbleToLoginAndAuthorizeReaderUsingStartTlsOnEC2() throws Throwable
     {
         restartNeo4jServerWithOverriddenSettings( useSystemAccountSettings
-                .andThen( settings -> settings.put( SecuritySettings.ldap_use_starttls, "true" ) ) );
+                .andThen( settings -> settings.put( SecuritySettings.ldap_use_starttls, TRUE ) ) );
 
         assertAuth( "neo", "ProudListingsMedia1" );
         assertReadSucceeds();
@@ -235,7 +237,7 @@ public class ActiveDirectoryAuthenticationIT
     @Test
     public void shouldBeAbleToLoginAndAuthorizeReaderWithUserLdapContextUsingStartTlsOnEC2() throws Throwable
     {
-        restartNeo4jServerWithOverriddenSettings( settings -> settings.put( SecuritySettings.ldap_use_starttls, "true" ) );
+        restartNeo4jServerWithOverriddenSettings( settings -> settings.put( SecuritySettings.ldap_use_starttls, TRUE ) );
 
         assertAuth( "neo", "ProudListingsMedia1" );
         assertReadSucceeds();

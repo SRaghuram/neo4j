@@ -30,6 +30,7 @@ import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 
 import static java.lang.ProcessBuilder.Redirect;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class ServerDatabase implements Database
 {
@@ -43,7 +44,7 @@ public class ServerDatabase implements Database
     {
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                    .setBoltUri( generateBoltUriString() )
-                   .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
+                   .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
                    .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
                    .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() )
                    .withSetting( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() )

@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
@@ -72,7 +73,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   val VERBOSE = false // Lots of debug prints
 
-  override def databaseConfig = Map(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "false")
+  override def databaseConfig = Map(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE)
 
   test("shortestPath with same start and end node should return zero length path with no fallback") {
     val start = System.currentTimeMillis

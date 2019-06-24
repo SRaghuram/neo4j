@@ -33,6 +33,7 @@ import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -55,6 +56,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.AuthToken.BASIC_SCHEME;
 import static org.neo4j.kernel.api.security.AuthToken.CREDENTIALS;
@@ -73,12 +75,12 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     private FileSystemAbstraction fileSystem;
     private CommercialAuthManager authManager;
 
-    BoltInteraction( Map<String,String> config )
+    BoltInteraction( Map<Setting<?>,String> config )
     {
         this( config, EphemeralFileSystemAbstraction::new );
     }
 
-    BoltInteraction( Map<String,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
+    BoltInteraction( Map<Setting<?>,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
     {
         TestCommercialDatabaseManagementServiceBuilder factory = new TestCommercialDatabaseManagementServiceBuilder();
         fileSystem = fileSystemSupplier.get();
@@ -87,7 +89,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
                 () -> fileSystem,
                 settings ->
                 {
-                    settings.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
+                    settings.put( GraphDatabaseSettings.auth_enabled, TRUE );
                     settings.putAll( config );
                 } );
         server.ensureDatabase( r ->

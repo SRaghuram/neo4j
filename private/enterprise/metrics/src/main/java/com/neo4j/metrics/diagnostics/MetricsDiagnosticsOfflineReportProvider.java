@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.diagnostics;
 
-import com.neo4j.metrics.MetricsSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     @Override
     protected List<DiagnosticsReportSource> provideSources( Set<String> classifiers )
     {
-        File metricsDirectory = config.get( MetricsSettings.csvPath );
+        File metricsDirectory = config.get( MetricsSettings.csvPath ).toFile();
         if ( fs.fileExists( metricsDirectory ) && fs.isDirectory( metricsDirectory ) )
         {
             List<DiagnosticsReportSource> files = new ArrayList<>();

@@ -6,24 +6,20 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Setting;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<CommercialLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config )
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
             throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );

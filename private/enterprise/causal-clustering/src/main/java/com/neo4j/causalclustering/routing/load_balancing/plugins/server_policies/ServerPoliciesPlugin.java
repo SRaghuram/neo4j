@@ -26,8 +26,7 @@ import java.util.stream.Stream;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -59,16 +58,9 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private DatabaseIdRepository databaseIdRepository;
 
     @Override
-    public void validate( Config config, Log log ) throws InvalidSettingException
+    public void validate( Config config, Log log )
     {
-        try
-        {
-            FilteringPolicyLoader.load( config, PLUGIN_NAME, log );
-        }
-        catch ( InvalidFilterSpecification e )
-        {
-            throw new InvalidSettingException( "Invalid filter specification", e );
-        }
+        FilteringPolicyLoader.loadServerPolicies( config, log );
     }
 
     @Override
@@ -79,7 +71,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         this.leaderService = leaderService;
         this.timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
-        this.policies = FilteringPolicyLoader.load( config, PLUGIN_NAME, logProvider.getLog( getClass() ) );
+        this.policies = FilteringPolicyLoader.loadServerPolicies( config, logProvider.getLog( getClass() ) );
         this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
         this.databaseIdRepository = databaseIdRepository;
     }
@@ -109,7 +101,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                 readEndpoints( coreTopology, rrTopology, policy, dbId ), timeToLive );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
+    private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
     {
         Set<ServerInfo> routers = coreTopology.members().entrySet().stream()
                 .map( e ->
@@ -133,12 +125,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                 .map( ServerInfo::boltAddress ).collect( Collectors.toList() );
     }
 
-    private List<AdvertisedSocketAddress> writeEndpoints( DatabaseId databaseId )
+    private List<SocketAddress> writeEndpoints( DatabaseId databaseId )
     {
         return leaderService.getLeaderBoltAddress( databaseId ).map( List::of ).orElse( emptyList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
+    private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
             DatabaseId databaseId )
     {
 

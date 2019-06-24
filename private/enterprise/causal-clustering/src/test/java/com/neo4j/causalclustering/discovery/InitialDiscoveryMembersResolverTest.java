@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static java.util.Arrays.asList;
@@ -35,29 +35,27 @@ public class InitialDiscoveryMembersResolverTest
     @Mock
     private HostnameResolver hostnameResolver;
 
-    private AdvertisedSocketAddress input1 = new AdvertisedSocketAddress( "foo.bar", 123 );
-    private AdvertisedSocketAddress input2 = new AdvertisedSocketAddress( "baz.bar", 432 );
-    private AdvertisedSocketAddress input3 = new AdvertisedSocketAddress( "quux.bar", 789 );
+    private SocketAddress input1 = new SocketAddress( "foo.bar", 123 );
+    private SocketAddress input2 = new SocketAddress( "baz.bar", 432 );
+    private SocketAddress input3 = new SocketAddress( "quux.bar", 789 );
 
-    private AdvertisedSocketAddress output1 = new AdvertisedSocketAddress( "a.b", 3 );
-    private AdvertisedSocketAddress output2 = new AdvertisedSocketAddress( "b.b", 34 );
-    private AdvertisedSocketAddress output3 = new AdvertisedSocketAddress( "c.b", 7 );
+    private SocketAddress output1 = new SocketAddress( "a.b", 3 );
+    private SocketAddress output2 = new SocketAddress( "b.b", 34 );
+    private SocketAddress output3 = new SocketAddress( "c.b", 7 );
 
-    private String configString = Stream.of( input1, input2, input3 ).map( AdvertisedSocketAddress::toString ).collect( Collectors.joining( "," ) );
+    private String configString = Stream.of( input1, input2, input3 ).map( SocketAddress::toString ).collect( Collectors.joining( "," ) );
 
     @Test
     public void shouldReturnEmptyCollectionIfEmptyInitialMembers()
     {
         // given
-        Config config = Config.builder()
-                .withSetting( initial_discovery_members, "" )
-                .build();
+        Config config = Config.defaults( initial_discovery_members, "" );
 
         InitialDiscoveryMembersResolver
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
 
         // when
-        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+        Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
         assertThat( result, empty() );
@@ -67,9 +65,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldResolveAndReturnAllConfiguredAddresses()
     {
         // given
-        Config config = Config.builder()
-                .withSetting( initial_discovery_members, configString )
-                .build();
+        Config config = Config.defaults( initial_discovery_members, configString );
 
         when( hostnameResolver.resolve( input1 ) ).thenReturn( asList( output1, output2 ) );
         when( hostnameResolver.resolve( input2 ) ).thenReturn( emptyList() );
@@ -79,7 +75,7 @@ public class InitialDiscoveryMembersResolverTest
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
 
         // when
-        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+        Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
         assertThat( result, containsInAnyOrder( output1, output2, output3 ) );
@@ -89,9 +85,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldDeDupeConfiguredAddresses()
     {
         // given
-        Config config = Config.builder()
-                .withSetting( initial_discovery_members, configString )
-                .build();
+        Config config = Config.defaults( initial_discovery_members, configString );
 
         when( hostnameResolver.resolve( any() ) ).thenReturn( singletonList( output1 ) );
 
@@ -99,7 +93,7 @@ public class InitialDiscoveryMembersResolverTest
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
 
         // when
-        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+        Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
         assertThat( result, contains( output1 ) );
@@ -113,9 +107,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldReturnConfiguredAddressesInOrder()
     {
         // given
-        Config config = Config.builder()
-                .withSetting( initial_discovery_members, configString )
-                .build();
+        Config config = Config.defaults( initial_discovery_members, configString );
 
         when( hostnameResolver.resolve( any() ) )
                 .thenReturn( singletonList( output3 ) )
@@ -126,7 +118,7 @@ public class InitialDiscoveryMembersResolverTest
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
 
         // when
-        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+        Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
         assertThat( result, contains( output1, output2, output3 ) );
@@ -136,13 +128,11 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldApplyTransform()
     {
         // given
-        AdvertisedSocketAddress input1 = new AdvertisedSocketAddress( "foo.bar", 123 );
+        SocketAddress input1 = new SocketAddress( "foo.bar", 123 );
 
-        AdvertisedSocketAddress output1 = new AdvertisedSocketAddress( "a.b", 3 );
+        SocketAddress output1 = new SocketAddress( "a.b", 3 );
 
-        Config config = Config.builder()
-                .withSetting( initial_discovery_members, input1.toString() )
-                .build();
+        Config config = Config.defaults( initial_discovery_members, input1.toString() );
 
         when( hostnameResolver.resolve( input1 ) ).thenReturn( singletonList( output1 ) );
 

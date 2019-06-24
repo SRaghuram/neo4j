@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -15,21 +13,23 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
+
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 
 public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
 {
     private final HostnameResolver hostnameResolver;
-    private final List<AdvertisedSocketAddress> advertisedSocketAddresses;
+    private final List<SocketAddress> advertisedSocketAddresses;
 
     public InitialDiscoveryMembersResolver( HostnameResolver hostnameResolver, Config config )
     {
         this.hostnameResolver = hostnameResolver;
-        advertisedSocketAddresses = config.get( CausalClusteringSettings.initial_discovery_members );
+        advertisedSocketAddresses = config.get( initial_discovery_members );
     }
 
     @Override
-    public <C extends Collection<T>,T> C resolve( Function<AdvertisedSocketAddress,T> transform, Supplier<C> collectionFactory )
+    public <C extends Collection<T>,T> C resolve( Function<SocketAddress,T> transform, Supplier<C> collectionFactory )
     {
         return advertisedSocketAddresses
                 .stream()
@@ -40,10 +40,10 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
                 .collect( Collectors.toCollection( collectionFactory ) );
     }
 
-    public static final Comparator<AdvertisedSocketAddress> advertisedSockedAddressComparator =
-            Comparator.comparing( AdvertisedSocketAddress::getHostname ).thenComparingInt( AdvertisedSocketAddress::getPort );
+    public static final Comparator<SocketAddress> advertisedSockedAddressComparator =
+            Comparator.comparing( SocketAddress::getHostname ).thenComparingInt( SocketAddress::getPort );
 
-    public static Comparator<AdvertisedSocketAddress> advertisedSocketAddressComparator()
+    public static Comparator<SocketAddress> advertisedSocketAddressComparator()
     {
         return advertisedSockedAddressComparator;
     }

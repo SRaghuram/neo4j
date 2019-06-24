@@ -23,9 +23,9 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.logging.Log;
@@ -33,6 +33,8 @@ import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.synchronizedList;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
 public class CausalClusterInProcessBuilder
@@ -279,7 +281,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
 
                 builder.withConfig( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.CORE.name() );
-                builder.withConfig( CausalClusteringSettings.multi_dc_license.name(), "true" );
+                builder.withConfig( CausalClusteringSettings.multi_dc_license.name(), TRUE );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
 
                 builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( discoveryPort ) );
@@ -291,7 +293,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "core," + "core" + coreId );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
 
-                builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+                builder.withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
 
                 config.forEach( builder::withConfig );
 
@@ -328,7 +330,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.server_groups.name(), "replica," + "replica" + replicaId );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
 
-                builder.withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+                builder.withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
 
                 config.forEach( builder::withConfig );
 
@@ -349,20 +351,17 @@ public class CausalClusterInProcessBuilder
 
         private static void configureConnectors( int boltPort, int httpPort, int httpsPort, Neo4jBuilder builder )
         {
-            builder.withConfig( new BoltConnector( "bolt" ).type.name(), "BOLT" );
-            builder.withConfig( new BoltConnector( "bolt" ).enabled.name(), "true" );
-            builder.withConfig( new BoltConnector( "bolt" ).listen_address.name(), specifyPortOnly( boltPort ) );
-            builder.withConfig( new BoltConnector( "bolt" ).advertised_address.name(), specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.group( "bolt" ).enabled.name(), TRUE );
+            builder.withConfig( BoltConnector.group( "bolt" ).listen_address.name(), specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.group( "bolt" ).advertised_address.name(), specifyPortOnly( boltPort ) );
 
-            builder.withConfig( new HttpConnector( "http", HttpConnector.Encryption.NONE ).type.name(), "HTTP" );
-            builder.withConfig( new HttpConnector( "http", HttpConnector.Encryption.NONE ).enabled.name(), "true" );
-            builder.withConfig( new HttpConnector( "http", HttpConnector.Encryption.NONE ).listen_address.name(), specifyPortOnly( httpPort ) );
-            builder.withConfig( new HttpConnector( "http", HttpConnector.Encryption.NONE ).advertised_address.name(), specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.group( "http" ).enabled.name(), TRUE );
+            builder.withConfig( HttpConnector.group( "http" ).listen_address.name(), specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.group( "http" ).advertised_address.name(), specifyPortOnly( httpPort ) );
 
-            builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).type.name(), "HTTP" );
-            builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).enabled.name(), "true" );
-            builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).listen_address.name(), specifyPortOnly( httpsPort ) );
-            builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).advertised_address.name(), specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.group( "https" ).enabled.name(), TRUE );
+            builder.withConfig( HttpsConnector.group( "https" ).listen_address.name(), specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.group( "https" ).advertised_address.name(), specifyPortOnly( httpsPort ) );
         }
 
         public List<InProcessNeo4j> getCoreNeo4j()

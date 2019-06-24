@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
@@ -15,10 +16,10 @@ import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.ConfigUtils;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.consistency.ConsistencyCheckOptions;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
@@ -31,7 +32,7 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.kernel.impl.util.Converters.toAdvertisedSocketAddress;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 
@@ -88,7 +89,7 @@ public class OnlineBackupCommand extends AbstractCommand
     protected void execute()
     {
         backupDir = requireExisting( backupDir );
-        final var address = getAddress( from );
+        final var address = SettingValueParsers.SOCKET_ADDRESS.parse( from );
         final var configFile = ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME );
         final var config = buildConfig( configFile, additionalConfig, backupDir );
         final var onlineBackupContext = OnlineBackupContext.builder()
@@ -143,34 +144,19 @@ public class OnlineBackupCommand extends AbstractCommand
         }
     }
 
-    private static AdvertisedSocketAddress getAddress( String s )
-    {
-        return toAdvertisedSocketAddress( new HostnamePort( s ), DEFAULT_BACKUP_HOST, DEFAULT_BACKUP_PORT );
-    }
-
     private Config buildConfig( Path configFile, Path additionalConfigFile, Path backupDirectory )
     {
-        Config config = Config.fromFile( configFile )
-                .withHome( backupDirectory )
-                .withConnectorsDisabled()
-                .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
+        Config cfg = Config.newBuilder()
+                .fromFileNoThrow( configFile.toFile() )
+                .fromFileNoThrow( additionalConfigFile )
+                .set( GraphDatabaseSettings.neo4j_home, backupDirectory.toString() )
+                .set( pagecache_memory, pagecacheMemory )
+                .set( pagecache_warmup_enabled, FALSE )
+                .set( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .build();
+        ConfigUtils.disableAllConnectors( cfg );
 
-        if ( additionalConfigFile != null )
-        {
-            Config additionalConfig = Config.fromFile( additionalConfigFile ).build();
-            config.augment( additionalConfig );
-        }
-
-        // We replace the page cache memory setting.
-        // Any other custom page swapper, etc. settings are preserved and used.
-        config.augment( pagecache_memory, pagecacheMemory );
-        // warmup is also disabled because it is not needed for temporary databases
-        config.augment( pagecache_warmup_enabled.name(), Settings.FALSE );
-
-        // Disable all metrics to avoid port binding and JMX naming exceptions
-        config.augment( "metrics.enabled", Settings.FALSE );
-        return config;
+        return cfg;
     }
 
     private LogProvider buildInternalLogProvider()

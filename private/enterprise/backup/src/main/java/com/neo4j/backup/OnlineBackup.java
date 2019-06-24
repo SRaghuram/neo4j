@@ -15,7 +15,6 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
@@ -123,22 +122,6 @@ public class OnlineBackup
     public OnlineBackup withOutputStream( OutputStream outputStream )
     {
         this.outputStream = requireNonNull( outputStream, "outputStream" );
-        return this;
-    }
-
-    /**
-     * Override a default configuration value for the backup.
-     * <p>
-     * {@link Setting#getDefaultValue()} is used for every setting by default.
-     *
-     * @param setting the setting key to override.
-     * @param value new value as string.
-     * @return this {@code OnlineBackup} instance.
-     * @throws NullPointerException if the given {@link Setting} is {@code null}.
-     */
-    public OnlineBackup withSetting( Setting<?> setting, String value )
-    {
-        config.augment( requireNonNull( setting, "setting" ), value );
         return this;
     }
 

@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
@@ -49,7 +50,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class BookmarkIT
@@ -128,12 +129,10 @@ public class BookmarkIT
 
     private static Config configWithBoltEnabled()
     {
-        Config config = Config.defaults();
-
-        config.augment( "dbms.connector.bolt.enabled", TRUE );
-        config.augment( "dbms.connector.bolt.listen_address", "localhost:0" );
-
-        return config;
+        return Config.newBuilder()
+                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .set( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+                .build();
     }
 
     private static String boltAddress( GraphDatabaseAPI db )

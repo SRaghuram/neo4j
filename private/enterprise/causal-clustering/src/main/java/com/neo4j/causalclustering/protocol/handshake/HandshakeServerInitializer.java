@@ -15,7 +15,7 @@ import io.netty.channel.socket.SocketChannel;
 import java.net.InetSocketAddress;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.neo4j.internal.helpers.SocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

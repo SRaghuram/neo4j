@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -352,10 +352,10 @@ class GlobalTopologyStateTest
 
     private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )
     {
-        var raftAddress = new AdvertisedSocketAddress( "raft-" + memberId.getUuid(), 1 );
-        var catchupAddress = new AdvertisedSocketAddress( "catchup-" + memberId.getUuid(), 2 );
-        var boltUri = new ConnectorUri( bolt, new AdvertisedSocketAddress( "bolt-" + memberId.getUuid(), 3 ) );
-        var httpUri = new ConnectorUri( http, new AdvertisedSocketAddress( "http-" + memberId.getUuid(), 4 ) );
+        var raftAddress = new SocketAddress( "raft-" + memberId.getUuid(), 1 );
+        var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 2 );
+        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 3 ) );
+        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 4 ) );
         var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
         var groups = Set.of( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         var refuseToBeLeader = memberId.getUuid().getLeastSignificantBits() % 2 == 0;
@@ -364,9 +364,9 @@ class GlobalTopologyStateTest
 
     private static ReadReplicaInfo newReadReplicaInfo( MemberId memberId, Set<DatabaseId> databaseIds )
     {
-        var catchupAddress = new AdvertisedSocketAddress( "catchup-" + memberId.getUuid(), 1 );
-        var boltUri = new ConnectorUri( bolt, new AdvertisedSocketAddress( "bolt-" + memberId.getUuid(), 2 ) );
-        var httpUri = new ConnectorUri( http, new AdvertisedSocketAddress( "http-" + memberId.getUuid(), 3 ) );
+        var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 1 );
+        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 2 ) );
+        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 3 ) );
         var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
         var groups = Set.of( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -183,8 +183,8 @@ class UserDefinedConfigurationStrategyTest
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
     {
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( List.of(
-                new ConnectorUri( bolt, new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
-        AdvertisedSocketAddress catchupAddress = new AdvertisedSocketAddress( "localhost", offset.getAndIncrement() );
+                new ConnectorUri( bolt, new SocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
+        SocketAddress catchupAddress = new SocketAddress( "localhost", offset.getAndIncrement() );
         Set<String> groups = groupGenerator.apply( memberId );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID_REPOSITORY.defaultDatabase() );
         return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );

@@ -12,7 +12,6 @@ import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -22,6 +21,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class StartOnExistingDbWithIndexIT
 {
@@ -59,7 +59,8 @@ public class StartOnExistingDbWithIndexIT
     {
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setInternalLogProvider( logProvider )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 

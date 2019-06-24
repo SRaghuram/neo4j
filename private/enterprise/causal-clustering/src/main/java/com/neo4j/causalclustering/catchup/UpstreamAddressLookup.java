@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class UpstreamAddressLookup
@@ -24,7 +24,7 @@ public class UpstreamAddressLookup
         this.topologyService = topologyService;
     }
 
-    public AdvertisedSocketAddress lookupAddressForDatabase( DatabaseId databaseId ) throws CatchupAddressResolutionException
+    public SocketAddress lookupAddressForDatabase( DatabaseId databaseId ) throws CatchupAddressResolutionException
     {
         try
         {

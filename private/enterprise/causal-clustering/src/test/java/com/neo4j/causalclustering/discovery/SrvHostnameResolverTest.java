@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
@@ -57,8 +57,8 @@ public class SrvHostnameResolverTest
         );
 
         // when
-        Collection<AdvertisedSocketAddress> resolvedAddresses = resolver.resolve(
-                new AdvertisedSocketAddress( "_discovery._tcp.google.com", 0 )
+        Collection<SocketAddress> resolvedAddresses = resolver.resolve(
+                new SocketAddress( "_discovery._tcp.google.com", 0 )
         );
 
         // then
@@ -84,7 +84,7 @@ public class SrvHostnameResolverTest
 
         // when
         resolver.resolve(
-                new AdvertisedSocketAddress( "_resolutionDetailsAreLoggedToUserLogs._test.neo4j.com", 0 )
+                new SocketAddress( "_resolutionDetailsAreLoggedToUserLogs._test.neo4j.com", 0 )
         );
 
         // then
@@ -95,7 +95,7 @@ public class SrvHostnameResolverTest
     public void unknownHostExceptionsAreLoggedAsErrors()
     {
         // when
-        resolver.resolve( new AdvertisedSocketAddress( "unknown.com", 0 ) );
+        resolver.resolve( new SocketAddress( "unknown.com", 0 ) );
 
         // then
         logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
@@ -105,7 +105,7 @@ public class SrvHostnameResolverTest
     public void emptyRecordListsAreLoggedAsErrors()
     {
         // when
-        resolver.resolve( new AdvertisedSocketAddress( "emptyrecord.com", 0 ) );
+        resolver.resolve( new SocketAddress( "emptyrecord.com", 0 ) );
 
         // then
         logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
@@ -131,8 +131,8 @@ public class SrvHostnameResolverTest
                 new SrvHostnameResolver( new SimpleLogService( userLogProvider, logProvider ), mockResolver, config, RetryStrategyTest.testRetryStrategy( 2 ) );
 
         // when
-        Collection<AdvertisedSocketAddress> resolvedAddresses = resolver.resolve(
-                new AdvertisedSocketAddress( "_discovery._tcp.google.com", 0 )
+        Collection<SocketAddress> resolvedAddresses = resolver.resolve(
+                new SocketAddress( "_discovery._tcp.google.com", 0 )
         );
 
         // then

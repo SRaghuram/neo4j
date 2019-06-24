@@ -64,6 +64,7 @@ import static com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
 public class RunWorkloadCommand implements Runnable
@@ -355,7 +356,7 @@ public class RunWorkloadCommand implements Runnable
             }
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
                                                  .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
-                                                 .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
+                                                 .withSetting( GraphDatabaseSettings.cypher_hints_error, TRUE )
                                                  .removeSetting( load_csv_file_url_root );
             if ( executionMode.equals( ExecutionMode.PLAN ) )
             {

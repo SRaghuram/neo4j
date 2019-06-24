@@ -15,11 +15,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
+public class RaftSender implements Outbound<SocketAddress,Message>
 {
     private final ChannelPoolService channels;
     private final Log log;
@@ -31,7 +31,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
     }
 
     @Override
-    public void send( AdvertisedSocketAddress to, Message message, boolean block )
+    public void send( SocketAddress to, Message message, boolean block )
     {
         Future<Void> fOperation = channels.acquire( to )
                 .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );

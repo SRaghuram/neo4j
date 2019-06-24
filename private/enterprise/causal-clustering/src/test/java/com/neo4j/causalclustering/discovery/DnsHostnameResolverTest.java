@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
@@ -45,8 +45,8 @@ public class DnsHostnameResolverTest
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
 
         // when
-        Collection<AdvertisedSocketAddress> resolvedAddresses =
-                resolver.resolve( new AdvertisedSocketAddress( "google.com", 80 ) );
+        Collection<SocketAddress> resolvedAddresses =
+                resolver.resolve( new SocketAddress( "google.com", 80 ) );
 
         // then
         assertEquals( 2, resolvedAddresses.size() );
@@ -61,8 +61,8 @@ public class DnsHostnameResolverTest
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
 
         // when
-        List<AdvertisedSocketAddress> resolvedAddresses =
-                new ArrayList<>( resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) ) );
+        List<SocketAddress> resolvedAddresses =
+                new ArrayList<>( resolver.resolve( new SocketAddress( "google.com", 1234 ) ) );
 
         // then
         assertEquals( 2, resolvedAddresses.size() );
@@ -77,7 +77,7 @@ public class DnsHostnameResolverTest
         mockDomainNameResolver.setHostnameAddresses( "google.com", asList( "1.2.3.4", "5.6.7.8" ) );
 
         // when
-        resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) );
+        resolver.resolve( new SocketAddress( "google.com", 1234 ) );
 
         // then
         userLogProvider.rawMessageMatcher().assertContains( "Resolved initial host '%s' to %s" );
@@ -87,7 +87,7 @@ public class DnsHostnameResolverTest
     public void unknownHostExceptionsAreLoggedAsErrors()
     {
         // when
-        resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) );
+        resolver.resolve( new SocketAddress( "google.com", 1234 ) );
 
         // then
         logProvider.rawMessageMatcher().assertContains( "Failed to resolve host '%s'" );
@@ -108,8 +108,8 @@ public class DnsHostnameResolverTest
                 new DnsHostnameResolver( new SimpleLogService( userLogProvider, logProvider ), mockResolver, config, RetryStrategyTest.testRetryStrategy( 2 ) );
 
         // when
-        List<AdvertisedSocketAddress> resolvedAddresses =
-                new ArrayList<>( resolver.resolve( new AdvertisedSocketAddress( "google.com", 1234 ) ) );
+        List<SocketAddress> resolvedAddresses =
+                new ArrayList<>( resolver.resolve( new SocketAddress( "google.com", 1234 ) ) );
 
         // then
         verify( mockResolver, times( 3 ) ).resolveDomainName( "google.com" );

@@ -26,12 +26,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
@@ -42,6 +45,7 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.STRING;
 
 public class Stores
 {
@@ -168,7 +172,8 @@ public class Stores
 
         // will create an empty database directory under top level
         new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
-                .setConfigRaw( config.neo4jConfig().toMap() )
+                .setConfig( config.neo4jConfig().toMap().entrySet().stream()
+                        .collect( Collectors.toMap( e -> SettingImpl.newBuilder( e.getKey(), STRING, null ).build(), Map.Entry::getValue ) ) )
                 .build()
                 .shutdown();
 

@@ -13,14 +13,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class FakeTopologyService implements TopologyService
 {
     private final DatabaseCoreTopology coreTopology;
     private final DatabaseReadReplicaTopology readReplicaTopology;
-    private final Map<MemberId,AdvertisedSocketAddress> catchupAddresses;
+    private final Map<MemberId,SocketAddress> catchupAddresses;
 
     public FakeTopologyService( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology readReplicaTopology )
     {
@@ -64,7 +64,7 @@ public class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         var address = catchupAddresses.get( upstream );
         if ( address == null )
@@ -106,10 +106,10 @@ public class FakeTopologyService implements TopologyService
     {
     }
 
-    private static Map<MemberId,AdvertisedSocketAddress> extractCatchupAddressesMap( DatabaseCoreTopology coreTopology,
+    private static Map<MemberId,SocketAddress> extractCatchupAddressesMap( DatabaseCoreTopology coreTopology,
             DatabaseReadReplicaTopology readReplicaTopology )
     {
-        var catchupAddressMap = new HashMap<MemberId,AdvertisedSocketAddress>();
+        var catchupAddressMap = new HashMap<MemberId,SocketAddress>();
 
         for ( var entry : coreTopology.members().entrySet() )
         {

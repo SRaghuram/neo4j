@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -60,7 +60,7 @@ class BackupStrategyWrapper
     private void performBackupWithoutLifecycle( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
         Path backupLocation = onlineBackupContext.getDatabaseBackupDir();
-        AdvertisedSocketAddress address = onlineBackupContext.getAddress();
+        SocketAddress address = onlineBackupContext.getAddress();
         Config config = onlineBackupContext.getConfig();
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
 
@@ -92,7 +92,7 @@ class BackupStrategyWrapper
         }
     }
 
-    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, AdvertisedSocketAddress address, boolean fallbackToFullAllowed )
+    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, SocketAddress address, boolean fallbackToFullAllowed )
             throws BackupExecutionException
     {
         try
@@ -139,7 +139,7 @@ class BackupStrategyWrapper
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
 
-        AdvertisedSocketAddress address = onlineBackupContext.getAddress();
+        SocketAddress address = onlineBackupContext.getAddress();
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
         backupStrategy.performFullBackup( backupLayout, address );
 

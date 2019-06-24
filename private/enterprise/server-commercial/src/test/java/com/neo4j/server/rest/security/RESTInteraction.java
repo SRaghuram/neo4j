@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import javax.ws.rs.core.HttpHeaders;
 
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.server.HTTP;
 
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
@@ -20,7 +21,7 @@ import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 class RESTInteraction extends AbstractRESTInteraction
 {
 
-    RESTInteraction( Map<String,String> config ) throws IOException
+    RESTInteraction( Map<Setting<?>,String> config ) throws IOException
     {
         super( config );
     }

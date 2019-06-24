@@ -5,6 +5,7 @@
  */
 package com.neo4j.metrics;
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.metrics.global.MetricsManager;
 import com.neo4j.test.extension.CommercialDbmsExtension;
@@ -15,7 +16,6 @@ import java.io.File;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -47,6 +47,8 @@ import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
 class DatabaseMetricsExtensionIT
@@ -64,14 +66,14 @@ class DatabaseMetricsExtensionIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, Settings.TRUE );
-        builder.setConfig( MetricsSettings.csvEnabled, Settings.TRUE );
+        builder.setConfig( MetricsSettings.metricsEnabled, TRUE );
+        builder.setConfig( MetricsSettings.csvEnabled, TRUE );
         builder.setConfig( cypher_min_replan_interval, "0m" );
         builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
         builder.setConfig( check_point_interval_time, "100ms" );
         builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
         builder.setConfig( record_id_batch_size, "1" );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
     }
 
     @BeforeEach

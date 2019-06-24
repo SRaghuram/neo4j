@@ -39,7 +39,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.TransactionTracingLevel;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -74,10 +73,10 @@ import static org.hamcrest.core.Every.everyItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
@@ -166,7 +165,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void listTransactionWithNullInMetadata() throws Throwable
+    void listTransactionWithNullInMetadata()
     {
         GraphDatabaseFacade graph = neo.getLocalGraph();
 
@@ -257,8 +256,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void listTransactionInitialisationTraceWhenAvailable() throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.transaction_tracing_level.name(), TransactionTracingLevel.ALL.name(),
-                                                 GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.transaction_tracing_level, GraphDatabaseSettings.TransactionTracingLevel.ALL.name(),
+                                                 GraphDatabaseSettings.auth_enabled, FALSE ) );
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
         {
@@ -315,7 +314,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldListAllTransactionsWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
 
         DoubleLatch latch = new DoubleLatch( 2, true );
         OffsetDateTime startTime = getStartTime();
@@ -413,7 +412,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void killAnyTransactionWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
         {
@@ -526,7 +525,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldListAllQueryWithConnectionDetails() throws Throwable
+    void shouldListAllQueryWithConnectionDetails() throws Throwable
     {
         String matchQuery = "MATCH (n) RETURN n";
         String listQueriesQuery = "CALL dbms.listQueries()";
@@ -548,7 +547,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         tx.closeAndAssertSuccess();
     }
 
-    @SuppressWarnings( "unchecked" )
     @Test
     void shouldListAllQueriesWhenRunningAsAdmin() throws Throwable
     {
@@ -609,7 +607,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         read2.closeAndAssertSuccess();
     }
 
-    @SuppressWarnings( "unchecked" )
     @Test
     @DisabledOnOs( OS.WINDOWS )
     void shouldListQueriesEvenIfUsingPeriodicCommit() throws Throwable
@@ -670,7 +667,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldListAllQueriesWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
-        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        neo = setUpNeoServer( Map.of( GraphDatabaseSettings.auth_enabled, FALSE ) );
 
         DoubleLatch latch = new DoubleLatch( 2, true );
         OffsetDateTime startTime = getStartTime();
@@ -1123,7 +1120,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         userManager.addRoleToUser( READER, "notAllowedToWrite" );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
-                itr -> assertEquals( itr.stream().collect( toList() ).size(), 2 ) );
+                itr -> assertEquals( (int) itr.stream().count(), 2 ) );
         // should not be able to do writes
         assertFail( neo.login( "notAllowedToWrite", "abc" ),
                 "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
@@ -1149,7 +1146,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         userManager.addRoleToUser( "role1", "nopermission" );
         // should not be able to invoke any procedure
         assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.allowedReadProcedure()",
-                itr -> assertEquals( itr.stream().collect( toList() ).size(), 1 ) );
+                itr -> assertEquals( (int) itr.stream().count(), 1 ) );
         assertFail( neo.login( "nopermission", "abc" ),
                 "CALL test.allowedReadProcedure() YIELD value MATCH (n:Secret) RETURN n.pass", READ_OPS_NOT_ALLOWED );
     }
@@ -1494,7 +1491,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     ==================================================================================
      */
 
-    private Map<String,Object> getResultRowForMetadataQuery( GraphDatabaseFacade graph )
+    private static Map<String,Object> getResultRowForMetadataQuery( GraphDatabaseFacade graph )
     {
         Result result = graph.execute( "call dbms.getTXMetaData() yield metadata return metadata" );
         Map<String,Object> row = (Map<String,Object>) result.next().get( "metadata" );
@@ -1504,7 +1501,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     //---------- jetty helpers for serving CSV files -----------
 
-    private int getLocalPort( Server server )
+    private static int getLocalPort( Server server )
     {
         return ((ServerConnector) (server.getConnectors()[0])).getLocalPort();
 
@@ -1524,7 +1521,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
-    private Matcher<Map<String,Object>> listedQuery( OffsetDateTime startTime, String username, String query )
+    private static Matcher<Map<String,Object>> listedQuery( OffsetDateTime startTime, String username, String query )
     {
         return allOf(
                 hasQuery( query ),
@@ -1535,7 +1532,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
-    private Matcher<Map<String,Object>> listedTransaction( OffsetDateTime startTime, String username, String currentQuery )
+    private static Matcher<Map<String,Object>> listedTransaction( OffsetDateTime startTime, String username, String currentQuery )
     {
         return allOf(
                 hasCurrentQuery( currentQuery ),
@@ -1561,8 +1558,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
-    private Matcher<Map<String,Object>> listedQueryWithMetaData( OffsetDateTime startTime, String username,
-            String query, Map<String,Object> metaData )
+    private static Matcher<Map<String,Object>> listedQueryWithMetaData( OffsetDateTime startTime, String username, String query, Map<String,Object> metaData )
     {
         return allOf(
                 hasQuery( query ),
@@ -1574,8 +1570,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         );
     }
 
-    private Matcher<Map<String,Object>> listedTransactionWithMetaData( OffsetDateTime startTime, String username,
-            String currentQuery, Map<String,Object> metaData )
+    private static Matcher<Map<String,Object>> listedTransactionWithMetaData( OffsetDateTime startTime, String username, String currentQuery,
+            Map<String,Object> metaData )
     {
         return allOf(
                 hasCurrentQuery( currentQuery ),
@@ -1587,51 +1583,51 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasQuery( String query )
+    private static Matcher<Map<String,Object>> hasQuery( String query )
     {
         return (Matcher) hasEntry( equalTo( "query" ), equalTo( query ) );
     }
 
-    private Matcher<Map<String,Object>> hasCurrentQuery( String currentQuery )
+    private static Matcher<Map<String,Object>> hasCurrentQuery( String currentQuery )
     {
         return (Matcher) hasEntry( equalTo( "currentQuery" ), equalTo( currentQuery ) );
     }
 
-    private Matcher<Map<String,Object>> hasStatus( String statusPrefix )
+    private static Matcher<Map<String,Object>> hasStatus( String statusPrefix )
     {
         return (Matcher) hasEntry( equalTo( "status" ), startsWith( statusPrefix ) );
     }
 
-    private Matcher<Map<String,Object>> hasResultEntry( String entryKey, String entryPrefix )
+    private static Matcher<Map<String,Object>> hasResultEntry( String entryKey, String entryPrefix )
     {
         return (Matcher) hasEntry( equalTo( entryKey ), startsWith( entryPrefix ) );
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasUsername( String username )
+    private static Matcher<Map<String,Object>> hasUsername( String username )
     {
         return (Matcher) hasEntry( equalTo( "username" ), equalTo( username ) );
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasQueryId()
+    private static Matcher<Map<String,Object>> hasQueryId()
     {
         Matcher<String> queryId = equalTo( "queryId" );
         Matcher valueMatcher =
-                allOf( (Matcher) isA( String.class ), (Matcher) containsString( QueryId.QUERY_ID_PREFIX ) );
+                allOf( isA( String.class ), containsString( QueryId.QUERY_ID_PREFIX ) );
         return hasEntry( queryId, valueMatcher );
     }
 
-    private Matcher<Map<String,Object>> hasTransactionId()
+    private static Matcher<Map<String,Object>> hasTransactionId()
     {
         Matcher<String> transactionId = equalTo( "transactionId" );
         Matcher valueMatcher =
-                allOf( (Matcher) isA( String.class ), (Matcher) containsString( "transaction-" ) );
+                allOf( isA( String.class ), containsString( "transaction-" ) );
         return hasEntry( transactionId, valueMatcher );
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasStartTimeAfter( OffsetDateTime startTime )
+    private static Matcher<Map<String,Object>> hasStartTimeAfter( OffsetDateTime startTime )
     {
         return (Matcher) hasEntry( equalTo( "startTime" ), new BaseMatcher<String>()
         {
@@ -1651,19 +1647,19 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasNoParameters()
+    private static Matcher<Map<String,Object>> hasNoParameters()
     {
         return (Matcher) hasEntry( equalTo( "parameters" ), equalTo( emptyMap() ) );
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasProtocol( String expected )
+    private static Matcher<Map<String,Object>> hasProtocol( String expected )
     {
         return (Matcher) hasEntry( "protocol", expected );
     }
 
     @SuppressWarnings( "unchecked" )
-    private Matcher<Map<String,Object>> hasMetaData( Map<String,Object> expected )
+    private static Matcher<Map<String,Object>> hasMetaData( Map<String,Object> expected )
     {
         return (Matcher) hasEntry( equalTo( "metaData" ), allOf(
                 expected.entrySet().stream().map(
@@ -1673,7 +1669,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @SuppressWarnings( {"rawtypes", "unchecked"} )
-    private Function<Entry<String,Object>,Matcher<Entry<String,Object>>> entryMapper()
+    private static Function<Entry<String,Object>,Matcher<Entry<String,Object>>> entryMapper()
     {
         return entry ->
         {
@@ -1699,8 +1695,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         return transformed;
     }
 
-    public static Server createHttpServer(
-            DoubleLatch latch, Barrier.Control innerBarrier, int firstBatchSize, int otherBatchSize )
+    static Server createHttpServer( DoubleLatch latch, Barrier.Control innerBarrier, int firstBatchSize, int otherBatchSize )
     {
         Server server = new Server( 0 );
         server.setHandler( new AbstractHandler()

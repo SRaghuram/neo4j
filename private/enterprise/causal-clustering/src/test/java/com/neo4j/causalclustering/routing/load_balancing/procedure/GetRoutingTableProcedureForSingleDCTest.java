@@ -27,6 +27,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -40,9 +41,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -74,6 +74,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.DefaultParameterValue.nullValue;
 import static org.neo4j.internal.kernel.api.procs.FieldSignature.inputField;
@@ -104,8 +106,8 @@ class GetRoutingTableProcedureForSingleDCTest
     private static Stream<Arguments> routingConfigs()
     {
         return Stream.of(
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, Settings.TRUE ) ),
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, Settings.FALSE ) )
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, TRUE ) ),
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, FALSE ) )
         );
     }
 
@@ -121,7 +123,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderService = new DefaultLeaderService( noLeaderAvailable(), coreTopologyService );
 
         // set the TTL in minutes
-        config.augment( routing_ttl, "10m" );
+        config.set( routing_ttl, Duration.ofMinutes( 10 ) );
 
         var proc = newProcedure( coreTopologyService, leaderService, config );
 
@@ -544,9 +546,9 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private static class ClusterView
     {
-        private final Map<Role,Set<AdvertisedSocketAddress>> clusterView;
+        private final Map<Role,Set<SocketAddress>> clusterView;
 
-        private ClusterView( Map<Role,Set<AdvertisedSocketAddress>> clusterView )
+        private ClusterView( Map<Role,Set<SocketAddress>> clusterView )
         {
             this.clusterView = clusterView;
         }
@@ -580,7 +582,7 @@ class GetRoutingTableProcedureForSingleDCTest
 
         static ClusterView parse( ListValue result )
         {
-            var view = new HashMap<Role,Set<AdvertisedSocketAddress>>();
+            var view = new HashMap<Role,Set<SocketAddress>>();
             for ( var value : result )
             {
                 var single = (MapValue) value;
@@ -593,10 +595,10 @@ class GetRoutingTableProcedureForSingleDCTest
             return new ClusterView( view );
         }
 
-        private static Set<AdvertisedSocketAddress> parseAdresses( ListValue addresses )
+        private static Set<SocketAddress> parseAdresses( ListValue addresses )
         {
 
-            var list = new ArrayList<AdvertisedSocketAddress>( addresses.size() );
+            var list = new ArrayList<SocketAddress>( addresses.size() );
             for ( var address : addresses )
             {
                 list.add( parse( ((TextValue) address).stringValue() ) );
@@ -606,33 +608,33 @@ class GetRoutingTableProcedureForSingleDCTest
             return set;
         }
 
-        private static AdvertisedSocketAddress parse( String address )
+        private static SocketAddress parse( String address )
         {
             var split = address.split( ":" );
             assertEquals( 2, split.length );
-            return new AdvertisedSocketAddress( split[0], Integer.parseInt( split[1] ) );
+            return new SocketAddress( split[0], Integer.parseInt( split[1] ) );
         }
 
         static class Builder
         {
-            private final Map<Role,Set<AdvertisedSocketAddress>> view = new HashMap<>();
+            private final Map<Role,Set<SocketAddress>> view = new HashMap<>();
 
-            void readAddress( AdvertisedSocketAddress address )
+            void readAddress( SocketAddress address )
             {
                 addAddress( Role.READ, address );
             }
 
-            void writeAddress( AdvertisedSocketAddress address )
+            void writeAddress( SocketAddress address )
             {
                 addAddress( Role.WRITE, address );
             }
 
-            void routeAddress( AdvertisedSocketAddress address )
+            void routeAddress( SocketAddress address )
             {
                 addAddress( Role.ROUTE, address );
             }
 
-            private void addAddress( Role role, AdvertisedSocketAddress address )
+            private void addAddress( Role role, SocketAddress address )
             {
                 var advertisedSocketAddresses = view.computeIfAbsent( role, k -> new HashSet<>() );
                 advertisedSocketAddresses.add( address );

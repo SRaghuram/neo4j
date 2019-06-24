@@ -19,7 +19,7 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
@@ -39,7 +39,7 @@ class BackupDelegatorTest
 
     private BackupDelegator subject;
 
-    private final AdvertisedSocketAddress anyAddress = new AdvertisedSocketAddress( "any.address", 1234 );
+    private final SocketAddress anyAddress = new SocketAddress( "any.address", 1234 );
 
     @BeforeEach
     void setup()
@@ -54,7 +54,7 @@ class BackupDelegatorTest
     void tryCatchingUpDelegatesToRemoteStore() throws StoreCopyFailedException, IOException
     {
         // given
-        AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4j.com", 5432 );
+        SocketAddress fromAddress = new SocketAddress( "neo4j.com", 5432 );
         StoreId expectedStoreId = new StoreId( 7, 2, 3, 5, 98 );
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "." ) );
 
@@ -90,7 +90,7 @@ class BackupDelegatorTest
     void fetchStoreIdDelegatesToStoreCopyClient() throws StoreIdDownloadFailedException
     {
         // given
-        AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "neo4.com", 935 );
+        SocketAddress fromAddress = new SocketAddress( "neo4.com", 935 );
 
         // and
         StoreId expectedStoreId = new StoreId( 6, 2, 7, 9, 3 );

@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -25,21 +25,21 @@ public class AnyGroupFilterTest
         // given
         AnyGroupFilter groupFilter = new AnyGroupFilter( asSet( "china-west", "europe" ) );
 
-        ServerInfo serverA = new ServerInfo( new AdvertisedSocketAddress( "bolt", 1 ),
+        ServerInfo serverA = new ServerInfo( new SocketAddress( "bolt", 1 ),
                 new MemberId( UUID.randomUUID() ), asSet( "china-west" ) );
-        ServerInfo serverB = new ServerInfo( new AdvertisedSocketAddress( "bolt", 2 ),
+        ServerInfo serverB = new ServerInfo( new SocketAddress( "bolt", 2 ),
                         new MemberId( UUID.randomUUID() ), asSet( "europe" ) );
-        ServerInfo serverC = new ServerInfo( new AdvertisedSocketAddress( "bolt", 3 ),
+        ServerInfo serverC = new ServerInfo( new SocketAddress( "bolt", 3 ),
                 new MemberId( UUID.randomUUID() ), asSet( "china", "china-west" ) );
-        ServerInfo serverD = new ServerInfo( new AdvertisedSocketAddress( "bolt", 4 ),
+        ServerInfo serverD = new ServerInfo( new SocketAddress( "bolt", 4 ),
                 new MemberId( UUID.randomUUID() ), asSet( "china-west", "china" ) );
-        ServerInfo serverE = new ServerInfo( new AdvertisedSocketAddress( "bolt", 5 ),
+        ServerInfo serverE = new ServerInfo( new SocketAddress( "bolt", 5 ),
                 new MemberId( UUID.randomUUID() ), asSet( "china-east", "asia" ) );
-        ServerInfo serverF = new ServerInfo( new AdvertisedSocketAddress( "bolt", 6 ),
+        ServerInfo serverF = new ServerInfo( new SocketAddress( "bolt", 6 ),
                 new MemberId( UUID.randomUUID() ), asSet( "europe-west" ) );
-        ServerInfo serverG = new ServerInfo( new AdvertisedSocketAddress( "bolt", 7 ),
+        ServerInfo serverG = new ServerInfo( new SocketAddress( "bolt", 7 ),
                 new MemberId( UUID.randomUUID() ), asSet( "china-west", "europe" ) );
-        ServerInfo serverH = new ServerInfo( new AdvertisedSocketAddress( "bolt", 8 ),
+        ServerInfo serverH = new ServerInfo( new SocketAddress( "bolt", 8 ),
                 new MemberId( UUID.randomUUID() ), asSet( "africa" ) );
 
         Set<ServerInfo> data = asSet( serverA, serverB, serverC, serverD, serverE, serverF, serverG, serverH );

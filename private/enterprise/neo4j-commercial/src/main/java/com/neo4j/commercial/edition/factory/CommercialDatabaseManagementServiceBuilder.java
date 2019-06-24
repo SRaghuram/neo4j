@@ -6,11 +6,14 @@
 package com.neo4j.commercial.edition.factory;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
+import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLocksFactory;
 
 import java.io.File;
 import java.util.function.Function;
 
 import org.neo4j.common.Edition;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -39,5 +42,13 @@ public class CommercialDatabaseManagementServiceBuilder extends DatabaseManageme
     protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
     {
         return CommercialEditionModule::new;
+    }
+
+    @Override
+    protected Config augmentConfig( Config config )
+    {
+        config = super.augmentConfig( config );
+        config.setIfNotSet( GraphDatabaseSettings.lock_manager, ForsetiLocksFactory.KEY );
+        return config;
     }
 }

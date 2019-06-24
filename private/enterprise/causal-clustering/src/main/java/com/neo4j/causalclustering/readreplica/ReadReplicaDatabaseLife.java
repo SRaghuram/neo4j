@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
@@ -168,7 +168,7 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
             debugLog.info( "Finding store ID of upstream server %s", source );
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
+            SocketAddress fromAddress = topologyService.findCatchupAddress( source );
             StoreId storeId = catchupComponents.remoteStore().getStoreId( fromAddress );
 
             debugLog.info( "Copying store from upstream server %s", source );
@@ -187,7 +187,7 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = databaseContext.storeId();
-        AdvertisedSocketAddress advertisedSocketAddress = topologyService.findCatchupAddress( upstream );
+        SocketAddress advertisedSocketAddress = topologyService.findCatchupAddress( upstream );
         StoreId remoteStoreId = remoteStore.getStoreId( advertisedSocketAddress );
         if ( !localStoreId.equals( remoteStoreId ) )
         {

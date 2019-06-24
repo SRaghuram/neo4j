@@ -43,6 +43,7 @@ import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class ConvenientLocalExecutionIT
@@ -182,7 +183,7 @@ class ConvenientLocalExecutionIT
         // Unless NEO4J_CONFIG points to a real file, this is equivalent to Neo4jConfig.empty()
         return Neo4jConfigBuilder.fromFile( NEO4J_CONFIG )
                           // Additional settings you wish to run with
-                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" )
+                          .withSetting( GraphDatabaseSettings.allow_upgrade, FALSE )
                           .build();
     }
 }

@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
@@ -54,7 +55,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
@@ -99,7 +99,6 @@ import org.neo4j.test.scheduler.DaemonThreadFactory;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static java.lang.Integer.parseInt;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
@@ -128,8 +127,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
@@ -881,7 +880,7 @@ class BackupIT
         Node node;
         RelationshipType typeToDelete = RelationshipType.withName( "A" );
         RelationshipType theOtherType = RelationshipType.withName( "B" );
-        int defaultDenseNodeThreshold = Integer.parseInt( dense_node_threshold.getDefaultValue() );
+        int defaultDenseNodeThreshold = dense_node_threshold.defaultValue();
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -906,7 +905,7 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, "false" ) );
+        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, FALSE ) );
 
         createInitialDataSet( db );
         createIndex( db );
@@ -960,9 +959,7 @@ class BackupIT
 
     private static ConsistencyCheckService.Result checkConsistency( DatabaseLayout layout ) throws ConsistencyCheckIncompleteException
     {
-        Config config = Config.builder()
-                .withSetting( pagecache_memory, "8m" )
-                .build();
+        Config config = Config.defaults(pagecache_memory, "8m" );
 
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
@@ -1080,7 +1077,7 @@ class BackupIT
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
         Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE,
-                record_format, record_format.getDefaultValue(),
+                record_format, record_format.defaultValue(),
                 transaction_logs_root_path, path.getAbsolutePath() );
         return startDb( path, settings );
     }
@@ -1109,9 +1106,10 @@ class BackupIT
 
     private DbRepresentation getBackupDbRepresentation()
     {
-        Config config = Config.builder()
-                .withSetting( online_backup_enabled, FALSE )
-                .withSetting( transaction_logs_root_path, backupsDir.getAbsolutePath() ).build();
+        Config config = Config.newBuilder()
+                .set( online_backup_enabled, FALSE )
+                .set( transaction_logs_root_path, backupsDir.getAbsolutePath() )
+                .build();
         return DbRepresentation.of( backupDatabaseLayout, config );
     }
 
@@ -1132,10 +1130,10 @@ class BackupIT
 
     private void executeBackup( String hostname, int port ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        executeBackup( new AdvertisedSocketAddress( hostname, port ), new Monitors(), true );
+        executeBackup( new SocketAddress( hostname, port ), new Monitors(), true );
     }
 
-    private void executeBackup( AdvertisedSocketAddress address, Monitors monitors, boolean fallbackToFull )
+    private void executeBackup( SocketAddress address, Monitors monitors, boolean fallbackToFull )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupContext context = defaultBackupContextBuilder( address )
@@ -1163,7 +1161,7 @@ class BackupIT
         executor.executeBackup( context );
     }
 
-    private OnlineBackupContext.Builder defaultBackupContextBuilder( AdvertisedSocketAddress address )
+    private OnlineBackupContext.Builder defaultBackupContextBuilder( SocketAddress address )
     {
         Path dir = backupsDir.toPath();
 
@@ -1178,7 +1176,7 @@ class BackupIT
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.createNode();
-            int threshold = parseInt( dense_node_threshold.getDefaultValue() );
+            int threshold = dense_node_threshold.defaultValue();
             for ( int i = 0; i < threshold * 2; i++ )
             {
                 node.createRelationshipTo( db.createNode(), TEST );
@@ -1221,7 +1219,7 @@ class BackupIT
 
     private static boolean checkLogFileExistence( String directory )
     {
-        return Config.defaults( logs_directory, directory ).get( store_internal_log_path ).exists();
+        return Config.defaults( logs_directory, directory ).get( store_internal_log_path ).toFile().exists();
     }
 
     private static long lastTxChecksumOf( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
@@ -1313,13 +1311,13 @@ class BackupIT
         storageEngine.flushAndForce( IOLimiter.UNLIMITED );
     }
 
-    private static AdvertisedSocketAddress backupAddress( GraphDatabaseService db )
+    private static SocketAddress backupAddress( GraphDatabaseService db )
     {
         DependencyResolver resolver = dependencyResolver( db );
         ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
         HostnamePort address = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
         assertNotNull( address, "Backup server address not registered" );
-        return new AdvertisedSocketAddress( address.getHost(), address.getPort() );
+        return new SocketAddress( address.getHost(), address.getPort() );
     }
 
     private static DependencyResolver dependencyResolver( GraphDatabaseService db )
