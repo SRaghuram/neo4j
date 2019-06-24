@@ -23,7 +23,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
   override def toCommandProjection(id: Id, projections: Map[String, Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     val slots = physicalPlan.slotConfigurations(id)
-    val projected = for {(k, v) <- projections} yield slots.get(k).get.offset -> self.toCommandExpression(id, v)
+    val projected = for {(k, v) <- projections if !slots(k).isLongSlot } yield slots(k).offset -> self.toCommandExpression(id, v)
     Some(SlottedCommandProjection(projected))
   }
 

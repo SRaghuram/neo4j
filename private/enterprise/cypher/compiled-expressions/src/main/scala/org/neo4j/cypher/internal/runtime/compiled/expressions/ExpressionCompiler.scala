@@ -102,7 +102,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     */
   def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
     val compiled = for {(k, v) <- projections
-                        c <- intermediateCompileExpression(v)} yield slots.get(k).get.offset -> c
+                        c <- intermediateCompileExpression(v) if !slots(k).isLongSlot} yield slots(k).offset -> c
     if (compiled.size < projections.size) None
     else {
       val expression = intermediateCompileProjection(compiled)
