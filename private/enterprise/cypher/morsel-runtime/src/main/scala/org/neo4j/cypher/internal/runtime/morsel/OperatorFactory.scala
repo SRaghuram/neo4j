@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
@@ -248,7 +248,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.Selection(predicate, _) =>
         Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
-      case plans.Limit(_, count, ties) =>
+      case plans.Limit(_, count, DoNotIncludeTies) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
