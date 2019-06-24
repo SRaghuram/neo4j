@@ -201,7 +201,7 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      condition(not(isNull(loadField(nodeLabelCursorField))))(
+      condition(isNotNull(loadField(nodeLabelCursorField)))(
         invokeSideEffect(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
       ),
       inner.genSetExecutionEvent(event)

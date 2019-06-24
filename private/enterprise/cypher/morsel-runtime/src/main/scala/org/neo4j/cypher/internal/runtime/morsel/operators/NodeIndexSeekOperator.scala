@@ -43,10 +43,6 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             override val indexMode: IndexSeekMode = IndexSeek)
   extends StreamingOperator with NodeIndexSeeker {
 
-  if (indexMode == LockingUniqueIndexSeek) {
-    throw new CantCompileQueryException("NodeUniqueIndexSeek(Locking) is not supported in runtime=morsel/parallel.")
-  }
-
   private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty

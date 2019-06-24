@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
@@ -62,6 +63,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
+        if (indexSeekMode == LockingUniqueIndexSeek) {
+          throw new CantCompileQueryException("NodeUniqueIndexSeek(Locking) is not supported in runtime=morsel/parallel.")
+        }
+
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
                                   slots.getLongOffsetFor(column),
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
