@@ -336,6 +336,9 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                         case "DatabaseAll":
                             privilegeBuilder.forAllDatabases();
                             break;
+                        case "DeletedDatabase":
+                            //give up
+                            return;
                         default:
                             throw new IllegalStateException(
                                     "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
