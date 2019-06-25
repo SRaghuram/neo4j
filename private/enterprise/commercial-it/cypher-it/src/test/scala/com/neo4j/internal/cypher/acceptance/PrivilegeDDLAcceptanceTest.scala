@@ -1607,18 +1607,22 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       row.get("n.name") should be("b")
     }) should be(1)
 
+    // Need token permission to create node with non-existing label
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:B) RETURN n")
     }
 
+    // Need token permission to create node with non-existing property name
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:A {prop: 'b'}) RETURN n")
     }
 
+    // Need schema permission to add index
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "CREATE INDEX ON :A(name)")
     }
 
+    // Need schema permission to add constraint
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:A) ASSERT exists(n.name)")
     }

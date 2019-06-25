@@ -87,7 +87,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testSuccessfulWrite( subject );
 
         // When
-        neo.getSystemGraph().execute( String.format( "REVOKE WRITE(*) ON GRAPH * FROM %s", roleName ) );
+        neo.getSystemGraph().execute( String.format( "REVOKE WRITE (*) ON GRAPH * FROM %s", roleName ) );
 
         // Then
         testSuccessfulRead( subject, 4 );
@@ -283,7 +283,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE(*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -378,7 +378,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE(*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
