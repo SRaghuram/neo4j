@@ -36,7 +36,7 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
+import static org.neo4j.kernel.impl.transaction.log.LogPosition.start;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
@@ -71,7 +71,8 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
                 .withLogVersionRepository( metaDataStore )
-                .withTransactionIdStore( metaDataStore );
+                .withTransactionIdStore( metaDataStore )
+                .withLastClosedTransactionPositionSupplier( () -> start( metaDataStore.getCurrentLogVersion() ) );
         this.logFiles = logFilesBuilder.build();
         this.lifespan.add( logFiles );
         this.logChannel = logFiles.getLogFile().getWriter();
@@ -180,7 +181,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             /* A checkpoint which points to the beginning of all the log files, meaning that
             all the streamed transactions will be applied as part of recovery. */
             long logVersion = logFiles.getLowestLogVersion();
-            LogPosition checkPointPosition = new LogPosition( logVersion, LOG_HEADER_SIZE );
+            LogPosition checkPointPosition = start( logVersion );
 
             log.info( "Writing checkpoint as part of store copy: " + checkPointPosition );
             writer.checkPoint( checkPointPosition );

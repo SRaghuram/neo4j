@@ -15,8 +15,6 @@ import java.util.List;
 
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
-import org.neo4j.kernel.impl.transaction.log.ServiceLoadingCommandReaderFactory;
-import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StoreId;
@@ -28,8 +26,7 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
     {
         NetworkReadableClosableChannelNetty4 logChannel = new NetworkReadableClosableChannelNetty4( msg );
         StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( logChannel );
-        LogEntryReader<NetworkReadableClosableChannelNetty4> reader = new VersionAwareLogEntryReader<>(
-                new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
+        LogEntryReader<NetworkReadableClosableChannelNetty4> reader = new VersionAwareLogEntryReader<>();
         PhysicalTransactionCursor<NetworkReadableClosableChannelNetty4> transactionCursor =
                 new PhysicalTransactionCursor<>( logChannel, reader );
 

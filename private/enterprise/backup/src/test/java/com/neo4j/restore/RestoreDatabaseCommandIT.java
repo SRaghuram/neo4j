@@ -148,10 +148,11 @@ class RestoreDatabaseCommandIT
         // given
         StoreLayout toStoreLayout = directory.storeLayout( "new" );
         StoreLayout fromStoreLayout = directory.storeLayout( "old" );
-        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
 
         DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
         DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
+        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
+        config.augment( transaction_logs_root_path, toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
         int fromNodeCount = 10;
         int toNodeCount = 20;
 
