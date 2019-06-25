@@ -62,7 +62,8 @@ class DirectedRelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots),
+                                         state.subscriber)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       ids = relId.expressions(initExecutionContext, queryState).iterator()
       true
