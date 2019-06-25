@@ -214,6 +214,58 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans)
           }
 
+          case plan@plans.DirectedRelationshipByIdSeek(relationship, relIds, from, to, _) => {
+            val newTemplate = relIds match {
+              case SingleSeekableArg(expr) =>
+                new SingleDirectedRelationshipByIdSeekTaskTemplate(acc.template,
+                                                   plan.id,
+                                                   innermostTemplate,
+                                                   slots.getLongOffsetFor(relationship),
+                                                   slots.getLongOffsetFor(from),
+                                                   slots.getLongOffsetFor(to),
+                                                   expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+
+              case ManySeekableArgs(expr) => expr match {
+                case coll: ListLiteral =>
+                  ZeroOneOrMany(coll.expressions) match {
+                    case Zero => OperatorTaskTemplate.empty(plan.id)
+                    case One(value) => new SingleDirectedRelationshipByIdSeekTaskTemplate(acc.template,
+                                                                                          plan.id,
+                                                                                          innermostTemplate,
+                                                                                          slots.getLongOffsetFor(
+                                                                                            relationship),
+                                                                                          slots.getLongOffsetFor(from),
+                                                                                          slots.getLongOffsetFor(to),
+                                                                                          value, physicalPlan
+                                                                                            .argumentSizes(id))(
+                      expressionCompiler)
+                    case Many(_) =>
+                      new ManyDirectedRelationshipByIdsSeekTaskTemplate(acc.template,
+                                                                        plan.id,
+                                                                        innermostTemplate,
+                                                                        slots.getLongOffsetFor(relationship),
+                                                                        slots.getLongOffsetFor(from),
+                                                                        slots.getLongOffsetFor(to),
+                                                                        expr, physicalPlan.argumentSizes(id))(
+                        expressionCompiler)
+                  }
+
+                case _ =>
+                  new ManyDirectedRelationshipByIdsSeekTaskTemplate(acc.template,
+                                                                    plan.id,
+                                                                    innermostTemplate,
+                                                                    slots.getLongOffsetFor(relationship),
+                                                                    slots.getLongOffsetFor(from),
+                                                                    slots.getLongOffsetFor(to),
+                                                                    expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+              }
+            }
+
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+          }
+
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
