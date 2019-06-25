@@ -14,6 +14,7 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
+import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
@@ -82,6 +83,44 @@ class LoadCsvAcceptanceTest
       assertStats(result, propertiesWritten = 6)
       result.executionPlanDescription() should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("user"))
     }
+  }
+
+  test("should be able to use multiple index hints with load csv") {
+    val startNodes = (0 to 9 map (i => createLabeledNode(Map("loginId" -> i.toString), "Login"))).toArray
+    val endNodes = (0 to 9 map (i => createLabeledNode(Map("platformId" -> i.toString), "Permission"))).toArray
+
+    for( a <- 0 to 9 ) {
+      for( b <- 0 to 9) {
+        relate( startNodes(a), endNodes(b), "prop" -> (10 * a + b))
+      }
+    }
+
+    val urls = csvUrls({
+      writer =>
+        writer.println("USER_ID,PLATFORM")
+        writer.println("1,5")
+        writer.println("2,4")
+        writer.println("3,4")
+    })
+
+    graph.createIndex("Permission", "platformId")
+    graph.createIndex("Login", "loginId")
+
+    val query =
+      s"""
+         |    LOAD CSV WITH HEADERS FROM '${urls.head}' AS line
+         |    WITH line
+         |    MATCH (l:Login {loginId: line.USER_ID}), (p:Permission {platformId: line.PLATFORM})
+         |    USING INDEX l:Login(loginId)
+         |    USING INDEX p:Permission(platformId)
+         |    MATCH (l)-[r: REL]->(p)
+         |    RETURN r.prop
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.atLeastNTimes(2, aPlan("NodeIndexSeek"))))
+
+    result.toSet should be(Set(Map("r.prop" -> 15), Map("r.prop" -> 24), Map("r.prop" -> 34)))
   }
 
   test("import should not be eager") {
