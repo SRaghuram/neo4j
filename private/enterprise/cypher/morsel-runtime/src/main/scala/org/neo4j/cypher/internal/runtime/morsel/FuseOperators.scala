@@ -132,7 +132,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                             innermostTemplate,
                                                             slots.getLongOffsetFor(node),
                                                             properties.map(SlottedIndexedProperty(node, _, slots)).toArray,
-                                                            operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                            operatorFactory.queryIndexes.registerQueryIndex(label, properties),
                                                             asKernelIndexOrder(indexOrder),
                                                             physicalPlan.argumentSizes(id))(expressionCompiler)
 
