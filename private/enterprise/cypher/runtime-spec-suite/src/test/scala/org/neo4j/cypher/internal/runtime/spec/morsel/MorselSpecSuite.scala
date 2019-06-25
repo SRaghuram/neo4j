@@ -33,7 +33,7 @@ class MorselNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreT
 
 // RELATIONSHIP COUNT FROM COUNT STORE
 class MorselRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
-class MorselRelationshipCountFromCountStoreFusingTest extends RelationshipCountFromCountStoreTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+class MorselRelationshipCountFromCountStoreNoFusingTest extends RelationshipCountFromCountStoreTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // LABEL SCAN
 class MorselLabelScanTest extends LabelScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
