@@ -31,12 +31,12 @@ class ParallelRuntimeNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(ENTER
 class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(PARALLEL)
 
 // NODE COUNT FROM COUNT STORE
-class ParallelNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ParallelNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // RELATIONSHIP COUNT FROM COUNT STORE
-class ParallelRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ParallelRelationshipCountFromCountStoreNoFusingTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRelationshipCountFromCountStoreNoFusingTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // LABEL SCAN
 class ParallelRuntimeLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
