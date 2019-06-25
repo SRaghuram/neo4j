@@ -25,6 +25,10 @@ class ExecutionGraphDefinitionBuilder()
     semanticTable = semanticTable.addNode(node)
   }
 
+  override def newRelationship(relationship: Variable): Unit = {
+    semanticTable = semanticTable.addRelationship(relationship)
+  }
+
   def withBreak(): this.type = {
     plansToBreakOn += idOfLastPlan
     this

@@ -30,6 +30,10 @@ class ParallelRuntimeNodeByIdSeekTest extends NodeByIdSeekTestBase(ENTERPRISE.PA
 class ParallelRuntimeNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(PARALLEL)
 
+// RELATIONSHIP BY ID SEEK
+class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.PARALLEL, MORSEL, SIZE_HINT)
+class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MORSEL, SIZE_HINT)
+
 // NODE COUNT FROM COUNT STORE
 class ParallelNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL, PARALLEL)
 class ParallelNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)

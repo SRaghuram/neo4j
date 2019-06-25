@@ -27,6 +27,10 @@ class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(SINGLE_THREADED_
 class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// RELATIONSHIP BY ID SEEK
+class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // NODE COUNT FROM COUNT STORE
 class MorselNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(SINGLE_THREADED, MORSEL)
 class MorselNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)

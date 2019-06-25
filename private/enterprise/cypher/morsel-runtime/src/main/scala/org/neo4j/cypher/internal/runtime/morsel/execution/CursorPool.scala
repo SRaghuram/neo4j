@@ -18,6 +18,8 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     () => cursorFactory.allocateRelationshipGroupCursor())
   val relationshipTraversalCursorPool = new CursorPool[RelationshipTraversalCursor](
     () => cursorFactory.allocateRelationshipTraversalCursor())
+  val relationshipScanCursorPool = new CursorPool[RelationshipScanCursor](
+    () => cursorFactory.allocateRelationshipScanCursor())
   val nodeValueIndexCursorPool = new CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor())
   val nodeLabelIndexCursorPool = new CursorPool[NodeLabelIndexCursor](
@@ -35,6 +37,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     IOUtils.closeAll(nodeCursorPool,
                      relationshipGroupCursorPool,
                      relationshipTraversalCursorPool,
+                      relationshipScanCursorPool,
                      nodeValueIndexCursorPool,
                      nodeLabelIndexCursorPool)
   }
@@ -43,6 +46,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     liveCounts.nodeCursorPool += nodeCursorPool.getLiveCount
     liveCounts.relationshipGroupCursorPool += relationshipGroupCursorPool.getLiveCount
     liveCounts.relationshipTraversalCursorPool += relationshipTraversalCursorPool.getLiveCount
+    liveCounts.relationshipScanCursorPool += relationshipScanCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
     liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
   }
@@ -51,6 +55,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
 class LiveCounts(var nodeCursorPool: Long = 0,
                  var relationshipGroupCursorPool: Long = 0,
                  var relationshipTraversalCursorPool: Long = 0,
+                 var relationshipScanCursorPool: Long = 0,
                  var nodeValueIndexCursorPool: Long = 0,
                  var nodeLabelIndexCursorPool: Long = 0) {
 
@@ -65,6 +70,7 @@ class LiveCounts(var nodeCursorPool: Long = 0,
       reportLeak(nodeCursorPool, "nodeCursorPool"),
       reportLeak(relationshipGroupCursorPool, "relationshipGroupCursorPool"),
       reportLeak(relationshipTraversalCursorPool, "relationshipTraversalCursorPool"),
+      reportLeak(relationshipScanCursorPool, "relationshipScanCursorPool"),
       reportLeak(nodeValueIndexCursorPool, "nodeValueIndexCursorPool"),
       reportLeak(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")).flatten
 
