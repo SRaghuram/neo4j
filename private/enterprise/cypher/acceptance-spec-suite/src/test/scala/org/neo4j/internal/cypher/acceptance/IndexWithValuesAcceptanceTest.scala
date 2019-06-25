@@ -73,10 +73,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         _ should includeSomewhere.aPlan("Projection")
           .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : n.prop2}")
           // just for n.prop2, not for n.prop1
-          .withDBHits(2)
+          .withDBHitsBetween(2, 4)
           .onTopOf(aPlan("NodeIndexSeek")
-            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
-        expectPlansToFail = Configs.Morsel // no dbHits yet,
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
       )
     )
 
@@ -157,10 +156,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         _ should (includeSomewhere.aPlan("Projection")
           .containingArgument("{n.prop2 : n.prop2}")
           // just for n.prop2, not for n.prop1
-          .withDBHits(6)
+          .withDBHitsBetween(6, 12)
           .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
-                   and not(includeSomewhere.aPlan("Sort"))),
-        expectPlansToFail = Configs.Morsel // no dbHits yet
+                   and not(includeSomewhere.aPlan("Sort")))
       )
     )
 
@@ -195,10 +193,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("EagerAggregation")
           // just for n.prop2, not for n.prop1
-          .withDBHits(6)
+          .withDBHitsBetween(6, 12)
           .onTopOf(aPlan("NodeIndexSeekByRange")
-            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
-        expectPlansToFail = Configs.Morsel // no dbHits yet
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
       )
     )
 

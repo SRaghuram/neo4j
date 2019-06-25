@@ -58,24 +58,21 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
           includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("track db hits in Projection") {
     createNode()
     createNode()
-    createNode()
+    createLabeledNode("Foo")
 
     profile(Configs.All,
       "MATCH (n) RETURN (n:Foo)",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
-          includeSomewhere.aPlan("AllNodesScan").withRows(3) and
-          includeSomewhere.aPlan("Projection").withDBHits(3) and
-          includeSomewhere.aPlan("AllNodesScan").withDBHits(4)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+          includeSomewhere.aPlan("Projection").withDBHitsBetween(3, 6) and
+          includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
+        ))
   }
 
   test("track time in Projection") {
@@ -134,8 +131,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("MATCH (n:A)-->(x:B) RETURN *") {
@@ -150,8 +146,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
           includeSomewhere.aPlan("Filter").withRows(1).withDBHits(1) and
           includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(2) and
           includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *") {
@@ -164,8 +159,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("unfinished profiler complains [using MATCH]") {
@@ -219,9 +213,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       "MATCH (n) WHERE id(n) = 0 RETURN n.foo",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
-          includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
+          includeSomewhere.aPlan("Projection").withRows(1).withDBHitsBetween(1, 2) and
           includeSomewhere.aPlan("NodeByIdSeek").withRows(1).withDBHits(1)
-        ),  configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("no problem measuring creation") {
@@ -240,10 +234,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       "MATCH (n) RETURN n.foo",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0) and
-          includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1) and
+          includeSomewhere.aPlan("Projection").withRows(1).withDBHitsBetween(0, 1) and
           includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("tracks optional MATCHes") {
@@ -275,10 +268,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     profile(Configs.All,
       "MATCH (n) RETURN n LIMIT 1",
       _ should (
-        includeSomewhere.aPlan("AllNodesScan").withRows(1).withDBHits(2) and
+        includeSomewhere.aPlan("AllNodesScan").withRowsBetween(1, 3).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
-        ),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+        ))
   }
 
   test("should support profiling union queries") {
@@ -289,8 +281,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should support profiling merge_queries") {
     profile(Configs.InterpretedAndSlotted,
-      "MERGE (a {x: 1}) RETURN a.x AS A",
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      "MERGE (a {x: 1}) RETURN a.x AS A")
   }
 
   test("should support profiling optional match queries") {
@@ -384,8 +375,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // when
     profile(Configs.All,
       "MATCH (n:Label1) RETURN n",
-      _ should includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      _ should includeSomewhere.aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
   }
 
   test("should report correct dbhits and rows for expand") {
@@ -395,8 +385,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // then
     profile(Configs.All,
       "MATCH (n)-->(x) RETURN x",
-      _ should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(3),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      _ should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHitsBetween(3, 4))
   }
 
   test("should report correct dbhits and rows for literal addition") {
@@ -415,8 +404,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // then
     profile(Configs.All,
       "MATCH (n) RETURN n.name + 3",
-      _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHitsBetween(1, 2))
   }
 
   test("should report correct dbhits and rows for property subtraction") {
@@ -426,8 +414,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // then
     profile(Configs.All,
       "MATCH (n) RETURN n.name - 3",
-      _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      _ should includeSomewhere.aPlan("Projection").withRows(1).withDBHitsBetween(1, 2))
   }
 
   test("should throw if accessing profiled results before they have been materialized") {
@@ -485,8 +472,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p:Glass)
         |  USING INDEX n:Glass(name)
         |RETURN p.name""".stripMargin,
-      _ should includeSomewhere.aPlan("Projection").withDBHits(2),
-      configsWithFailingPlanAssertion = Configs.Morsel)
+      _ should includeSomewhere.aPlan("Projection").withDBHitsBetween(2, 4))
   }
 
   test("profile filter") {
@@ -506,8 +492,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
               |  USING INDEX n:Glass(name)
               |  WHERE p.name = 'Franny'
               |RETURN p.name""".stripMargin,
-            _ should includeSomewhere.aPlan("Filter").withDBHits(4),
-            configsWithFailingPlanAssertion = Configs.Morsel)
+            _ should includeSomewhere.aPlan("Filter").withDBHitsBetween(4, 6))
   }
 
   test("joins with identical scans") {
