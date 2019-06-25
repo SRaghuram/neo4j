@@ -50,6 +50,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
   override def stop(): Unit = {
     DebugLog.log("stopping worker threads")
     workers.foreach(_.stop())
+    workerThreads.foreach(LockSupport.unpark)
     workerThreads.foreach(_.join(1000))
     workers.foreach(_.close())
     DebugLog.logDiff("done")
