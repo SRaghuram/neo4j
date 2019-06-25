@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.util.Collections.emptyMap
 
 import org.neo4j.cypher._
+import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
@@ -84,6 +85,46 @@ class LoadCsvAcceptanceTest
       assertStats(result, propertiesWritten = 6)
       result.executionPlanDescription() should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("user"))
     }
+  }
+
+  test("should be able to use multiple index hints with load csv") {
+    val startNodes = (0 to 9 map (i => createLabeledNode(Map("loginId" -> i.toString), "Login"))).toArray
+    val endNodes = (0 to 9 map (i => createLabeledNode(Map("platformId" -> i.toString), "Permission"))).toArray
+
+    for( a <- 0 to 9 ) {
+      for( b <- 0 to 9) {
+        relate( startNodes(a), endNodes(b), "prop" -> (10 * a + b))
+      }
+    }
+
+    val urls = csvUrls({
+      writer =>
+        writer.println("USER_ID,PLATFORM")
+        writer.println("1,5")
+        writer.println("2,4")
+        writer.println("3,4")
+    })
+
+    graph.createIndex("Permission", "platformId")
+    graph.createIndex("Login", "loginId")
+
+    val query =
+      s"""
+         |    LOAD CSV WITH HEADERS FROM '${urls.head}' AS line
+         |    WITH line
+         |    MATCH (l:Login {loginId: line.USER_ID}), (p:Permission {platformId: line.PLATFORM})
+         |    USING INDEX l:Login(loginId)
+         |    USING INDEX p:Permission(platformId)
+         |    MATCH (l)-[r: REL]->(p)
+         |    RETURN r.prop
+      """.stripMargin
+
+    // TODO remove 3.4 when depending on 3.4.15
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_4 - Configs.Cost3_1 - Configs.Version2_3, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.atLeastNTimes(2, aPlan("NodeIndexSeek")),
+        expectPlansToFail = Configs.RulePlanner))
+
+    result.toSet should be(Set(Map("r.prop" -> 15), Map("r.prop" -> 24), Map("r.prop" -> 34)))
   }
 
   test("import should not be eager") {

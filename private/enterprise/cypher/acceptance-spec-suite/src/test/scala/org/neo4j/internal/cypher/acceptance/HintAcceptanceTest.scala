@@ -73,6 +73,26 @@ class HintAcceptanceTest
       }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
   }
 
+  test("should solve join hints when leaves have extra variables") {
+
+    val rel = relate(createNode(), createNode())
+
+    val query =
+      s"""
+         |    WITH 1 as nbr
+         |    MATCH (n)-[r]->(p)
+         |    USING JOIN ON p
+         |    RETURN r
+      """.stripMargin
+
+    // TODO remove 3.4 when depending on 3.4.15
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_4 - Configs.Cost3_1 - Configs.Cost2_3, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin"),
+        expectPlansToFail = Configs.RulePlanner))
+
+    result.toList should be(List(Map("r" -> rel)))
+  }
+
   test("should do index seek instead of index scan with explicit index seek hint") {
     graph.createIndex("A", "prop")
     graph.createIndex("B", "prop")
