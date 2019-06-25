@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
@@ -121,6 +122,20 @@ class FuseOperators(operatorFactory: OperatorFactory,
               label.name,
               maybeToken,
               argumentSize)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
+          case plan@plans.NodeIndexScan(node, label, properties, _, indexOrder) =>
+            val newTemplate = new NodeIndexScanTaskTemplate(acc.template,
+                                                            plan.id,
+                                                            innermostTemplate,
+                                                            slots.getLongOffsetFor(node),
+                                                            properties.map(SlottedIndexedProperty(node, _, slots)).toArray,
+                                                            operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                            asKernelIndexOrder(indexOrder),
+                                                            physicalPlan.argumentSizes(id))(expressionCompiler)
+
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

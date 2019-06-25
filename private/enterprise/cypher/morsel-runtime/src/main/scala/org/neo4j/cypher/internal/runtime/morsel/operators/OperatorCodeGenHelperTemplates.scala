@@ -127,23 +127,32 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
                      cursor)
 
+  def nodeIndexScan(indexReadSession: IntermediateRepresentation,
+                    cursor: IntermediateRepresentation,
+                    order: IndexOrder,
+                    needsValues: Boolean): IntermediateRepresentation =
+    invokeSideEffect(loadField(DATA_READ),
+                     method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean]("nodeIndexScan"),
+                     indexReadSession, cursor, indexOrder(order), constant(needsValues))
+
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     query: IntermediateRepresentation,
-                    indexOrder: IndexOrder = IndexOrder.NONE): IntermediateRepresentation = {
-    val order = indexOrder match {
-      case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
-      case IndexOrder.DESCENDING => getStatic[IndexOrder, IndexOrder]("DESCENDING")
-      case IndexOrder.NONE => getStatic[IndexOrder, IndexOrder]("NONE")
-    }
+                    order: IndexOrder = IndexOrder.NONE): IntermediateRepresentation = {
     invokeSideEffect(loadField(DATA_READ),
                      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
                        "nodeIndexSeek"),
                      indexReadSession,
                      cursor,
-                     order,
+                     indexOrder(order),
                      constant(false),
                      arrayOf[IndexQuery](query))
+  }
+
+  def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
+    case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")
+    case IndexOrder.DESCENDING => getStatic[IndexOrder, IndexOrder]("DESCENDING")
+    case IndexOrder.NONE => getStatic[IndexOrder, IndexOrder]("NONE")
   }
 
   def exactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
