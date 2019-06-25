@@ -17,6 +17,8 @@ import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
+import scala.collection.immutable
+
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
                                with QueryStatisticsTestSupport
                                with CypherComparisonSupport
@@ -95,19 +97,29 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     // Indexes
     executeSingle("CALL db.indexes").toList should beListWithoutOrder(
       beMapContaining(
-        "description" -> "INDEX ON :User(email)"
+        "labelsOrTypes" -> List("User"),
+        "properties" -> List("email"),
+        "type" -> "BTREE"
       ),
       beMapContaining(
-        "description" -> "INDEX ON :User(lastName)"
+        "labelsOrTypes" -> List("User"),
+        "properties" -> List("lastName"),
+          "type" -> "BTREE"
       ),
       beMapContaining(
-        "description" -> "INDEX ON :User(firstName, lastName)"
+        "labelsOrTypes" -> List("User"),
+        "properties" -> List("firstName", "lastName"),
+        "type" -> "BTREE"
       ),
       beMapContaining(
-        "description" -> "INDEX ON :Room(hotel, number)"
+        "labelsOrTypes" -> List("Room"),
+        "properties" -> List("hotel", "number"),
+        "type" -> "BTREE"
       ),
       beMapContaining(
-        "description" -> "INDEX ON :Car(number)"
+        "labelsOrTypes" -> List("Car"),
+        "properties" -> List("number"),
+        "type" -> "BTREE"
       )
     )
 

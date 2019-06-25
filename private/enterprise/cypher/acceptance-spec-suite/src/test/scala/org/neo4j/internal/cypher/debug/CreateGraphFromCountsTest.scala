@@ -26,7 +26,16 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
-        "description" -> "INDEX ON :User(name)"
+        "id" -> 1,
+        "name" -> "index_1",
+        // "state" -> // we don't care about state
+        "uniqueness" -> "UNIQUE",
+        // "populationPercent" -> // we don't care about specific population percentage,
+        "properties" -> List("name"),
+        "labelsOrTypes" -> List("User"),
+        "entityType" -> "NODE",
+        "type" -> "BTREE",
+        "provider" -> "native-btree-1.0"
       )
     )
   }
@@ -78,7 +87,16 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
-        "description" -> "INDEX ON :Foo(bar, baz)"
+        "id" -> 1,
+        "name" -> "index_1",
+        // "state" -> // we don't care about state
+        "uniqueness" -> "NONUNIQUE",
+        // "populationPercent" -> // we don't care about specific population percentage,
+        "properties" -> List("bar", "baz"),
+        "labelsOrTypes" -> List("Foo"),
+        "entityType" -> "NODE",
+        "type" -> "BTREE",
+        "provider" -> "native-btree-1.0"
       )
     )
   }
