@@ -395,7 +395,7 @@ order by a.COL1""".format(a, b))
     val a = createNode()
     val b = createNode()
     val r = relate(a, b)
-    val result = executeWith(Configs.RelationshipById, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
+    val result = executeWith(Configs.CartesianProduct - Configs.Compiled, "match (a), ()-[r]->() where id(a) = 0 and id(r) = 0 return a,r")
 
     result.toList should equal(List(Map("a" -> a, "r" -> r)))
   }

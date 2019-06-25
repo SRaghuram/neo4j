@@ -56,7 +56,7 @@ object Configs {
   // adding it here should be a fast way to correct many tests, although some might still
   // fail for lack of some other operator or construct.
   val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime
