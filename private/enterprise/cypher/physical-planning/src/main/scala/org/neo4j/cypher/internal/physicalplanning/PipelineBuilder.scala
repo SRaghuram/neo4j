@@ -39,17 +39,21 @@ object PipelineBuilder {
   }
 
   private def mapBuffer(bufferDefinition: BufferDefinitionBuild): BufferDefinition = {
+    val downstreamReducers = bufferDefinition.downstreamStates.collect { case d: DownstreamReduce => d.id }
+    val workCancellers = bufferDefinition.downstreamStates.collect { case d: DownstreamWorkCanceller => mapArgumentStateDefinition(d.state) }
+    val downstreamStates = bufferDefinition.downstreamStates.collect { case d: DownstreamState => mapArgumentStateDefinition(d.state) }
+
     bufferDefinition match {
       case b: ApplyBufferDefinitionBuild =>
-        ApplyBufferDefinition(b.id, b.argumentSlotOffset, b.reducers, b.workCancellers.map(mapArgumentStateDefinition), b.reducersOnRHS.map(mapArgumentStateDefinition), b.delegates)
+        ApplyBufferDefinition(b.id, b.argumentSlotOffset, downstreamReducers, workCancellers, downstreamStates, b.reducersOnRHS.map(mapArgumentStateDefinition), b.delegates)
       case b: ArgumentStateBufferDefinitionBuild =>
-        ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, b.reducers, b.workCancellers.map(mapArgumentStateDefinition))
+        ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, downstreamReducers, workCancellers, downstreamStates)
       case b: MorselBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, b.reducers, b.workCancellers.map(mapArgumentStateDefinition))
+        MorselBufferDefinition(b.id, downstreamReducers, workCancellers, downstreamStates)
       case b: DelegateBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, b.reducers, b.workCancellers.map(mapArgumentStateDefinition))
+        MorselBufferDefinition(b.id, downstreamReducers, workCancellers, downstreamStates)
       case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>
-        LHSAccumulatingRHSStreamingBufferDefinition(b.id, b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId, b.reducers, b.workCancellers.map(mapArgumentStateDefinition))
+        LHSAccumulatingRHSStreamingBufferDefinition(b.id, b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId, downstreamReducers, workCancellers, downstreamStates)
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }

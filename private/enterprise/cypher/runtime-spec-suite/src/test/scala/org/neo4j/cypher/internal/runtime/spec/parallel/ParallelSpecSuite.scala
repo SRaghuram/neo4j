@@ -95,6 +95,10 @@ class ParallelRuntimeFilterStressTest extends FilterStressTestBase(PARALLEL)
 class ParallelRuntimeLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeLimitNoFusingTest extends LimitTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 
+// DISTINCT
+class ParallelRuntimeDistinctTest extends DistinctTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeDistinctStressTest extends DistinctStressTestBase(PARALLEL)
+
 // UNWIND
 class ParallelRuntimeUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeUnwindNoFusingTest extends UnwindTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)

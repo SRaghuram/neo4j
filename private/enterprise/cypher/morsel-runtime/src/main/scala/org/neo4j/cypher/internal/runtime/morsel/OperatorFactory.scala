@@ -268,6 +268,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
+      case plans.Distinct(_, groupingExpressions) =>
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings))
+
       case plans.Projection(_, expressions) =>
         val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
         Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))

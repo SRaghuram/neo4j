@@ -94,7 +94,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   class StartSequence {
 
     def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
       new ApplyBufferSequence(bd)
     }
 
@@ -121,7 +121,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   class ApplyBufferSequence(applyBufferDefinition: ApplyBufferDefinition) extends BufferSequence(applyBufferDefinition) {
 
     def delegateToMorselBuffer(id: Int): MorselBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, MorselBufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[MorselBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, MorselBufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[MorselBufferDefinition]
       buffers(applyBufferDefinition.id.x) = applyBufferDefinition.copy(delegates = applyBufferDefinition.delegates :+ bd.id)
       new MorselBufferSequence(bd)
     }
@@ -149,14 +149,14 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   class PipelineSequence(matchablePipeline: MatchablePipeline) {
     def argumentStateBuffer(id: Int, asmId: Int = -1): ArgumentStateBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ArgumentStateBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ArgumentStateBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, ArgumentStateBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ArgumentStateBufferDefinition]
       val out = ReduceOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ArgumentStateBufferSequence(bd)
     }
 
     def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
       val out = MorselBufferOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ApplyBufferSequence(bd)
@@ -165,7 +165,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
       val updatedBD = bd.copy(lhsPipelineId = matchablePipeline.id)
       // Update lhs pipeline ID
       buffers.update(id, updatedBD)
@@ -175,7 +175,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     def rightOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
       val updatedBD = bd.copy(rhsPipelineId = matchablePipeline.id)
       // Update rhs pipeline ID
       buffers.update(id, updatedBD)

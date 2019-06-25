@@ -61,6 +61,8 @@ sealed trait BufferDefinition {
 
   def workCancellers: IndexedSeq[ArgumentStateDefinition]
 
+  def downstreamStates: IndexedSeq[ArgumentStateDefinition]
+
   def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition
 
   def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateDefinition]): BufferDefinition
@@ -71,7 +73,8 @@ sealed trait BufferDefinition {
   */
 case class MorselBufferDefinition(id: BufferId,
                                   reducers: IndexedSeq[ArgumentStateMapId],
-                                  workCancellers: IndexedSeq[ArgumentStateDefinition])
+                                  workCancellers: IndexedSeq[ArgumentStateDefinition],
+                                  downstreamStates: IndexedSeq[ArgumentStateDefinition])
   extends BufferDefinition {
   override def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): MorselBufferDefinition = copy(reducers = reducers)
 
@@ -89,6 +92,7 @@ case class ApplyBufferDefinition(id: BufferId,
                                  argumentSlotOffset: Int,
                                  reducers: IndexedSeq[ArgumentStateMapId],
                                  workCancellers: IndexedSeq[ArgumentStateDefinition],
+                                 downstreamStates: IndexedSeq[ArgumentStateDefinition],
                                  reducersOnRHS: IndexedSeq[ArgumentStateDefinition],
                                  delegates: IndexedSeq[BufferId])
   extends BufferDefinition {
@@ -104,7 +108,8 @@ case class ApplyBufferDefinition(id: BufferId,
 case class ArgumentStateBufferDefinition(id: BufferId,
                                          argumentStateMapId: ArgumentStateMapId,
                                          reducers: IndexedSeq[ArgumentStateMapId],
-                                         workCancellers: IndexedSeq[ArgumentStateDefinition])
+                                         workCancellers: IndexedSeq[ArgumentStateDefinition],
+                                         downstreamStates: IndexedSeq[ArgumentStateDefinition])
   extends BufferDefinition {
   override def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): ArgumentStateBufferDefinition = copy(reducers = reducers)
 
@@ -120,7 +125,8 @@ case class LHSAccumulatingRHSStreamingBufferDefinition(id: BufferId,
                                                        lhsArgumentStateMapId: ArgumentStateMapId,
                                                        rhsArgumentStateMapId: ArgumentStateMapId,
                                                        reducers: IndexedSeq[ArgumentStateMapId],
-                                                       workCancellers: IndexedSeq[ArgumentStateDefinition])
+                                                       workCancellers: IndexedSeq[ArgumentStateDefinition],
+                                                       downstreamStates: IndexedSeq[ArgumentStateDefinition])
   extends BufferDefinition {
   override def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): LHSAccumulatingRHSStreamingBufferDefinition = copy(reducers = reducers)
 

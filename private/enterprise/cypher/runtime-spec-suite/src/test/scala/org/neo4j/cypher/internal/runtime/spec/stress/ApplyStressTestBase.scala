@@ -22,14 +22,14 @@ abstract class ApplyStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeConte
       .|.apply()
       .|.|.nodeIndexOperator("c:Label(prop < ???)", paramExpr = Some(prop("b", "prop")), argumentIds = Set("a", "b"))
       .|.nodeIndexOperator("b:Label(prop < ???)", paramExpr = Some(prop("a", "prop")), argumentIds = Set("a"))
-      .nodeIndexOperator("a:Label(prop <= 40)")
+      .nodeIndexOperator("a:Label(prop <= 20)")
       .build()
 
     val runtimeResult = execute(logicalQuery, runtime)
 
     // then
     val expected = for {
-      a <- nodes if a.getId <= 40
+      a <- nodes if a.getProperty("prop").asInstanceOf[Int] <= 20
       b <- nodes if b.getId < a.getId
       c <- nodes if c.getId < b.getId
     } yield Array(a, b, c)

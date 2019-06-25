@@ -70,7 +70,7 @@ abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeConte
 
   def init(): Unit = {
     nodes = nodePropertyGraph(graphSize, {
-      case i => Map("prop" -> i, "text" -> i.toString)
+      case i => Map("prop" -> i, "propWithDuplicates" -> ((i/2) * 2))
     }, "Label")
     try {
       index("Label", "prop")
@@ -78,10 +78,10 @@ abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeConte
     } catch {
       case e:IllegalStateException =>
         // TODO This is to investigate flaky tests
-      Thread.getAllStackTraces.forEach {
-        case (thread, trace) => stringify(thread, trace)
-      }
-      throw e
+        Thread.getAllStackTraces.forEach {
+          case (thread, trace) => stringify(thread, trace)
+        }
+        throw e
     }
     val relTuples = (for (i <- nodes.indices) yield {
       Seq(
@@ -185,8 +185,8 @@ trait RHSOfApplyOneChildStressSuite {
       .produceResults(resultColumns: _*)
       .apply()
       .|.theOperator(op)
-      .|.nodeIndexOperator("y:Label(prop < 100)", argumentIds = Set("x", "prop"))
-      .projection("x.prop AS prop")
+      .|.nodeIndexOperator("y:Label(propWithDuplicates < 50)", argumentIds = Set("x", "prop"))
+      .projection("x.propWithDuplicates AS prop")
       .input(nodes = Seq("x"))
       .build()
 

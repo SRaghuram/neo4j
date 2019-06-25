@@ -83,6 +83,10 @@ class MorselFilterNoFusingTest extends FilterTestBase(SINGLE_THREADED_NO_FUSING,
 class MorselLimitTest extends LimitTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselLimitNoFusingTest extends LimitTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// DISTINCT
+class MorselDistinctTest extends DistinctTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselDistinctNoFusingTest extends DistinctTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // UNWIND
 class MorselUnwindTest extends UnwindTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselUnwindNoFusingTest extends UnwindTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)

@@ -68,11 +68,13 @@ class Buffers(numBuffers: Int,
 
     val reducers = bufferDefinition.reducers.map(asmId => findRHSAccumulatingStateBuffer(i, asmId))
     val workCancellers = bufferDefinition.workCancellers.map(_.id)
+    val downstreamStates = bufferDefinition.downstreamStates.map(_.id)
+
     buffers(i) =
       bufferDefinition match {
         case x: ApplyBufferDefinition =>
           val reducerOnRHSDefs = x.reducersOnRHS
-          val argumentStatesToInitiate = workCancellers
+          val argumentStatesToInitiate = workCancellers ++ downstreamStates
           // argumentReducersForThis in reverse order, since upstream reducers possibly
           // need to increment counts on their downstreams, which have to be initialized
           // first in order to do that

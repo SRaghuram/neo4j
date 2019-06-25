@@ -41,6 +41,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
       case _: ProduceResult |
            _: Limit |
+           _: Distinct |
            _: Projection |
            _: Selection
         => false
