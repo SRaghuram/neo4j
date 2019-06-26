@@ -151,14 +151,14 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
                                                       arrayOf[String](missingTypes.map(constant):_*))
 
-  override def genFields: Seq[Field] = {
+  override def genMoreFields: Seq[Field] = {
     val localFields =
       ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
 
-    super.genFields ++ localFields
+    localFields
   }
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)

@@ -186,7 +186,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = super.genFields :+ nodeIndexCursorField
+  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, queryVariable)
 
@@ -300,7 +300,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val queryIteratorField = field[ExactPredicateIterator](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = super.genFields :+ nodeIndexCursorField :+ queryIteratorField
+  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, queryIteratorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 

@@ -100,7 +100,9 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   protected val canContinue: InstanceField = field[Boolean](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = Seq(INNER_LOOP, canContinue)
+  override final def genFields: Seq[Field] = Seq(INNER_LOOP, canContinue) ++ genMoreFields
+
+  def genMoreFields: Seq[Field]
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
