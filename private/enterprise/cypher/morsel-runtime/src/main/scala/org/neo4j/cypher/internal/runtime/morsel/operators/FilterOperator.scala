@@ -42,7 +42,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
                                        state.subscriber)
 
     while (readingRow.isValidRow) {
-      val matches = predicate(readingRow, queryState) == Values.TRUE
+      val matches = predicate(readingRow, queryState) eq Values.TRUE
       if (matches) {
         writingRow.copyFrom(readingRow)
         writingRow.moveToNextRow()
