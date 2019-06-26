@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.restore;
+package com.neo4j.restore;
 
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
