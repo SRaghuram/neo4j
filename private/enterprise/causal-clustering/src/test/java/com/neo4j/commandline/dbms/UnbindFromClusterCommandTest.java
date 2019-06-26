@@ -90,25 +90,25 @@ class UnbindFromClusterCommandTest
         {
             CommandLine.usage( command, new PrintStream( out ) );
         }
-        assertThat( baos.toString().trim(), equalTo(
-                "Removes cluster state data for the specified database.\n" +
-                        "\n" +
-                        "USAGE\n" +
-                        "\n" +
-                        "unbind [--verbose] [--database=<database>]\n" +
-                        "\n" +
-                        "DESCRIPTION\n" +
-                        "\n" +
-                        "Removes cluster state data for the specified database, so that the instance can\n" +
-                        "rebind to a new or recovered cluster.\n" +
-                        "\n" +
-                        "OPTIONS\n" +
-                        "\n" +
-                        "      --verbose   Enable verbose output.\n" +
-                        "      --database=<database>\n" +
-                        "                  Name of the database.\n" +
-                        "                    Default: neo4j"
-        ) );
+        assertThat( baos.toString().trim(), equalTo( String.format(
+                "Removes cluster state data for the specified database.%n" +
+                "%n" +
+                "USAGE%n" +
+                "%n" +
+                "unbind [--verbose] [--database=<database>]%n" +
+                "%n" +
+                "DESCRIPTION%n" +
+                "%n" +
+                "Removes cluster state data for the specified database, so that the instance can%n" +
+                "rebind to a new or recovered cluster.%n" +
+                "%n" +
+                "OPTIONS%n" +
+                "%n" +
+                "      --verbose   Enable verbose output.%n" +
+                "      --database=<database>%n" +
+                "                  Name of the database.%n" +
+                "                    Default: neo4j"
+        ) ) );
     }
 
     @Test
