@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
@@ -107,6 +108,8 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
     inner.genLocalVariables :+ CURSOR_POOL_V
   }
 
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     maybeLabelId match {
       case Some(labelId) =>
@@ -179,12 +182,11 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField)))
       )
     )
   }
-
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**

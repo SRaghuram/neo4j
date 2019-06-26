@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNoValue
@@ -175,7 +176,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
         block(
           setters,
           profileRow(id),
-          inner.genOperate,
+          inner.genOperateWithExpressions,
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))
           )
         ),
@@ -187,6 +188,8 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genFields: Seq[Field] = inputCursorField +: canContinue +: inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] = inner.genLocalVariables
+
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }

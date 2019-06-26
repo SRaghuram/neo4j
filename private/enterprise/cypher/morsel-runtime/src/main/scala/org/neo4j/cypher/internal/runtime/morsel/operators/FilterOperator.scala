@@ -9,15 +9,13 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.Values
 
@@ -65,31 +63,20 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
 
   private var predicate: IntermediateExpression = _
 
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq(predicate)
+
   override def genOperate: IntermediateRepresentation = {
     if (predicate != null) {
       throw new IllegalStateException("genOperate must be called first!!")
     }
     predicate = generatePredicate()
 
-    val filterIr =
-      condition(equal(nullCheckIfRequired(predicate), trueValue)) (
-        block(
-          profileRow(id),
-          inner.genOperate
-        )
-      )
-
-    val expressionCursors = predicate.variables.intersect(Seq(ExpressionCompiler.vNODE_CURSOR,
-                                                              ExpressionCompiler.vPROPERTY_CURSOR,
-                                                              ExpressionCompiler.vRELATIONSHIP_CURSOR))
-    if (expressionCursors.nonEmpty) {
-      val setTracerCalls = expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
+    condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(
-        setTracerCalls :+ filterIr:_*
+        profileRow(id),
+        inner.genOperateWithExpressions
       )
-    } else {
-      filterIr
-    }
+    )
   }
 
   override def genLocalVariables: Seq[LocalVariable] = {

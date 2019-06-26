@@ -12,6 +12,7 @@ import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
@@ -164,7 +165,28 @@ trait OperatorTaskTemplate {
     *                 queryProfiler: QueryProfiler): Unit
     * }}}
     */
-  def genOperate: IntermediateRepresentation
+  final def genOperateWithExpressions: IntermediateRepresentation = {
+    val ir = genOperate
+    val expressionCursors = genExpressions.flatMap(_.variables)
+      .intersect(Seq(ExpressionCompiler.vNODE_CURSOR,
+                     ExpressionCompiler.vPROPERTY_CURSOR,
+                     ExpressionCompiler.vRELATIONSHIP_CURSOR))
+    if (expressionCursors.nonEmpty) {
+      val setTracerCalls = expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
+      block(
+        setTracerCalls :+ ir:_*
+      )
+    } else {
+      ir
+    }
+  }
+
+  protected def genOperate: IntermediateRepresentation
+
+  /**
+    * Returns the intermediate expressions used by the operator. Should not recurse into inner operator templates.
+    */
+  protected def genExpressions: Seq[IntermediateExpression]
 
   // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
   def genFields: Seq[Field]
@@ -230,7 +252,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                               param[QueryResources]("resources"),
                               param[QueryProfiler]("queryProfiler")
                           ),
-                          body = genOperate,
+                          body = genOperateWithExpressions,
                           genLocalVariables = () => {
                             Seq(
                               variable[Array[AnyValue]]("params",
@@ -303,7 +325,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
 
   override def genCloseProfileEvents: IntermediateRepresentation = noop()
 
-  override def genOperate: IntermediateRepresentation = {
+  override protected def genOperate: IntermediateRepresentation = {
     if (shouldWriteToContext) {
       block(
         codeGen.writeLocalsToSlots(),
@@ -313,6 +335,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
       noop()
     }
   }
+
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   def predicate: IntermediateRepresentation = if (shouldWriteToContext) OUTPUT_ROW_IS_VALID else HAS_DEMAND
 

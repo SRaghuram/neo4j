@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -242,13 +243,16 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
       assign(SERVED, add(load(SERVED), constant(1L))),
       profileRow(id),
-      inner.genOperate)
+      inner.genOperateWithExpressions
+    )
   }
 
   override def genFields: Seq[Field] = inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] =
     inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
+
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 

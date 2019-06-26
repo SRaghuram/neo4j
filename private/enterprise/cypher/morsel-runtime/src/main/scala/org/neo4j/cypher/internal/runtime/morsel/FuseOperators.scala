@@ -53,6 +53,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val slots = physicalPlan.slotConfigurations(id)
     val namer = new VariableNamer
     val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots is the same within an entire pipeline
+    def compile(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
+      () => expressionCompiler.intermediateCompileExpression(astExpression).getOrElse(throw new CantCompileQueryException)
     generateSlotAccessorFunctions(slots)
 
     // Fold plans in reverse to build-up code generation templates with inner templates
@@ -138,7 +140,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                                 SlottedIndexedProperty(node,
                                                                                                        properties.head,
                                                                                                        slots),
-                                                                                expr,
+                                                                                compile(expr),
                                                                                 operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
                                                                                 argumentSize)(expressionCompiler)
                 acc.copy(
@@ -156,7 +158,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                                 SlottedIndexedProperty(node,
                                                                                                        properties.head,
                                                                                                        slots),
-                                                                                expr,
+                                                                                compile(expr),
                                                                                 operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
                                                                                 argumentSize)(expressionCompiler)
                 acc.copy(
@@ -242,10 +244,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Selection(predicate, _) =>
-            val compiledPredicate = () =>
-              expressionCompiler.intermediateCompileExpression(predicate).getOrElse(throw new CantCompileQueryException)
             acc.copy(
-              template = new FilterOperatorTemplate(acc.template, plan.id, compiledPredicate),
+              template = new FilterOperatorTemplate(acc.template, plan.id, compile(predicate)),
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Input(nodes, variables, nullable) =>

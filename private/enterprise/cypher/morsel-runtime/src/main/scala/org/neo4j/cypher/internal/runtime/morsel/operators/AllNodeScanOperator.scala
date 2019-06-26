@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -188,6 +189,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
     inner.genLocalVariables :+ CURSOR_POOL_V
   }
 
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**
       * {{{
@@ -234,7 +237,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField)))
         )
       )

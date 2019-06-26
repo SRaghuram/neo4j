@@ -174,7 +174,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                                 nodeVarName: String,
                                                 offset: Int,
                                                 property: SlottedIndexedProperty,
-                                                rawExpression: expressions.Expression,
+                                                generatePredicate: () => IntermediateExpression,
                                                 queryIndexId: Int,
                                                 argumentSize: SlotConfiguration.Size)
                                                (codeGen: OperatorExpressionCompiler)
@@ -194,8 +194,10 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
     query.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V :+ queryVariable
   }
 
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq(query)
+
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    val compiled = codeGen.intermediateCompileExpression(rawExpression).getOrElse(throw new CantCompileQueryException())
+    val compiled = generatePredicate()
     query = compiled.copy(ir = asStorableValue(nullCheckIfRequired(compiled)))
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
 
@@ -250,10 +252,10 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, load(queryVariable))).getOrElse(noop()),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
-        )
       )
+    )
   }
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
@@ -268,6 +270,14 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       setField(nodeIndexCursorField, constant(null))
       )
   }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      condition(isNotNull(loadField(nodeIndexCursorField)))(
+        invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
+      ),
+      inner.genSetExecutionEvent(event)
+    )
 }
 
 /**
@@ -281,7 +291,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                                 nodeVarName: String,
                                                 offset: Int,
                                                 property: SlottedIndexedProperty,
-                                                rawListExpression: expressions.Expression,
+                                                generatePredicate: () => IntermediateExpression,
                                                 queryIndexId: Int,
                                                 argumentSize: SlotConfiguration.Size)
                                                (codeGen: OperatorExpressionCompiler)
@@ -302,10 +312,12 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
     queries.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
   }
 
+  override protected def genExpressions: Seq[IntermediateExpression] = Seq(queries)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    val compiled = codeGen.intermediateCompileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException())
+    val compiled = generatePredicate()
     queries = compiled.copy(ir = asListValue(compiled.ir))
+
     /**
       * {{{
       *   val queries = asListValue([query predicate])
@@ -356,7 +368,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                                                                method[ExactPredicateIterator, Value](
                                                                                  "current")))).getOrElse(noop()),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue,
                  invokeStatic(nextMethod,
                               indexReadSession(queryIndexId),
@@ -379,6 +391,14 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       setField(nodeIndexCursorField, constant(null))
       )
   }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      condition(isNotNull(loadField(nodeIndexCursorField)))(
+        invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
+      ),
+      inner.genSetExecutionEvent(event)
+    )
 }
 
 /**
