@@ -17,6 +17,8 @@ import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
 import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.internal.index.label.NodeLabelRange;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptorFactory;
@@ -25,7 +27,6 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.FormattedLog;
-import org.neo4j.storageengine.api.StorageIndexReference;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.common.TokenNameLookup.idTokenNameLookup;
@@ -101,8 +102,8 @@ class InconsistencyReportReaderTest
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 4242 ) );
     }
 
-    private StorageIndexReference someIndexDescriptor()
+    private IndexDescriptor2 someIndexDescriptor()
     {
-        return IndexDescriptorFactory.forSchema( SchemaDescriptor.forLabel( 1, 1 ) ).withId( 1L );
+        return IndexPrototype.forSchema( SchemaDescriptor.forLabel( 1, 1 ) ).materialise( 1L );
     }
 }

@@ -14,16 +14,15 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor2;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.token.api.NamedToken;
 
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
 
 class SimpleSchemaRuleCache
 {
-    final LongObjectMap<IndexDescriptor> indexes;
+    final LongObjectMap<IndexDescriptor2> indexes;
     final IntObjectMap<NamedToken> labelTokens;
     final IntObjectMap<NamedToken> relationshipTypeTokens;
     final IntObjectMap<NamedToken> propertyKeyTokens;
@@ -71,13 +70,13 @@ class SimpleSchemaRuleCache
         return result;
     }
 
-    private static LongObjectMap<IndexDescriptor> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
+    private static LongObjectMap<IndexDescriptor2> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
     {
-        LongObjectHashMap<IndexDescriptor> indexes = new LongObjectHashMap<>();
-        Iterator<StorageIndexReference> indexRules = schemaRuleAccess.indexesGetAll();
+        LongObjectHashMap<IndexDescriptor2> indexes = new LongObjectHashMap<>();
+        Iterator<IndexDescriptor2> indexRules = schemaRuleAccess.indexesGetAll();
         while ( indexRules.hasNext() )
         {
-            StorageIndexReference rule = indexRules.next();
+            IndexDescriptor2 rule = indexRules.next();
             indexes.put( rule.getId(), rule );
         }
         return indexes;

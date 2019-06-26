@@ -15,8 +15,9 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
-import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexPrototype;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
@@ -57,7 +58,7 @@ class DumpCountsStoreTest
     private static final String INDEX_PROPERTY = "indexProperty";
 
     private static final long indexId = 0;
-    private static final IndexDescriptor descriptor = TestIndexDescriptorFactory.forLabel( INDEX_LABEL_ID, INDEX_PROPERTY_KEY_ID );
+    private static final IndexPrototype prototype = IndexPrototype.forSchema( SchemaDescriptor.forLabel( INDEX_LABEL_ID, INDEX_PROPERTY_KEY_ID ) );
 
     @Inject
     private SuppressOutput suppressOutput;
@@ -120,8 +121,8 @@ class DumpCountsStoreTest
     private SchemaRuleAccess createRuleAccess()
     {
         SchemaRuleAccess schemaRuleAccess = mock( SchemaRuleAccess.class );
-        StorageIndexReference rule = descriptor.withId( indexId );
-        ArrayList<StorageIndexReference> rules = new ArrayList<>();
+        IndexDescriptor2 rule = prototype.materialise( indexId );
+        ArrayList<IndexDescriptor2> rules = new ArrayList<>();
         rules.add( rule );
 
         when( schemaRuleAccess.indexesGetAll() ).thenReturn( rules.iterator() );
@@ -166,7 +167,7 @@ class DumpCountsStoreTest
 
     private HeaderField<String> createNamedHeader( String name )
     {
-        return new HeaderField<String>()
+        return new HeaderField<>()
         {
             @Override
             public String read( ReadableBuffer header )

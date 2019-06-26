@@ -9,6 +9,7 @@ import com.neo4j.SchemaHelper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
+import java.util.OptionalLong;
 
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.exceptions.KernelException;
@@ -27,6 +28,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor2;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
@@ -37,11 +39,9 @@ import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.ConstraintRule;
-import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
@@ -61,7 +62,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 {
     private static final String DUPLICATED_VALUE = "apa";
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-    private IndexDescriptor uniqueIndex;
+    private IndexDescriptor2 uniqueIndex;
 
     @Override
     protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
@@ -244,11 +245,13 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
-        StorageIndexReference indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
+        IndexDescriptor2 indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
-        assertEquals( constraintRule.getId(), indexRule.owningConstraintReference() );
+        OptionalLong owningConstraintId = indexRule.getOwningConstraintId();
+        assertTrue( owningConstraintId.isPresent() );
+        assertEquals( constraintRule.getId(), owningConstraintId.getAsLong() );
         assertEquals( indexRule.getId(), constraintRule.ownedIndexReference() );
     }
 
