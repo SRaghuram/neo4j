@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
@@ -35,7 +36,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
   private val runtimeName = RuntimeName(name)
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
     MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan)

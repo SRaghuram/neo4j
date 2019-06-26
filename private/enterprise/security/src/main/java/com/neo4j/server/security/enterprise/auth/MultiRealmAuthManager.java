@@ -41,6 +41,7 @@ import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.Credential;
@@ -189,6 +190,12 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     public Credential deserialize( String part ) throws Throwable
     {
         return SystemGraphCredential.deserialize( part, new SecureHasher() );
+    }
+
+    @Override
+    public void log( String message, SecurityContext securityContext )
+    {
+        securityLog.info( securityContext.subject(), message );
     }
 
     private void assertValidScheme( ShiroAuthToken token ) throws InvalidAuthTokenException

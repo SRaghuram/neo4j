@@ -7,6 +7,7 @@ package com.neo4j.kernel.enterprise.api.security;
 
 import java.util.Map;
 
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -77,9 +78,14 @@ public interface CommercialAuthManager extends AuthManager
         }
 
         @Override
-        public Credential deserialize( String part ) throws Throwable
+        public Credential deserialize( String part )
         {
             return Credential.INACCESSIBLE;
+        }
+
+        @Override
+        public void log( String message, SecurityContext securityContext )
+        {
         }
     };
 }

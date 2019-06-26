@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.CypherException
+import org.neo4j.internal.kernel.api.security.SecurityContext
 
 object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
   override def name: String = "slotted"
@@ -33,7 +34,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   override val PRINT_FAILURE_STACK_TRACE = true
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, username: String): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     try {
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printPlanInfo(query)
