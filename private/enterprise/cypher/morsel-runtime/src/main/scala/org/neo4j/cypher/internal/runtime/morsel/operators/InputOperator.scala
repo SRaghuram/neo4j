@@ -185,11 +185,11 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
-  override def genFields: Seq[Field] = inputCursorField +: canContinue +: inner.genFields
+  override def genFields: Seq[Field] = Seq(inputCursorField, canContinue)
 
-  override def genLocalVariables: Seq[LocalVariable] = inner.genLocalVariables
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }

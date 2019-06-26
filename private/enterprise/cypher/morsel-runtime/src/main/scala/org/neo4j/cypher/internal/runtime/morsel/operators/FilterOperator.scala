@@ -63,7 +63,7 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
 
   private var predicate: IntermediateExpression = _
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq(predicate)
+  override def genExpressions: Seq[IntermediateExpression] = Seq(predicate)
 
   override def genOperate: IntermediateRepresentation = {
     if (predicate != null) {
@@ -79,13 +79,9 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    predicate.variables ++ inner.genLocalVariables
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
-  override def genFields: Seq[Field] = {
-    predicate.fields ++ inner.genFields
-  }
+  override def genFields: Seq[Field] = Seq.empty
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 

@@ -115,6 +115,20 @@ trait OperatorTaskTemplate {
     */
   def inner: OperatorTaskTemplate
 
+  final def map[T](f: OperatorTaskTemplate => T): List[T] = {
+    inner match {
+      case null => f(this) :: Nil
+      case operator => f(this) :: operator.map(f)
+    }
+  }
+
+  final def flatMap[T](f: OperatorTaskTemplate => Seq[T]): Seq[T] = {
+    inner match {
+      case null => f(this) ++ Seq.empty
+      case operator => f(this) ++ operator.flatMap(f)
+    }
+  }
+
   /**
     * ID of the Logical plan of this template.
     */
@@ -184,13 +198,26 @@ trait OperatorTaskTemplate {
   protected def genOperate: IntermediateRepresentation
 
   /**
-    * Returns the intermediate expressions used by the operator. Should not recurse into inner operator templates.
+    * Get the intermediate expressions used by the operator.
+    *
+    * Should NOT recurse into inner operator templates.
     */
-  protected def genExpressions: Seq[IntermediateExpression]
+  def genExpressions: Seq[IntermediateExpression]
 
-  // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
+  /**
+    * Get the fields used by the operator, excluding those used by intermediate expressions.
+    *
+    * Should NOT recurse into inner operator templates.
+    */
   def genFields: Seq[Field]
+
+  /**
+    * Get the local variables used by the operator, excluding those used by intermediate expressions.
+    *
+    * Should NOT recurse into inner operator templates.
+    */
   def genLocalVariables: Seq[LocalVariable]
+
   /**
     * Responsible for generating:
     * {{{
@@ -266,7 +293,8 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                                                                method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
                                                                invoke(QUERY_STATE,
                                                                       method[QueryState, Int]("nExpressionSlots"))
-                                                        ))) ++ genLocalVariables
+                                                        ))) ++ flatMap[LocalVariable](op => op.genLocalVariables ++
+                                                                                            op.genExpressions.flatMap(_.variables))
                           },
                           parameterizedWith = None, throws = Some(typeRefOf[Exception])
         ),
@@ -304,7 +332,10 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           body = loadField(INPUT_MORSEL)
         )
       ),
-      genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ genFields ++ genProfileEventFields) // NOTE: This has to be called after genOperate!
+      // NOTE: This has to be called after genOperate!
+      genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
+                                                                             op.genProfileEventFields ++
+                                                                             op.genExpressions.flatMap(_.fields)))
   }
 }
 
@@ -336,7 +367,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
     }
   }
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   def predicate: IntermediateRepresentation = if (shouldWriteToContext) OUTPUT_ROW_IS_VALID else HAS_DEMAND
 

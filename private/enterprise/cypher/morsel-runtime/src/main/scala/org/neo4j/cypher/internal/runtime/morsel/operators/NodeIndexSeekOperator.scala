@@ -186,15 +186,11 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = {
-    (super.genFields ++ query.fields :+ nodeIndexCursorField ) ++ inner.genFields
-  }
+  override def genFields: Seq[Field] = super.genFields :+ nodeIndexCursorField
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    query.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V :+ queryVariable
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, queryVariable)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq(query)
+  override def genExpressions: Seq[IntermediateExpression] = Seq(query)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val compiled = generatePredicate()
@@ -304,15 +300,11 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val queryIteratorField = field[ExactPredicateIterator](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = {
-    (super.genFields ++ queries.fields :+ nodeIndexCursorField :+ queryIteratorField) ++ inner.genFields
-  }
+  override def genFields: Seq[Field] = super.genFields :+ nodeIndexCursorField :+ queryIteratorField
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    queries.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq(queries)
+  override def genExpressions: Seq[IntermediateExpression] = Seq(queries)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val compiled = generatePredicate()

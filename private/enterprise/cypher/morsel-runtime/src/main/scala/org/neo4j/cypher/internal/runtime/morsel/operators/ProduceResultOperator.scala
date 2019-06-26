@@ -247,12 +247,12 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
-  override def genFields: Seq[Field] = inner.genFields
+  override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] =
-    inner.genLocalVariables ++ Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
+    Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 

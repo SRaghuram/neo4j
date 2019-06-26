@@ -158,14 +158,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       localFields += missingTypeField
     }
 
-    super.genFields ++ localFields ++ inner.genFields
+    super.genFields ++ localFields
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   /**
     * {{{

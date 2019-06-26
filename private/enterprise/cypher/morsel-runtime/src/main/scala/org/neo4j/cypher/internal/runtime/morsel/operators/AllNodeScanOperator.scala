@@ -181,15 +181,11 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
 
-  override def genFields: Seq[Field] = {
-    (super.genFields :+ nodeCursorField) ++ inner.genFields
-  }
+  override def genFields: Seq[Field] = super.genFields :+ nodeCursorField
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**

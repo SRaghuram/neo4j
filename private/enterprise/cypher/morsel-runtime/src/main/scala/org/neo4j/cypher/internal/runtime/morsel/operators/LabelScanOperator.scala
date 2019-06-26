@@ -101,14 +101,12 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
   private val labelField = field[Int](codeGen.namer.nextVariableName(), NO_TOKEN)
 
   override def genFields: Seq[Field] = {
-    (super.genFields :+ nodeLabelCursorField ) ++ maybeLabelId.fold(Option(labelField))(_ => None) ++ inner.genFields
+    (super.genFields :+ nodeLabelCursorField) ++ maybeLabelId.fold(Option(labelField))(_ => None)
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override protected def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     maybeLabelId match {
