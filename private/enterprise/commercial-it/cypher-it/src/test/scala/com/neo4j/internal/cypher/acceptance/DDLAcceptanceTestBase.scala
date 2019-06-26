@@ -42,20 +42,17 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     grantGraph().role("reader").action("find").node("*").map,
     grantGraph().role("reader").action("read").node("*").map,
     grantGraph().role("reader").action("find").relationship("*").map,
-    grantGraph().role("reader").action("read").relationship("*").map,
 
     grantGraph().role("editor").action("find").node("*").map,
     grantGraph().role("editor").action("read").node("*").map,
     grantGraph().role("editor").action("write").node("*").map,
     grantGraph().role("editor").action("find").relationship("*").map,
-    grantGraph().role("editor").action("read").relationship("*").map,
 
     grantGraph().role("publisher").action("find").node("*").map,
     grantGraph().role("publisher").action("read").node("*").map,
     grantGraph().role("publisher").action("write").node("*").map,
     grantToken().role("publisher").action("write").node("*").map,
     grantGraph().role("publisher").action("find").relationship("*").map,
-    grantGraph().role("publisher").action("read").relationship("*").map,
 
     grantGraph().role("architect").action("find").node("*").map,
     grantGraph().role("architect").action("read").node("*").map,
@@ -63,7 +60,6 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     grantToken().role("architect").action("write").node("*").map,
     grantSchema().role("architect").action("write").node("*").map,
     grantGraph().role("architect").action("find").relationship("*").map,
-    grantGraph().role("architect").action("read").relationship("*").map,
 
     grantGraph().role("admin").action("find").node("*").map,
     grantGraph().role("admin").action("read").node("*").map,
@@ -72,7 +68,6 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     grantToken().role("admin").action("write").node("*").map,
     grantSchema().role("admin").action("write").node("*").map,
     grantGraph().role("admin").action("find").relationship("*").map,
-    grantGraph().role("admin").action("read").relationship("*").map,
   )
 
   def authManager: CommercialAuthManager = graph.getDependencyResolver.resolveDependency(classOf[CommercialAuthManager])

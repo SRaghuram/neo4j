@@ -345,7 +345,6 @@ class SystemGraphRealmIT
 
         // Then
         ResourcePrivilege readNodePrivilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), LabelSegment.ALL );
-        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), RelTypeSegment.ALL );
         ResourcePrivilege findNodePrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), LabelSegment.ALL );
         ResourcePrivilege findRelPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), RelTypeSegment.ALL );
         ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), LabelSegment.ALL );
@@ -354,8 +353,7 @@ class SystemGraphRealmIT
         ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
 
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege,
-                findNodePrivilege , findRelPrivilege)
+                readNodePrivilege, findNodePrivilege, findRelPrivilege )
         );
 
         // When
@@ -363,8 +361,7 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege,
-                findNodePrivilege, findRelPrivilege,
+                readNodePrivilege, findNodePrivilege, findRelPrivilege,
                 writeNodePrivilege )
         );
 
@@ -373,8 +370,7 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege,
-                findNodePrivilege, findRelPrivilege,
+                readNodePrivilege, findNodePrivilege, findRelPrivilege,
                 writeNodePrivilege, tokenNodePrivilege )
         );
 
@@ -383,8 +379,7 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege,
-                findNodePrivilege, findRelPrivilege,
+                readNodePrivilege, findNodePrivilege, findRelPrivilege,
                 writeNodePrivilege, tokenNodePrivilege, schemaNodePrivilege )
         );
 
@@ -393,8 +388,7 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege,
-                findNodePrivilege, findRelPrivilege,
+                readNodePrivilege, findNodePrivilege, findRelPrivilege,
                 writeNodePrivilege, tokenNodePrivilege, schemaNodePrivilege, adminNodePrivilege )
         );
     }

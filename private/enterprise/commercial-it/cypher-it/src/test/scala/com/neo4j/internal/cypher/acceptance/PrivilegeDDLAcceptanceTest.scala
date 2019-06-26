@@ -58,8 +58,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantGraph().role("editor").action("find").node("*").map,
       grantGraph().role("editor").action("read").node("*").map,
       grantGraph().role("editor").action("write").node("*").map,
-      grantGraph().role("editor").action("find").relationship("*").map,
-      grantGraph().role("editor").action("read").relationship("*").map,
+      grantGraph().role("editor").action("find").relationship("*").map
     )
 
     result.toSet should be(expected)
@@ -107,8 +106,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantSystem().role("admin").user("neo4j").action("write").node("*").map,
       grantToken().role("admin").user("neo4j").action("write").node("*").map,
       grantSchema().role("admin").user("neo4j").action("write").node("*").map,
-      grantGraph().role("admin").user("neo4j").action("find").relationship("*").map,
-      grantGraph().role("admin").user("neo4j").action("read").relationship("*").map,
+      grantGraph().role("admin").user("neo4j").action("find").relationship("*").map
     )
 
     result.toSet should be(expected)
