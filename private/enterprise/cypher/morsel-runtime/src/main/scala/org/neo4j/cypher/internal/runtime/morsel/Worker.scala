@@ -89,23 +89,23 @@ class Worker(val workerId: Int,
 
   private def executeTask(executingQuery: ExecutingQuery,
                           task: PipelineTask): Unit = {
+    var workUnitEvent: WorkUnitEvent = null
     try {
       executingQuery.bindTransactionToThread()
 
       DebugLog.log("[WORKER%2d] working on %s".format(workerId, task))
 
       sleeper.reportStartWorkUnit()
-      val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task,
-                                                                               upstreamWorkUnitEvents(task)).start()
-      val preparedOutput =
-        try {
-          task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
-        } finally {
-          workUnitEvent.stop()
-          sleeper.reportStopWorkUnit()
-        }
-      preparedOutput.produce()
+      workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+      task
+        .executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
+        .produce()
+
     } finally {
+      if (workUnitEvent != null) {
+        workUnitEvent.stop()
+        sleeper.reportStopWorkUnit()
+      }
       executingQuery.unbindTransaction()
     }
   }
