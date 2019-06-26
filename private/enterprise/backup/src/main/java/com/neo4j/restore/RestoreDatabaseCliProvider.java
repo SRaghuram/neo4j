@@ -5,8 +5,6 @@
  */
 package com.neo4j.restore;
 
-import com.neo4j.OnlineBackupCommandSection;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.cli.CommandProvider;
 import org.neo4j.cli.ExecutionContext;
