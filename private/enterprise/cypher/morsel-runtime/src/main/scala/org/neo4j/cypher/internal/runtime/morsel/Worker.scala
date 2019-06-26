@@ -5,9 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.LockSupport
-
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.execution._
@@ -15,8 +12,6 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAcc
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
-
-import scala.concurrent.duration.Duration
 
 /**
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
@@ -28,11 +23,8 @@ import scala.concurrent.duration.Duration
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
-             val resources: QueryResources,
-             var sleeper: Sleeper = null) extends Runnable {
-
-  if (sleeper == null)
-    sleeper = new Sleeper(workerId)
+             val sleeper: Sleeper,
+             val resources: QueryResources) extends Runnable {
 
   def isSleeping: Boolean = sleeper.isSleeping
 
@@ -179,43 +171,4 @@ object Worker {
 
   def WORKING_THOUGH_RELEASED(worker: Worker): String =
     s"$worker is WORKING even though all resources should be released!"
-}
-
-object Sleeper {
-  sealed trait Status
-  case object ACTIVE extends Status // while the worker is not doing any of the below, e.g. looking for work
-  case object WORKING extends Status // while the worker is executing a work unit of some query
-  case object SLEEPING extends Status // while the worker is parked and not looking for work
-}
-
-class Sleeper(val workerId: Int,
-              private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
-
-  import Sleeper._
-
-  private val sleepNs = sleepDuration.toNanos
-  private var workStreak = 0
-  @volatile private var status: Status = ACTIVE
-
-  def reportStartWorkUnit(): Unit = {
-    status = WORKING
-  }
-
-  def reportStopWorkUnit(): Unit = {
-    status = ACTIVE
-    workStreak += 1
-  }
-
-  def reportIdle(): Unit = {
-    DebugSupport.logWorker(s"Worker($workerId) parked after working $workStreak times")
-    workStreak = 0
-    status = SLEEPING
-    LockSupport.parkNanos(sleepNs)
-    DebugSupport.logWorker(s"Worker($workerId) unparked")
-    status = ACTIVE
-  }
-
-  def isSleeping: Boolean = status == SLEEPING
-  def isWorking: Boolean = status == WORKING
-  def statusString: String = status.toString
 }

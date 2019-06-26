@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Worker}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
@@ -78,7 +78,7 @@ class CallingThreadQueryExecutor(morselSize: Int,
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)
       }
 
-    val worker = new Worker(0, null, LazyScheduling, resources)
+    val worker = new Worker(0, null, LazyScheduling, Sleeper.noSleep, resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
                                                          queryContext,
                                                          queryState,

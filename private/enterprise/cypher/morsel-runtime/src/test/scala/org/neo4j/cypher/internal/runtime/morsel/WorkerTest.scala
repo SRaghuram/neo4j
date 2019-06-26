@@ -24,7 +24,7 @@ class WorkerTest extends CypherFunSuite {
     }
     val sleeper = mock[Sleeper]
 
-    val worker = new Worker(1, queryManager, schedulingPolicy, null, sleeper)
+    val worker = new Worker(1, queryManager, schedulingPolicy, sleeper,  null)
     worker.run()
 
     verify(sleeper, never()).reportStopWorkUnit()
@@ -47,7 +47,7 @@ class WorkerTest extends CypherFunSuite {
 
     val sleeper = mock[Sleeper]
 
-    val worker = new Worker(1, queryManager, schedulingPolicy, null, sleeper)
+    val worker = new Worker(1, queryManager, schedulingPolicy,  sleeper, null)
     worker.run()
 
     verify(sleeper, never()).reportStopWorkUnit()

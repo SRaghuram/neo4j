@@ -18,7 +18,7 @@ abstract class WorkerManager(val numberOfWorkers: Int,
 
   protected val workers: Array[Worker] =
     (for (workerId <- 0 until numberOfWorkers) yield {
-      new Worker(workerId, queryManager, LazyScheduling, queryResourceFactory())
+      new Worker(workerId, queryManager, LazyScheduling,  Sleeper.concurrentSleeper(workerId), queryResourceFactory())
     }).toArray
 
   def assertAllReleased(): Unit = {
