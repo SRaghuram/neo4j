@@ -101,11 +101,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     * @return an instance of [[CompiledProjection]] corresponding to the provided projection
     */
   def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
-    val compiled = for {(k, v) <- projections
-                        c <- intermediateCompileExpression(v) if !slots(k).isLongSlot} yield slots(k).offset -> c
-    if (compiled.size < projections.size) None
-    else {
-      val expression = intermediateCompileProjection(compiled)
+      intermediateCompileProjection(projections).map(expression => {
       val classDeclaration =
         ClassDeclaration[CompiledProjection](
           PACKAGE_NAME,
@@ -130,9 +126,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                 }: _*),
                                 expression.ir
                               ))))
-      Some(compileClass(classDeclaration)
-        .getDeclaredConstructor().newInstance())
-    }
+      compileClass(classDeclaration).getDeclaredConstructor().newInstance()
+    })
   }
 
   /**
@@ -1912,12 +1907,17 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       None
   }
 
-  private def intermediateCompileProjection(projections: Map[Int, IntermediateExpression]): IntermediateExpression = {
-    val all = projections.toSeq.map {
-      case (slot, value) => setRefAt(slot, nullCheckIfRequired(value))
+  def intermediateCompileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
+    val compiled = for {(k, v) <- projections
+                        c <- intermediateCompileExpression(v) if !slots(k).isLongSlot} yield slots(k).offset -> c
+    if (compiled.size < projections.size) None
+    else {
+      val all = compiled.toSeq.map {
+        case (slot, value) => setRefAt(slot, nullCheckIfRequired(value))
+      }
+      Some(IntermediateExpression(block(all: _*), compiled.values.flatMap(_.fields).toSeq,
+                             compiled.values.flatMap(_.variables).toSeq, Set.empty))
     }
-    IntermediateExpression(block(all:_*), projections.values.flatMap(_.fields).toSeq,
-                           projections.values.flatMap(_.variables).toSeq, Set.empty)
   }
 
   private def intermediateCompileGroupingExpression(projections: Map[Slot, IntermediateExpression]): IntermediateGroupingExpression = {
