@@ -389,7 +389,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     }
                     else
                     {
-                        throw new IllegalStateException( "Unrecognized privilege segment qualifier: " + segment.getClass().getSimpleName() );
+                        throw new IllegalStateException( "Unsupported segment qualifier for find privilege: " + segment.getClass().getSimpleName() );
                     }
 
                     break;
@@ -417,6 +417,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                                 allowedNodesWithLabels.add( labelId );
                             }
                         }
+                        else
+                        {
+                            throw new IllegalStateException( "Unsupported segment qualifier for read privilege: " + segment.getClass().getSimpleName() );
+                        }
                         break;
                     case ALL_PROPERTIES:
                         read = true;
@@ -431,6 +435,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
                                 allowedSegmentForAllProperties.add( labelId );
                             }
+                        }
+                        else
+                        {
+                            throw new IllegalStateException( "Unsupported segment qualifier for read privilege: " + segment.getClass().getSimpleName() );
                         }
                         break;
                     default:

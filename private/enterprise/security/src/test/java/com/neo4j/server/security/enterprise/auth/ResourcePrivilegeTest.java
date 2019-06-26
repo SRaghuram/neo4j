@@ -5,6 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
+import com.neo4j.server.security.enterprise.auth.Resource.ProcedureResource;
+import com.neo4j.server.security.enterprise.auth.Resource.SchemaResource;
+import com.neo4j.server.security.enterprise.auth.Resource.SystemResource;
+import com.neo4j.server.security.enterprise.auth.Resource.TokenResource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import org.junit.jupiter.api.Test;
 
@@ -17,29 +22,56 @@ class ResourcePrivilegeTest
     @Test
     void shouldConstructValidPrivileges() throws InvalidArgumentsException
     {
-        new ResourcePrivilege( Action.READ, new Resource.GraphResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.FIND, new GraphResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.FIND, new GraphResource(), RelTypeSegment.ALL );
 
-        new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), LabelSegment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL );
-        new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.READ, new GraphResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.READ, new GraphResource(), RelTypeSegment.ALL );
 
-        new ResourcePrivilege( Action.EXECUTE, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new GraphResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new TokenResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new SchemaResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new SystemResource(), LabelSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new GraphResource(), RelTypeSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new TokenResource(), RelTypeSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new SchemaResource(), RelTypeSegment.ALL );
+        new ResourcePrivilege( Action.WRITE, new SystemResource(), RelTypeSegment.ALL );
+
+        new ResourcePrivilege( Action.EXECUTE, new ProcedureResource( "", "" ), LabelSegment.ALL );
+        new ResourcePrivilege( Action.EXECUTE, new ProcedureResource( "", "" ), RelTypeSegment.ALL );
     }
 
     @Test
     void shouldNotAcceptInvalidPrivileges()
     {
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.TokenResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SchemaResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new Resource.SystemResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class,
-                () -> new ResourcePrivilege( Action.READ, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class,
-                () -> new ResourcePrivilege( Action.WRITE, new Resource.ProcedureResource( "", "" ), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.GraphResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.TokenResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SchemaResource(), LabelSegment.ALL ) );
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new Resource.SystemResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new TokenResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new SchemaResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new SystemResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new TokenResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new SchemaResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new SystemResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.FIND, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new TokenResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new SchemaResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new SystemResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new TokenResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new SchemaResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new SystemResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.READ, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.WRITE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.WRITE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new GraphResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new TokenResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new SchemaResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new SystemResource(), LabelSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new GraphResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new TokenResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new SchemaResource(), RelTypeSegment.ALL ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( Action.EXECUTE, new SystemResource(), RelTypeSegment.ALL ) );
     }
 }

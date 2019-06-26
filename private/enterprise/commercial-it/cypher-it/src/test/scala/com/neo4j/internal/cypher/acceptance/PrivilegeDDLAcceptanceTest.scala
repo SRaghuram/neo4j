@@ -60,7 +60,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantGraph().role("editor").action("write").node("*").map,
       grantGraph().role("editor").action("find").relationship("*").map,
       grantGraph().role("editor").action("read").relationship("*").map,
-      grantGraph().role("editor").action("write").relationship("*").map
     )
 
     result.toSet should be(expected)
@@ -110,10 +109,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantSchema().role("admin").user("neo4j").action("write").node("*").map,
       grantGraph().role("admin").user("neo4j").action("find").relationship("*").map,
       grantGraph().role("admin").user("neo4j").action("read").relationship("*").map,
-      grantGraph().role("admin").user("neo4j").action("write").relationship("*").map,
-      grantSystem().role("admin").user("neo4j").action("write").relationship("*").map,
-      grantToken().role("admin").user("neo4j").action("write").relationship("*").map,
-      grantSchema().role("admin").user("neo4j").action("write").relationship("*").map
     )
 
     result.toSet should be(expected)
@@ -226,6 +221,18 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").node("A").map))
   }
 
+  test("should grant traversal privilege to custom role for all databases but only a specific relationship type (that does not need to exist)") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").relationship("A").map))
+  }
+
   test("should grant traversal privilege to custom role for a specific database and a specific label") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -239,6 +246,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").node("A").map))
   }
 
+  test("should grant traversal privilege to custom role for a specific database and a specific relationship type") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").relationship("A").map))
+  }
+
   test("should grant traversal privilege to custom role for a specific database and all labels") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -250,6 +270,19 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").map))
+  }
+
+  test("should grant traversal privilege to custom role for a specific database and all relationship types") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").relationship("*").map))
   }
 
   test("should grant traversal privilege to custom role for a specific database and multiple labels") {
@@ -269,6 +302,23 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should grant traversal privilege to custom role for a specific database and multiple relationship types") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").relationship("A").map,
+      grantTraverse().role("custom").database("foo").relationship("B").map
+    ))
+  }
+
   test("should grant traversal privilege to custom role for a specific database and multiple labels in one grant") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -282,6 +332,22 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().role("custom").database("foo").node("A").map,
       grantTraverse().role("custom").database("foo").node("B").map
+    ))
+  }
+
+  test("should grant traversal privilege to custom role for a specific database and multiple relationship types in one grant") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A, B (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").database("foo").relationship("A").map,
+      grantTraverse().role("custom").database("foo").relationship("B").map
     ))
   }
 
@@ -306,19 +372,40 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should grant traversal privilege to multiple roles for a specific database and multiple relationship types in one grant") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role1")
+    execute("CREATE ROLE role2")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A, B (*) TO role1, role2")
+
+    // THEN
+    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("role1").database("foo").relationship("A").map,
+      grantTraverse().role("role1").database("foo").relationship("B").map
+    ))
+    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("role2").database("foo").relationship("A").map,
+      grantTraverse().role("role2").database("foo").relationship("B").map
+    ))
+  }
+
   test("should fail when granting traversal privilege with missing database") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     the [DatabaseNotFoundException] thrownBy {
-      execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH foo TO custom")
     } should have message "Database 'foo' does not exist."
   }
 
   test("should fail when granting traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * TO custom")
       // THEN
     } should have message
       "This is a DDL command and it should be executed against the system database: GRANT TRAVERSE"
@@ -969,7 +1056,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  test("should revoke correct traverse privilege different label qualifier") {
+  test("should revoke correct traverse node privilege different label qualifier") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -1002,7 +1089,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  test("should revoke correct traverse privilege different databases") {
+  test("should revoke correct traverse node privilege different databases") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -1033,6 +1120,73 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantTraverse().role("custom").database("bar").map
+    ))
+  }
+
+  test("should revoke correct traverse relationships privilege different type qualifier") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("A").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").relationship("B").map
+    ))
+  }
+
+  test("should revoke correct traverse relationship privilege different databases") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH bar RELATIONSHIPS * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").relationship("*").map,
+      grantTraverse().role("custom").relationship("*").database("foo").map,
+      grantTraverse().role("custom").relationship("*").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").relationship("*").map,
+      grantTraverse().role("custom").relationship("*").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").relationship("*").database("bar").map
     ))
   }
 
@@ -1920,9 +2074,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})")
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should (be("a") or be("b"))
-    })
+
+    val expected = List(
+      "a", "b"
+    )
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, index) => {
+      row.get("n.name") should be(expected(index))
+    }) should be(2)
 
     executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (_, _) => {
       fail("should not get a match")
