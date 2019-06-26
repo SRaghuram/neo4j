@@ -118,7 +118,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
 
   private val idVariable = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
-  private var nodeId: IntermediateExpression= _
+  private var nodeId: IntermediateExpression = _
 
   override def genFields: Seq[Field] = {
     nodeId.fields ++ super.genFields ++ inner.genFields

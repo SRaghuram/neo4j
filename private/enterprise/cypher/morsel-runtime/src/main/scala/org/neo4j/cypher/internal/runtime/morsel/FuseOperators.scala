@@ -186,13 +186,15 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                           innermostTemplate,
                                                                           node,
                                                                           slots.getLongOffsetFor(node),
-                                                                          value, physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                                          value,
+                                                                          physicalPlan.argumentSizes(id))(expressionCompiler)
                     case Many(_) => new ManyNodeByIdsSeekTaskTemplate(acc.template,
-                                                                          plan.id,
-                                                                          innermostTemplate,
-                                                                          node,
-                                                                          slots.getLongOffsetFor(node),
-                                                                          expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                                      plan.id,
+                                                                      innermostTemplate,
+                                                                      node,
+                                                                      slots.getLongOffsetFor(node),
+                                                                      expr,
+                                                                      physicalPlan.argumentSizes(id))(expressionCompiler)
                   }
 
                 case _ => new ManyNodeByIdsSeekTaskTemplate(acc.template,
@@ -200,7 +202,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                             innermostTemplate,
                                                             node,
                                                             slots.getLongOffsetFor(node),
-                                                            expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                            expr,
+                                                            physicalPlan.argumentSizes(id))(expressionCompiler)
               }
             }
 
