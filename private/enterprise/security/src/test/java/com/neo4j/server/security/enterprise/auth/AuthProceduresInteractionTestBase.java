@@ -932,9 +932,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction" );
         latch.finishAndWaitForAllToFinish();
         assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 1 ) );
-        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(),
-                anyOf( containsString( WRITE_OPS_NOT_ALLOWED ), containsString( TOKEN_CREATE_OPS_NOT_ALLOWED ) ) );
-        assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
+        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(), containsString( WRITE_OPS_NOT_ALLOWED ) );
+                assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "0" ) );
     }
 

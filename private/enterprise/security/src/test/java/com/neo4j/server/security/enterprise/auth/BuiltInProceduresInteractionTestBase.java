@@ -1126,7 +1126,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 itr -> assertEquals( itr.stream().collect( toList() ).size(), 2 ) );
         // should not be able to do writes
         assertFail( neo.login( "notAllowedToWrite", "abc" ),
-                "CALL test.allowedWriteProcedure() YIELD value CREATE (n)", WRITE_OPS_NOT_ALLOWED );
+                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
     }
 
     @Test

@@ -193,13 +193,19 @@ public abstract class ProcedureInteractionTestBase<S>
         writeSubject = neo.login( "writeSubject", "abc" );
         schemaSubject = neo.login( "schemaSubject", "abc" );
         adminSubject = neo.login( "adminSubject", "abc" );
-        createSomeNodes();
+        setupTokensAndNodes();
     }
 
-    private void createSomeNodes()
+    private void setupTokensAndNodes()
     {
         try ( Transaction tx = neo.getLocalGraph().beginTx( 1, TimeUnit.HOURS ) )
         {
+            // Note: the intention of this query is to seed the token store with labels and property keys
+            // that an editor should be allowed to use.
+            assertEmpty( schemaSubject, "CREATE (n) SET n:A:Test:NEWNODE:VeryUniqueLabel:Node " +
+                    "SET n.id = '2', n.square = '4', n.name = 'me', n.prop = 'a', n.number = '1' " +
+                    "DELETE n" );
+
             assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
             tx.success();
         }
