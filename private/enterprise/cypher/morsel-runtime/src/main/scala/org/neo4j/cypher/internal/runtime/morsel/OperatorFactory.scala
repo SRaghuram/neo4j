@@ -187,8 +187,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.UnwindCollection(_, variable, collection) =>
         val offset = slots.get(variable) match {
           case Some(RefSlot(idx, _, _)) => idx
-          case _ =>
-            throw new InternalException("Weird slot found for UNWIND")
+          case Some(slot) =>
+            throw new InternalException(s"$slot cannot be used for UNWIND")
+          case None =>
+            throw new InternalException("No slot found for UNWIND")
         }
         val runtimeExpression = converters.toCommandExpression(id, collection)
         new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)

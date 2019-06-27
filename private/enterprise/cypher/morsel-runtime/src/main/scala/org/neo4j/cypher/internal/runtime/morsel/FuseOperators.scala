@@ -17,8 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.{OperatorTaskTemplate,
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
-import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util._
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -258,8 +257,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
           case plan@plans.UnwindCollection(_, variable, collection) =>
             val offset = slots.get(variable) match {
               case Some(RefSlot(idx, _, _)) => idx
-              case _ =>
-                throw new InternalException("Weird slot found for UNWIND")
+              case Some(slot) =>
+                throw new InternalException(s"$slot cannot be used for UNWIND")
+              case None =>
+                throw new InternalException("No slot found for UNWIND")
             }
             val newTemplate = new UnwindOperatorTaskTemplate(
               acc.template,

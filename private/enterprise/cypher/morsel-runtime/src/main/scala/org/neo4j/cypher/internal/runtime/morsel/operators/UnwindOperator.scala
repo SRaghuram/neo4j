@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -143,7 +143,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
         },
         codeGen.setRefAt(offset, cast[AnyValue](invoke(loadField(iteratorField), method[java.util.Iterator[_], Object]("next")))),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, invoke(loadField(iteratorField), method[java.util.Iterator[_], Boolean]("hasNext"))),
         )
       )
