@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.tracing
 
-import java.io.IOException
+import java.io.Closeable
 
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
@@ -46,18 +46,12 @@ trait DataPointWriter {
 /**
   * Write data points to somewhere.
   */
-trait DataPointFlusher extends DataPointWriter {
+trait DataPointFlusher extends DataPointWriter with Closeable {
 
   /**
     * Flush buffered data points
     */
   def flush(): Unit
 
-  /**
-    * Close any underlying resources.
-    *
-    * @throws IOException on failure to close some underlying resource
-    */
-  def close(): Unit
 }
 
