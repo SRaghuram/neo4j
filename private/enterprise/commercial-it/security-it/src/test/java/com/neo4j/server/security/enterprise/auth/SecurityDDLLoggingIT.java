@@ -212,12 +212,14 @@ class SecurityDDLLoggingIT
         // WHEN
         execute( adminContext, "GRANT TRAVERSE ON GRAPH * TO foo" );
         execute( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 3 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo" ) ) );
+        assertThat( logLines, hasSize( 4 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
     }
 
     @Test
@@ -242,22 +244,40 @@ class SecurityDDLLoggingIT
     }
 
     @Test
+    void shouldLogGrantWrite() throws IOException
+    {
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+
+        // WHEN
+        execute( adminContext, "GRANT WRITE (*) ON GRAPH * TO foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 2 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+    }
+
+    @Test
     void shouldLogRevokeTraverse() throws IOException
     {
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
         execute( adminContext, "GRANT TRAVERSE ON GRAPH * TO foo" );
         execute( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // WHEN
+        execute( adminContext, "REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS C,D FROM foo" );
         execute( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A,B FROM foo" );
         execute( adminContext, "REVOKE TRAVERSE ON GRAPH * FROM foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 5 ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM foo" ) ) );
+        assertThat( logLines, hasSize( 7 ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
     @Test
@@ -287,6 +307,22 @@ class SecurityDDLLoggingIT
         assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH (*) ON GRAPH * NODES * (*) FROM foo" ) ) );
         assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "REVOKE READ (bar, baz) ON GRAPH * NODES A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 8 ), containsString( withSubject( adminContext, "REVOKE READ (*) ON GRAPH * NODES * (*) FROM foo" ) ) );
+    }
+
+    @Test
+    void shouldLogRevokeWrite() throws IOException
+    {
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+        execute( adminContext, "GRANT WRITE (*) ON GRAPH * TO foo" );
+
+        // WHEN
+        execute( adminContext, "REVOKE WRITE (*) ON GRAPH * FROM foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 3 ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
     private List<String> readAllLines( File logFilename ) throws IOException
