@@ -882,10 +882,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE custom")
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantWrite().role("custom").resource("all_properties").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantWrite().role("custom").resource("all_properties").map,
+      grantWrite().role("custom").resource("all_properties").relationship("*").map
+    ))
   }
 
   test("should grant write privilege to custom role for a specific database and all labels") {
@@ -895,10 +898,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantWrite().role("custom").database("foo").resource("all_properties").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantWrite().role("custom").database("foo").resource("all_properties").map,
+      grantWrite().role("custom").database("foo").resource("all_properties").relationship("*").map
+    ))
   }
 
   test("should grant write privilege to multiple roles in a single grant") {
@@ -910,14 +916,17 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH foo NODES * (*) TO role1, role2, role3")
+    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO role1, role2, role3")
 
     // THEN
-    val expected: PrivilegeMapBuilder = grantWrite().database("foo").resource("all_properties")
+    val expected: Seq[PrivilegeMapBuilder] = Seq(
+      grantWrite().database("foo").resource("all_properties").node("*"),
+      grantWrite().database("foo").resource("all_properties").relationship("*")
+    )
 
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(expected.role("role1").map))
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(expected.role("role2").map))
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(Set(expected.role("role3").map))
+    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
   }
 
   test("should fail granting write privilege for all databases and all labels to non-existing role") {
@@ -927,7 +936,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
       // THEN
     } should have message "Role 'custom' does not exist."
 
@@ -940,14 +949,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     the [DatabaseNotFoundException] thrownBy {
-      execute("GRANT WRITE (*) ON GRAPH foo NODES * (*) TO custom")
+      execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
     } should have message "Database 'foo' does not exist."
   }
 
   test("should fail when granting write privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
       // THEN
     } should have message "This is a DDL command and it should be executed against the system database: GRANT WRITE"
   }
@@ -1323,31 +1332,37 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH foo NODES * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH bar NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantWrite().role("custom").map,
       grantWrite().role("custom").database("foo").map,
-      grantWrite().role("custom").database("bar").map
+      grantWrite().role("custom").database("bar").map,
+      grantWrite().role("custom").relationship("*").map,
+      grantWrite().role("custom").relationship("*").database("foo").map,
+      grantWrite().role("custom").relationship("*").database("bar").map
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       grantWrite().role("custom").map,
-      grantWrite().role("custom").database("bar").map
+      grantWrite().role("custom").database("bar").map,
+      grantWrite().role("custom").relationship("*").map,
+      grantWrite().role("custom").relationship("*").database("bar").map
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").database("bar").map
+      grantWrite().role("custom").database("bar").map,
+      grantWrite().role("custom").relationship("*").database("bar").map
     ))
   }
 
@@ -1455,7 +1470,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val error1 = the [InvalidArgumentsException] thrownBy {
@@ -1485,7 +1500,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error4 = the [InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM wrongRole")
+      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
     }
 
     // THEN
@@ -1502,7 +1517,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val errorTraverse = the [InvalidArgumentsException] thrownBy {
@@ -1527,7 +1542,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val errorWrite = the [InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM role")
+      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
     }
     // THEN
     errorWrite.getMessage should include("The role 'role' does not have the specified privilege")
@@ -1572,11 +1587,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val e = the [InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH foo NODES * (*) FROM custom")
+      execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
     }
     // THEN
     e.getMessage should be("The privilege 'write * ON GRAPH foo NODES *' does not exist.")
@@ -1613,7 +1628,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when revoking WRITE privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE WRITE (*) ON GRAPH * NODES * (*) FROM custom")
+      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
       // THEN
     } should have message "This is a DDL command and it should be executed against the system database: REVOKE WRITE"
   }
@@ -1705,7 +1720,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
@@ -1725,7 +1740,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     graph.execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     val expected = List("b", null)
@@ -1753,7 +1768,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n: A) WITH n, n.name as name DETACH DELETE n RETURN name", resultHandler = (row, _) => {
@@ -1783,7 +1798,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b' REMOVE n.prop") should be(0)
@@ -1801,7 +1816,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN n.name", resultHandler = (row, _) => {
@@ -1851,7 +1866,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -2340,7 +2355,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setupUserJoeWithCustomRole()
 
     // WHEN
-    execute(s"GRANT WRITE (*) ON GRAPH ${DEFAULT_DATABASE_NAME} NODES * (*) TO custom")
+    execute(s"GRANT WRITE (*) ON GRAPH ${DEFAULT_DATABASE_NAME} ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
