@@ -183,7 +183,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         if (errors.isEmpty) {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         } else {
-          subscriber.onError(allErrors())
+          subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
         }
       } finally {
         completeQuery()
@@ -275,6 +275,6 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def allErrors(): Throwable = {
     val first = errors.peek()
     errors.forEach(t => if (t != first) first.addSuppressed(t))
-    exceptionHandler.mapToCypher(first)
+    first
   }
 }
