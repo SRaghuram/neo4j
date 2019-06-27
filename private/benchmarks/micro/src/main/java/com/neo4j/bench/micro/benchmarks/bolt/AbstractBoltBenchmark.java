@@ -103,9 +103,15 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
 
         @Override
-        public void messageFailed() throws IOException
+        public void messageFailed()
         {
-            throw new IOException( "Benchmark should never fail in this way" );
+            throw new RuntimeException( "Benchmark should never fail in this way" );
+        }
+
+        @Override
+        public void messageReset()
+        {
+            throw new RuntimeException( "Benchmark should never fail in this way" );
         }
 
         @Override
@@ -235,7 +241,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                         }
 
                         @Override
-                        public void onError() throws IOException
+                        public void onError()
                         {
                             writer.onError();
                         }
