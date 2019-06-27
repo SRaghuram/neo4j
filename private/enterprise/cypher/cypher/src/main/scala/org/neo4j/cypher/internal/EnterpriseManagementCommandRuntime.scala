@@ -474,7 +474,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           .handleNoResult(() => Some(new DatabaseNotFoundException("Database '" + dbName + "' does not exist.")))
       )
 
-      // Used to log commands
+    // Used to log commands
     case LogSystemCommand(source, command) => (context, parameterMapping, securityContext) =>
       LoggingSystemCommandExecutionPlan(
         logicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext),
