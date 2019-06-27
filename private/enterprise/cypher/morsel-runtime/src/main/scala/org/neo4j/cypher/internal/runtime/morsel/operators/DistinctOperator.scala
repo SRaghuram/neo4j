@@ -70,10 +70,10 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long): DistinctState =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): DistinctState =
       new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType]())
 
-    override def newConcurrentArgumentState(argumentRowId: Long): DistinctState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): DistinctState =
       new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType]())
   }
 

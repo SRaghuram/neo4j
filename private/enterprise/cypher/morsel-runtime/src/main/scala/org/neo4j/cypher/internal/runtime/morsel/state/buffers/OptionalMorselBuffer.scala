@@ -1,0 +1,285 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.runtime.morsel.state.buffers
+
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap._
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
+import org.neo4j.cypher.internal.v4_0.util.InternalException
+
+import scala.collection.mutable.ArrayBuffer
+
+/**
+  * Extension of Morsel buffer that also holds an argument state map in order to track
+  * argument rows that do not result in any output rows, i.e. gets filtered out.
+  *
+  * This is used in front of a pipeline with an OptionalOperator.
+  *
+  * This buffer sits between two pipeline.
+  */
+class OptionalMorselBuffer(id: BufferId,
+                           tracker: QueryCompletionTracker,
+                           downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                           argumentStateMaps: ArgumentStateMaps,
+                           val argumentStateMapId: ArgumentStateMapId
+                          )
+  extends ArgumentCountUpdater
+  with AccumulatingBuffer
+  with Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]
+  with ClosingSource[MorselData]
+  with SinkByOrigin
+  with DataHolder {
+
+  private val argumentStateMap: ArgumentStateMap[OptionalArgumentStateBuffer] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[OptionalArgumentStateBuffer]]
+
+  override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
+
+  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
+
+  override def take(): MorselData = {
+    // To achieve streaming behavior, we peek at the data, even if it is not completed yet.
+    // To keep input order (i.e., place the null rows at thr right position), we give the
+    // data out in ascending argument row id order.
+    val argumentState = argumentStateMap.takeNextIfCompletedOrElsePeek()
+    val data: MorselData =
+      if (argumentState != null) {
+        argumentState match {
+          case ArgumentStateWithCompleted(completedArgument, true) =>
+            if (!completedArgument.didReceiveData) {
+              MorselData(completedArgument.argumentRowId, IndexedSeq.empty, EndOfEmptyStream(completedArgument.viewOfArgumentRow(argumentSlotOffset)))
+            } else {
+              val morsels = completedArgument.takeAll()
+              if (morsels != null) {
+                MorselData(completedArgument.argumentRowId, morsels, EndOfNonEmptyStream)
+              } else {
+                // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
+                // before us), to close and decrement correctly.
+                MorselData(completedArgument.argumentRowId, IndexedSeq.empty, EndOfNonEmptyStream)
+              }
+            }
+
+          case ArgumentStateWithCompleted(incompleteArgument, false) =>
+            val morsels = incompleteArgument.takeAll()
+            if (morsels != null) {
+              MorselData(incompleteArgument.argumentRowId, morsels, NotTheEnd)
+            } else {
+              // In this case we can simply not return anything, there will arrive more data for this argument row id.
+              null.asInstanceOf[MorselData]
+            }
+        }
+      } else {
+        null.asInstanceOf[MorselData]
+      }
+    DebugSupport.logBuffers(s"[take]  $this -> $data")
+    data
+  }
+
+  override def canPut: Boolean = {
+    val buffer = argumentStateMap.peekNext()
+    buffer != null && buffer.canPut
+  }
+
+  override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
+    DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
+    // We increment for each morsel view, otherwise we can reach a count of zero too early, when the all data arrived in this buffer, but has not been
+    // streamed out yet.
+    tracker.incrementBy(data.length)
+    incrementArgumentCounts(downstreamArgumentReducers, data.map(_.argumentRowId))
+    var i = 0
+    while (i < data.length) {
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      i += 1
+    }
+  }
+
+  override def hasData: Boolean = {
+    argumentStateMap.nextArgumentStateIsCompletedOr(state => state.hasData)
+  }
+
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    argumentStateMap.initiate(argumentRowId, argumentMorsel)
+    // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
+    incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
+    tracker.increment()
+  }
+
+  override def increment(argumentRowId: Long): Unit = {
+    argumentStateMap.increment(argumentRowId)
+  }
+
+  override def decrement(argumentRowId: Long): Unit = {
+    argumentStateMap.decrement(argumentRowId)
+  }
+
+  override def clearAll(): Unit = {
+    argumentStateMap.clearAll(buffer => {
+      val morsels = buffer.takeAll()
+      val data = MorselData(buffer.argumentRowId, morsels, EndOfNonEmptyStream)
+      close(data)
+    })
+  }
+
+  override def close(data: MorselData): Unit = {
+    DebugSupport.logBuffers(s"[close] $this -X- $data")
+
+    val theArgumentId = IndexedSeq(data.argumentRowId)
+
+   data.streamContinuation match {
+      case _:EndOfStream =>
+        // Decrement that corresponds to the increment in initiate
+        tracker.decrement()
+        decrementArgumentCounts(downstreamArgumentReducers, theArgumentId)
+      case _ =>
+       // Do nothing
+    }
+
+    // Decrement that corresponds to the increment in put
+    val numberOfDecrements = data.morsels.size
+    tracker.decrementBy(numberOfDecrements)
+
+    var i = 0
+    while (i < numberOfDecrements) {
+      decrementArgumentCounts(downstreamArgumentReducers, theArgumentId)
+      i += 1
+    }
+  }
+
+  def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
+    false
+  }
+
+  override def toString: String =
+    s"OptionalMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+}
+
+// --- Messaging protocol ---
+
+/**
+  * Some Morsels for one argeemnt row id. Depending on the [[StreamContinuation]] there might be more data for this argument row id.
+  */
+case class MorselData(argumentRowId: Long, morsels: IndexedSeq[MorselExecutionContext], streamContinuation: StreamContinuation)
+
+trait StreamContinuation
+trait EndOfStream extends StreamContinuation
+
+/**
+  * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
+  * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
+  */
+case class EndOfEmptyStream(viewOfArgumentRow: MorselExecutionContext) extends EndOfStream
+
+/**
+  * The end of data for one argument row id, when there was data.
+  */
+case object EndOfNonEmptyStream extends EndOfStream
+
+/**
+  * There will be more data for this argument row id.
+  */
+case object NotTheEnd extends StreamContinuation
+
+// --- Inner Buffer ---
+
+/**
+  * For Optional, we need to keep track whether the Buffer held data at any point in time.
+  */
+trait OptionalBuffer {
+  self: Buffer[_] =>
+  /**
+    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
+    */
+  def didReceiveData: Boolean
+}
+
+/**
+  * Delegating [[Buffer]] used in argument state maps.
+  * Holds data for one argument row id in an [[OptionalBuffer]].
+  */
+class OptionalArgumentStateBuffer(argumentRowId: Long,
+                                  val argumentMorsel: MorselExecutionContext,
+                                  inner: Buffer[MorselExecutionContext] with OptionalBuffer) extends ArgumentStateBuffer(argumentRowId, inner) {
+  /**
+    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
+    */
+  def didReceiveData: Boolean = inner.didReceiveData
+
+  /**
+    * Given the whole argument morsel, this creates a view of just the one argument row with [[argumentRowId]].
+    * @param argumentSlotOffset the offset at which to look for the [[argumentRowId]]
+    */
+  def viewOfArgumentRow(argumentSlotOffset: Int): MorselExecutionContext = {
+    val view = argumentMorsel.shallowCopy()
+    view.resetToFirstRow()
+    var arg = view.getLongAt(argumentSlotOffset)
+    while (arg < argumentRowId && view.isValidRow) {
+      view.moveToNextRow()
+      arg = view.getLongAt(argumentSlotOffset)
+    }
+    if (arg == argumentRowId) {
+      view
+    } else {
+      throw new InternalException(s"Could not locate argumentRowId $argumentRowId in $argumentMorsel")
+    }
+  }
+
+  /**
+    * Take all morsels from the buffer that are currently available.
+    */
+  def takeAll(): IndexedSeq[MorselExecutionContext] = {
+    var morsel = take()
+    if (morsel != null) {
+      val morsels = new ArrayBuffer[MorselExecutionContext]
+      do {
+        morsels += morsel
+        morsel = take()
+      } while (morsel != null)
+      morsels
+    } else {
+      null
+    }
+  }
+
+  override def toString: String = {
+    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentMorsel=$argumentMorsel)"
+  }
+}
+
+object OptionalArgumentStateBuffer {
+  object Factory extends ArgumentStateFactory[ArgumentStateBuffer] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext])
+
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext])
+  }
+}
+
+class StandardOptionalBuffer[T <: AnyRef] extends StandardBuffer[T] with OptionalBuffer {
+  private var _didReceiveData : Boolean = false
+
+  override def put(t: T): Unit = {
+    _didReceiveData = true
+    super.put(t)
+  }
+
+  def didReceiveData: Boolean = _didReceiveData
+}
+
+class ConcurrentOptionalBuffer[T <: AnyRef] extends ConcurrentBuffer[T] with OptionalBuffer {
+  @volatile
+  private var _didReceiveData : Boolean = false
+
+  override def put(t: T): Unit = {
+    _didReceiveData = true
+    super.put(t)
+  }
+
+  def didReceiveData: Boolean = _didReceiveData
+}

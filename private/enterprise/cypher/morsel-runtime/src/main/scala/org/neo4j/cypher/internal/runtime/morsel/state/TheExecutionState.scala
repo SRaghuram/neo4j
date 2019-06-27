@@ -124,6 +124,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffers.source[AccumulatorAndMorsel[DATA, ACC]](bufferId).take()
   }
 
+  override def takeData[DATA <: AnyRef](bufferId: BufferId, pipeline: ExecutablePipeline): DATA = {
+    buffers.source[DATA](bufferId).take()
+  }
+
   override def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
     if (pipeline.serial) {
       pipelineLocks(pipeline.id.x).unlock()
@@ -133,6 +137,11 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
     closeWorkUnit(pipeline)
     buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
+  }
+
+  override def closeData[DATA <: AnyRef](pipeline: ExecutablePipeline, data: DATA): Unit = {
+    closeWorkUnit(pipeline)
+    buffers.closingSource(pipeline.inputBuffer.id).close(data)
   }
 
   override def closeAccumulatorTask(pipeline: ExecutablePipeline, accumulator: MorselAccumulator[_]): Unit = {
@@ -170,7 +179,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       DebugSupport.logErrorHandling(s"[putContinuation] Closing $task because of query cancellation")
       task.close(resources)
     } else {
-      DebugSupport.logErrorHandling(s"[putContinuation] put $task")
+      DebugSupport.logBuffers(s"[putContinuation]   $this <- $task")
       continuations(task.pipelineState.pipeline.id.x).put(task)
       if (wakeUp && !task.pipelineState.pipeline.serial) {
         // We only wake up other Threads if this pipeline is not serial.

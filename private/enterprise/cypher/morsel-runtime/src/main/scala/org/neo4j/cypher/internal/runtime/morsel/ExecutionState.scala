@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId,
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, Sink}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, OptionalMorselBuffer, Sink}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, MorselParallelizer}
 
 /**
@@ -50,7 +50,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def putMorsel(fromPipeline: PipelineId, bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
-    * Take a morsel from the row buffer with id `bufferId`.
+    * Take a morsel from the buffer with id `bufferId`.
     *
     * @return the morsel to take, or `null` if no morsel was available
     */
@@ -71,12 +71,26 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[DATA, ACC]
 
   /**
+    * Take data from the [[OptionalMorselBuffer]] buffer with id `bufferId`.
+    *
+    * @return the data to take, or `null` if no data was available
+    */
+  def takeData[DATA <: AnyRef](bufferId: BufferId, pipeline: ExecutablePipeline): DATA
+
+  /**
     * Close a pipeline task which was executing over an input morsel.
     *
     * @param pipeline the executing pipeline
     * @param inputMorsel the input morsel
     */
   def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit
+
+  /**
+    * Close a pipeline task which was executing over some data from an [[OptionalMorselBuffer]].
+    * @param pipeline the executing pipeline
+    * @param data the input data
+    */
+  def closeData[DATA <: AnyRef](pipeline: ExecutablePipeline, data: DATA): Unit
 
   /**
     * Close the work unit of a pipeline. This will release a lock

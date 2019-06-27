@@ -151,6 +151,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               dir,
                               lazyTypes)
 
+      case plans.Optional(source, protectedSymbols) =>
+        val argumentStateMapId = inputBuffer.asInstanceOf[OptionalMorselBufferDefinition].argumentStateMapId
+        val nullableKeys = source.availableSymbols -- protectedSymbols
+        val nullableSlots: Array[Slot] = nullableKeys.map(k => slots.get(k).get).toArray
+        val argumentSize = physicalPlan.argumentSizes(plan.id)
+
+        val argumentDepth = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+
+        new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)
+
       case joinPlan:plans.NodeHashJoin =>
 
         val slotConfigs = physicalPlan.slotConfigurations

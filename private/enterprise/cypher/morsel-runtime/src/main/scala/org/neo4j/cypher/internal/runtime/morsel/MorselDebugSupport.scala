@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.operators._
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{EndOfEmptyStream, EndOfNonEmptyStream, MorselData, NotTheEnd}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 object MorselDebugSupport {
@@ -20,6 +21,12 @@ object MorselDebugSupport {
           Array(
             workIdentity.toString
           )
+      case task:OptionalOperatorTask =>
+        Array("INPUT:") ++
+          prettyStreamedData(task.morselData) ++
+        Array(
+          workIdentity.toString
+        )
     }
   }
 
@@ -29,6 +36,9 @@ object MorselDebugSupport {
         prettyMorselWithHeader(
           "INPUT POST (canContinue: "+startTask.canContinue + "):",
           withMorsel.inputMorsel)
+      case _:ContinuableOperatorTask => Array(
+        s"INPUT POST (canContinue: ${startTask.canContinue})"
+      )
     }
   }
 
@@ -40,10 +50,20 @@ object MorselDebugSupport {
       )
   }
 
-  private def prettyMorselWithHeader(header: String, morsel: MorselExecutionContext): Seq[String] = {
+  def prettyMorselWithHeader(header: String, morsel: MorselExecutionContext): Seq[String] = {
     (
       Array(header) ++
       morsel.prettyString
     ).map(row => MORSEL_INDENT+row)
+  }
+
+  private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
+    Array(s"MorselData with argId ${streamedData.argumentRowId}") ++
+      streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
+      (streamedData.streamContinuation match {
+        case EndOfEmptyStream(argRow) => prettyMorselWithHeader("EndOfEmptyStream", argRow)
+        case EndOfNonEmptyStream => Array("EndOfNonEmptyStream")
+        case NotTheEnd => Array("NotTheEnd")
+      })
   }
 }

@@ -158,7 +158,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     }
 
     def optionalBuffer(id: Int, argumentSlotOffset: Int,  asmId: Int = -1): OptionalBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, OptionalMorselBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[OptionalMorselBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, OptionalMorselBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty)).asInstanceOf[OptionalMorselBufferDefinition]
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new OptionalBufferSequence(bd)

@@ -69,3 +69,11 @@ trait Source[+T <: AnyRef] {
     */
   def take(): T
 }
+
+/**
+  * A source where you can also close the things you take.
+  */
+trait ClosingSource[T <: AnyRef] extends Source[T] {
+
+  def close(data: T): Unit
+}

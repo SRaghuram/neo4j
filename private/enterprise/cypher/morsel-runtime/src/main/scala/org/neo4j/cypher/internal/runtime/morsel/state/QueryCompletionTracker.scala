@@ -30,9 +30,19 @@ trait QueryCompletionTracker extends FlowControl {
   def increment(): Long
 
   /**
+    * Increment by n
+    */
+  def incrementBy(n: Long): Long
+
+  /**
     * Decrement the tracker count.
     */
   def decrement(): Long
+
+  /**
+    * Decrement by n
+    */
+  def decrementBy(n: Long): Long
 
   /**
     * Error!
@@ -79,12 +89,28 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     count
   }
 
+  override def incrementBy(n: Long): Long = {
+    count += n
+    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $count")
+    count
+  }
+
   override def decrement(): Long = {
     count -= 1
     DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $count")
     if (count < 0) {
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
+    postDecrement()
+  }
+
+  override def decrementBy(n: Long): Long = {
+    count -= n
+    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $count")
+    postDecrement()
+  }
+
+  private def postDecrement(): Long = {
     if (count == 0) {
       try {
         if (throwable != null) {
@@ -192,9 +218,25 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     newCount
   }
 
+  override def incrementBy(n: Long): Long = {
+    val newCount = count.addAndGet(n)
+    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $newCount")
+    newCount
+  }
+
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
     DebugSupport.logTracker(s"Decremented $toString. New count: $newCount")
+    postDecrement(newCount)
+  }
+
+  override def decrementBy(n: Long): Long = {
+    val newCount = count.addAndGet(-n)
+    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $newCount")
+    postDecrement(newCount)
+  }
+
+  private def postDecrement(newCount: Long): Long = {
     if (newCount == 0) {
       try {
         status.compareAndExchange(Running, CountReachedZero) match {

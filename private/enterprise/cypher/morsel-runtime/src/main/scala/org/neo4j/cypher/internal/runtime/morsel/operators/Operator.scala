@@ -41,6 +41,12 @@ trait OperatorInput {
     * @return the input accumulator and the morsel, or `null` if no input is available
     */
   def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): AccumulatorAndMorsel[DATA, ACC]
+
+  /**
+    * Take the next data.
+    * @return the next data to work on or `null` if no input is available
+    */
+  def takeData[DATA <: AnyRef](): DATA
 }
 
 /**
@@ -52,6 +58,11 @@ trait OperatorCloser {
     * Close input morsel.
     */
   def closeMorsel(morsel: MorselExecutionContext): Unit
+
+  /**
+    * Close input data.
+    */
+  def closeData[DATA <: AnyRef](data: DATA): Unit
 
   /**
     * Close input accumulators.

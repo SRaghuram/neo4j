@@ -49,6 +49,8 @@ class Buffers(numBuffers: Int,
           return x.RHSSink
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
+        case x: OptionalMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
+          return x
         case _ =>
       }
       j += 1
@@ -86,7 +88,8 @@ class Buffers(numBuffers: Int,
           // first in order to do that
           val reducersOnRHS = reducerOnRHSDefs.map(argStateDef => findRHSAccumulatingStateBuffer(i,
                                                                                                  argStateDef.id)).reverse
-          new MorselApplyBuffer(argumentStatesToInitiate,
+          new MorselApplyBuffer(x.id,
+                                argumentStatesToInitiate,
                                 reducersOnRHS,
                                 argumentReducersOnTopOfThisApply = reducers,
                                 argumentStateMaps,
@@ -110,8 +113,15 @@ class Buffers(numBuffers: Int,
                                                 x.rhsPipelineId,
                                                 stateFactory)
 
-        case _: BufferDefinition =>
-          new MorselBuffer(tracker, reducers, workCancellerIDs, argumentStateMaps, stateFactory.newBuffer())
+        case x: OptionalMorselBufferDefinition =>
+          new OptionalMorselBuffer(x.id,
+                                   tracker,
+                                   reducers,
+                                   argumentStateMaps,
+                                   x.argumentStateMapId)
+
+        case x: BufferDefinition =>
+          new MorselBuffer(x.id, tracker, reducers, workCancellerIDs, argumentStateMaps, stateFactory.newBuffer())
       }
   }
 
@@ -146,6 +156,12 @@ class Buffers(numBuffers: Int,
     */
   def morselBuffer(bufferId: BufferId): MorselBuffer =
     buffers(bufferId.x).asInstanceOf[MorselBuffer]
+
+  /**
+    * Get the buffer with the given ud casted as a [[ClosingSource]].
+    */
+  def closingSource[S <: AnyRef](bufferId: BufferId): ClosingSource[S] =
+    buffers(bufferId.x).asInstanceOf[ClosingSource[S]]
 
   /**
     * Get the buffer with the given id casted as a [[MorselArgumentStateBuffer]].

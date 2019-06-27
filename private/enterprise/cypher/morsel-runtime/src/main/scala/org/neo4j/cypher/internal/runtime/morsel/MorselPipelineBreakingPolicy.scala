@@ -31,13 +31,15 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
       // 1 child operators
       case e: Expand =>
-        if (e.mode == ExpandAll) true
-        else throw unsupported("ExpandInto")
-
+        if (e.mode == ExpandAll)
+          true
+        else
+          throw unsupported("ExpandInto")
       case _: UnwindCollection |
            _: Sort |
-           _: Aggregation
-      => true
+           _: Aggregation |
+           _: Optional
+    => true
 
       case _: ProduceResult |
            _: Limit |

@@ -154,16 +154,6 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.putContinuation(task, wakeUp, resources)
   }
 
-  /**
-    * When a task is done, whether it can continue or not,
-    * the work unit is done and needs to be closed.
-    *
-    * This will release a lock if the pipeline is serial. Otherwise this does nothing.
-    */
-  def closeWorkUnit(): Unit = {
-    executionState.closeWorkUnit(pipeline)
-  }
-
   /* OperatorInput */
 
   override def takeMorsel(): MorselParallelizer = {
@@ -178,10 +168,18 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id, pipeline)
   }
 
+  override def takeData[DATA <: AnyRef](): DATA = {
+    executionState.takeData(pipeline.inputBuffer.id, pipeline)
+  }
+
   /* OperatorCloser */
 
   override def closeMorsel(morsel: MorselExecutionContext): Unit = {
     executionState.closeMorselTask(pipeline, morsel)
+  }
+
+  override def closeData[DATA <: AnyRef](data: DATA): Unit = {
+    executionState.closeData(pipeline, data)
   }
 
   override def closeAccumulator(accumulator: MorselAccumulator[_]): Unit = {
