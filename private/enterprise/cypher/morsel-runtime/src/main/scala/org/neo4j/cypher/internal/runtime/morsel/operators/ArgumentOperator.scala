@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.internal.kernel.api.KernelReadTracer
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {

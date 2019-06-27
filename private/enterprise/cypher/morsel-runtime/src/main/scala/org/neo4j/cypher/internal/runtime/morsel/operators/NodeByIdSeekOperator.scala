@@ -80,8 +80,8 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && ids.hasNext) {
         val nextId = asId(ids.next())
+        tracer.onNode(nextId)
         if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
-          tracer.onNode(nextId)
           outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
           outputRow.setLongAt(offset, nextId)
           outputRow.moveToNextRow()
@@ -127,27 +127,29 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
   private val idVariable = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
   private var nodeId: IntermediateExpression = _
 
-  override def genFields: Seq[Field] = {
-    nodeId.fields ++ super.genFields ++ inner.genFields
-  }
+  override def genMoreFields: Seq[Field] = Seq.empty
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    nodeId.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V :+ idVariable
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, idVariable)
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(nodeId)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     nodeId = codeGen.intermediateCompileExpression(nodeIdExpr).getOrElse(throw new CantCompileQueryException())
 
     /**
       * {{{
-      *   this.id = asId(<<nodeIdExpr>>)
+      *   id = asId(<<nodeIdExpr>>)
       *   this.canContinue = id >= 0 && read.nodeExists(id)
+      *   tracer.onNode(id)
       *   true
       * }}}
       */
     block(
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(nodeId))),
       setField(canContinue, isValidNode(idVariable.name)),
+      invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
       constant(true))
   }
 
@@ -172,7 +174,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         },
         codeGen.setLongAt(offset, load(idVariable)),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, constant(false)))
       )
   }
@@ -195,13 +197,13 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
   private val idIterator = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
   private var nodeIds: IntermediateExpression= _
 
-  override def genFields: Seq[Field] = {
-    nodeIds.fields ++ super.genFields ++ inner.genFields :+ idIterator
-  }
+  override def genMoreFields: Seq[Field] = Seq(idIterator)
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    nodeIds.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(nodeIds)
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     nodeIds = codeGen.intermediateCompileExpression(nodeIdsExpr).getOrElse(throw new CantCompileQueryException())
@@ -226,11 +228,12 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     val id = asId(idIterator.next())
+      *     tracer.onNode(id)
       *     if (id >= 0 && read.nodeExists(id)) {
       *       setLongAt(offset, id)
       *       << inner.genOperate >>
-      *      }
-      *      this.canContinue = itIterator.hasNext()
+      *     }
+      *     this.canContinue = itIterator.hasNext()
       *   }
       * }}}
       */
@@ -240,7 +243,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
                          invokeStatic(asIdMethod, cast[AnyValue](
                            invoke(loadField(idIterator),
                                   method[java.util.Iterator[AnyValue], Object]("next"))))),
-
+        invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
         condition(isValidNode(idVariable))(
           block(
             if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
@@ -252,7 +255,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             },
             codeGen.setLongAt(offset, load(idVariable)),
             profileRow(id),
-            inner.genOperate
+            inner.genOperateWithExpressions
             )),
         setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))))
       )

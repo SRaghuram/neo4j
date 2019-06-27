@@ -142,9 +142,7 @@ trait OperatorTaskTemplate {
 
   def executionEventField: InstanceField = field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)
 
-  def genProfileEventFields: Seq[Field] = {
-    executionEventField +: inner.genProfileEventFields
-  }
+  def genProfileEventField: Option[Field] = Some(executionEventField)
 
   def genInitializeProfileEvents: IntermediateRepresentation = {
     block(
@@ -242,6 +240,8 @@ object OperatorTaskTemplate {
     override def genOperate: IntermediateRepresentation = noop()
     override def genFields: Seq[Field] = Seq.empty
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+    override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+    override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
     override def genCanContinue: Option[IntermediateRepresentation] = None
     override def genCloseCursors: IntermediateRepresentation = noop()
   }
@@ -334,7 +334,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
       ),
       // NOTE: This has to be called after genOperate!
       genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
-                                                                             op.genProfileEventFields ++
+                                                                             op.genProfileEventField ++
                                                                              op.genExpressions.flatMap(_.fields)))
   }
 }
@@ -350,7 +350,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
 
   override def genInitializeProfileEvents: IntermediateRepresentation = noop()
 
-  override def genProfileEventFields: Seq[Field] = Seq.empty
+  override def genProfileEventField: Option[Field] = None
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 
