@@ -43,9 +43,10 @@ public class ServerDatabase implements Database
         Neo4jConfig.fromFile( neo4jConfigFile )
                    .setBoltUri( generateBoltUriString() )
                    .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
-                   .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toAbsolutePath().toString() )
-                   .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().toAbsolutePath().toString() )
+                   .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
+                   .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() )
                    .withSetting( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() )
+                   .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
                    .writeToFile( neo4jConfigFile );
 
         Neo4jServerWrapper neo4jServer = new Neo4jServerWrapper( neo4jDir );
