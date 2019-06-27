@@ -79,6 +79,40 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.resultAsString() // should not explode
   }
 
+  test("optional match with distinct should take labels into account") {
+
+    val setupQuery =
+      """
+        |CREATE (s1: StartLabel1), (s2: StartLabel2)
+        |CREATE (s1)-[:REL]->(:MidLabel1)-[:REL]->(:End)
+        |CREATE (s1)-[:REL]->(:MidLabel2)-[:REL]->(:End)
+        |CREATE (s2)-[:REL]->(:MidLabel1)-[:REL]->(:End)
+        |CREATE (s2)-[:REL]->(:MidLabel2)-[:REL]->(:End)
+      """.stripMargin
+
+    executeSingle(setupQuery)
+
+    val countQuery =
+      """
+        |OPTIONAL MATCH (:StartLabel1)-->(:MidLabel1)-->(end:End)
+        |RETURN COUNT(end) as count
+      """.stripMargin
+
+    val countResult = executeWith(Configs.InterpretedAndSlotted, countQuery)
+
+    countResult.toList should be(List(Map("count" -> 1)))
+
+    val countDistinctQuery =
+      """
+        |OPTIONAL MATCH (:StartLabel1)-->(:MidLabel1)-->(end:End)
+        |RETURN COUNT(DISTINCT end) as count
+      """.stripMargin
+
+    val countDistinctResult = executeWith(Configs.InterpretedAndSlotted, countDistinctQuery)
+
+    countDistinctResult.toList should be(List(Map("count" -> 1)))
+  }
+
   test("should be able to plan customer query using outer join and alias (ZenDesk ticket #6628)") {
     graph.inTx {
       executeSingle("CREATE INDEX ON :L0(p0)")
