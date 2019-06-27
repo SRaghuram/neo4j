@@ -23,7 +23,7 @@ class SlottedRelationshipCountFromCountStoreTest extends RelationshipCountFromCo
 class SlottedAggregationTest extends AggregationTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedOrderedAggregationTest extends OrderedAggregationTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
-                           with ExpandAllWithOptionalTestBase[EnterpriseRuntimeContext]
+                           with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class SlottedLabelScanTest extends LabelScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
@@ -50,3 +50,5 @@ class SlottedMiscTest extends MiscTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRu
 class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedOptionalTest extends OptionalTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+

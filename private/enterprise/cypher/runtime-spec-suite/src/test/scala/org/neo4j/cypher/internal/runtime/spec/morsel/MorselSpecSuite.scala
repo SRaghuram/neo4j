@@ -69,7 +69,9 @@ class MorselApplyStressTest extends ApplyStressTestBase(MORSEL)
 
 // EXPAND
 class MorselExpandAllTest extends ExpandAllTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+                          with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class MorselExpandAllTestNoFusing extends ExpandAllTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+                                  with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
@@ -113,6 +115,10 @@ class MorselReactiveParallelStressTest
 class MorselReactiveParallelNoFusingStressTest
   extends ReactiveResultStressTestBase(SINGLE_THREADED_NO_FUSING, MORSEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
+
+// OPTIONAL
+class MorselOptionalSingleThreadedTest extends OptionalTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselOptionalSingleThreadedNoFusingTest extends OptionalTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // GENERAL
 class MorselMiscTest extends MiscTestBase(SINGLE_THREADED, MORSEL)

@@ -78,7 +78,9 @@ class ParallelRuntimeApplyStressTest extends ApplyStressTestBase(PARALLEL)
 
 // EXPAND
 class ParallelRuntimeExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+                                   with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+                                           with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandStressTest extends ExpandStressTestBase(PARALLEL)
 
 // PROJECTION
@@ -119,10 +121,14 @@ class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(ENTERPRI
 class ParallelRuntimeReactiveResultsNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 class ParallelRuntimeReactiveResultsStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL, PARALLEL,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)// this test is slow, hence the reduced size
 class ParallelRuntimeReactiveParallelNoFusingStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
+                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1)// this test is slow, hence the reduced size
+
+// OPTIONAL
+class ParallelRuntimeOptionalTest extends OptionalTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.PARALLEL, PARALLEL)
