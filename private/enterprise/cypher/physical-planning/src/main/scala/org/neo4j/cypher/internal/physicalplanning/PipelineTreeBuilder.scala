@@ -55,6 +55,14 @@ object PipelineTreeBuilder {
                                     val producingPipelineId: PipelineId) extends BufferDefinitionBuild(id)
 
   /**
+    * Builder for [[OptionalMorselBufferDefinition]]
+    */
+  class OptionalMorselBufferDefinitionBuild(id: BufferId,
+                                            val producingPipelineId: PipelineId,
+                                            val argumentStateMapId: ArgumentStateMapId,
+                                            val argumentSlotOffset: Int) extends BufferDefinitionBuild(id)
+
+  /**
     * Builder for [[MorselBufferDefinition]], that is a delegate.
     */
   class DelegateBufferDefinitionBuild(id: BufferId,
@@ -106,6 +114,13 @@ object PipelineTreeBuilder {
     def newBuffer(producingPipelineId: PipelineId): MorselBufferDefinitionBuild = {
       val x = buffers.size
       val buffer = new MorselBufferDefinitionBuild(BufferId(x), producingPipelineId)
+      buffers += buffer
+      buffer
+    }
+
+    def newOptionalBuffer(producingPipelineId: PipelineId, argumentStateMapId: ArgumentStateMapId, argumentSlotOffset: Int): OptionalMorselBufferDefinitionBuild = {
+      val x = buffers.size
+      val buffer = new OptionalMorselBufferDefinitionBuild(BufferId(x), producingPipelineId, argumentStateMapId, argumentSlotOffset)
       buffers += buffer
       buffer
     }
@@ -176,9 +191,17 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   private def outputToArgumentStateBuffer(pipeline: PipelineDefinitionBuild, plan: LogicalPlan, applyBuffer: ApplyBufferDefinitionBuild, argumentSlotOffset: Int): ArgumentStateBufferDefinitionBuild = {
-    val asm = stateDefinition.newArgumentStateMap(plan.id, argumentSlotOffset, true)
+    val asm = stateDefinition.newArgumentStateMap(plan.id, argumentSlotOffset, counts = true)
     val output = stateDefinition.newArgumentStateBuffer(pipeline.id, asm.id)
     pipeline.outputDefinition = ReduceOutput(output.id, plan)
+    markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
+    output
+  }
+
+  private def outputToOptionalMorselBuffer(pipeline: PipelineDefinitionBuild, plan: LogicalPlan, applyBuffer: ApplyBufferDefinitionBuild, argumentSlotOffset: Int): OptionalMorselBufferDefinitionBuild = {
+    val asm = stateDefinition.newArgumentStateMap(plan.id, argumentSlotOffset, counts = true)
+    val output = stateDefinition.newOptionalBuffer(pipeline.id, asm.id, argumentSlotOffset)
+    pipeline.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
   }
@@ -188,8 +211,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                                         planId: Id,
                                                         applyBuffer: ApplyBufferDefinitionBuild,
                                                         argumentSlotOffset: Int): LHSAccumulatingRHSStreamingBufferDefinitionBuild = {
-    val lhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, true)
-    val rhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, true)
+    val lhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, counts = true)
+    val rhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, counts = true)
     val output = stateDefinition.newLhsAccumulatingRhsStreamingBuffer(lhs.id, rhs.id, lhsAsm.id, rhsAsm.id)
     lhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
     rhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
@@ -244,6 +267,16 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException("not implemented")
         }
 
+      case _: Optional =>
+        if (breakingPolicy.breakOn(plan)) {
+          val pipeline = newPipeline(plan)
+          val optionalMorselBuffer = outputToOptionalMorselBuffer(source, plan, argument, argument.argumentSlotOffset)
+          pipeline.inputBuffer = optionalMorselBuffer
+          pipeline
+        } else {
+          throw new UnsupportedOperationException("not implemented")
+        }
+
       case _: Expand |
            _: PruningVarExpand |
            _: VarExpand |
@@ -261,7 +294,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Limit =>
-        val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, false)
+        val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
         source.middlePlans += plan
         source
@@ -391,7 +424,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     */
   private def traverseBuffers(buffer: BufferDefinitionBuild,
                               applyBuffer: ApplyBufferDefinitionBuild,
-                              onInputBuffer: MorselBufferDefinitionBuild => Unit,
+                              onInputBuffer: BufferDefinitionBuild => Unit,
                               onLHSAccumulatingRHSStreamingBuffer: LHSAccumulatingRHSStreamingBufferDefinitionBuild => Unit,
                               onDelegateBuffer: DelegateBufferDefinitionBuild => Unit,
                               onLastDelegate: DelegateBufferDefinitionBuild => Unit): Unit = {
@@ -413,6 +446,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           onDelegateBuffer(d)
           upstreams += pipelines(d.applyBuffer.producingPipelineId.x).inputBuffer
         case b: MorselBufferDefinitionBuild =>
+          onInputBuffer(b)
+          upstreams += pipelines(b.producingPipelineId.x).inputBuffer
+        case b: OptionalMorselBufferDefinitionBuild =>
           onInputBuffer(b)
           upstreams += pipelines(b.producingPipelineId.x).inputBuffer
       }

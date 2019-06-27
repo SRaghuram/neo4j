@@ -92,6 +92,16 @@ case class MorselBufferDefinition(id: BufferId,
 }
 
 /**
+  * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalMorselBuffer.
+  */
+case class OptionalMorselBufferDefinition(id: BufferId,
+                                          argumentStateMapId: ArgumentStateMapId,
+                                          downstreamStates: IndexedSeq[DownstreamStateOperator])
+  extends BufferDefinition {
+  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): OptionalMorselBufferDefinition = copy(downstreamStates = downstreamStates)
+}
+
+/**
   * Sits between the LHS and RHS of an apply.
   * This acts as a multiplexer. It receives input and copies it into
   *

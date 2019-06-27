@@ -46,6 +46,8 @@ object PipelineBuilder {
         ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, bufferDefinition.downstreamStates)
       case b: MorselBufferDefinitionBuild =>
         MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
+      case b: OptionalMorselBufferDefinitionBuild =>
+        OptionalMorselBufferDefinition(b.id, b.argumentStateMapId, bufferDefinition.downstreamStates)
       case b: DelegateBufferDefinitionBuild =>
         MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
       case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>

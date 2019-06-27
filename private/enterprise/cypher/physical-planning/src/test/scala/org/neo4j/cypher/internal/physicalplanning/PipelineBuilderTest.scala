@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, Ascending, Limit, NodeByLabelScan, NodeHashJoin, ProduceResult, Sort}
+import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, Argument, Ascending, Limit, NodeByLabelScan, NodeHashJoin, Optional, ProduceResult, Sort}
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
@@ -107,6 +107,31 @@ class PipelineBuilderTest extends CypherFunSuite {
         .delegateToMorselBuffer(3)
         .pipeline(1, Seq(classOf[NodeByLabelScan], classOf[ProduceResult]), serial = true)
         .end
+    }
+  }
+
+  test("should plan optional") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .apply().withBreak()
+      .|.optional("n").withBreak()
+      .|.argument("n").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, 0)
+        .delegateToMorselBuffer(1)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .applyBuffer(2, 2)
+        .delegateToMorselBuffer(3)
+        .pipeline(1, Seq(classOf[Argument]))
+        .optionalBuffer(4, 2, 0)
+        .pipeline(2, Seq(classOf[Optional], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(2).reducerOnRHS(0, 2, 2)
+      start(graph).morselBuffer(3).reducer(0)
     }
   }
 }
