@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -17,12 +17,6 @@ import scala.collection.mutable.ArrayBuffer
 trait ArgumentStateMap[S <: ArgumentState] {
 
   def clearAll(f: S => Unit): Unit
-
-  /**
-    * Update the [[ArgumentState]] related to `argument` and decrement
-    * the argument counter.
-    */
-  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit): Unit
 
   def update(argumentRowId: Long, onState: S => Unit): Unit
 
@@ -50,6 +44,29 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
     */
   def takeOneCompleted(): S
+
+  /**
+    * When using this method to take argument states, an internal counter of the argument id last completed argument state is kept.
+    * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
+    *
+    * The counter is unaffected by other methods that take, so they should not be mixed!
+    *
+    * Returns an ArgumentStateWithCompleted of the [[ArgumentState]] for the specified argumentId
+    * which indicated whether the state was completed or not,
+    * or `null` if no state exist for that argumentId..
+    */
+  def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
+
+  /**
+    * Returns `true` if the next [[ArgumentState]] according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]]
+    * is either completed or fulfills the given predicate.
+    */
+  def nextArgumentStateIsCompletedOr(statePredicate: S => Boolean): Boolean
+
+  /**
+    * Peeks at the next argument state according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]].
+    */
+  def peekNext(): S
 
   /**
     * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
@@ -163,24 +180,10 @@ object ArgumentStateMap {
   }
 
   /**
-    * For each argument row id at `argumentSlotOffset`, create a view over `morsel`
-    * displaying only the rows derived from this argument rows, and execute `f` on this view.
+    * One argument state together with the information whether it is completed, i.e.
+    * all data has arrived.
     */
-  def foreachArgument(argumentSlotOffset: Int,
-                      morsel: MorselExecutionContext,
-                      f: (Long, MorselExecutionContext) => Unit): Unit = {
-
-    while (morsel.isValidRow) {
-      val arg = morsel.getLongAt(argumentSlotOffset)
-      val start: Int = morsel.getCurrentRow
-      while (morsel.isValidRow && morsel.getLongAt(argumentSlotOffset) == arg) {
-        morsel.moveToNextRow()
-      }
-      val end: Int = morsel.getCurrentRow
-      val view = morsel.view(start, end)
-      f(arg, view)
-    }
-  }
+  case class ArgumentStateWithCompleted[S <: ArgumentState](argumentState: S, isCompleted: Boolean)
 
   /**
     * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`). This

@@ -8,146 +8,27 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentArgumentStateMap.ConcurrentStateController
-
-import scala.collection.JavaConverters._
 
 /**
   * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
   */
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
-                                                         factory: ArgumentStateFactory[STATE]) extends ArgumentStateMap[STATE] {
+                                                         factory: ArgumentStateFactory[STATE])
+  extends AbstractArgumentStateMap[STATE, ConcurrentStateController[STATE]] {
 
-  private val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
+  override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
 
-  override def update(morsel: MorselExecutionContext,
-                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
-    ArgumentStateMap.foreachArgument(
-      argumentSlotOffset,
-      morsel,
-      (argumentRowId, morselView) => {
-        val controller = controllers.get(argumentRowId)
-        onState(controller.state, morselView)
-      }
-    )
-  }
+  @volatile
+  override protected var lastCompletedArgumentId: Long = -1
 
-  def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
-    onState(controllers.get(argumentRowId).state)
-  }
-
-  override def clearAll(f: STATE => Unit): Unit = {
-    controllers.forEach((_, controller) => {
-      if (controller.take()) {
-        // We do not remove the controller from controllers here in case there
-        // is some outstanding work unit that wants to update count of accumulator
-        f(controller.state)
-      }
-    })
-  }
-
-  override def filter[U](readingRow: MorselExecutionContext,
-                         onArgument: (STATE, Long) => U,
-                         onRow: (U, MorselExecutionContext) => Boolean): Unit = {
-    ArgumentStateMap.filter(
-      argumentSlotOffset,
-      readingRow,
-      (argumentRowId, nRows) =>
-        onArgument(controllers.get(argumentRowId).state, nRows),
-      onRow
-    )
-  }
-
-  override def filterCancelledArguments(morsel: MorselExecutionContext,
-                                        isCancelled: STATE => Boolean): IndexedSeq[Long] = {
-    ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
-                                              morsel,
-                                              argumentRowId => isCancelled(controllers.get(argumentRowId).state))
-  }
-
-  override def takeOneCompleted(): STATE = {
-    val iterator = controllers.values().iterator()
-
-    while(iterator.hasNext) {
-      val controller: ConcurrentStateController[STATE] = iterator.next()
-      if (controller.tryTake()) {
-        controllers.remove(controller.state.argumentRowId)
-        debug("ASM %s take %03d".format(argumentStateMapId, controller.state.argumentRowId))
-        return controller.state
-      }
-    }
-    null.asInstanceOf[STATE]
-  }
-
-  override def peekCompleted(): Iterator[STATE] = {
-    controllers.values().stream().filter(_.isZero).map[STATE](_.state).iterator().asScala
-  }
-
-  override def peek(argumentId: Long): STATE = {
-    val controller = controllers.get(argumentId)
-    if (controller != null) {
-      controller.state
-    } else {
-      null.asInstanceOf[STATE]
-    }
-  }
-
-  override def hasCompleted: Boolean = {
-    val iterator = controllers.values().iterator()
-
-    while(iterator.hasNext) {
-      val controller: ConcurrentStateController[STATE] = iterator.next()
-      if (controller.isZero) {
-        return true
-      }
-    }
-    false
-  }
-
-  override def hasCompleted(argument: Long): Boolean = {
-    val controller = controllers.get(argument)
-    controller != null && controller.isZero
-  }
-
-  override def remove(argument: Long): Boolean = {
-    debug("ASM %s rem %03d".format(argumentStateMapId, argument))
-    controllers.remove(argument) != null
-  }
-
-  override def initiate(argument: Long): Unit = {
-    val id = if (DEBUG) s"ArgumentState[id=$argumentStateMapId, rowId=$argument]" else "ArgumentState[...]"
-    debug("ASM %s init %03d".format(argumentStateMapId, argument))
-    val newController = new ConcurrentStateController(id, factory.newConcurrentArgumentState(argument))
-    controllers.put(argument, newController)
-  }
-
-  override def increment(argument: Long): Unit = {
-    val controller = controllers.get(argument)
-    val newCount = controller.increment()
-    debug("ASM %s incr %03d to %d".format(argumentStateMapId, argument, newCount))
-  }
-
-  override def decrement(argument: Long): Boolean = {
-    val newCount = controllers.get(argument).decrement()
-    debug("ASM %s decr %03d to %d".format(argumentStateMapId, argument, newCount))
-    newCount == 0
-  }
-
-  override def toString: String = {
-    val sb = new StringBuilder
-    sb ++= "ConcurrentArgumentStateMap(\n"
-    controllers.forEach((argumentRowId, controller) => {
-      sb ++= s"$argumentRowId -> $controller\n"
-    })
-    sb += ')'
-    sb.result()
-  }
+  override protected def newStateController(argument: Long,
+                                            argumentMorsel: MorselExecutionContext): ConcurrentStateController[STATE] =
+    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel))
 }
-
 
 object ConcurrentArgumentStateMap {
   /**
@@ -159,26 +40,28 @@ object ConcurrentArgumentStateMap {
     * Controller which knows when an [[ArgumentState]] is complete,
     * and protects it from concurrent access.
     */
-  private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](id: String, val state: STATE) {
+  private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
+    extends AbstractArgumentStateMap.StateController[STATE] {
+
     private val count = new AtomicLong(1)
 
-    def increment(): Long = count.incrementAndGet()
+    override def increment(): Long = count.incrementAndGet()
 
-    def decrement(): Long = count.decrementAndGet()
+    override def decrement(): Long = count.decrementAndGet()
 
     /**
       * Tries to take a controller, if the count has reached zero.
       * @return `true` if this call took the controller, `false` if it was already taken or the count was not zero.
       */
-    def tryTake(): Boolean = count.compareAndSet(0, TAKEN)
+    override def tryTake(): Boolean = count.compareAndSet(0, TAKEN)
 
     /**
       * Tries to take a controller.
       * @return `true` if this call took the controller, `false` if it was already taken.
       */
-    def take(): Boolean = count.getAndSet(TAKEN) >= 0
+    override def take(): Boolean = count.getAndSet(TAKEN) >= 0
 
-    def isZero: Boolean = count.get() == 0
+    override def isZero: Boolean = count.get() == 0
 
     override def toString: String = {
       s"[count: ${count.get()}, state: $state]"
