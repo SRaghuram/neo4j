@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -113,22 +114,37 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final IntPredicate propertyPermissions;
         private final boolean isAdmin;
 
-        private final boolean allowsReadAllPropertiesAllLabels;
         private final boolean allowsTraverseAllLabels;
-        private final IntSet whitelistedNodeProperties;
-        private final IntSet whitelistedLabelsForAllProperties;
-        private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
-        private final IntSet whitelistTraverseLabels;
-
         private final boolean allowsTraverseAllRelTypes;
+        private final IntSet whitelistTraverseLabels;
         private final IntSet whitelistTraverseRelTypes;
 
-        StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
-                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions,
-                boolean allowsReadAllPropertiesAllLabels, IntSet whitelistedLabelsForAllProperties,
-                IntObjectMap<IntSet> whitelistedLabelsForProperty, IntSet whitelistedNodeProperties,
-                boolean allowsTraverseAllLabels, IntSet whitelistTraverseLabels,
-                boolean allowsTraverseAllRelTypes, IntSet whitelistTraverseRelTypes )
+        private final boolean allowsReadAllPropertiesAllLabels;
+        private final boolean allowsReadAllPropertiesAllRelTypes;
+        private final IntSet whitelistedNodeProperties;
+        private final IntSet whitelistedRelationshipProperties;
+        private final IntSet whitelistedLabelsForAllProperties;
+        private final IntSet whitelistedRelTypesForAllProperties;
+        private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
+        private final IntObjectMap<IntSet> whitelistedRelTypesForProperty;
+
+        StandardAccessMode(
+                boolean allowsReads,
+                boolean allowsWrites,
+                boolean allowsTokenCreates,
+                boolean allowsSchemaWrites,
+                boolean isAdmin,
+                boolean passwordChangeRequired,
+                Set<String> roles,
+                IntPredicate propertyPermissions,
+                boolean allowsTraverseAllLabels,
+                boolean allowsTraverseAllRelTypes, IntSet whitelistTraverseLabels,
+                IntSet whitelistTraverseRelTypes,
+                boolean allowsReadAllPropertiesAllLabels,
+                boolean allowsReadAllPropertiesAllRelTypes, IntSet whitelistedLabelsForAllProperties,
+                IntSet whitelistedRelTypesForAllProperties, IntObjectMap<IntSet> whitelistedLabelsForProperty,
+                IntObjectMap<IntSet> whitelistedRelTypesForProperty, IntSet whitelistedNodeProperties,
+                IntSet whitelistedRelationshipProperties )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
@@ -139,6 +155,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
             this.allowsReadAllPropertiesAllLabels = allowsReadAllPropertiesAllLabels;
+            this.allowsReadAllPropertiesAllRelTypes = allowsReadAllPropertiesAllRelTypes;
             this.whitelistedLabelsForAllProperties = whitelistedLabelsForAllProperties;
             this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
             this.whitelistedNodeProperties = whitelistedNodeProperties;
@@ -146,6 +163,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.whitelistTraverseLabels = whitelistTraverseLabels;
             this.allowsTraverseAllRelTypes = allowsTraverseAllRelTypes;
             this.whitelistTraverseRelTypes = whitelistTraverseRelTypes;
+            this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
+            this.whitelistedRelTypesForAllProperties = whitelistedRelTypesForAllProperties;
+            this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
         }
 
         @Override
@@ -226,9 +246,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
-        public boolean allowsReadProperty( Supplier<LabelSet> labelSupplier, int propertyKey )
+        public boolean allowsReadNodeProperty( Supplier<LabelSet> labelSupplier, int propertyKey )
         {
-
             if ( allowsReadPropertyAllLabels( propertyKey ) )
             {
                 return true;
@@ -247,9 +266,25 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 {
                     return true;
                 }
-
             }
             return false;
+        }
+
+        @Override
+        public boolean allowsReadPropertyAllRelTypes( int propertyKey )
+        {
+            return allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey );
+        }
+
+        @Override
+        public boolean allowsReadRelationshipProperty( IntSupplier relType, int propertyKey )
+        {
+            if ( allowsReadPropertyAllRelTypes( propertyKey ) )
+            {
+                return true;
+            }
+            IntSet whitelisted = whitelistedRelTypesForProperty.get( propertyKey );
+            return whitelisted != null && whitelisted.contains( relType.getAsInt() ) || whitelistedRelTypesForAllProperties.contains( relType.getAsInt() );
         }
 
         @Override
@@ -309,14 +344,18 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean schema;
             private boolean admin;
             private IntPredicate propertyPermissions;
-            private boolean whitelistAllPropertiesInWholeGraph;
-            private MutableIntSet allowedSegmentForAllProperties = IntSets.mutable.empty();
+            private boolean allowReadAllPropertiesAllLabels;
+            private MutableIntSet allowedNodeSegmentForAllProperties = IntSets.mutable.empty();
 
-            private MutableIntObjectMap<IntSet> allowedSegmentForProperty = IntObjectMaps.mutable.empty();
+            private MutableIntObjectMap<IntSet> allowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
             private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllLabels;
             private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
 
+            private boolean allowReadAllPropertiesAllRelTypes;
+            private MutableIntSet allowedRelTypeSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
+            private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllRelTypes;
             private MutableIntSet whitelistTraverseRelTypes = IntSets.mutable.empty();
 
@@ -345,14 +384,19 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         passwordChangeRequired,
                         roles,
                         propertyPermissions,
-                        whitelistAllPropertiesInWholeGraph,
-                        allowedSegmentForAllProperties,
-                        allowedSegmentForProperty,
-                        whitelistNodeProperties,
                         allowsTraverseAllLabels,
-                        whitelistTraverseLabels,
                         allowsTraverseAllRelTypes,
-                        whitelistTraverseRelTypes );
+                        whitelistTraverseLabels,
+                        whitelistTraverseRelTypes,
+                        allowReadAllPropertiesAllLabels,
+                        allowReadAllPropertiesAllRelTypes,
+                        allowedNodeSegmentForAllProperties,
+                        allowedRelTypeSegmentForAllProperties,
+                        allowedNodeSegmentForProperty,
+                        allowedRelationshipSegmentForProperty,
+                        whitelistNodeProperties,
+                        whitelistRelationshipProperties
+                );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
@@ -397,7 +441,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     switch ( resource.type() )
                     {
                     case GRAPH:
-                        whitelistAllPropertiesInWholeGraph = true;
+                        allowReadAllPropertiesAllLabels = true;
+                        allowReadAllPropertiesAllRelTypes = true;
                         read = true;
                         break;
                     case PROPERTY:
@@ -411,10 +456,24 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedSegmentForProperty
+                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedNodeSegmentForProperty
                                         .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
                                 allowedNodesWithLabels.add( labelId );
+                            }
+                        }
+                        else if ( segment instanceof RelTypeSegment )
+                        {
+                            if ( segment.equals( RelTypeSegment.ALL ) )
+                            {
+                                whitelistRelationshipProperties.add( propertyId );
+                            }
+                            else
+                            {
+                                MutableIntSet allowedWithRelType = (MutableIntSet) allowedRelationshipSegmentForProperty
+                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
+                                allowedWithRelType.add( relTypeId );
                             }
                         }
                         else
@@ -428,12 +487,24 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                whitelistAllPropertiesInWholeGraph = true;
+                                allowReadAllPropertiesAllLabels = true;
                             }
                             else
                             {
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                                allowedSegmentForAllProperties.add( labelId );
+                                allowedNodeSegmentForAllProperties.add( labelId );
+                            }
+                        }
+                        else if ( segment instanceof RelTypeSegment )
+                        {
+                            if ( segment.equals( RelTypeSegment.ALL ) )
+                            {
+                                allowReadAllPropertiesAllRelTypes = true;
+                            }
+                            else
+                            {
+                                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
+                                allowedRelTypeSegmentForAllProperties.add( relTypeId );
                             }
                         }
                         else

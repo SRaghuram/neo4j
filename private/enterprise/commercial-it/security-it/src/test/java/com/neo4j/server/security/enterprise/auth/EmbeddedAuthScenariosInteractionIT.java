@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -590,6 +591,14 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String query = "MATCH (:A)-[r]->(:B) RETURN r.foo";
 
         assertSuccess( adminSubject, query, r -> assertKeyIs( r, "r.foo", 1 ) );
+        assertSuccess( subject, query, r -> {
+            List<Map<String,Object>> rows = r.stream().collect( Collectors.toList() );
+            assertThat( rows.size(), equalTo( 1 ) );
+            assertNull( rows.get( 0 ).get( "r.foo" ) );
+        } );
+
+        neo.getSystemGraph().execute( String.format( "GRANT READ (foo) ON GRAPH * RELATIONSHIPS REL TO %s", role ) );
+
         assertSuccess( subject, query, r -> assertKeyIs( r, "r.foo", 1 ) );
     }
 
