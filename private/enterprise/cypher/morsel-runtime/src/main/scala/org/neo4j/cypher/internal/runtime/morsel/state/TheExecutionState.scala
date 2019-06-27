@@ -294,6 +294,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
+  override def toString: String = "TheExecutionState"
+
   // used by join operator, to create thread-safe argument states in its RHS ASM
   override def newBuffer[T <: AnyRef](): Buffer[T] =
     stateFactory.newBuffer()

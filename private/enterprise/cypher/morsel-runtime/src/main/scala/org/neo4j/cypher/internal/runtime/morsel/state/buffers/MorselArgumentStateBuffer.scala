@@ -54,8 +54,8 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     argumentStateMap.takeOneCompleted()
   }
 
-  override def initiate(argumentRowId: Long): Unit = {
-    argumentStateMap.initiate(argumentRowId)
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    argumentStateMap.initiate(argumentRowId, argumentMorsel)
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
     incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
     tracker.increment()
@@ -89,7 +89,6 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     * @return `true` iff the accumulator is cancelled
     */
   def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
-    // TODO
     false
   }
 

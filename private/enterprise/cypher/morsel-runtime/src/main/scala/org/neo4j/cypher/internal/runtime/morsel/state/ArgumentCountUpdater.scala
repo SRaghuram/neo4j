@@ -46,7 +46,7 @@ abstract class ArgumentCountUpdater {
 
   protected def initiateArgumentReducers(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                          morsel: MorselExecutionContext): Unit = {
-    morselLoop(downstreamAccumulatingBuffers, morsel, _.initiate(_))
+    morselLoop(downstreamAccumulatingBuffers, morsel, _.initiate(_, morsel))
   }
 
   protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],

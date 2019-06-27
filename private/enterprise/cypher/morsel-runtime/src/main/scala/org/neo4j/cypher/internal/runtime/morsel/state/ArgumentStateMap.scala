@@ -80,9 +80,12 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def remove(argument: Long): Boolean
 
   /**
-    * Initiate state and counting for a new argument.
+    * Initiate state and counting for a new argument
+    *
+    * @param argument       the argument row id
+    * @param argumentMorsel the morsel that contains this argument
     */
-  def initiate(argument: Long): Unit
+  def initiate(argument: Long, argumentMorsel: MorselExecutionContext): Unit
 
   /**
     * Increment the argument counter for `argument`.
@@ -144,8 +147,9 @@ object ArgumentStateMap {
     * the corresponding ArgumentStateMap.
     */
   trait ArgumentStateFactory[S <: ArgumentState] {
-    def newStandardArgumentState(argumentRowId: Long): S
-    def newConcurrentArgumentState(argumentRowId: Long): S
+    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): S
+
+    def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): S
   }
 
   /**

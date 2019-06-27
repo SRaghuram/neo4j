@@ -98,8 +98,8 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 object NodeHashJoinOperator {
 
   class HashTableFactory(lhsOffsets: Array[Int]) extends ArgumentStateFactory[HashTable] {
-    override def newStandardArgumentState(argumentRowId: Long): HashTable = new StandardHashTable(argumentRowId, lhsOffsets)
-    override def newConcurrentArgumentState(argumentRowId: Long): HashTable = new ConcurrentHashTable(argumentRowId, lhsOffsets)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): HashTable = new StandardHashTable(argumentRowId, lhsOffsets)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): HashTable = new ConcurrentHashTable(argumentRowId, lhsOffsets)
   }
 
   /**

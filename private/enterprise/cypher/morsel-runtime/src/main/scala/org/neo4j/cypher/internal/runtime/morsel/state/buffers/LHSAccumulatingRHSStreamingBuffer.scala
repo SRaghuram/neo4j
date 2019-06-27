@@ -164,8 +164,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def canPut: Boolean = true
 
-    override def initiate(argumentRowId: Long): Unit = {
-      lhsArgumentStateMap.initiate(argumentRowId)
+    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
     }
 
     override def increment(argumentRowId: Long): Unit = {
@@ -198,8 +198,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def canPut: Boolean = true
 
-    override def initiate(argumentRowId: Long): Unit = {
-      rhsArgumentStateMap.initiate(argumentRowId)
+    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
       // Increment for an ArgumentID in RHS's accumulator
       incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
       tracker.increment()

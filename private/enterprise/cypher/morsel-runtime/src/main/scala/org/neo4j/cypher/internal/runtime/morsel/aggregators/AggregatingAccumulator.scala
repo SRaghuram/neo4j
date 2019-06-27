@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.aggregators
 
+import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.values.AnyValue
 
@@ -31,10 +32,10 @@ class AggregatingAccumulator(override val argumentRowId: Long,
 object AggregatingAccumulator {
 
   class Factory(aggregators: Array[Aggregator]) extends ArgumentStateFactory[AggregatingAccumulator] {
-    override def newStandardArgumentState(argumentRowId: Long): AggregatingAccumulator =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
       new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer))
 
-    override def newConcurrentArgumentState(argumentRowId: Long): AggregatingAccumulator =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
       new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer))
   }
 }

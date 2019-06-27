@@ -173,10 +173,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   object AggregatingAccumulator {
 
     class Factory(aggregators: Array[Aggregator]) extends ArgumentStateFactory[AggregatingAccumulator] {
-      override def newStandardArgumentState(argumentRowId: Long): AggregatingAccumulator =
+      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
         new StandardAggregatingAccumulator(argumentRowId, aggregators)
 
-      override def newConcurrentArgumentState(argumentRowId: Long): AggregatingAccumulator =
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators)
     }
   }

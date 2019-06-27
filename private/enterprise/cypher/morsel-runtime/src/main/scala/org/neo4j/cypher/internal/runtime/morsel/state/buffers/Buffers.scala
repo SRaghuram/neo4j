@@ -246,7 +246,7 @@ object Buffers {
       * If the accumulator is already initiated, this will increment the count.
       * Will be called when upstream apply buffers receive new morsels.
       */
-    def initiate(argumentRowId: Long): Unit
+    def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit
 
     /**
       * Increment counts for the accumulator relevant to the given argument ID.

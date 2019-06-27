@@ -53,7 +53,7 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
         argumentStateMapId <- argumentStatesOnRHSOfThisApply
         asm = argumentStateMaps(argumentStateMapId)
         argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-      } asm.initiate(argumentId)
+      } asm.initiate(argumentId, morsel)
 
       // Reducers on the RHS need to be initiated
       initiateArgumentReducers(argumentReducersOnRHSOfThisApply, morsel)

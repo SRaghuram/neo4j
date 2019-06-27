@@ -29,14 +29,18 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   override def hasData: Boolean = inner.hasData
   override def take(): MorselExecutionContext = inner.take()
   override def foreach(f: MorselExecutionContext => Unit): Unit = inner.foreach(f)
+
+  override def toString: String = {
+    s"ArgumentStateBuffer(argumentRowId=$argumentRowId)"
+  }
 }
 
 object ArgumentStateBuffer {
   object Factory extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long): ArgumentStateBuffer =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
       new ArgumentStateBuffer(argumentRowId, new StandardBuffer[MorselExecutionContext])
 
-    override def newConcurrentArgumentState(argumentRowId: Long): ArgumentStateBuffer =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
       new ArgumentStateBuffer(argumentRowId, new ConcurrentBuffer[MorselExecutionContext])
   }
 }

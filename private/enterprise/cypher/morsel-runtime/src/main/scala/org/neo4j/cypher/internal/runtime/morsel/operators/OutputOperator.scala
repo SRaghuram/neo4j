@@ -131,6 +131,3 @@ case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgu
                                                    data: IndexedSeq[PerArgument[MorselExecutionContext]]) extends PreparedOutput {
   override def produce(): Unit = sink.put(data)
 }
-
-
-

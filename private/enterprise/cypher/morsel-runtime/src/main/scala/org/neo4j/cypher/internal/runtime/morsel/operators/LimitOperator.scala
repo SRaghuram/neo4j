@@ -68,7 +68,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
 
       argumentStateMap.filter[FilterState](output,
                                            (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
-                                           (x, morsel) => x.next())
+                                           (x, _) => x.next())
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
@@ -88,10 +88,10 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long): LimitState =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): LimitState =
       new StandardLimitState(argumentRowId, count)
 
-    override def newConcurrentArgumentState(argumentRowId: Long): LimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): LimitState =
       new ConcurrentLimitState(argumentRowId, count)
   }
 
