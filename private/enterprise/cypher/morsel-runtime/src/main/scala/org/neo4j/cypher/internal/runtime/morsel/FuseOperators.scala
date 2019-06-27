@@ -223,7 +223,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                    slots.getLongOffsetFor(relationship),
                                                    slots.getLongOffsetFor(from),
                                                    slots.getLongOffsetFor(to),
-                                                   expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                   expr,
+                                                   physicalPlan.argumentSizes(id))(expressionCompiler)
 
               case ManySeekableArgs(expr) => expr match {
                 case coll: ListLiteral =>
@@ -232,13 +233,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
                     case One(value) => new SingleDirectedRelationshipByIdSeekTaskTemplate(acc.template,
                                                                                           plan.id,
                                                                                           innermostTemplate,
-                                                                                          slots.getLongOffsetFor(
-                                                                                            relationship),
+                                                                                          slots.getLongOffsetFor(relationship),
                                                                                           slots.getLongOffsetFor(from),
                                                                                           slots.getLongOffsetFor(to),
-                                                                                          value, physicalPlan
-                                                                                            .argumentSizes(id))(
-                      expressionCompiler)
+                                                                                          value,
+                                                                                          physicalPlan.argumentSizes(id))(expressionCompiler)
                     case Many(_) =>
                       new ManyDirectedRelationshipByIdsSeekTaskTemplate(acc.template,
                                                                         plan.id,
@@ -246,8 +245,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                         slots.getLongOffsetFor(relationship),
                                                                         slots.getLongOffsetFor(from),
                                                                         slots.getLongOffsetFor(to),
-                                                                        expr, physicalPlan.argumentSizes(id))(
-                        expressionCompiler)
+                                                                        expr,
+                                                                        physicalPlan.argumentSizes(id))(expressionCompiler)
                   }
 
                 case _ =>
@@ -257,7 +256,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                     slots.getLongOffsetFor(relationship),
                                                                     slots.getLongOffsetFor(from),
                                                                     slots.getLongOffsetFor(to),
-                                                                    expr, physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                                    expr,
+                                                                    physicalPlan.argumentSizes(id))(expressionCompiler)
               }
             }
 

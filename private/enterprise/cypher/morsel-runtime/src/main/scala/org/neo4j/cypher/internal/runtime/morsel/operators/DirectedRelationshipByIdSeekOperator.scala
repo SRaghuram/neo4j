@@ -133,11 +133,13 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
     relId = codeGen.intermediateCompileExpression(relIdExpr).getOrElse(throw new CantCompileQueryException())
 
     /**
-      * this.cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
-      * id = asId([relExpresssion])
-      * if (id >= 0) read.singleRelationship(id, cursor)
-      * this.canContinue = id >= 0 && cursor.next
-      * this.canContinue
+      * {{{
+      *   this.cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
+      *   id = asId([relExpresssion])
+      *   if (id >= 0) read.singleRelationship(id, cursor)
+      *   this.canContinue = id >= 0 && cursor.next
+      *   this.canContinue
+      * }}}
       */
     block(
       setField(cursor, ALLOCATE_REL_SCAN_CURSOR),
@@ -222,10 +224,12 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
     relIds = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException())
 
     /**
-      * this.cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
-      * this.idIterator = ((ListValue) <<reldIdsExpr>>)).iterator()
-      * this.canContinue = idIterator.hasNext
-      * this.canContinue
+      * {{{
+      *   this.cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
+      *   this.idIterator = ((ListValue) <<reldIdsExpr>>)).iterator()
+      *   this.canContinue = idIterator.hasNext
+      *   this.canContinue
+      * }}}
       */
     block(
       setField(cursor, ALLOCATE_REL_SCAN_CURSOR),
@@ -238,18 +242,6 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInnerLoop: IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
 
-    /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(relOffset, id)
-      *     setLongAt(fromOffset, cursor.sourceNodeReference)
-      *     setLongAt(toOffset, cursor.targetNodeReference)
-      *     << inner.genOperate >>
-      *     this.canContinue = false
-      *   }
-      * }}}
-      */
     /**
       * {{{
       *   while (hasDemand && this.canContinue) {
