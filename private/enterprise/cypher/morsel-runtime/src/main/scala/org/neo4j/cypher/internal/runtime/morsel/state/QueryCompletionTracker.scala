@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
+import org.neo4j.cypher.exceptionHandler
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
@@ -87,7 +88,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     if (count == 0) {
       try {
         if (throwable != null) {
-          subscriber.onError(throwable)
+
+          subscriber.onError(exceptionHandler.mapToCypher(throwable))
         } else if (!cancelled) {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         }
@@ -273,6 +275,6 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def allErrors(): Throwable = {
     val first = errors.peek()
     errors.forEach(t => if (t != first) first.addSuppressed(t))
-    first
+    exceptionHandler.mapToCypher(first)
   }
 }

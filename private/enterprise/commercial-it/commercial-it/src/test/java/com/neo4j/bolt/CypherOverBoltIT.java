@@ -23,13 +23,18 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
+import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CypherOverBoltIT
 {
@@ -248,6 +253,33 @@ public class CypherOverBoltIT
                 }
             }
             assertEquals( lineCountInCSV, countOfNodes );
+        }
+    }
+
+    @Test
+    public void shouldConsumeWithFailure()
+    {
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+              Session session = driver.session() )
+        {
+            String query = "UNWIND [1, 2, 3, 4, 0] AS x RETURN 10 / x";
+            StatementResult result = session.run( query );
+
+           try
+           {
+               result.consume();
+               fail();
+           }
+           catch ( ClientException e )
+           {
+               assertTrue( e.code().contains( "ArithmeticError" ) );
+
+               assertFalse( result.hasNext() );
+               assertEquals( emptyList(), result.list() );
+
+               ResultSummary summary = result.summary();
+               assertEquals( query, summary.statement().text() );
+           }
         }
     }
 
