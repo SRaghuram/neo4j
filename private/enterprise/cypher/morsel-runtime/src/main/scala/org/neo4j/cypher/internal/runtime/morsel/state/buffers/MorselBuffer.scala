@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
@@ -18,7 +19,8 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, Arg
   *
   * @param inner inner buffer to delegate real buffer work to
   */
-class MorselBuffer(tracker: QueryCompletionTracker,
+class MorselBuffer(id: BufferId,
+                   tracker: QueryCompletionTracker,
                    downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                    workCancellers: IndexedSeq[ArgumentStateMapId],
                    argumentStateMaps: ArgumentStateMaps,
@@ -32,6 +34,7 @@ class MorselBuffer(tracker: QueryCompletionTracker,
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(morsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[put]   $this <- $morsel")
     if (morsel.hasData) {
       morsel.resetToFirstRow()
       incrementArgumentCounts(downstreamArgumentReducers, morsel)
@@ -48,6 +51,7 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     * buffer took care of incrementing the right ones already.
     */
   def putInDelegate(morsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[putInDelegate] $this <- $morsel")
     if (morsel.hasData) {
       morsel.resetToFirstRow()
       tracker.increment()
@@ -59,10 +63,12 @@ class MorselBuffer(tracker: QueryCompletionTracker,
 
   override def take(): MorselParallelizer = {
     val morsel = inner.take()
-    if (morsel == null)
+    if (morsel == null) {
       null
-    else
+    } else {
+      DebugSupport.logBuffers(s"[take]  $this -> $morsel")
       new Parallelizer(morsel)
+    }
   }
 
   override def clearAll(): Unit = {
@@ -95,11 +101,12 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     * Decrement reference counters attached to `morsel`.
     */
   def close(morsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[close] $this -X- $morsel")
     decrementArgumentCounts(downstreamArgumentReducers, morsel)
     tracker.decrement()
   }
 
-  override def toString: String = s"MorselBuffer($inner)"
+  override def toString: String = s"MorselBuffer($id, $inner)"
 
   /**
     * Implementation of [[MorselParallelizer]] that ensures correct reference counting.

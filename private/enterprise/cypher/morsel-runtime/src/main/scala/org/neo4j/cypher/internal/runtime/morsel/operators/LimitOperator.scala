@@ -124,7 +124,6 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
         0L
       } else {
         val newCountLeft = countLeft.addAndGet(-wanted)
-        debug("newCountLeft:"+newCountLeft)
         if (newCountLeft >= 0) {
           wanted
         } else {

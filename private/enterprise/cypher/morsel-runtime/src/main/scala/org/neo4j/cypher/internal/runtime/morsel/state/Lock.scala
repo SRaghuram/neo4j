@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.debug
 
 /**
   * Basic lock.
@@ -45,6 +44,7 @@ class NoLock(val id: String) extends Lock {
     if (isLocked)
       throw new IllegalStateException(s"$name is already locked")
     isLocked = true
+    DebugSupport.logLocks(s"Locked $name")
     isLocked
   }
 
@@ -53,6 +53,7 @@ class NoLock(val id: String) extends Lock {
   override def unlock(): Unit = {
     if (!isLocked)
       throw new IllegalStateException(s"$name is not locked")
+    DebugSupport.logLocks(s"Unlocked $name")
     isLocked = false
   }
 

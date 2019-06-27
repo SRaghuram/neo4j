@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.Task
 
 /**
@@ -31,8 +32,10 @@ object LazyScheduling extends SchedulingPolicy {
     var i = pipelineStates.length - 1
     while (i >= 0) {
       val pipelineState = pipelineStates(i)
+      DebugSupport.logScheduling(s"[nextTask] probe pipeline (${pipelineState.pipeline})")
       val task = pipelineState.nextTask(executingQuery.queryContext, executingQuery.queryState, queryResources)
       if (task != null) {
+        DebugSupport.logScheduling(s"[nextTask] schedule $task")
         return task
       }
       i -= 1

@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
@@ -39,6 +41,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+    DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
     var i = 0
     while (i < data.length) {
       argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
@@ -51,10 +54,15 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def hasData: Boolean = argumentStateMap.hasCompleted
 
   override def take(): ACC = {
-    argumentStateMap.takeOneCompleted()
+    val accumulator = argumentStateMap.takeOneCompleted()
+    if (accumulator != null) {
+      DebugSupport.logBuffers(s"[take]  $this -> $accumulator")
+    }
+    accumulator
   }
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     argumentStateMap.initiate(argumentRowId, argumentMorsel)
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
     incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
@@ -77,6 +85,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     * Decrement reference counters attached to `accumulator`.
     */
   def close(accumulator: MorselAccumulator[_]): Unit = {
+    DebugSupport.logBuffers(s"[close] $this -X- $accumulator")
     // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
     decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
     tracker.decrement()

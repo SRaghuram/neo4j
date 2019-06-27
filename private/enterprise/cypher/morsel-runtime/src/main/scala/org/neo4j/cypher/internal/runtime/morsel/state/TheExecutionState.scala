@@ -219,9 +219,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                          resources: QueryResources,
                          failedPipeline: ExecutablePipeline): Unit = {
 
-    DebugSupport.logErrorHandling("Starting ExecutionState.failQuery")
-    closeOutstandingWork(resources, failedPipeline)
+    DebugSupport.logErrorHandling(s"Starting ExecutionState.failQuery, because of $throwable")
     tracker.error(throwable)
+    closeOutstandingWork(resources, failedPipeline)
   }
 
   /**

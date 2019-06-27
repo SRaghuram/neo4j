@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
@@ -24,7 +25,8 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, IdA
   *                                         These are on the RHS of the Apply this Buffer is for.
   * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
   */
-class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
+class MorselApplyBuffer(id: BufferId,
+                        argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
                         argumentReducersOnRHSOfThisApply: IndexedSeq[AccumulatingBuffer],
                         argumentReducersOnTopOfThisApply: IndexedSeq[AccumulatingBuffer],
                         argumentStateMaps: ArgumentStateMaps,
@@ -38,6 +40,7 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   def put(morsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[put]   $this <- $morsel")
     if (morsel.hasData) {
       var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
 
@@ -69,5 +72,5 @@ class MorselApplyBuffer(argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentState
 
   override def canPut: Boolean = delegates.forall(_.canPut)
 
-  override def toString: String = s"MorselApplyBuffer(argumentSlotOffset=$argumentSlotOffset)"
+  override def toString: String = s"MorselApplyBuffer($id, argumentSlotOffset=$argumentSlotOffset)"
 }

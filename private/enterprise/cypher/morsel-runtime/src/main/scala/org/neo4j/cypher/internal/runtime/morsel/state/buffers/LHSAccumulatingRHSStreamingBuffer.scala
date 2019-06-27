@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.MorselDebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, DataHolder, SinkByOrigin}
@@ -99,6 +101,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
       if (rhsBuffer != null) {
         val rhsMorsel = rhsBuffer.take()
         if (rhsMorsel != null) {
+          DebugSupport.logBuffers(s"[take] $this -> $lhsAcc & ${MorselDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
           return AccumulatorAndMorsel(lhsAcc, rhsMorsel)
         }
       }
@@ -134,6 +137,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
   }
 
   def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Unit = {
+    DebugSupport.logBuffers(s"[close] $this -X- $accumulator & ${MorselDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
     if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
       val rhsAcc = rhsArgumentStateMap.peek(accumulator.argumentRowId)
@@ -155,6 +159,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
 
     override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+      DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
       var i = 0
       while (i < data.length) {
         lhsArgumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
@@ -165,6 +170,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     override def canPut: Boolean = true
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+      DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
       lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
     }
 
@@ -184,6 +190,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
     override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
+      DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
       // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
       var i = 0
       while (i < data.length) {
@@ -199,6 +206,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     override def canPut: Boolean = true
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+      DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
       rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
       // Increment for an ArgumentID in RHS's accumulator
       incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))

@@ -97,10 +97,16 @@ class Worker(val workerId: Int,
       } catch {
         // Failure while executing `task`
         case throwable: Throwable =>
-          task match {
-            case pipelineTask: PipelineTask =>
-              executingQuery.executionState.failQuery(throwable, resources, pipelineTask.pipelineState.pipeline)
-              pipelineTask.close(resources)
+          try {
+            task match {
+              case pipelineTask: PipelineTask =>
+                executingQuery.executionState.failQuery(throwable, resources, pipelineTask.pipelineState.pipeline)
+                pipelineTask.close(resources)
+            }
+          } catch {
+            case t2:Throwable =>
+              // Cleaning up also failed
+              throwable.addSuppressed(t2)
           }
           true
       }
