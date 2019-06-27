@@ -200,4 +200,19 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
   }
 
+  test("should handle rename followed by aggregation") {
+    relate(createNode("prop" -> 2), createNode("prop" -> 3))
+
+    val res = executeWith(Configs.CachedProperty, "MATCH (x) WHERE x.prop = 2 WITH x AS y MATCH (y)-->(z) WITH y, collect(z) AS ignore RETURN y.prop")
+
+    res.executionPlanDescription() should includeSomewhere.
+      aPlan("Projection").containingArgument("{y.prop : cache[y.prop]}")
+      .onTopOf(aPlan("EagerAggregation")
+        .onTopOf(aPlan("Expand(All)")
+          .onTopOf(aPlan("Projection").containingArgument("{y : x}")
+            .onTopOf(aPlan("Filter").containingArgument("cache[x.prop] = $`  AUTOINT0`")))))
+
+    res.toList should contain theSameElementsAs List(Map("y.prop" -> 2))
+  }
+
 }
