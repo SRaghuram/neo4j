@@ -165,8 +165,12 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   def prettyCurrentRow: String =
-    s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
-     s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
+    if (isValidRow) {
+      s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
+        s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
+    } else {
+      s"<Invalid row>"
+    }
 
   def prettyString: Seq[String] = {
     val longStrings = morsel.longs.slice(firstRow*longsPerRow, validRows*longsPerRow).map(String.valueOf)
