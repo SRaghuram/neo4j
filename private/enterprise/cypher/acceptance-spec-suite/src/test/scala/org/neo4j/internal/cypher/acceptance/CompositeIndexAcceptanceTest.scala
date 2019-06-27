@@ -809,6 +809,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index for multiple range comparisons") {
+    // Given
     val query =
       """PROFILE MATCH (person:Person)
         |WHERE 10 < person.highScore < 20 AND exists(person.name)
@@ -816,9 +817,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY name""".stripMargin
     val expected = Seq(Map("name" -> "p1"), Map("name" -> "p2"), Map("name" -> "p6"), Map("name" -> "p7"))
 
-    // Given
-    executeSingle("CREATE INDEX ON :Person(highScore, name)")
-
+    // Nodes in index
     executeSingle("CREATE (:Person {name: 'p1', highScore: 14})")
     executeSingle("CREATE (:Person {name: 'p2', highScore: 16})")
     executeSingle("CREATE (:Person {name: 'p3', highScore: 25})")
@@ -827,6 +826,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeSingle("CREATE (:Person {name: 'p6', highScore: 19})")
     executeSingle("CREATE (:Person {name: 'p7', highScore: 13})")
 
+    // Nodes not in index to ensure index is chosen
+    for (i <- 8 to 100) {
+      executeSingle(s"CREATE (:Person {name: 'p$i'})")
+    }
+
+    // Given
+    executeSingle("CREATE INDEX ON :Person(highScore, name)")
     resampleIndexes()
 
     // When
@@ -843,20 +849,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeSingle("DROP INDEX ON :Person(highScore, name)")
     executeSingle("CREATE INDEX ON :Person(name, highScore)")
 
-    // Nodes not in index to ensure index is chosen
-    executeSingle("CREATE (:Person {name: 'p8'})")
-    executeSingle("CREATE (:Person {name: 'p9'})")
-    executeSingle("CREATE (:Person {name: 'p10'})")
-    executeSingle("CREATE (:Person {name: 'p11'})")
-    executeSingle("CREATE (:Person {name: 'p12'})")
-    executeSingle("CREATE (:Person {name: 'p13'})")
-    executeSingle("CREATE (:Person {name: 'p14'})")
-    executeSingle("CREATE (:Person {name: 'p15'})")
-    executeSingle("CREATE (:Person {name: 'p16'})")
-    executeSingle("CREATE (:Person {name: 'p17'})")
-    executeSingle("CREATE (:Person {name: 'p18'})")
-    executeSingle("CREATE (:Person {name: 'p19'})")
-    executeSingle("CREATE (:Person {name: 'p20'})")
+    // More nodes not in index to ensure index is chosen
+    for (i <- 100 to 200) {
+      executeSingle(s"CREATE (:Person {name: 'p$i'})")
+    }
 
     resampleIndexes()
 
