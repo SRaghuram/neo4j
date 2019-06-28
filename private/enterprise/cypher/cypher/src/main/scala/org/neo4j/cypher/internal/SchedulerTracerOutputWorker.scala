@@ -30,9 +30,6 @@ class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
         dataBuffers.consume(dataWriter)
         Thread.sleep(1)
       }
-    } catch {
-      case e: InterruptedException =>
-      // expected
     } finally {
       dataBuffers.consume(dataWriter)
       dataWriter.close()
