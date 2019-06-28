@@ -11,8 +11,10 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.{Node, QueryExecutionException, Result}
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.Transaction
+import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.Map
@@ -2192,6 +2194,102 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct elements privilege when granted as nodes + relationships") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("A").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("A").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").relationship("A").map,
+      grantRead().role("custom").relationship("*").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").relationship("A").map,
+      grantTraverse().role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantRead().role("custom").node("A").map,
+      grantRead().role("custom").relationship("A").map
+    ))
+  }
+
+  test("should rollback transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    val tx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
+    try {
+      val result: Result = new RichGraphDatabaseQueryService(graph).execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+      result.accept(_ => true)
+      tx.failure()
+    } finally {
+      tx.close()
+    }
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should fail revoke elements privilege when granted only nodes or relationships") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("ALTER USER neo4j SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+
+    execute("GRANT MATCH (foo) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").property("foo").node("*").map,
+      grantRead().role("custom").property("bar").relationship("*").map
+    ))
+
+    // WHEN
+    val error1 = the [QueryExecutionException] thrownBy {
+      executeOnSystem("neo4j", "abc", "REVOKE MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
+    }
+    // THEN
+    error1.getMessage should include("The privilege 'read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").property("foo").node("*").map,
+      grantRead().role("custom").property("bar").relationship("*").map
+    ))
+
+    // WHEN
+    val error2 = the [QueryExecutionException] thrownBy {
+      executeOnSystem("neo4j", "abc", "REVOKE MATCH (bar) ON GRAPH * FROM custom")
+    }
+    // THEN
+    error2.getMessage should include("The privilege 'read bar ON GRAPH * NODES *' does not exist.")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").property("foo").node("*").map,
+      grantRead().role("custom").property("bar").relationship("*").map
+    ))
+  }
+
   test("should fail revoke privilege from non-existent role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -2327,7 +2425,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     e.getMessage should be("The privilege 'write * ON GRAPH foo NODES *' does not exist.")
   }
 
-
   test("should fail when revoking traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -2460,7 +2557,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
   }
 
-  test("should read you own writes when granted TRAVERSE and WRITE privilege to custom role for all databases and all labels") {
+  test("should read you own writes on nodes when granted TRAVERSE and WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
     setupUserJoeWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
@@ -2480,6 +2577,30 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(2)
 
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+  }
+
+  test("should read you own writes on relationships when granted TRAVERSE and WRITE privilege to custom role for all databases and all types") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+    // WHEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A)-[:REL {name:'a'}]->()")
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    val expected = List("b", null)
+
+    executeOnDefault("joe", "soap", "CREATE (n:A)-[:REL {name:'b'}]->() WITH n MATCH (A)-[r:REL]->() RETURN r.name AS name ORDER BY name",
+      resultHandler = (row, index) => {
+        row.get("name") should be(expected(index))
+      }) should be(2)
+
+    execute("MATCH (A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
   }
 
   test("should delete node when granted WRITE privilege to custom role for all databases and all labels") {
@@ -2599,7 +2720,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT READ (name) ON GRAPH * RELATIONSHIPS REL (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN n.name") should be(0)
+    executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
   }
 
   test("write privilege should not imply traverse privilege") {
