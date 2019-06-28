@@ -832,7 +832,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // Given
-    executeSingle("CREATE INDEX ON :Person(highScore, name)")
+    graph.createIndex("Person", "highScore", "name")
     resampleIndexes()
 
     // When
@@ -846,8 +846,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     res.toComparableResult should be(expected)
 
     // Given
-    executeSingle("DROP INDEX ON :Person(highScore, name)")
-    executeSingle("CREATE INDEX ON :Person(name, highScore)")
+    executeSingle("DROP INDEX ON :Person(highScore,name)")
+    graph.createIndex("Person", "name", "highScore")
 
     // More nodes not in index to ensure index is chosen
     for (i <- 100 to 200) {
