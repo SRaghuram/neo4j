@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, ListLiteral}
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util._
 
@@ -98,6 +98,49 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]) ::: acc.unhandledPlans,
         unhandledOutput = output)
     }
+    def indexSeek(node: String,
+                  label: LabelToken,
+                  properties: Seq[IndexedProperty],
+                  valueExpr: QueryExpression[Expression],
+                  unique: Boolean,
+                  plan: LogicalPlan,
+                  acc: FusionPlan): Option[InputLoopTaskTemplate] = {
+      val needsLockingUnique = !operatorFactory.readOnly && unique
+      valueExpr match {
+        case SingleQueryExpression(expr) if !needsLockingUnique =>
+          assert(properties.length == 1)
+          Some(new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
+                                                             plan.id,
+                                                             innermostTemplate,
+                                                             node,
+                                                             slots.getLongOffsetFor(node),
+                                                             SlottedIndexedProperty(node,
+                                                                                    properties.head,
+                                                                                    slots),
+                                                             compile(expr),
+                                                             operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                             physicalPlan.argumentSizes(id))(expressionCompiler))
+
+
+        //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
+        case ManyQueryExpression(expr) if !needsLockingUnique =>
+          assert(properties.length == 1)
+          Some(new ManyQueriesExactNodeIndexSeekTaskTemplate(acc.template,
+                                                             plan.id,
+                                                             innermostTemplate,
+                                                             node,
+                                                             slots.getLongOffsetFor(node),
+                                                             SlottedIndexedProperty(node,
+                                                                                    properties.head,
+                                                                                    slots),
+                                                             compile(expr),
+                                                             operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                             physicalPlan.argumentSizes(id))(expressionCompiler))
+
+        case _ => None
+
+      }
+    }
 
     val fusedPipeline =
       reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
@@ -146,48 +189,18 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _,  _)  =>
-            val argumentSize = physicalPlan.argumentSizes(id)
+          case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, _) if operatorFactory.readOnly =>
+            indexSeek(node, label, properties, valueExpr, unique = false, plan, acc) match {
+              case Some(seek) =>
+                acc.copy(template = seek, fusedPlans = nextPlan :: acc.fusedPlans)
+              case None => cantHandle(acc, nextPlan)
+            }
 
-            valueExpr match {
-              //MATCH (n:L) WHERE n.prop = 1337
-              case SingleQueryExpression(expr) if operatorFactory.readOnly =>
-                assert(properties.length == 1)
-                val newTemplate = new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
-                                                                                plan.id,
-                                                                                innermostTemplate,
-                                                                                node,
-                                                                                slots.getLongOffsetFor(node),
-                                                                                SlottedIndexedProperty(node,
-                                                                                                       properties.head,
-                                                                                                       slots),
-                                                                                compile(expr),
-                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
-                                                                                argumentSize)(expressionCompiler)
-                acc.copy(
-                  template = newTemplate,
-                  fusedPlans = nextPlan :: acc.fusedPlans)
-
-              //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
-              case ManyQueryExpression(expr) =>
-                assert(properties.length == 1)
-                val newTemplate = new ManyQueriesExactNodeIndexSeekTaskTemplate(acc.template,
-                                                                                plan.id,
-                                                                                innermostTemplate,
-                                                                                node,
-                                                                                slots.getLongOffsetFor(node),
-                                                                                SlottedIndexedProperty(node,
-                                                                                                       properties.head,
-                                                                                                       slots),
-                                                                                compile(expr),
-                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
-                                                                                argumentSize)(expressionCompiler)
-                acc.copy(
-                  template = newTemplate,
-                  fusedPlans = nextPlan :: acc.fusedPlans)
-
-
-              case _ => cantHandle(acc, nextPlan)
+          case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _, _) =>
+            indexSeek(node, label, properties, valueExpr, unique = false, plan, acc) match {
+              case Some(seek) =>
+                acc.copy(template = seek, fusedPlans = nextPlan :: acc.fusedPlans)
+              case None => cantHandle(acc, nextPlan)
             }
 
           case plan@plans.NodeByIdSeek(node, nodeIds, _) => {
