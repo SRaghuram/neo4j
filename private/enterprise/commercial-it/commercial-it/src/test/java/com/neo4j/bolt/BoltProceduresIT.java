@@ -16,6 +16,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -27,7 +28,10 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
+import org.neo4j.driver.Value;
+import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
+import org.neo4j.driver.internal.value.NullValue;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
@@ -40,9 +44,12 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -101,6 +108,57 @@ public class BoltProceduresIT
             {
                 assertEquals( Status.Transaction.Terminated.code().serialize(), e.code() );
             }
+        }
+    }
+
+    @Test
+    public void shouldHaveAccessToRoutingProcedureWithDatabaseNameOnSystemDb()
+    {
+        try ( Session session = driver.session( t -> t.withDatabase( "system" ) ) )
+        {
+            Map<String,Object> params = new HashMap<>();
+            params.put( "context", NullValue.NULL );
+            params.put( "database", NullValue.NULL );
+            final StatementResult result = session.run( "CALL dbms.routing.getRoutingTable({context}, {database})", params );
+
+            final List<Map<String,Value>> servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
+            assertThat( servers.size(), equalTo( 3 ) );
+            Map<String, String> routingTable = new HashMap<>();
+            for ( Map<String,Value> entry : servers )
+            {
+                final List<String> addresses = entry.get( "addresses" ).asList( Values.ofString() );
+                assertThat( addresses.size(), equalTo( 1 ) );
+                routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
+            }
+
+            assertThat( routingTable.keySet(), containsInAnyOrder( "WRITE", "READ", "ROUTE" ) );
+            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "READ" ) ) );
+            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "ROUTE" ) ) );
+        }
+    }
+
+    @Test
+    public void shouldHaveAccessToRoutingProcedureWithoutDatabaseNameOnDefaultDb()
+    {
+        try ( Session session = driver.session() )
+        {
+            Map<String,Object> params = new HashMap<>();
+            params.put( "context", NullValue.NULL );
+            final StatementResult result = session.run( "CALL dbms.cluster.routing.getRoutingTable({context})", params );
+
+            final List<Map<String,Value>> servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
+            assertThat( servers.size(), equalTo( 3 ) );
+            Map<String, String> routingTable = new HashMap<>();
+            for ( Map<String,Value> entry : servers )
+            {
+                final List<String> addresses = entry.get( "addresses" ).asList( Values.ofString() );
+                assertThat( addresses.size(), equalTo( 1 ) );
+                routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
+            }
+
+            assertThat( routingTable.keySet(), containsInAnyOrder( "WRITE", "READ", "ROUTE" ) );
+            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "READ" ) ) );
+            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "ROUTE" ) ) );
         }
     }
 
