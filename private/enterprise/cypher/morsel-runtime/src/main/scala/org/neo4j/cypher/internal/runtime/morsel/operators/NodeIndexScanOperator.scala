@@ -10,18 +10,13 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
-import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, KernelReadTracer, NodeValueIndexCursor}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueIndexCursor}
+import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, KernelReadTracer, NodeValueIndexCursor}
 import org.neo4j.values.storable.Value
 
 class NodeIndexScanOperator(val workIdentity: WorkIdentity,
@@ -117,7 +112,7 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
           * }}}
           */
         block(
-          setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
+          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
           nodeIndexScan(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, needsValues),
           setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
           constant(true)
@@ -156,7 +151,7 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         block(cacheProperties:_*),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
         )
       )
