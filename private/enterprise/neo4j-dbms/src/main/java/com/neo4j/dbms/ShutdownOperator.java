@@ -43,6 +43,7 @@ public class ShutdownOperator implements DbmsOperator
 
     void stopAll()
     {
+        //TODO: Stop system db separately, afterwards
         this.desired = databaseManager.registeredDatabases().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, ignored -> STOPPED ) );
         trigger().awaitAll();
