@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -63,10 +64,11 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Neo4jConfig neo4jConfig = Neo4jConfig
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder
                 .empty()
                 .withSetting( record_format, DatabaseRecovery_storeFormat )
-                .withSetting( GraphDatabaseSettings.check_point_interval_tx, String.valueOf( Integer.MAX_VALUE ) );
+                .withSetting( GraphDatabaseSettings.check_point_interval_tx, String.valueOf( Integer.MAX_VALUE ) )
+                .build();
         return new DataGeneratorConfigBuilder()
                 .withGraphWriter( TRANSACTIONAL )
                 .withNeo4jConfig( neo4jConfig )

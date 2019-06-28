@@ -41,6 +41,7 @@ import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Metrics;
 import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.queries.SubmitTestRun;
@@ -156,7 +157,7 @@ public class Main
     {
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         BenchmarkGroup group = new BenchmarkGroup( "Import" );
-        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
+        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
         long starttime = System.currentTimeMillis();
 
         String[] sizes = {"100m", "1bn", "10bn", "100bn"};

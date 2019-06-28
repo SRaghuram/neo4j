@@ -7,6 +7,7 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 
 import java.io.IOException;
@@ -243,7 +244,7 @@ public class DataGenerator
         {
             long startTime = System.currentTimeMillis();
 
-            Map<String,String> neo4jConfigMap = Neo4jConfig.fromFile( neo4jConfig ).toMap();
+            Map<String,String> neo4jConfigMap = Neo4jConfigBuilder.fromFile( neo4jConfig ).build().toMap();
             inserter = BatchInserters.inserter( storeDir.toFile(), neo4jConfigMap );
 
             System.out.printf( "Creating Nodes... " );

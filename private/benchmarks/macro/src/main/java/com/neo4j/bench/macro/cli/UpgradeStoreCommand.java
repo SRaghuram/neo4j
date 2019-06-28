@@ -7,7 +7,7 @@ package com.neo4j.bench.macro.cli;
 
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
@@ -92,7 +92,7 @@ public class UpgradeStoreCommand implements Runnable
             else
             {
                 neo4jConfigPath = Paths.get( "neo4j.conf" );
-                Neo4jConfig.empty()
+                Neo4jConfigBuilder.empty()
                            .withSetting( allow_upgrade, "true" )
                            .withSetting( record_format, "high_limit" )
                            .writeToFile( neo4jConfigPath );

@@ -12,7 +12,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
@@ -125,7 +125,7 @@ public class EndToEndIT extends AnnotationsFixture
 
         // prepare neo4j config file
         Path neo4jConfig = temporaryFolder.newFile( "neo4j.config" ).toPath();
-        Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
+        Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
         File benchmarkConfig = createBenchmarkConfig();
 

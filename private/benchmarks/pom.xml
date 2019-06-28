@@ -23,6 +23,7 @@
         <license-text.header>build/license-header.txt</license-text.header>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
+		<neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -87,6 +88,7 @@
         <module>macro</module>
         <module>import</module>
         <module>benchmark-infra</module>
+        <module>benchmark-neo4j-common</module>
     </modules>
 
     <profiles>

@@ -7,7 +7,7 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
@@ -212,7 +212,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
         {
             Redirect outputRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-out.log" ).toFile() );
             Redirect errorRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-error.log" ).toFile() );
-            Neo4jConfig.fromFile( neo4jConfigFile )
+            Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                        .addJvmArgs( additionalJvmArgs )
                        .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );

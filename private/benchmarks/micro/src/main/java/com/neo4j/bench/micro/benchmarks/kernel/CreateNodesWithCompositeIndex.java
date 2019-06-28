@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -114,9 +114,10 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withSchemaIndexes( new LabelKeyDefinition( LABEL, keys() ) )
-                .withNeo4jConfig( Neo4jConfig
+                .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateNodesWithCompositeIndex_format ) )
+                                          .withSetting( record_format, CreateNodesWithCompositeIndex_format )
+                                          .build() )
                 .isReusableStore( false )
                 .build();
     }

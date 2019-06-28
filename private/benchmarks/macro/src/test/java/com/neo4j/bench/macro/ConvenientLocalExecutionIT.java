@@ -10,6 +10,7 @@ import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.client.profiling.ProfilerType;
@@ -167,15 +168,16 @@ public class ConvenientLocalExecutionIT
     {
         Path neo4jConfigFile = temporaryFolder.newFile().toPath();
         Neo4jConfig neo4jConfig = neo4jConfig();
-        neo4jConfig.writeToFile( neo4jConfigFile );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;
     }
 
     private Neo4jConfig neo4jConfig()
     {
         // Unless NEO4J_CONFIG points to a real file, this is equivalent to Neo4jConfig.empty()
-        return Neo4jConfig.fromFile( NEO4J_CONFIG )
+        return Neo4jConfigBuilder.fromFile( NEO4J_CONFIG )
                           // Additional settings you wish to run with
-                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" );
+                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" )
+                          .build();
     }
 }

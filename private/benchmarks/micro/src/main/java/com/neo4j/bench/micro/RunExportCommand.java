@@ -17,6 +17,7 @@ import com.neo4j.bench.client.model.Environment;
 import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
@@ -239,11 +240,12 @@ public class RunExportCommand implements Runnable
         // trim anything like '-M01' from end of Neo4j version string
         neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
 
-        Neo4jConfig baseNeo4jConfig = Neo4jConfig.withDefaults()
-                                                 .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+        Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
+                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
                                                  .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
                                                  .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                 .withSetting( new HttpConnector( "https" ).enabled, "false" );
+                                                 .withSetting( new HttpConnector( "https" ).enabled, "false" )
+                                                 .build();
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );

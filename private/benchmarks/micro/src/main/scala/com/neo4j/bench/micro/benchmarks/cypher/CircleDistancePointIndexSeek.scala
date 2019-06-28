@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.client.model.Neo4jConfig
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.benchmarks.{Kaboom, RNGState}
@@ -28,6 +27,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import com.neo4j.bench.client.model.Neo4jConfigBuilder
 
 @BenchmarkEnabled(true)
 class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
@@ -188,12 +188,13 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .withNeo4jConfig(
-        Neo4jConfig
+        Neo4jConfigBuilder
         .empty()
         .withSetting(space_filling_curve_max_bits, CircleDistancePointIndexSeek_maxBits.toString)
         .withSetting(space_filling_curve_extra_levels, CircleDistancePointIndexSeek_extraLevels.toString)
         .withSetting(space_filling_curve_top_threshold, CircleDistancePointIndexSeek_thresholdTop.toString)
-        .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString))
+        .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
+        .build())
       .build()
   }
 

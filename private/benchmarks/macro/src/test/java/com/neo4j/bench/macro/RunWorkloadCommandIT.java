@@ -9,7 +9,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.AddProfilesCommand;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
@@ -220,7 +220,7 @@ public class RunWorkloadCommandIT
             Store store = createEmptyStoreFor( workload );
 
             Path neo4jConfiguration = temporaryFolder.newFile().toPath();
-            Neo4jConfig.withDefaults().writeToFile( neo4jConfiguration );
+            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfiguration );
             Path resultsJson = temporaryFolder.newFile().toPath();
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );

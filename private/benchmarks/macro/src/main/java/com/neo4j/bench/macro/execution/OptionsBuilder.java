@@ -7,6 +7,7 @@ package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.client.profiling.ProfilerType;
@@ -68,7 +69,7 @@ public class OptionsBuilder
                 edition,
                 outputDir,
                 storeDir,
-                Neo4jConfig.fromFile( neo4jConfigFile ),
+                Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build(),
                 forks,
                 warmupCount,
                 measurementCount,

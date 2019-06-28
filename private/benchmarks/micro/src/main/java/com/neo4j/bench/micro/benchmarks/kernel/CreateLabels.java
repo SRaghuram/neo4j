@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -77,7 +77,7 @@ public class CreateLabels extends AbstractKernelBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( CreateLabels_txMemory ) )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateLabels_txMemory ).build() )
                 .isReusableStore( false )
                 .build();
     }

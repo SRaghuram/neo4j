@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -98,7 +98,7 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIPS_PER_NODE )
                 .withRelationshipProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, ReadRelationshipProperty_format ) )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, ReadRelationshipProperty_format ).build() )
                 .isReusableStore( true )
                 .build();
     }

@@ -234,25 +234,6 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeNeo4jConfigFromFile() throws IOException
-    {
-        // given
-        File neo4jConfig = temporaryFolder.newFile();
-        FileWriter fileWriter = new FileWriter( neo4jConfig );
-        fileWriter.append( "key1=value1" );
-        fileWriter.append( "\n" );
-        fileWriter.append( "key2=value2" );
-        fileWriter.flush();
-        fileWriter.close();
-
-        Neo4jConfig before = Neo4jConfig.fromFile( neo4jConfig );
-        // then
-        Neo4jConfig after = (Neo4jConfig) shouldSerializeAndDeserialize( before );
-        assertThat( before.toMap().get( "key1" ), equalTo( after.toMap().get( "key1" ) ) );
-        assertThat( before.toMap().get( "key2" ), equalTo( after.toMap().get( "key2" ) ) );
-    }
-
-    @Test
     public void shouldSerializePlan() throws IOException
     {
         // given

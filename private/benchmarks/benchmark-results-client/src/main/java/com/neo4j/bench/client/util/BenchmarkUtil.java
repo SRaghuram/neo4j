@@ -10,6 +10,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -32,8 +33,6 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Stream;
-
-import org.neo4j.io.fs.FileUtils;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -139,7 +138,12 @@ public class BenchmarkUtil
         try
         {
             assertDirectoryExists( dir );
-            FileUtils.deleteRecursively( dir.toFile() );
+
+            Files.walk( dir )
+                .sorted( Comparator.reverseOrder() )
+                .map( Path::toFile )
+                .forEach( File::delete );
+
         }
         catch ( IOException e )
         {

@@ -12,7 +12,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
@@ -133,7 +133,7 @@ public class EndToEndIT
 
         // prepare neo4j config file
         Path neo4jConfig = temporaryFolder.newFile( "neo4j.config" ).toPath();
-        Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
+        Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
         // create empty store
         Path dbPath = temporaryFolder.newFolder( "db" ).toPath();

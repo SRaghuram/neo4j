@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.Jvm;
@@ -111,7 +111,7 @@ public class Main
 
         // only used in interactive mode, to apply more (normally unsupported) benchmark annotations to JMH configuration
         boolean extendedAnnotationSupport = true;
-        BenchmarksRunner runner = new BenchmarksRunner( Neo4jConfig.withDefaults(),
+        BenchmarksRunner runner = new BenchmarksRunner( Neo4jConfigBuilder.withDefaults().build(),
                                                         forkCount,
                                                         iterationCount,
                                                         iterationDuration,

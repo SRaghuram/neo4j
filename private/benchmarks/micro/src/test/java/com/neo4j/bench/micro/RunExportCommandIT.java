@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.Project;
 import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRunReport;
@@ -146,8 +147,9 @@ public class RunExportCommandIT
                 new BenchmarkTool( Repository.MICRO_BENCH, "2", "Trinity", "master" );
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
 
-        int expectedConfigSize = Neo4jConfig.withDefaults()
-                                            .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+        int expectedConfigSize = Neo4jConfigBuilder.withDefaults()
+                                            .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                            .build()
                                             .toMap()
                                             .size();
 
