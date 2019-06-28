@@ -61,7 +61,13 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                     resources: QueryResources,
                                     queryProfiler: QueryProfiler): Unit = {
 
-      produceOutputWithProfile(inputMorsel, context, state, resources, queryProfiler)
+      val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+
+      try {
+        produceOutputWithProfile(inputMorsel, context, state, resources, operatorExecutionEvent)
+      } finally {
+        operatorExecutionEvent.close()
+      }
     }
 
     override def operate(output: MorselExecutionContext,
@@ -85,13 +91,15 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = _canContinue
 
+    override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
+
     override def prepareOutput(outputMorsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
-                               queryProfiler: QueryProfiler): PreparedOutput = {
+                               operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
 
-      produceOutputWithProfile(outputMorsel, context, state, resources, queryProfiler)
+      produceOutputWithProfile(outputMorsel, context, state, resources, operatorExecutionEvent)
       _canContinue = outputMorsel.isValidRow
       this
     }
@@ -107,15 +115,10 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                          context: QueryContext,
                                          state: QueryState,
                                          resources: QueryResources,
-                                         queryProfiler: QueryProfiler): Unit = {
-    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
-    try {
-      val rowBefore = output.getCurrentRow
-      produceOutput(output, context, state, resources)
-      operatorExecutionEvent.rows(output.getCurrentRow - rowBefore)
-    } finally {
-      operatorExecutionEvent.close()
-    }
+                                         operatorExecutionEvent: OperatorProfileEvent): Unit = {
+    val rowBefore = output.getCurrentRow
+    produceOutput(output, context, state, resources)
+    operatorExecutionEvent.rows(output.getCurrentRow - rowBefore)
   }
 
   protected def produceOutput(output: MorselExecutionContext,

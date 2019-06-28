@@ -69,7 +69,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   private def executeOutputOperator(resources: QueryResources,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
     DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
-    val preparedOutput = outputOperatorState.prepareOutput(_output, queryContext, state, resources, queryProfiler)
+    val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, queryContext, state, resources, queryProfiler)
     if (!outputOperatorState.canContinue) {
       // There is no continuation on the output operator,
       // next-time around we need a new output morsel

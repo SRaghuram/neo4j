@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
-import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -68,31 +68,27 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends OutputOperatorState {
 
+      override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
+
       override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
-                                 queryProfiler: QueryProfiler): PreAggregatedOutput = {
+                                 operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
-        val operatorProfileEvent = queryProfiler.executeOperator(workIdentity.workId)
+        val queryState = new OldQueryState(context,
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber)
 
-        try {
-          val queryState = new OldQueryState(context,
-                                             resources = null,
-                                             params = state.params,
-                                             resources.expressionCursors,
-                                             Array.empty[IndexReadSession],
-                                             resources.expressionVariables(state.nExpressionSlots),
-                                             state.subscriber)
+        val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
+                                             morsel,
+                                             preAggregate(queryState))
 
-          val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
-                                               morsel,
-                                               preAggregate(queryState))
-
-          new PreAggregatedOutput(preAggregated, sink)
-        } finally {
-          operatorProfileEvent.close()
-        }
+        new PreAggregatedOutput(preAggregated, sink)
       }
 
       private def preAggregate(queryState: OldQueryState)

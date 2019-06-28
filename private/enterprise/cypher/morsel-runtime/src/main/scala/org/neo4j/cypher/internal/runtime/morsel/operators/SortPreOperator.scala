@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
-import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -31,28 +31,25 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, outputBufferId))
 
   class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {
+
+    override def workIdentity: WorkIdentity = SortPreOperator.this.workIdentity
+
     override def prepareOutput(morsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
-                               queryProfiler: QueryProfiler): PreSortedOutput = {
+                               operatorExecutionEvent: OperatorProfileEvent): PreSortedOutput = {
 
-      val operatorProfileEvent = queryProfiler.executeOperator(workIdentity.workId)
+      val rowCloneForComparators = morsel.shallowCopy()
+      val comparator: Comparator[Integer] = orderBy
+        .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
+        .reduce((a, b) => a.thenComparing(b))
 
-      try {
-        val rowCloneForComparators = morsel.shallowCopy()
-        val comparator: Comparator[Integer] = orderBy
-          .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
-          .reduce((a, b) => a.thenComparing(b))
+      val preSorted = ArgumentStateMap.map(argumentSlotOffset,
+                                           morsel,
+                                           morselView => sortInPlace(morselView, comparator))
 
-        val preSorted = ArgumentStateMap.map(argumentSlotOffset,
-                                             morsel,
-                                             morselView => sortInPlace(morselView, comparator))
-
-        new PreSortedOutput(preSorted, sink)
-      } finally {
-        operatorProfileEvent.close()
-      }
+      new PreSortedOutput(preSorted, sink)
     }
 
     private def sortInPlace(morsel: MorselExecutionContext, comparator: Comparator[Integer]): MorselExecutionContext = {

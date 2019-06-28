@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
-import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, Task}
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.internal.kernel.api.KernelReadTracer
 
 /**
   * Operator which ends a pipeline, and thus prepares the computed output.
@@ -31,12 +32,29 @@ trait OutputOperator extends HasWorkIdentity {
   def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState
 }
 
-trait OutputOperatorState {
-  def prepareOutput(outputMorsel: MorselExecutionContext,
-                    context: QueryContext,
-                    state: QueryState,
-                    resources: QueryResources,
-                    queryProfiler: QueryProfiler): PreparedOutput
+trait OutputOperatorState extends HasWorkIdentity {
+
+  def prepareOutputWithProfile(output: MorselExecutionContext,
+                               context: QueryContext,
+                               state: QueryState,
+                               resources: QueryResources,
+                               queryProfiler: QueryProfiler): PreparedOutput = {
+
+    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    resources.setKernelTracer(operatorExecutionEvent)
+    try {
+      prepareOutput(output, context, state, resources, operatorExecutionEvent)
+    } finally {
+      resources.setKernelTracer(KernelReadTracer.NONE)
+      operatorExecutionEvent.close()
+    }
+  }
+
+  protected def prepareOutput(outputMorsel: MorselExecutionContext,
+                              context: QueryContext,
+                              state: QueryState,
+                              resources: QueryResources,
+                              operatorExecutionEvent: OperatorProfileEvent): PreparedOutput
 
   def canContinue: Boolean = false
 }
@@ -54,7 +72,7 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
-                             queryProfiler: QueryProfiler): PreparedOutput = this
+                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = this
 
   override def produce(): Unit = ()
   override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "Perform no output")
@@ -66,16 +84,17 @@ case class MorselBufferOutputOperator(bufferId: BufferId) extends OutputOperator
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
-    MorselBufferOutputState(bufferId, executionState, pipelineId)
+    MorselBufferOutputState(workIdentity, bufferId, executionState, pipelineId)
 }
-case class MorselBufferOutputState(bufferId: BufferId,
+case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
+                                   bufferId: BufferId,
                                    executionState: ExecutionState,
                                    pipelineId: PipelineId) extends OutputOperatorState {
   override def prepareOutput(outputMorsel: MorselExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
-                             queryProfiler: QueryProfiler): PreparedOutput =
+                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput =
     MorselBufferPreparedOutput(bufferId, executionState, pipelineId, outputMorsel)
 }
 case class MorselBufferPreparedOutput(bufferId: BufferId,
@@ -92,15 +111,18 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel grouped by argumentRowId $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
-    MorselArgumentStateBufferOutputState(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId), argumentSlotOffset)
+    MorselArgumentStateBufferOutputState(workIdentity,
+                                         executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
+                                         argumentSlotOffset)
 }
-case class MorselArgumentStateBufferOutputState(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
+case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
+                                                sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
                                                 argumentSlotOffset: Int) extends OutputOperatorState {
   override def prepareOutput(outputMorsel: MorselExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
-                             queryProfiler: QueryProfiler): PreparedOutput = {
+                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
     val viewsPerArgument = ArgumentStateMap.map(argumentSlotOffset, outputMorsel, morselView => morselView)
     MorselArgumentStateBufferPreparedOutput(sink, viewsPerArgument)
   }
