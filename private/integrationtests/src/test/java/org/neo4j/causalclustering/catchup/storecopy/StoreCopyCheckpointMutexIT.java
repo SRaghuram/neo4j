@@ -21,6 +21,8 @@ import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.net.Server;
+import org.neo4j.commandline.admin.CommandFailed;
+import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -38,6 +40,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
@@ -58,7 +61,7 @@ class StoreCopyCheckpointMutexIT
     private static final String PROP_KEY = "prop";
 
     @Inject
-    TestDirectory directory;
+    private TestDirectory directory;
 
     /**
      * This test springs from a support case where recovery could not finished on backup after file copy was done because
@@ -88,28 +91,31 @@ class StoreCopyCheckpointMutexIT
 
         // a db with some data safely checkpointed
         GraphDatabaseAPI db = (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
-        setupSchema( db );
-        createSomeData( db );
-        CheckPointer checkPointer = resolve( db, CheckPointer.class );
-        checkPointer.forceCheckPoint( new SimpleTriggerInfo( "Checkpointing of initial data" ) );
+        Lifespan lifespan = new Lifespan();
+        try
+        {
+            setupSchema( db );
+            createSomeData( db );
+            CheckPointer checkPointer = resolve( db, CheckPointer.class );
+            checkPointer.forceCheckPoint( new SimpleTriggerInfo( "Checkpointing of initial data" ) );
 
-        // and a custom catchup server that will simulate heavy workload and continuous checkpointing during store copy.
-        FileSystemAbstraction realFS = resolve( db, FileSystemAbstraction.class );
-        InjectingFileSystemAbstraction injectingFS = new InjectingFileSystemAbstraction( realFS, db, checkPointer );
-        Server server = buildCatchupServer( hostname, port, db, checkPointer, injectingFS );
-        server.start();
+            // and a custom catchup server that will simulate heavy workload and continuous checkpointing during store copy.
+            FileSystemAbstraction realFS = resolve( db, FileSystemAbstraction.class );
+            InjectingFileSystemAbstraction injectingFS = new InjectingFileSystemAbstraction( realFS, db, checkPointer );
+            lifespan.add( buildCatchupServer( hostname, port, db, checkPointer, injectingFS ) );
 
-        // When performing a backup
-        new OnlineBackupCommandBuilder().withSelectedBackupStrategy( SelectedBackupProtocol.CATCHUP )
-                .withHost( hostname )
-                .withPort( port )
-                .withTimeout( TimeUnit.HOURS.toMillis( 1 ) )
-                // Then store should be consistent
-                .backup( storeDir, "backup" );
+            // When performing a backup, Then store should be consistent
+            performBackupWithConsistencyCheck( hostname, port, storeDir );
 
-        // and we make sure that store copy used code path where we inject data and checkpoint.
-        assertTrue( injectingFS.usedInjectingReadPath, "Expected store copy to use code path where we inject data and checkpoint. " +
-                "If we fail here, this test need to be rewritten to do injection in the correct place." );
+            // and we make sure that store copy used code path where we inject data and checkpoint.
+            assertTrue( injectingFS.usedInjectingReadPath, "Expected store copy to use code path where we inject data and checkpoint. " +
+                    "If we fail here, this test need to be rewritten to do injection in the correct place." );
+        }
+        finally
+        {
+            db.shutdown();
+            lifespan.close();
+        }
     }
 
     /**
@@ -121,7 +127,8 @@ class StoreCopyCheckpointMutexIT
      * @param injectingFS The custom fs that will inject data and try checkpoint on every file read.
      * @return Our custom catchup server.
      */
-    private static Server buildCatchupServer( String hostname, int port, GraphDatabaseAPI db, CheckPointer checkPointer, InjectingFileSystemAbstraction injectingFS )
+    private static Server buildCatchupServer( String hostname, int port, GraphDatabaseAPI db, CheckPointer checkPointer,
+            InjectingFileSystemAbstraction injectingFS )
     {
         MetaDataStore metaDataStore = resolve( db, MetaDataStore.class );
         org.neo4j.storageengine.api.StoreId kernelStoreId = metaDataStore.getStoreId();
@@ -144,6 +151,16 @@ class StoreCopyCheckpointMutexIT
         return new CatchupServerBuilder( regularCatchupServerHandler )
                 .listenAddress( new ListenSocketAddress( hostname, port ) )
                 .build();
+    }
+
+    private void performBackupWithConsistencyCheck( String hostname, int port, File storeDir ) throws CommandFailed, IncorrectUsage
+    {
+        new OnlineBackupCommandBuilder().withSelectedBackupStrategy( SelectedBackupProtocol.CATCHUP )
+                .withHost( hostname )
+                .withPort( port )
+                .withTimeout( TimeUnit.HOURS.toMillis( 1 ) )
+                .withConsistencyCheck( true )
+                .backup( storeDir, "backup" );
     }
 
     private static void createSomeData( GraphDatabaseAPI db )
@@ -178,7 +195,7 @@ class StoreCopyCheckpointMutexIT
     {
         private final GraphDatabaseAPI db;
         private final CheckPointer checkPointer;
-        private boolean usedInjectingReadPath;
+        private volatile boolean usedInjectingReadPath;
 
         InjectingFileSystemAbstraction( FileSystemAbstraction delegate, GraphDatabaseAPI db, CheckPointer checkPointer )
         {
