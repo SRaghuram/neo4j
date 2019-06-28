@@ -12,19 +12,26 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 
+/**
+ * Operator responsible for transitioning all non-DROPPED databases to a STOPPED state.
+ * The system database is reconciled only after all other databases have successfully stopped.
+ */
 public class ShutdownOperator implements DbmsOperator
 {
     private final DatabaseManager<?> databaseManager;
+    private final DatabaseId systemDatabaseId;
     private volatile Map<DatabaseId,OperatorState> desired;
     private OperatorConnector connector;
 
-    ShutdownOperator( DatabaseManager<?> databaseManager )
+    ShutdownOperator( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository )
     {
         this.databaseManager = databaseManager;
         this.desired = Collections.emptyMap();
+        this.systemDatabaseId = databaseIdRepository.systemDatabase();
     }
 
     @Override
@@ -43,10 +50,13 @@ public class ShutdownOperator implements DbmsOperator
 
     void stopAll()
     {
-        //TODO: Stop system db separately, afterwards
-        this.desired = databaseManager.registeredDatabases().entrySet().stream()
+        desired = databaseManager.registeredDatabases().entrySet().stream()
+                .filter( e -> !e.getKey().equals( systemDatabaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, ignored -> STOPPED ) );
         trigger().awaitAll();
+
+        desired.put( systemDatabaseId, STOPPED );
+        trigger().await( systemDatabaseId );
     }
 
     private Reconciliation trigger()

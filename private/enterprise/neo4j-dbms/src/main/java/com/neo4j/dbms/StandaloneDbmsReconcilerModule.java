@@ -39,7 +39,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
 
         this.dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository );
-        this.shutdownOperator = new ShutdownOperator( databaseManager );
+        this.shutdownOperator = new ShutdownOperator( databaseManager, databaseIdRepository );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
 

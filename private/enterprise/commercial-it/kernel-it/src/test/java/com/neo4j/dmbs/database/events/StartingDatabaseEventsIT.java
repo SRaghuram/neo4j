@@ -41,8 +41,7 @@ class StartingDatabaseEventsIT
         List<String> startedDatabases = eventListener.getStartedDatabases();
         List<String> shutdownDatabases = eventListener.getShutdownDatabases();
         assertThat( startedDatabases, contains( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME ) );
-        //TODO: Reinstate ordered check when ShutdownOperator stops system database last
-        assertThat( shutdownDatabases, containsInAnyOrder( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ) );
+        assertThat( shutdownDatabases, contains( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ) );
     }
 
     private static class AllDatabasesEventListener extends DatabaseEventListenerAdapter
