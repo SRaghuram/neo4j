@@ -11,6 +11,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
@@ -23,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryS
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.{IndexReadSession, RelationshipScanCursor}
+import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
 import org.neo4j.values.virtual.ListValue
@@ -93,6 +94,12 @@ class DirectedRelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
       resources.cursorPools.relationshipScanCursorPool.free(cursor)
       cursor = null
     }
+
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit =  {
+      if (cursor != null) {
+        cursor.setTracer(event)
+      }
+    }
   }
 }
 
@@ -121,13 +128,19 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
   private val cursor = field[RelationshipScanCursor](codeGen.namer.nextVariableName())
   private var relId: IntermediateExpression= _
 
-  override def genFields: Seq[Field] = {
-    relId.fields ++ super.genFields ++ inner.genFields :+ cursor
-  }
+  override def genMoreFields: Seq[Field] = Seq(cursor)
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    relId.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V :+ idVariable
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, idVariable)
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      condition(isNotNull(loadField(cursor)))(
+        invokeSideEffect(loadField(cursor), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), event)
+        ),
+      inner.genSetExecutionEvent(event)
+      )
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(relId)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     relId = codeGen.intermediateCompileExpression(relIdExpr).getOrElse(throw new CantCompileQueryException())
@@ -142,7 +155,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
       * }}}
       */
     block(
-      setField(cursor, ALLOCATE_REL_SCAN_CURSOR),
+      allocateAndTraceCursor(cursor, executionEventField, ALLOCATE_REL_SCAN_CURSOR),
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(relId))),
       condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
         singleRelationship(load(idVariable), loadField(cursor)) },
@@ -176,7 +189,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
         profileRow(id),
-        inner.genOperate,
+        inner.genOperateWithExpressions,
         setField(canContinue, constant(false)))
       )
   }
@@ -211,14 +224,19 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
   private var relIds: IntermediateExpression= _
   private val cursor = field[RelationshipScanCursor](codeGen.namer.nextVariableName())
 
+  override def genMoreFields: Seq[Field] = Seq(idIterator,cursor)
 
-  override def genFields: Seq[Field] = {
-    relIds.fields ++ super.genFields ++ inner.genFields :+ idIterator :+ cursor
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    relIds.variables ++ inner.genLocalVariables :+ CURSOR_POOL_V
-  }
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      condition(isNotNull(loadField(cursor)))(
+        invokeSideEffect(loadField(cursor), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), event)
+        ),
+      inner.genSetExecutionEvent(event)
+      )
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(relIds)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     relIds = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException())
@@ -280,7 +298,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
             profileRow(id),
-            inner.genOperate
+            inner.genOperateWithExpressions
             )),
         setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))))
       )

@@ -29,6 +29,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     nodeCursorPool.setKernelTracer(tracer)
     relationshipGroupCursorPool.setKernelTracer(tracer)
     relationshipTraversalCursorPool.setKernelTracer(tracer)
+    relationshipScanCursorPool.setKernelTracer(tracer)
     nodeValueIndexCursorPool.setKernelTracer(tracer)
     nodeLabelIndexCursorPool.setKernelTracer(tracer)
   }
