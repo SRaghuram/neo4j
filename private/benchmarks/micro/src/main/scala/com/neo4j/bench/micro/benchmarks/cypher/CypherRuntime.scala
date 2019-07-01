@@ -11,7 +11,7 @@ object CypherRuntime {
       case CompiledByteCode.NAME => CompiledByteCode
       case CompiledSourceCode.NAME => CompiledSourceCode
       case Interpreted.NAME => Interpreted
-      case EnterpriseInterpreted.NAME => EnterpriseInterpreted
+      case Slotted.NAME => Slotted
       case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntimeString")
     }
 }
@@ -25,7 +25,7 @@ case object Interpreted extends CypherRuntime {
   override val debugOptions: Set[String] = Set()
 }
 
-case object EnterpriseInterpreted extends CypherRuntime {
+case object Slotted extends CypherRuntime {
   final val NAME = "slotted"
   override val debugOptions: Set[String] = Set()
 }

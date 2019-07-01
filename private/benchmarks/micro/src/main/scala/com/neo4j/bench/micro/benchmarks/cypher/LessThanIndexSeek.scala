@@ -22,8 +22,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(false)
 class LessThanIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
+    base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var LessThanIndexSeek_runtime: String = _
 

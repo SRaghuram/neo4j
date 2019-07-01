@@ -22,8 +22,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class Selection extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
+    base = Array(Slotted.NAME))
   @Param(Array[String]())
   var Selection_runtime: String = _
 

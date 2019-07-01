@@ -21,8 +21,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class ExpandInto extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME),
+    base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var ExpandInto_runtime: String = _
 

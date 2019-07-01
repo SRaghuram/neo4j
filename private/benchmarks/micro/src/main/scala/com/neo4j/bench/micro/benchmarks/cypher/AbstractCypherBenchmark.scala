@@ -103,7 +103,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val compilationStateBefore = getCompilationState(logicalPlan, semanticTable, resultColumns)
       val compilationStateAfter: CompilationState = cypherRuntime match {
         case Interpreted => BuildInterpretedExecutionPlan.process(compilationStateBefore, runtimeContext)
-        case EnterpriseInterpreted => BuildSlottedExecutionPlan.process(compilationStateBefore, runtimeContext)
+        case Slotted => BuildSlottedExecutionPlan.process(compilationStateBefore, runtimeContext)
         case CompiledByteCode => BuildCompiledExecutionPlan.process(compilationStateBefore, runtimeContext)
         case CompiledSourceCode => BuildCompiledExecutionPlan.process(compilationStateBefore, runtimeContext)
         case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntime")

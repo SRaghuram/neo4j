@@ -28,8 +28,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class UniqueIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
+    base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var UniqueIndexSeek_runtime: String = _
 
