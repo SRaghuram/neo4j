@@ -6,8 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -15,33 +13,34 @@ import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
-import org.mockito.Answers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
+import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
+import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
@@ -63,7 +62,7 @@ class AkkaCoreTopologyServiceTest
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, Answers.RETURNS_DEEP_STUBS );
+    private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
 
     private RetryStrategy restartRetryStrategy = new RetryStrategy( 0L, 10L );
 
@@ -170,7 +169,7 @@ class AkkaCoreTopologyServiceTest
         var databaseId = databaseIdRepository.get( "customers" );
         var leaderId = new MemberId( UUID.randomUUID() );
 
-        setupGlobalTopologyState( databaseId, leaderId );
+        setupCoreTopologyState( service.topologyState(), databaseId, leaderId );
 
         assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
     }
@@ -183,7 +182,7 @@ class AkkaCoreTopologyServiceTest
         var followerId1 = new MemberId( UUID.randomUUID() );
         var followerId2 = new MemberId( UUID.randomUUID() );
 
-        setupGlobalTopologyState( databaseId, leaderId, followerId1, followerId2 );
+        setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId1, followerId2 );
 
         assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
         assertEquals( RoleInfo.FOLLOWER, service.coreRole( databaseId, followerId1 ) );
@@ -199,7 +198,7 @@ class AkkaCoreTopologyServiceTest
         var leaderId = new MemberId( UUID.randomUUID() );
         var followerId = new MemberId( UUID.randomUUID() );
 
-        setupGlobalTopologyState( knownDatabaseId, leaderId, followerId );
+        setupCoreTopologyState( service.topologyState(), knownDatabaseId, leaderId, followerId );
 
         assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, leaderId ) );
         assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, followerId ) );
@@ -213,7 +212,7 @@ class AkkaCoreTopologyServiceTest
         var followerId = new MemberId( UUID.randomUUID() );
         var unknownId = new MemberId( UUID.randomUUID() );
 
-        setupGlobalTopologyState( databaseId, leaderId, followerId );
+        setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId );
 
         assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, unknownId ) );
     }
@@ -243,28 +242,20 @@ class AkkaCoreTopologyServiceTest
         assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "customers" ) ) );
     }
 
-    private void setupGlobalTopologyState( DatabaseId databaseId, MemberId leaderId, MemberId... followerIds )
+    @Test
+    void shouldReportEmptyTopologiesWhenShutdown() throws Exception
     {
-        var topologyState = service.topologyState();
-
-        var coreMembers = new HashMap<MemberId,CoreServerInfo>();
-
-        if ( leaderId != null )
+        testEmptyTopologiesAreReportedAfter( topologyService ->
         {
-            coreMembers.put( leaderId, addressesForCore( 0, false, Set.of( databaseId ) ) );
-            topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( leaderId, 42 ) ) );
-        }
+            topologyService.stop();
+            topologyService.shutdown();
+        } );
+    }
 
-        if ( followerIds != null )
-        {
-            for ( int i = 0; i < followerIds.length; i++ )
-            {
-                coreMembers.put( followerIds[i], addressesForCore( i + 1, false, Set.of( databaseId ) ) );
-            }
-        }
-
-        var coreTopology = new DatabaseCoreTopology( databaseId, new RaftId( UUID.randomUUID() ), coreMembers );
-        topologyState.onTopologyUpdate( coreTopology );
+    @Test
+    void shouldReportEmptyTopologiesAfterRestart() throws Exception
+    {
+        testEmptyTopologiesAreReportedAfter( AkkaCoreTopologyService::restart );
     }
 
     @Test
@@ -297,5 +288,45 @@ class AkkaCoreTopologyServiceTest
         InOrder inOrder = inOrder( system );
         inOrder.verify( system ).shutdown();
         inOrder.verify( system, times( 2 ) ).createClusterActorSystem();
+    }
+
+    private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
+    {
+        var databaseId = databaseIdRepository.get( "people" );
+        var memberId1 = new MemberId( UUID.randomUUID() );
+        var memberId2 = new MemberId( UUID.randomUUID() );
+        var memberId3 = new MemberId( UUID.randomUUID() );
+
+        service.init();
+        service.start();
+
+        // setup fake topology for cores
+        var bootstrapState = mock( BootstrapState.class );
+        when( bootstrapState.canBootstrapRaft( databaseId ) ).thenReturn( true );
+        service.topologyState().onBootstrapStateUpdate( bootstrapState );
+        setupCoreTopologyState( service.topologyState(), databaseId, memberId1, memberId2, memberId3 );
+
+        // setup fake topology for read replicas
+        setupReadReplicaTopologyState( service.topologyState(), databaseId, memberId1, memberId2 );
+
+        // verify core topology is not empty
+        assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.coreTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.allCoreServers().keySet() );
+        assertTrue( service.canBootstrapRaftGroup( databaseId ) );
+
+        // verify read replica topology is not empty
+        assertEquals( Set.of( memberId1, memberId2 ), service.readReplicaTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2 ), service.allReadReplicas().keySet() );
+
+        testAction.accept( service );
+
+        // verify core topology is empty
+        assertThat( service.coreTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( service.allCoreServers().keySet(), is( empty() ) );
+        assertFalse( service.canBootstrapRaftGroup( databaseId ) );
+
+        // verify read replica topology is empty
+        assertThat( service.readReplicaTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( service.allCoreServers().keySet(), is( empty() ) );
     }
 }

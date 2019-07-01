@@ -32,8 +32,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
 
@@ -43,11 +43,10 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final MemberId myself;
-    private final Log log;
     private final LogProvider logProvider;
-    private final GlobalTopologyState globalTopologyState;
 
-    private ActorRef clientTopologyActorRef;
+    private volatile ActorRef clientTopologyActorRef;
+    private volatile GlobalTopologyState globalTopologyState;
 
     AkkaTopologyClient( Config config, LogProvider logProvider, MemberId myself, ActorSystemLifecycle actorSystemLifecycle,
             DiscoveryMemberFactory discoveryMemberFactory )
@@ -56,11 +55,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         this.myself = myself;
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.discoveryMemberFactory = discoveryMemberFactory;
-        this.globalTopologyState = new GlobalTopologyState( logProvider, ignored ->
-        {
-        } );
-        this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
+        this.globalTopologyState = newGlobalTopologyState( logProvider );
     }
 
     @Override
@@ -97,18 +93,27 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     {
         clientTopologyActorRef = null;
         actorSystemLifecycle.shutdown();
+        globalTopologyState = newGlobalTopologyState( logProvider );
     }
 
     @Override
     public void onDatabaseStart( DatabaseId databaseId )
     {
-        clientTopologyActorRef.tell( new DatabaseStartedMessage( databaseId ), noSender() );
+        var clientTopologyActor = clientTopologyActorRef;
+        if ( clientTopologyActor != null )
+        {
+            clientTopologyActor.tell( new DatabaseStartedMessage( databaseId ), noSender() );
+        }
     }
 
     @Override
     public void onDatabaseStop( DatabaseId databaseId )
     {
-        clientTopologyActorRef.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
+        var clientTopologyActor = clientTopologyActorRef;
+        if ( clientTopologyActor != null )
+        {
+            clientTopologyActor.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
+        }
     }
 
     @Override
@@ -156,5 +161,18 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     public MemberId memberId()
     {
         return myself;
+    }
+
+    @VisibleForTesting
+    GlobalTopologyState topologyState()
+    {
+        return globalTopologyState;
+    }
+
+    private static GlobalTopologyState newGlobalTopologyState( LogProvider logProvider )
+    {
+        return new GlobalTopologyState( logProvider, ignored ->
+        {
+        } );
     }
 }
