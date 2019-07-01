@@ -105,8 +105,8 @@ class MorselSingleThreadedProvidedOrderTest extends ProvidedOrderTestBase(SINGLE
 class MorselSingleThreadedNoFusingProvidedOrderTest extends ProvidedOrderTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // REACTIVE
-class MorselReactiveSingleThreadedTest extends ReactiveResultTestBase(SINGLE_THREADED, MORSEL)
-class MorselReactiveSingleThreadedNoFusingTest extends ReactiveResultTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
+class MorselReactiveResultsTest extends ReactiveResultTestBase(SINGLE_THREADED, MORSEL)
+class MorselReactiveResultsNoFusingTest extends ReactiveResultTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
 class MorselReactiveParallelStressTest
   extends ReactiveResultStressTestBase(SINGLE_THREADED, MORSEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
@@ -115,8 +115,8 @@ class MorselReactiveParallelNoFusingStressTest
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
 // GENERAL
-class MorselSingleThreadedTest extends MiscTestBase(SINGLE_THREADED, MORSEL)
-class MorselSingleThreadedNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
+class MorselMiscTest extends MiscTestBase(SINGLE_THREADED, MORSEL)
+class MorselMiscNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
 
 // WORKLOAD

@@ -115,9 +115,9 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PAR
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
 // REACTIVE
-class ParallelRuntimeReactiveParallelTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, PARALLEL)
-class ParallelRuntimeReactiveParallelNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
-class ParallelRuntimeReactiveParallelStressTest
+class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeReactiveResultsNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
+class ParallelRuntimeReactiveResultsStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL, PARALLEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 class ParallelRuntimeReactiveParallelNoFusingStressTest
