@@ -86,7 +86,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     */
   def close(accumulator: MorselAccumulator[_]): Unit = {
     DebugSupport.logBuffers(s"[close] $this -X- $accumulator")
-    // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
+    // TODO Reduce-Apply-Reduce-Bug: the downstream might have different argument IDs to care about
     decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
     tracker.decrement()
   }

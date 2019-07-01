@@ -105,7 +105,7 @@ class OptionalMorselBuffer(id: BufferId,
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
     DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     argumentStateMap.initiate(argumentRowId, argumentMorsel)
-    // TODO Sort-Apply-Sort-Bug: the downstream might have different argument IDs to care about
+    // TODO Reduce-Apply-Reduce-Bug: the downstream might have different argument IDs to care about
     incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
     tracker.increment()
   }
