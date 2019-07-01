@@ -9,6 +9,7 @@ import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
+import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
 import com.neo4j.server.security.enterprise.auth.Resource.SchemaResource;
 import com.neo4j.server.security.enterprise.auth.Resource.SystemResource;
@@ -227,13 +228,15 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new GraphResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new GraphResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new GraphResource(), RelTypeSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new GraphResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
         }
     }
