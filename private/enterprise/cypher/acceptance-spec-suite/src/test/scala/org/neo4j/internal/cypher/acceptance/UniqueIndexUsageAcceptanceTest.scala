@@ -86,7 +86,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     graph.createUniqueConstraint("Place", "name")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.Optional,
       """
         |MATCH ()-[f:FRIEND_OF]->()
         |WITH f.placeName AS placeName

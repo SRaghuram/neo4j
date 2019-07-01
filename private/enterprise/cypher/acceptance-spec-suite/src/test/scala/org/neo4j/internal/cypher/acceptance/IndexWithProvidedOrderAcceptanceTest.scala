@@ -804,7 +804,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   for ((TestOrder(cypherToken, expectedOrder, providedOrder), functionName) <- List((ASCENDING, "min"), (DESCENDING, "max"))) {
     test(s"$cypherToken-$functionName: should use provided index order with range") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -826,7 +826,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
       graph.execute("CREATE (:Awesome {prop1: 35.5})")
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -845,7 +845,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed property") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -866,7 +866,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed variable") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m RETURN $functionName(m.prop1) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -887,7 +887,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed variable and property") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m WITH m.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -912,7 +912,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken-$functionName: should use provided index order for empty index"){
       graph.createIndex("B", "prop")
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n: B) WHERE n.prop > 0 RETURN $functionName(n.prop)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -928,7 +928,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with ORDER BY on same property") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1) ORDER BY $functionName(n.prop1) $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -965,7 +965,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.execute("CREATE (:Awesome {prop3: 'ha'})")
 
       //should give the length of the alphabetically smallest/largest prop3 string
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN size($functionName(n.prop3)) AS agg", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should

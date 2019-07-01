@@ -98,7 +98,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |RETURN COUNT(end) as count
       """.stripMargin
 
-    val countResult = executeWith(Configs.InterpretedAndSlotted, countQuery)
+    val countResult = executeWith(Configs.Optional, countQuery)
 
     countResult.toList should be(List(Map("count" -> 1)))
 

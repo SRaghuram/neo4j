@@ -216,7 +216,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
    graph.createIndex("Place", "name")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.Optional,
       """
         |MATCH ()-[f:FRIEND_OF]->()
         |WITH f.placeName AS placeName

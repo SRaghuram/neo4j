@@ -61,6 +61,7 @@ object Configs {
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime

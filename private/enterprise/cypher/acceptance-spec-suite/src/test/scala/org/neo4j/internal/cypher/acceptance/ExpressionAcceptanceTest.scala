@@ -60,7 +60,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("projecting from a null identifier produces a null value") {
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
+    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
 
     result.toList should equal(List(Map("n" -> null)))
   }

@@ -457,7 +457,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     graph.createIndex("User", "email")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
+    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> n), Map("n" -> m)))
@@ -469,7 +469,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     graph.createIndex("User", "email")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
+    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE exists(n.email) RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> null)))
@@ -497,7 +497,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     graph.createIndex("User", "email")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
+    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> n)))
@@ -509,7 +509,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     graph.createIndex("User", "email")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
+    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n:User) USING INDEX n:User(email) WHERE n.email IS NOT NULL RETURN n")
 
     // then
     val list = result.toList

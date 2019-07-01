@@ -256,7 +256,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("allows optional MATCH to start a query") {
     // WHEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.Optional,
       "OPTIONAL MATCH (n) RETURN n",
       _ should includeSomewhere.aPlan("Optional").withRows(1))
   }
