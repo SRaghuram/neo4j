@@ -109,17 +109,18 @@ public class DbmsReconciler
         return new Reconciliation( reconciliation );
     }
 
-    private Map<DatabaseId,OperatorState> combineDesiredStates( Map<DatabaseId,OperatorState> combined, Map<DatabaseId,OperatorState> operator )
+    private static Map<DatabaseId,OperatorState> combineDesiredStates( Map<DatabaseId,OperatorState> combined, Map<DatabaseId,OperatorState> operator,
+            BinaryOperator<OperatorState> precedence )
     {
         return Stream.concat( combined.entrySet().stream(), operator.entrySet().stream() )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue, precedence ) );
     }
 
-    private Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators )
+    static Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators, BinaryOperator<OperatorState> precedence )
     {
         return operators.stream()
                 .map( DbmsOperator::getDesired )
-                .reduce( new HashMap<>(), this::combineDesiredStates );
+                .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
     private CompletableFuture<ReconcilerStepResult> reconcile( DatabaseId databaseId, boolean force, List<DbmsOperator> operators )
@@ -178,7 +179,7 @@ public class DbmsReconciler
             {
                 acquireLockOn( databaseId );
 
-                var desiredState = desiredStates( operators ).get( databaseId );
+                var desiredState = desiredStates( operators, precedence ).get( databaseId );
                 if ( desiredState == null )
                 {
                     var cause = new NullPointerException( format( "No operator desires a state for database %s any more. " +

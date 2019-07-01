@@ -45,4 +45,9 @@ public class OperatorConnector
     {
         return reconciler.reconcile( new ArrayList<>( operators ), force );
     }
+
+    List<DbmsOperator> operators()
+    {
+        return operators;
+    }
 }

@@ -23,7 +23,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
 {
     private static final GlobalModule globalModule = mockGlobalModule();
 
-    StubMultiDatabaseManager()
+    public StubMultiDatabaseManager()
     {
         super( globalModule, null, NullLog.getInstance(), true );
     }
