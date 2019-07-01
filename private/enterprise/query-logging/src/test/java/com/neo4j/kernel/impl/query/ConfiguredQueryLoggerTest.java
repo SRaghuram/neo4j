@@ -5,8 +5,7 @@
  */
 package com.neo4j.kernel.impl.query;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,7 +42,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-public class ConfiguredQueryLoggerTest
+class ConfiguredQueryLoggerTest
 {
     private static final String LOG_MESSAGE_TEMPLATE = "%d ms: %s - %s - {}";
     private static final ClientConnectionInfo SESSION_1 = new BoltConnectionInfo( "bolt-1", "client", ANY, ANY );
@@ -55,18 +54,16 @@ public class ConfiguredQueryLoggerTest
     private static final String QUERY_4 = "MATCH (n) WHERE n.age IN {ages} RETURN n";
     private final FakeClock clock = Clocks.fakeClock();
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    @Rule
-    public final FakeCpuClock cpuClock = new FakeCpuClock();
-    @Rule
-    public final FakeHeapAllocation heapAllocation = new FakeHeapAllocation();
+    private final FakeCpuClock cpuClock = new FakeCpuClock();
+    private final FakeHeapAllocation heapAllocation = new FakeHeapAllocation();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private long pageHits;
     private long pageFaults;
     private long thresholdInMillis = 10;
     private int queryId;
-    private AssertableLogProvider logProvider = new AssertableLogProvider();
 
     @Test
-    public void shouldLogQuerySlowerThanThreshold()
+    void shouldLogQuerySlowerThanThreshold()
     {
         // given
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -84,7 +81,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldRespectThreshold()
+    void shouldRespectThreshold()
     {
         // given
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -112,7 +109,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldKeepTrackOfDifferentSessions()
+    void shouldKeepTrackOfDifferentSessions()
     {
         // given
         ExecutingQuery query1 = query( SESSION_1, "TestUser1", QUERY_1 );
@@ -143,7 +140,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogQueryOnFailureEvenIfFasterThanThreshold()
+    void shouldLogQueryOnFailureEvenIfFasterThanThreshold()
     {
         // given
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -164,7 +161,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogQueryParameters()
+    void shouldLogQueryParameters()
     {
         // given
         Map<String,Object> params = new HashMap<>();
@@ -187,7 +184,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogQueryParametersOnFailure()
+    void shouldLogQueryParametersOnFailure()
     {
         // given
         Map<String,Object> params = new HashMap<>();
@@ -211,7 +208,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogUserName()
+    void shouldLogUserName()
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
@@ -235,7 +232,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogMetaData()
+    void shouldLogMetaData()
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
@@ -264,7 +261,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPassword()
+    void shouldNotLogPassword()
     {
         String inputQuery = "CALL dbms.security.changePassword('abc123')";
         String outputQuery = "CALL dbms.security.changePassword('******')";
@@ -273,7 +270,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogChangeUserPassword()
+    void shouldNotLogChangeUserPassword()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
         String outputQuery = "CALL dbms.security.changeUserPassword('user', '******')";
@@ -282,7 +279,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogChangeUserPasswordWithChangeRequired()
+    void shouldNotLogChangeUserPasswordWithChangeRequired()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123', true)";
         String outputQuery = "CALL dbms.security.changeUserPassword('user', '******', true)";
@@ -291,7 +288,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordNull()
+    void shouldNotLogPasswordNull()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(null, 'password')";
         String outputQuery = "CALL dbms.security.changeUserPassword(null, '******')";
@@ -300,7 +297,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordWhenMalformedArgument()
+    void shouldNotLogPasswordWhenMalformedArgument()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user, 'password')";
         String outputQuery = "CALL dbms.security.changeUserPassword('user, '******')";
@@ -309,7 +306,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordExplain()
+    void shouldNotLogPasswordExplain()
     {
         String inputQuery = "EXPLAIN CALL dbms.security.changePassword('abc123')";
         String outputQuery = "EXPLAIN CALL dbms.security.changePassword('******')";
@@ -318,7 +315,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordEvenIfPasswordIsSilly()
+    void shouldNotLogPasswordEvenIfPasswordIsSilly()
     {
         String inputQuery = "CALL dbms.security.changePassword('.changePassword(\\'si\"lly\\')')";
         String outputQuery = "CALL dbms.security.changePassword('******')";
@@ -327,7 +324,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTime()
+    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTime()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('neo4j','.changePassword(silly)') " +
                 "CALL dbms.security.changeUserPassword('smith','other$silly') RETURN 1";
@@ -338,7 +335,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogCreateUserPassword()
+    void shouldNotLogCreateUserPassword()
     {
         String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
         String outputQuery = "CALL dbms.security.createUser('user', '******')";
@@ -347,7 +344,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogCreateUserPasswordWithRequiredChange()
+    void shouldNotLogCreateUserPasswordWithRequiredChange()
     {
         String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
         String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
@@ -356,7 +353,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTimeWithSeveralParms()
+    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTimeWithSeveralParms()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
                 "CALL dbms.security.changeUserPassword('smith',$second) RETURN 1";
@@ -371,7 +368,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordInParams()
+    void shouldNotLogPasswordInParams()
     {
         String inputQuery = "CALL dbms.security.changePassword($password)";
         String outputQuery = "CALL dbms.security.changePassword($password)";
@@ -381,7 +378,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordInDeprecatedParams()
+    void shouldNotLogPasswordInDeprecatedParams()
     {
         String inputQuery = "CALL dbms.security.changePassword({password})";
         String outputQuery = "CALL dbms.security.changePassword({password})";
@@ -390,7 +387,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldNotLogPasswordDifferentWhitespace()
+    void shouldNotLogPasswordDifferentWhitespace()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(%s'abc123'%s)";
         String outputQuery = "CALL dbms.security.changeUserPassword(%s'******'%s)";
@@ -428,7 +425,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldBeAbleToLogDetailedTime()
+    void shouldBeAbleToLogDetailedTime()
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
@@ -446,7 +443,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldBeAbleToLogAllocatedBytes()
+    void shouldBeAbleToLogAllocatedBytes()
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
@@ -464,7 +461,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldBeAbleToLogPageHitsAndPageFaults()
+    void shouldBeAbleToLogPageHitsAndPageFaults()
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
@@ -483,7 +480,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void shouldLogRuntime()
+    void shouldLogRuntime()
     {
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
@@ -507,7 +504,7 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
-    public void includeDatabaseNameIntoQueryLogString()
+    void includeDatabaseNameIntoQueryLogString()
     {
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
