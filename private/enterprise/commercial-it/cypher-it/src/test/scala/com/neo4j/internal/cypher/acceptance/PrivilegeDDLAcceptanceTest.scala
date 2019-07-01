@@ -145,1179 +145,594 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
-  // Tests for granting traverse privileges
+  // Tests for granting privileges
+
+  Seq(
+    ("traversal", "TRAVERSE", Set(grantTraverse())),
+    ("read", "READ (*)", Set(grantRead())),
+    ("match", "MATCH (*)", Set(grantTraverse(), grantRead()))
+  ).foreach {
+    case (name, command, startExpected) =>
+
+      test(s"should grant $name privilege to custom role for all databases and all labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH * NODES * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").node("*").map))
+      }
+
+      test(s"should grant $name privilege to custom role for all databases and all relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").relationship("*").map))
+      }
+
+      test(s"should grant $name privilege to custom role for all databases and all element types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH * TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").node("*").map) ++
+            startExpected.map(_.role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should fail granting $name privilege for all databases and all labels to non-existing role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+
+        // WHEN
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"GRANT $command ON GRAPH * NODES * (*) TO custom")
+          // THEN
+        } should have message "Role 'custom' does not exist."
+
+        // WHEN
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"GRANT $command ON GRAPH * RELATIONSHIPS * (*) TO custom")
+          // THEN
+        } should have message "Role 'custom' does not exist."
+
+        // WHEN
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"GRANT $command ON GRAPH * TO custom")
+          // THEN
+        } should have message "Role 'custom' does not exist."
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
+      }
+
+      test(s"should grant $name privilege to custom role for all databases but only a specific label (that does not need to exist)") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH * NODES A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").node("A").map))
+      }
+
+      test(s"should grant $name privilege to custom role for all databases but only a specific relationship type (that does not need to exist)") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH * RELATIONSHIPS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").relationship("A").map))
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and a specific label") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo NODES A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").database("foo").node("A").map))
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and a specific relationship type") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").database("foo").relationship("A").map))
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and all labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo NODES * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").database("foo").node("*").map))
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and all relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(startExpected.map(_.role("custom").database("foo").relationship("*").map))
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and multiple labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo NODES A (*) TO custom")
+        execute(s"GRANT $command ON GRAPH foo NODES B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("A").map) ++
+            startExpected.map(_.role("custom").database("foo").node("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and multiple relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and multiple labels in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo NODES A, B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("A").map) ++
+            startExpected.map(_.role("custom").database("foo").node("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege to custom role for a specific database and multiple relationship types in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS A, B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege to multiple roles for a specific database and multiple labels in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo NODES A, B (*) TO role1, role2")
+
+        // THEN
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role1").database("foo").node("A").map) ++
+            startExpected.map(_.role("role1").database("foo").node("B").map)
+        )
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role2").database("foo").node("A").map) ++
+            startExpected.map(_.role("role2").database("foo").node("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege to multiple roles for a specific database and multiple relationship types in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command ON GRAPH foo RELATIONSHIPS A, B (*) TO role1, role2")
+
+        // THEN
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role1").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("role1").database("foo").relationship("B").map)
+        )
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role2").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("role2").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should fail when granting $name privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        the[DatabaseNotFoundException] thrownBy {
+          execute(s"GRANT $command ON GRAPH foo TO custom")
+        } should have message "Database 'foo' does not exist."
+      }
+
+      test(s"should fail when granting $name privilege to custom role when not on system database") {
+        val commandName = command.split(" ").head
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"GRANT $command ON GRAPH * TO custom")
+          // THEN
+        } should have message
+          s"This is a DDL command and it should be executed against the system database: GRANT $commandName"
+      }
+
+  }
+
+  // Tests for granting privileges on properties
+
+  Seq(
+    ("read", "READ", Set.empty),
+    ("match", "MATCH", Set(grantTraverse()))
+  ).foreach {
+    case (name, command, expectedTraverse) =>
+
+      test(s"should grant $name privilege for specific property to custom role for all databases and all labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH * NODES * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").node("*").map) ++
+            expectedTraverse.map(_.role("custom").node("*").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for all databases and all relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").relationship("*").map) ++
+            expectedTraverse.map(_.role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for all databases and all element types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH * TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").node("*").map,
+            grantRead().role("custom").property("bar").relationship("*").map) ++
+            expectedTraverse.map(_.role("custom").node("*").map) ++
+            expectedTraverse.map(_.role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for all databases but only a specific label") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH * NODES A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").node("A").map) ++
+            expectedTraverse.map(_.role("custom").node("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for all databases but only a specific relationship type") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH * RELATIONSHIPS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and a specific label") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").node("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and a specific relationship type") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").relationship("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and all labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").node("*").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("*").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and all relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").relationship("*").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and multiple labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").node("A").map,
+            grantRead().database("foo").role("custom").property("bar").node("B").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege for specific property to custom role for a specific database and multiple relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").relationship("A").map,
+            grantRead().database("foo").role("custom").property("bar").relationship("B").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege for multiple properties to custom role for a specific database and specific label") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"GRANT $command (baz) ON GRAPH foo NODES A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").node("A").map,
+            grantRead().database("foo").role("custom").property("baz").node("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for multiple properties to custom role for a specific database and specific relationship type") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"GRANT $command (baz) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").relationship("A").map,
+            grantRead().database("foo").role("custom").property("baz").relationship("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $name privilege for multiple properties to custom role for a specific database and multiple labels") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"GRANT $command (baz) ON GRAPH foo NODES B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").node("A").map,
+            grantRead().database("foo").role("custom").property("baz").node("B").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").node("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege for multiple properties to custom role for a specific database and multiple relationship types") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"GRANT $command (baz) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().database("foo").role("custom").property("bar").relationship("A").map,
+            grantRead().database("foo").role("custom").property("baz").relationship("B").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("A").map) ++
+            expectedTraverse.map(_.database("foo").role("custom").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $name privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE ROLE role3")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (a, b, c) ON GRAPH foo NODES A, B, C (*) TO role1, role2, role3")
+
+        // THEN
+        val expected = (for (l <- Seq("A", "B", "C")) yield {
+          (for (p <- Seq("a", "b", "c")) yield {
+            grantRead().database("foo").property(p).node(l)
+          }) ++ expectedTraverse.map(_.database("foo").node(l))
+        }).flatten
+
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+        execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+      }
+
+      test(s"should grant $name privilege for multiple properties to multiple roles for a specific database and multiple relationship types in a single grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE ROLE role3")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $command (a, b, c) ON GRAPH foo RELATIONSHIPS A, B, C (*) TO role1, role2, role3")
+
+        // THEN
+        val expected = (for (l <- Seq("A", "B", "C")) yield {
+          (for (p <- Seq("a", "b", "c")) yield {
+            grantRead().database("foo").property(p).relationship(l)
+          }) ++ expectedTraverse.map(_.database("foo").relationship(l))
+        }).flatten
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+        execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+      }
 
-  test("should grant traversal privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").map))
-  }
-
-  test("should grant traversal privilege to custom role for all databases and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").relationship("*").map))
-  }
-
-  test("should grant traversal privilege to custom role for all databases and all element types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").node("*").map, grantTraverse().role("custom").relationship("*").map))
-  }
-
-  test("should fail granting traversal privilege for all databases and all labels to non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-      // THEN
-    } should have message "Role 'custom' does not exist."
-
-    // WHEN
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
-      // THEN
-    } should have message "Role 'custom' does not exist."
-
-    // WHEN
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * TO custom")
-      // THEN
-    } should have message "Role 'custom' does not exist."
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
-  }
-
-  test("should grant traversal privilege to custom role for all databases but only a specific label (that does not need to exist)") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").node("A").map))
-  }
-
-  test("should grant traversal privilege to custom role for all databases but only a specific relationship type (that does not need to exist)") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").relationship("A").map))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").node("A").map))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").relationship("A").map))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").map))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantTraverse().role("custom").database("foo").relationship("*").map))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").node("A").map,
-      grantTraverse().role("custom").database("foo").node("B").map
-    ))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").relationship("A").map,
-      grantTraverse().role("custom").database("foo").relationship("B").map
-    ))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and multiple labels in one grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A, B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").node("A").map,
-      grantTraverse().role("custom").database("foo").node("B").map
-    ))
-  }
-
-  test("should grant traversal privilege to custom role for a specific database and multiple relationship types in one grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A, B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").relationship("A").map,
-      grantTraverse().role("custom").database("foo").relationship("B").map
-    ))
-  }
-
-  test("should grant traversal privilege to multiple roles for a specific database and multiple labels in one grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A, B (*) TO role1, role2")
-
-    // THEN
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role1").database("foo").node("A").map,
-      grantTraverse().role("role1").database("foo").node("B").map
-    ))
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role2").database("foo").node("A").map,
-      grantTraverse().role("role2").database("foo").node("B").map
-    ))
-  }
-
-  test("should grant traversal privilege to multiple roles for a specific database and multiple relationship types in one grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A, B (*) TO role1, role2")
-
-    // THEN
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role1").database("foo").relationship("A").map,
-      grantTraverse().role("role1").database("foo").relationship("B").map
-    ))
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("role2").database("foo").relationship("A").map,
-      grantTraverse().role("role2").database("foo").relationship("B").map
-    ))
-  }
-
-  test("should fail when granting traversal privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    the [DatabaseNotFoundException] thrownBy {
-      execute("GRANT TRAVERSE ON GRAPH foo TO custom")
-    } should have message "Database 'foo' does not exist."
-  }
-
-  test("should fail when granting traversal privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("GRANT TRAVERSE ON GRAPH * TO custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: GRANT TRAVERSE"
-  }
-
-  // Tests for granting read privileges
-
-  test("should grant read privilege to custom role for all databases and all elements") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH * TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().role("custom").node("*").map,
-      grantRead().role("custom").relationship("*").map
-    ))
-  }
-
-  test("should grant read privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").map))
-  }
-
-  test("should grant read privilege to custom role for all databases and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").relationship("*").map))
-  }
-
-  test("should fail granting read privilege for all databases and all elements to non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT READ (*) ON GRAPH * TO custom")
-      // THEN
-    } should have message "Role 'custom' does not exist."
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
-  }
-
-  test("should grant read privilege to custom role for all databases but only a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").node("A").map))
-  }
-
-  test("should grant read privilege to custom role for all databases but only a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").relationship("A").map))
-  }
-
-  test("should grant read privilege to custom role for a specific database and a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").node("A").map))
-  }
-
-  test("should grant read privilege to custom role for a specific database and a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo RELATIONSHIP A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").relationship("A").map))
-  }
-
-  test("should grant read privilege to custom role for a specific database and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").map))
-  }
-
-  test("should grant read privilege to custom role for a specific database and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").database("foo").relationship("*").map))
-  }
-
-  test("should grant read privilege to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (*) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().role("custom").database("foo").node("A").map,
-      grantRead().role("custom").database("foo").node("B").map
-    ))
-  }
-
-  test("should grant read privilege to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (*) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (*) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().role("custom").database("foo").relationship("A").map,
-      grantRead().role("custom").database("foo").relationship("B").map
-    ))
-  }
-
-  test("should fail when granting read privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    the [DatabaseNotFoundException] thrownBy {
-      execute("GRANT READ (*) ON GRAPH foo TO custom")
-    } should have message "Database 'foo' does not exist."
-  }
-
-  test("should grant read privilege for specific property to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH * NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for all databases and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH * RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").relationship("*").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for all databases but only a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").node("A").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for all databases but only a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().role("custom").property("bar").relationship("A").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").node("A").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").relationship("A").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantRead().database("foo").role("custom").property("bar").relationship("*").map))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("bar").node("B").map
-    ))
-  }
-
-  test("should grant read privilege for specific property to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-  }
-
-  test("should grant read privilege for multiple properties to custom role for a specific database and specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (baz) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("baz").node("A").map
-    ))
-  }
-
-  test("should grant read privilege for multiple properties to custom role for a specific database and specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (baz) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("baz").relationship("A").map
-    ))
-  }
-
-  test("should grant read privilege for multiple properties to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (baz) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("baz").node("B").map
-    ))
-  }
-
-  test("should grant read privilege for multiple properties to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (baz) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("baz").relationship("B").map
-    ))
-  }
-
-  test("should grant read privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (a, b, c) ON GRAPH foo NODES A, B, C (*) TO role1, role2, role3")
-
-    // THEN
-    val expected = for (p <- Seq("a", "b", "c"); l <- Seq("A", "B", "C")) yield {
-      grantRead().database("foo").property(p).node(l)
-    }
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-  }
-
-  test("should grant read privilege for multiple properties to multiple roles for a specific database and multiple relationship types in a single grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT READ (a, b, c) ON GRAPH foo RELATIONSHIPS A, B, C (*) TO role1, role2, role3")
-
-    // THEN
-    val expected = for (p <- Seq("a", "b", "c"); l <- Seq("A", "B", "C")) yield {
-      grantRead().database("foo").property(p).relationship(l)
-    }
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-  }
-
-  test("should fail when granting read privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("GRANT READ (*) ON GRAPH * TO custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: GRANT READ"
-  }
-
-  // Tests for GRANT MATCH privileges
-
-  test("should grant MATCH privilege to custom role for all databases and all elements") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH * TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").node("*").map,
-      grantTraverse().role("custom").relationship("*").map,
-      grantRead().role("custom").node("*").map,
-      grantRead().role("custom").relationship("*").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").map,
-      grantRead().role("custom").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for all databases and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").relationship("*").map,
-      grantRead().role("custom").relationship("*").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for all databases but only a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").node("A").map,
-      grantRead().role("custom").node("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for all databases but only a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").relationship("A").map,
-      grantRead().role("custom").relationship("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").node("A").map,
-      grantRead().role("custom").database("foo").node("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").relationship("A").map,
-      grantRead().role("custom").database("foo").relationship("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").map,
-      grantRead().role("custom").database("foo").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").relationship("*").map,
-      grantRead().role("custom").database("foo").relationship("*").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (*) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").node("A").map,
-      grantTraverse().role("custom").database("foo").node("B").map,
-      grantRead().role("custom").database("foo").node("A").map,
-      grantRead().role("custom").database("foo").node("B").map
-    ))
-  }
-
-  test("should grant MATCH privilege to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (*) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").database("foo").relationship("A").map,
-      grantTraverse().role("custom").database("foo").relationship("B").map,
-      grantRead().role("custom").database("foo").relationship("A").map,
-      grantRead().role("custom").database("foo").relationship("B").map
-    ))
-  }
-
-  test("should fail grant MATCH privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    the [DatabaseNotFoundException] thrownBy {
-      execute("GRANT MATCH (*) ON GRAPH foo TO custom")
-    } should have message "Database 'foo' does not exist."
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for all databases and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH * NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").map,
-      grantRead().role("custom").property("bar").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for all databases and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").relationship("*").map,
-      grantRead().role("custom").relationship("*").property("bar").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for all databases but only a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH * NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").node("A").map,
-      grantRead().role("custom").property("bar").node("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for all databases but only a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().role("custom").relationship("A").map,
-      grantRead().role("custom").property("bar").relationship("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and a specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").node("A").map,
-      grantRead().database("foo").role("custom").property("bar").node("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and a specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").relationship("A").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and all labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").map,
-      grantRead().database("foo").role("custom").property("bar").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and all relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").relationship("*").map,
-      grantRead().database("foo").role("custom").relationship("*").property("bar").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").node("A").map,
-      grantTraverse().database("foo").role("custom").node("B").map,
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("bar").node("B").map
-    ))
-  }
-
-  test("should grant MATCH privilege for specific property to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").relationship("A").map,
-      grantTraverse().database("foo").role("custom").relationship("B").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-  }
-
-  test("should grant MATCH privilege for multiple properties to custom role for a specific database and specific label") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (baz) ON GRAPH foo NODES A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").node("A").map,
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("baz").node("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for multiple properties to custom role for a specific database and specific relationship type") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (baz) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").relationship("A").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("baz").relationship("A").map
-    ))
-  }
-
-  test("should grant MATCH privilege for multiple properties to custom role for a specific database and multiple labels") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (baz) ON GRAPH foo NODES B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").node("A").map,
-      grantTraverse().database("foo").role("custom").node("B").map,
-      grantRead().database("foo").role("custom").property("bar").node("A").map,
-      grantRead().database("foo").role("custom").property("baz").node("B").map
-    ))
-  }
-
-  test("should grant MATCH privilege for multiple properties to custom role for a specific database and multiple relationship types") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (baz) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantTraverse().database("foo").role("custom").relationship("A").map,
-      grantTraverse().database("foo").role("custom").relationship("B").map,
-      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
-      grantRead().database("foo").role("custom").property("baz").relationship("B").map
-    ))
-  }
-
-  test("should grant MATCH privilege for multiple properties to multiple roles for a specific database and multiple labels in a single grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (a, b, c) ON GRAPH foo NODES A, B, C (*) TO role1, role2, role3")
-
-    // THEN
-    val expected = (for (l <- Seq("A", "B", "C")) yield {
-      (for(p <- Seq("a", "b", "c")) yield {
-        grantRead().database("foo").property(p).node(l)
-      }) :+ grantTraverse().database("foo").node(l)
-    }).flatten
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-  }
-
-  test("should grant MATCH privilege for multiple properties to multiple roles for a specific database and multiple relationship types in a single grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT MATCH (a, b, c) ON GRAPH foo RELATIONSHIPS A, B, C (*) TO role1, role2, role3")
-
-    // THEN
-    val expected = (for (l <- Seq("A", "B", "C")) yield {
-      (for(p <- Seq("a", "b", "c")) yield {
-        grantRead().database("foo").property(p).relationship(l)
-      }) :+ grantTraverse().database("foo").relationship(l)
-    }).flatten
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-  }
-
-  test("should fail when granting MATCH privilege when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("GRANT MATCH (*) ON GRAPH * TO custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: GRANT MATCH"
   }
 
   // Tests for granting write privileges
@@ -1394,7 +809,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    the [DatabaseNotFoundException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
     } should have message "Database 'foo' does not exist."
   }
@@ -2249,7 +1664,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    val error1 = the [QueryExecutionException] thrownBy {
+    val error1 = the[QueryExecutionException] thrownBy {
       executeOnSystem("neo4j", "abc", "REVOKE MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
     }
     // THEN
@@ -2264,7 +1679,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    val error2 = the [QueryExecutionException] thrownBy {
+    val error2 = the[QueryExecutionException] thrownBy {
       executeOnSystem("neo4j", "abc", "REVOKE MATCH (bar) ON GRAPH * FROM custom")
     }
     // THEN
@@ -2290,7 +1705,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
-    val error1 = the [InvalidArgumentsException] thrownBy {
+    val error1 = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
     }
 
@@ -2299,7 +1714,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       be("The role 'wrongRole' does not exist."))
 
     // WHEN
-    val error2 = the [InvalidArgumentsException] thrownBy {
+    val error2 = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
     }
 
@@ -2308,7 +1723,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       be("The role 'wrongRole' does not exist."))
 
     // WHEN
-    val error3 = the [InvalidArgumentsException] thrownBy {
+    val error3 = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
     }
     // THEN
@@ -2316,7 +1731,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       be("The role 'wrongRole' does not exist."))
 
     // WHEN
-    val error4 = the [InvalidArgumentsException] thrownBy {
+    val error4 = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
     }
 
@@ -2337,28 +1752,28 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
-    val errorTraverse = the [InvalidArgumentsException] thrownBy {
+    val errorTraverse = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role")
     }
     // THEN
     errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
-    val errorRead = the [InvalidArgumentsException] thrownBy {
+    val errorRead = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role")
     }
     // THEN
     errorRead.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
-    val errorMatch = the [InvalidArgumentsException] thrownBy {
+    val errorMatch = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM role")
     }
     // THEN
     errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
-    val errorWrite = the [InvalidArgumentsException] thrownBy {
+    val errorWrite = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
     }
     // THEN
@@ -2370,7 +1785,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    the [InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
     } should have message "The privilege 'find  ON GRAPH foo NODES *' does not exist."
   }
@@ -2380,7 +1795,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    the [InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
     } should have message "The privilege 'read * ON GRAPH foo NODES *' does not exist."
   }
@@ -2392,7 +1807,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
-    val e = the [InvalidArgumentsException] thrownBy {
+    val e = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
     }
     // THEN
@@ -2407,7 +1822,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
-    val e = the [InvalidArgumentsException] thrownBy {
+    val e = the[InvalidArgumentsException] thrownBy {
       execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
     }
     // THEN
@@ -2765,8 +2180,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role1 FROM joe")
@@ -2781,8 +2196,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role2 FROM joe")
@@ -2795,8 +2210,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+      }) should be(2)
   }
 
   test("should see properties and nodes depending on granted MATCH privileges for role") {
@@ -2835,8 +2250,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role1 FROM joe")
@@ -2851,8 +2266,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE ROLE role2 FROM joe")
@@ -2865,8 +2280,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+      }) should be(2)
   }
 
   test("should see properties and nodes when revoking privileges for role") {
@@ -2897,8 +2312,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
@@ -2912,8 +2327,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-    }) should be(4)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
@@ -2925,8 +2340,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
-      (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
-    }) should be(2)
+        (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
+      }) should be(2)
   }
 
   test("should find relationship when granted traversal privilege") {
@@ -3288,7 +2703,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("should get no result")
     }) should be(0)
 
@@ -3370,7 +2785,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("should get no result")
     }) should be(0)
 
@@ -3459,7 +2874,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setupUserJoeWithCustomRole()
 
     // WHEN
-    execute(s"GRANT WRITE (*) ON GRAPH ${DEFAULT_DATABASE_NAME} ELEMENTS * (*) TO custom")
+    execute(s"GRANT WRITE (*) ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
@@ -3802,6 +3217,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE foo")
     execute("CREATE ROLE fum")
     val admin = Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")
+
     def role(r: String, u: String) = Map("role" -> r, "member" -> u, "isBuiltIn" -> false)
 
     // WHEN using single user and role version of GRANT
@@ -3842,7 +3258,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
 
-    the [InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
@@ -3857,7 +3273,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
-    the [InvalidArgumentsException] thrownBy {
+    the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
