@@ -204,7 +204,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
     execute("GRANT READ (a,b,c) ON GRAPH * NODES A (*) TO foo")
-    val expected = Set(grantTraverse().map,
+    val expected = Set(grantTraverse().node("*").map,
       grantRead().property("a").node("A").map,
       grantRead().property("b").node("A").map,
       grantRead().property("c").node("A").map

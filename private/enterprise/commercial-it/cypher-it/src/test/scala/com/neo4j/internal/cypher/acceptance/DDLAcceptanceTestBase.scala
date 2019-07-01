@@ -112,9 +112,9 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
 
-  def grantTraverse(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph")).node("*").action("find")
-  def grantRead(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).node("*").action("read")
-  def grantWrite(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).node("*").action("write")
+  def grantTraverse(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph")).action("find")
+  def grantRead(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).action("read")
+  def grantWrite(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).action("write")
 
   def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token")).action("write").node("*")
   def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema")).action("write").node("*")
