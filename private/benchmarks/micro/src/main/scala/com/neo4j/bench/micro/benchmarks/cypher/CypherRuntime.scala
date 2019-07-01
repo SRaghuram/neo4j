@@ -13,6 +13,7 @@ object CypherRuntime {
       case Interpreted.NAME => Interpreted
       case EnterpriseInterpreted.NAME => EnterpriseInterpreted
       case Morsel.NAME => Morsel
+      case Parallel.NAME => Parallel
       case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntimeString")
     }
 }
@@ -43,5 +44,10 @@ case object CompiledSourceCode extends CypherRuntime {
 
 case object Morsel extends CypherRuntime {
   final val NAME = "morsel"
+  override val debugOptions: Set[String] = Set()
+}
+
+case object Parallel extends CypherRuntime {
+  final val NAME = "parallel"
   override val debugOptions: Set[String] = Set()
 }

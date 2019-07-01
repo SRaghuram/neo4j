@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 @BenchmarkEnabled(false)
 class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var StringPrefixIndexSeek_runtime: String = _

@@ -31,7 +31,7 @@ import scala.collection.mutable
 class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
 
   @ParamValues(
-    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var VariableDensityPointIndexSeek_runtime: String = _
