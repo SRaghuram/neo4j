@@ -284,7 +284,7 @@ public class CatchupServerIT
     private List<String> getExpectedStoreFiles( NeoStoreDataSource neoStoreDataSource ) throws IOException
     {
         NeoStoreFileListing.StoreFileListingBuilder builder = neoStoreDataSource.getNeoStoreFileListing().builder();
-        builder.excludeLogFiles().excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders();
+        builder.excludeLogFiles().excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
             return stream.filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );
