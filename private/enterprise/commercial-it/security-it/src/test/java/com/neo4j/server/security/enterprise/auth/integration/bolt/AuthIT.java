@@ -35,8 +35,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.graphdb.config.Setting;
@@ -421,6 +423,31 @@ public class AuthIT extends AuthTestBase
             catch ( ClientException ce )
             {
                 assertThat( ce.getMessage(), equalTo( "Cannot grant non-existent role 'none' to user '" + READ_USER + "'" ) );
+            }
+        }
+    }
+
+    @Test
+    public void shouldNotFailOnUpdatingSecurityCommandsOnSystemDb()
+    {
+        assumeTrue( createUsers );
+
+        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "CREATE DATABASE foo" ).consume();
+                session.run( "CREATE ROLE fooRole" ).consume();
+                session.run( "CALL dbms.security.createUser('fooUser', 'fooPassword')" ).consume();
+                session.run( "GRANT MATCH (foo) ON GRAPH * NODES * TO fooRole" ).consume();
+                session.run( "GRANT TRAVERSE ON GRAPH foo TO fooRole" ).consume();
+            }
+            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                List<Record> records = session.run( "SHOW ROLE fooRole PRIVILEGES" ).list();
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 4 ) );
+                List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(foo)" ) ).collect( Collectors.toList() );
+                assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
         }
     }
