@@ -177,7 +177,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                                param[Array[AnyValue]]("expressionVariables")),
                               body = block(
                                 declarations(grouping.computeKey),
-                                returns(nullCheckIfRequired(grouping.computeKey)))),
+                                nullCheckIfRequired(grouping.computeKey))),
             MethodDeclaration("getGroupingKey",
                               owner = typeRefOf[CompiledGroupingExpression],
                               returnType = typeRefOf[AnyValue],
@@ -1489,7 +1489,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       } yield
         IntermediateExpression(
           ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), trueValue, falseValue),
-          l.fields ++ r.fields, l.variables ++ r.variables, Set.empty)
+          l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks)
 
     case NullCheck(offset, inner) =>
       intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))

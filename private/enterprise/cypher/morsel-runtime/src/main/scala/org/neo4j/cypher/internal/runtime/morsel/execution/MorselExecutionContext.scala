@@ -161,7 +161,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   override def toString: String = {
-    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}]($morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow $prettyCurrentRow)"
+    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}](longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow $prettyCurrentRow)"
   }
 
   def prettyCurrentRow: String =
