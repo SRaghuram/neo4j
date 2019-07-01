@@ -18,17 +18,16 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   worker: Worker)
   extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler)
   with QuerySubscription {
-  private val flowControl = queryState.flowControl
 
   override def request(numberOfRecords: Long): Unit = {
-    flowControl.request(numberOfRecords)
+    super.request(numberOfRecords)
     while (!executionState.isCompleted && flowControl.hasDemand) {
       worker.workOnQuery(this)
     }
   }
 
   override def cancel(): Unit = {
-    // We have to check this before we call cancel on the floe control
+    // We have to check this before we call cancel on the flow control
     val isCompleted = executionState.isCompleted
     flowControl.cancel()
     if (!isCompleted) {
@@ -50,6 +49,6 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
       }
     }
 
-    flowControl.await()
+    super.await()
   }
 }

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, StandardBuffer, StandardSingletonBuffer}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer, StandardBuffer, StandardSingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -18,7 +18,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 object StandardStateFactory extends StateFactory {
   override def newBuffer[T <: AnyRef](): Buffer[T] = new StandardBuffer[T]
 
-  override def newSingletonBuffer[T <: AnyRef](): Buffer[T] = new StandardSingletonBuffer[T]
+  override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new StandardSingletonBuffer[T]
 
   override def newTracker(subscriber: QuerySubscriber,
                           queryContext: QueryContext,

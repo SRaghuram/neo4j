@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.exceptionHandler
@@ -42,7 +42,7 @@ trait QueryCompletionTracker extends FlowControl {
   /**
     * Query completion state. Non-blocking.
     *
-    * @return true iff the query has completed
+    * @return true iff the query has completed. A query is completed when it delivered all data.
     */
   def isCompleted: Boolean
 
@@ -112,7 +112,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     demand -= newlyServed
   }
 
-  override def isCompleted: Boolean = count == 0 || cancelled
+  override def isCompleted: Boolean = count == 0
 
   // -------- Subscription Methods --------
 
@@ -162,12 +162,26 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext,
                                        tracer: QueryExecutionTracer) extends QueryCompletionTracker {
+  // Count of "things" that haven't been closed yet
   private val count = new AtomicLong(0)
+
+  // Errors that happened during execution
   private val errors = new ConcurrentLinkedQueue[Throwable]()
+
+  // Used to implement await. Released each time we meet the demand or the query is done
   private var latch = new CountDownLatch(1)
+
+  // Current demand in number of rows
   private val demand = new AtomicLong(0)
-  private val cancelled = new AtomicBoolean(false)
-  private val completed = new AtomicBoolean(false)
+
+  sealed trait Status
+  case object Running extends Status
+  case object CountReachedZero extends Status
+  case object Errors extends Status
+  case object Cancelled extends Status
+
+  // The status of the query
+  private val status = new AtomicReference[Status](Running)
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
@@ -180,13 +194,19 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
     if (newCount == 0) {
       try {
-        if (errors.isEmpty) {
-          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
-        } else {
-          subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
+        status.compareAndExchange(Running, CountReachedZero) match {
+          //case CountReachedZero is impossible by design
+          case Errors =>
+            subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
+          case Running =>
+            subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+          case Cancelled =>
+            // Nothing to do for now. Probably a subscriber.onCancelled callback later
         }
       } finally {
-        completeQuery()
+        tracer.stopQuery()
+        queryContext.transactionalContext.transaction.thawLocks()
+        releaseLatch()
       }
     } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")
@@ -195,26 +215,21 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def error(throwable: Throwable): Unit = {
+    status.set(Errors)
     errors.add(throwable)
   }
 
-  private def completeQuery(): Unit = {
-    if (completed.compareAndSet(false, true)) {
-      tracer.stopQuery()
-      queryContext.transactionalContext.transaction.thawLocks()
-      releaseLatch()
-    }
-  }
-
-  override def isCompleted: Boolean = completed.get()
+  override def isCompleted: Boolean = count.get() == 0
 
   override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 
-  override def getDemand: Long = demand.get()
+  // We avoid ProduceResults (which reads this) doing any more work if the query is cancelled or had an error
+  override def getDemand: Long = if (status.get() != Running) 0 else demand.get()
 
   override def hasDemand: Boolean = getDemand > 0
 
   override def addServed(newlyServed: Long): Unit = {
+    DebugSupport.logTracker(s"Subtracting $newlyServed of demand")
     val newDemand = demand.addAndGet(-newlyServed)
     if (newDemand == 0) {
       releaseLatch()
@@ -223,11 +238,18 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   // -------- Subscription Methods --------
 
+  override def cancel(): Unit = {
+    if (status.compareAndSet(Running, Cancelled)) {
+      DebugSupport.logTracker("Canceled")
+    }
+  }
+
   override def request(numberOfRecords: Long): Unit = {
-    if (!isCompleted) {
+    if (status.get() != CountReachedZero) {
       //there is new demand make sure to reset the latch
       if (numberOfRecords > 0) {
         resetLatch()
+        DebugSupport.logTracker(s"Adding $numberOfRecords to demand")
         demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
           val newDemand = oldVal + newVal
           //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
@@ -239,36 +261,32 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         })
       }
     }
-
-  }
-
-  override def cancel(): Unit = {
-    try {
-      cancelled.set(true)
-    } finally {
-      completeQuery()
-    }
   }
 
   override def await(): Boolean = {
+    DebugSupport.logTracker(s"Awaiting latch $latch ....")
     latch.await()
+    DebugSupport.logTracker(s"Awaiting latch $latch done")
     if (!errors.isEmpty) {
       throw allErrors()
     }
-    val moreToCome = !isCompleted
+    val moreToCome = status.get() == Running
     if (!moreToCome) {
       runAssertions()
     }
     moreToCome
   }
 
-  private def releaseLatch(): Unit = synchronized {
+  private def releaseLatch(): Unit = this.synchronized {
+    DebugSupport.logTracker(s"Releasing latch $latch")
     latch.countDown()
   }
 
-  private def resetLatch(): Unit = synchronized {
+  private def resetLatch(): Unit = this.synchronized {
     if (latch.getCount == 0) {
+      val oldLatch = latch
       latch = new CountDownLatch(1)
+      DebugSupport.logTracker(s"Resetting latch $oldLatch. new: $latch")
     }
   }
 

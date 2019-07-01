@@ -5,23 +5,28 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.cypher.internal.runtime.morsel.PipelineTask
+import org.neo4j.cypher.internal.runtime.morsel.Task
 
 /**
   * Policy which selects the next task for execute for a given executing query.
   */
 trait SchedulingPolicy {
   def nextTask(executingQuery: ExecutingQuery,
-               queryResources: QueryResources): PipelineTask
+               queryResources: QueryResources): Task[QueryResources]
 }
 
 object LazyScheduling extends SchedulingPolicy {
 
   def nextTask(executingQuery: ExecutingQuery,
-               queryResources: QueryResources): PipelineTask = {
+               queryResources: QueryResources): Task[QueryResources] = {
 
     // TODO this schedules RHS of hash join first. Not so good.
     val pipelineStates = executingQuery.executionState.pipelineStates
+
+    val cleanUpTask = executingQuery.executionState.cleanUpTask()
+    if (cleanUpTask != null) {
+      return cleanUpTask
+    }
 
     var i = pipelineStates.length - 1
     while (i >= 0) {

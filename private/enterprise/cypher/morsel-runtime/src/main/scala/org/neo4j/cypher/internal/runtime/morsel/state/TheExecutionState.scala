@@ -58,6 +58,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                                              id => argumentStateMaps(id.x),
                                              stateFactory)
 
+  // This can hold a CleanUpTask if the query was cancelled. It will get scheduled before anything else.
+  private val cleanUpTaskHolder = stateFactory.newSingletonBuffer[CleanUpTask]()
+
   override val pipelineStates: Array[PipelineState] = {
     val states = new Array[PipelineState](pipelines.length)
     var i = states.length - 1
@@ -226,6 +229,14 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     */
   override def cancelQuery(resources: QueryResources): Unit = {
     closeOutstandingWork(resources, failedPipeline = null)
+  }
+
+  override def scheduleCancelQuery(): Unit = {
+    cleanUpTaskHolder.tryPut(new CleanUpTask(this))
+  }
+
+  override def cleanUpTask(): CleanUpTask = {
+    cleanUpTaskHolder.take()
   }
 
   /**

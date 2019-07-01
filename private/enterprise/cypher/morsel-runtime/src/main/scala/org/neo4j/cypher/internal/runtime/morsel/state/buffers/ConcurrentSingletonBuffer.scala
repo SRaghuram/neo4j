@@ -10,13 +10,17 @@ import java.util.concurrent.atomic.AtomicReference
 /**
   * Implementation of a concurrent singleton [[Buffer]] of elements of type `T`.
   */
-class ConcurrentSingletonBuffer[T <: AnyRef] extends Buffer[T] {
+class ConcurrentSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
   private val datum = new AtomicReference[T]()
 
   override def put(t: T): Unit = {
     if (!datum.compareAndSet(null.asInstanceOf[T], t)) {
       throw new IllegalStateException(s"SingletonBuffer is full: tried to put $t but already held element ${datum.get}")
     }
+  }
+
+  override def tryPut(t: T): Unit = {
+    datum.compareAndSet(null.asInstanceOf[T], t)
   }
 
   override def canPut: Boolean = datum.get() == null

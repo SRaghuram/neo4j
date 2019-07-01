@@ -8,16 +8,31 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
+import org.neo4j.kernel.impl.query.QuerySubscription
 
 class ExecutingQuery(val executionState: ExecutionState,
                      val queryContext: QueryContext,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer,
-                     val workersQueryProfiler: WorkersQueryProfiler) {
+                     val workersQueryProfiler: WorkersQueryProfiler) extends QuerySubscription {
+  protected val flowControl: FlowControl = queryState.flowControl
 
   def bindTransactionToThread(): Unit =
     queryState.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
 
   def unbindTransaction(): Unit =
     queryState.transactionBinder.unbindFromThread()
+
+  override def request(numberOfRecords: Long): Unit = {
+    flowControl.request(numberOfRecords)
+  }
+
+  override def cancel(): Unit = {
+    flowControl.cancel()
+    executionState.scheduleCancelQuery()
+  }
+
+  override def await(): Boolean = {
+    flowControl.await()
+  }
 }

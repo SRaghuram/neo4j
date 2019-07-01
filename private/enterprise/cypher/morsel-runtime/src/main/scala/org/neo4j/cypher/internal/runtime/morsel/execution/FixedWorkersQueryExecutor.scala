@@ -137,6 +137,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
     queryManager.addQuery(executingQuery)
     executionState.initializeState()
-    ProfiledQuerySubscription(tracker, queryProfile)
+    ProfiledQuerySubscription(executingQuery, queryProfile)
   }
 }

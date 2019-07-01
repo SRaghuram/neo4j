@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffer
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -20,7 +20,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
   */
 trait StateFactory {
   def newBuffer[T <: AnyRef](): Buffer[T]
-  def newSingletonBuffer[T <: AnyRef](): Buffer[T]
+  def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T]
   def newTracker(subscriber: QuerySubscriber,
                  queryContext: QueryContext,
                  tracer: QueryExecutionTracer): QueryCompletionTracker

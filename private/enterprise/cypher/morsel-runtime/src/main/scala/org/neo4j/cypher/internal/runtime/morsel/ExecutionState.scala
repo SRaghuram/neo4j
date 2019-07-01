@@ -199,11 +199,21 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def failQuery(throwable: Throwable, resources: QueryResources, failedPipeline: ExecutablePipeline): Unit
 
   /**
-    * Cancel the query.
+    * Cancel the query immediately.
     *
     * @param resources resources where to hand-back any open cursors
     */
   def cancelQuery(resources: QueryResources): Unit
+
+  /**
+    * Cancel the query as soon as possible. This will schedule a Task that performs the cancellation.
+    */
+  def scheduleCancelQuery(): Unit
+
+  /**
+    * Return the clean up task if one was scheduled or `null` otherwise
+    */
+  def cleanUpTask(): CleanUpTask
 
   /**
     * Check whether this query has completed. A query is completed if it has

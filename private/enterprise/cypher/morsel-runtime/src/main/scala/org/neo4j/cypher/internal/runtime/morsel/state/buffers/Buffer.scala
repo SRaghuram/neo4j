@@ -19,6 +19,13 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
   def foreach(f: T => Unit): Unit
 }
 
+trait SingletonBuffer[T <: AnyRef] extends Buffer[T] {
+  /**
+    * Tries to put a datum into the singleton buffer, but simply does nothing if it is already full.
+    */
+  def tryPut(t: T): Unit
+}
+
 object Buffer {
 
   /**

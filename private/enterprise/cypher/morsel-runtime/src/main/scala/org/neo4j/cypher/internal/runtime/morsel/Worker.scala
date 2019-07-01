@@ -75,24 +75,32 @@ class Worker(val workerId: Int,
       false
     } else {
       try {
-        val state = task.pipelineState
+        task match {
+          case cleanUpTask: CleanUpTask =>
+            cleanUpTask.executeWorkUnit(resources, null, null)
+          case pipelineTask: PipelineTask =>
+            val state = pipelineTask.pipelineState
 
-        executeTask(executingQuery, task)
+            executeTask(executingQuery, pipelineTask)
 
-        if (task.canContinue) {
-          // Put the continuation before unlocking (closeWorkUnit)
-          // so that in serial pipelines we can guarantee that the continuation
-          // is the next thing which is picked up
-          state.putContinuation(task, wakeUp = false, resources)
-        } else {
-          task.close(resources)
-        }
+            if (pipelineTask.canContinue) {
+              // Put the continuation before unlocking (closeWorkUnit)
+              // so that in serial pipelines we can guarantee that the continuation
+              // is the next thing which is picked up
+              state.putContinuation(pipelineTask, wakeUp = false, resources)
+            } else {
+              pipelineTask.close(resources)
+            }
+      }
         true
       } catch {
         // Failure while executing `task`
         case throwable: Throwable =>
-          executingQuery.executionState.failQuery(throwable, resources, task.pipelineState.pipeline)
-          task.close(resources)
+          task match {
+            case pipelineTask: PipelineTask =>
+              executingQuery.executionState.failQuery(throwable, resources, pipelineTask.pipelineState.pipeline)
+              pipelineTask.close(resources)
+          }
           true
       }
     }
@@ -121,7 +129,7 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def scheduleNextTask(executingQuery: ExecutingQuery): PipelineTask = {
+  private def scheduleNextTask(executingQuery: ExecutingQuery): Task[QueryResources] = {
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {

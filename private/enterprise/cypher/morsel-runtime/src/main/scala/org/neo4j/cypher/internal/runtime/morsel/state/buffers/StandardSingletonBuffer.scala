@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 /**
   * Implementation of a standard non-Thread-safe singleton buffer of elements of type T.
   */
-class StandardSingletonBuffer[T <: AnyRef] extends Buffer[T] {
+class StandardSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
   private var datum: T = _
 
   override def put(t: T): Unit = {
@@ -16,6 +16,12 @@ class StandardSingletonBuffer[T <: AnyRef] extends Buffer[T] {
       throw new IllegalStateException(s"SingletonBuffer is full: tried to put $t, but already held element $datum")
     }
     datum = t
+  }
+
+  override def tryPut(t: T): Unit = {
+    if (datum == null) {
+      datum = t
+    }
   }
 
   override def canPut: Boolean = datum == null
