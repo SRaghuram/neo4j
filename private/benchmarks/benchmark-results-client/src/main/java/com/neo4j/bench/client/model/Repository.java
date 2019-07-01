@@ -45,6 +45,11 @@ public enum Repository
                     "neo-technology",
                     "^master$",
                     "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    ALGOS_JMH( "Graph Algorithms",
+            "graph-analytics",
+            "neo-technology",
+            "^master$",
+            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
 
     // -----------------------
     // --- target systems ----
@@ -59,7 +64,12 @@ public enum Repository
           "cypher-for-apache-spark",
           "opencypher",
           "^master$",
-          "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" );
+          "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    ALGOS( "Graph Algorithms",
+            "graph-analytics",
+            "neo-technology",
+            "^master$",
+            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" );
 
     public static Repository forName( String projectName )
     {
