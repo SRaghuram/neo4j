@@ -22,7 +22,7 @@ import org.openjdk.jmh.infra.Blackhole
 class ExpandInto extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
+    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var ExpandInto_runtime: String = _
 

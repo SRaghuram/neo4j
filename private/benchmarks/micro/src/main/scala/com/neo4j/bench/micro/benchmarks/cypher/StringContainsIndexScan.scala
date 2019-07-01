@@ -31,7 +31,7 @@ import scala.collection.JavaConverters._
 class StringContainsIndexScan extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(Interpreted.NAME))
+    base = Array(Interpreted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var StringContainsIndexScan_runtime: String = _
 

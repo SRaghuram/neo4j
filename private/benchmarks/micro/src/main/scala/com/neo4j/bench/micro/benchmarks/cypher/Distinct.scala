@@ -43,7 +43,7 @@ class Distinct extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(CompiledByteCode.NAME, EnterpriseInterpreted.NAME))
+    base = Array(CompiledByteCode.NAME, EnterpriseInterpreted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var Distinct_runtime: String = _
 

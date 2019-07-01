@@ -25,7 +25,7 @@ import org.openjdk.jmh.infra.Blackhole
 class CompositeIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
+    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var CompositeIndexSeek_runtime: String = _
 

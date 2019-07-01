@@ -30,7 +30,7 @@ import scala.collection.mutable
 @BenchmarkEnabled(true)
 class PartialTop extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var PartialTop_runtime: String = _
