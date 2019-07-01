@@ -42,7 +42,7 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     {
         boundRaftId = raftId;
         delegateHandler.start( raftId );
-        raftMessageDispatcher.registerHandlerChain( boundRaftId, this );
+        raftMessageDispatcher.registerHandlerChain( raftId, this );
     }
 
     @Override
@@ -62,14 +62,15 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     @Override
     public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
     {
-        if ( Objects.isNull( boundRaftId ) )
+        var raftId = boundRaftId;
+        if ( Objects.isNull( raftId ) )
         {
             log.debug( "Message handling has been stopped, dropping the message: %s", message.message() );
         }
-        else if ( !Objects.equals( boundRaftId, message.raftId() ) )
+        else if ( !Objects.equals( raftId, message.raftId() ) )
         {
             log.info( "Discarding message[%s] owing to mismatched raftId. Expected: %s, Encountered: %s",
-                    message.message(), boundRaftId, message.raftId() );
+                    message.message(), raftId, message.raftId() );
         }
         else
         {
