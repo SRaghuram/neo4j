@@ -10,7 +10,9 @@ import com.neo4j.helper.Workload;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -21,6 +23,13 @@ import org.neo4j.values.storable.RandomValues;
 
 class CreateNodesWithProperties extends Workload
 {
+    private static final Class[] TRANSIENT_EXCEPTIONS = new Class[]{
+            DatabaseNotFoundException.class,
+            DatabaseShutdownException.class,
+            TimeoutException.class,
+            TransactionFailureException.class
+    };
+
     private static final Label label = Label.label( "Label" );
 
     private final Cluster cluster;
@@ -108,9 +117,9 @@ class CreateNodesWithProperties extends Workload
 
     private boolean isTransient( Throwable e )
     {
-        return e != null &&
-                (e instanceof TimeoutException || e instanceof DatabaseShutdownException || e instanceof TransactionFailureException || isInterrupted(
-                        e.getCause() ));
+        boolean isTransient = Stream.of( TRANSIENT_EXCEPTIONS ).anyMatch( cls -> cls.isInstance( e ) );
+
+        return isTransient || isInterrupted( e.getCause() );
     }
 
     private boolean isInterrupted( Throwable e )
