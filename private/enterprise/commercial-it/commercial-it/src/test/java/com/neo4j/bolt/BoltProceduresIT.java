@@ -16,7 +16,6 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -28,7 +27,6 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
-import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.internal.value.NullValue;
@@ -114,19 +112,19 @@ public class BoltProceduresIT
     @Test
     public void shouldHaveAccessToRoutingProcedureWithDatabaseNameOnSystemDb()
     {
-        try ( Session session = driver.session( t -> t.withDatabase( "system" ) ) )
+        try ( var session = driver.session( t -> t.withDatabase( "system" ) ) )
         {
-            Map<String,Object> params = new HashMap<>();
+            var params = new HashMap<String,Object>();
             params.put( "context", NullValue.NULL );
             params.put( "database", NullValue.NULL );
-            final StatementResult result = session.run( "CALL dbms.routing.getRoutingTable({context}, {database})", params );
+            var result = session.run( "CALL dbms.routing.getRoutingTable({context}, {database})", params );
 
-            final List<Map<String,Value>> servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
+            var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
             assertThat( servers.size(), equalTo( 3 ) );
-            Map<String, String> routingTable = new HashMap<>();
-            for ( Map<String,Value> entry : servers )
+            var routingTable = new HashMap<String,String>();
+            for ( var entry : servers )
             {
-                final List<String> addresses = entry.get( "addresses" ).asList( Values.ofString() );
+                var addresses = entry.get( "addresses" ).asList( Values.ofString() );
                 assertThat( addresses.size(), equalTo( 1 ) );
                 routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
             }
@@ -140,18 +138,18 @@ public class BoltProceduresIT
     @Test
     public void shouldHaveAccessToRoutingProcedureWithoutDatabaseNameOnDefaultDb()
     {
-        try ( Session session = driver.session() )
+        try ( var session = driver.session() )
         {
-            Map<String,Object> params = new HashMap<>();
+            var params = new HashMap<String,Object>();
             params.put( "context", NullValue.NULL );
-            final StatementResult result = session.run( "CALL dbms.cluster.routing.getRoutingTable({context})", params );
+            var result = session.run( "CALL dbms.cluster.routing.getRoutingTable({context})", params );
 
-            final List<Map<String,Value>> servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
+            var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
             assertThat( servers.size(), equalTo( 3 ) );
-            Map<String, String> routingTable = new HashMap<>();
-            for ( Map<String,Value> entry : servers )
+            var routingTable = new HashMap<String,String>();
+            for ( var entry : servers )
             {
-                final List<String> addresses = entry.get( "addresses" ).asList( Values.ofString() );
+                var addresses = entry.get( "addresses" ).asList( Values.ofString() );
                 assertThat( addresses.size(), equalTo( 1 ) );
                 routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
             }
