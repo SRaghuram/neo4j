@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
