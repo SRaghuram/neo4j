@@ -6,7 +6,6 @@
 package com.neo4j.kernel.impl.index.schema;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.TokenRead;
@@ -27,7 +25,6 @@ import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.values.storable.Value;
@@ -76,7 +73,8 @@ class IndexConfigCausalClusterIT
             db.schema().indexFor( label ).on( prop ).create();
             tx.success();
         } );
-        cluster.coreMembers().forEach( this::awaitIndexOnline );
+
+        Cluster.dataMatchesEventually( cluster.awaitLeader(), cluster.coreMembers() );
 
         // Validate index has the same config on all cores even though they are configured with different settings.
         Map<String,Value> first = null;
@@ -115,16 +113,6 @@ class IndexConfigCausalClusterIT
             tx.success();
         }
         return indexConfig;
-    }
-
-    private void awaitIndexOnline( ClusterMember member )
-    {
-        GraphDatabaseAPI db = member.defaultDatabase();
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
-            tx.success();
-        }
     }
 
     private static IndexingService getIndexingService( GraphDatabaseFacade db )
