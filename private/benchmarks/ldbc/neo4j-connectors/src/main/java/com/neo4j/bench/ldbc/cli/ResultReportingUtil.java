@@ -13,7 +13,7 @@ import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 
 import java.io.File;
 import java.util.Map;

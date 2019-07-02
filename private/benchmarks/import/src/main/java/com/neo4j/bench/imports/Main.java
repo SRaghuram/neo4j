@@ -41,10 +41,11 @@ import com.neo4j.bench.client.model.Java;
 import com.neo4j.bench.client.model.Metrics;
 import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.queries.SubmitTestRun;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+
 import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.tooling.ImportTool;
 

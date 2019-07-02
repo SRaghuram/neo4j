@@ -6,8 +6,8 @@
 package com.neo4j.bench.procedures.annotations;
 
 import com.neo4j.bench.client.model.Annotation;
-import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
-import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
+import com.neo4j.bench.common.queries.AttachMetricsAnnotation;
+import com.neo4j.bench.common.queries.AttachTestRunAnnotation;
 
 import java.time.Instant;
 import java.util.stream.Stream;

@@ -27,7 +27,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
-import com.neo4j.bench.client.model.Neo4jConfigBuilder
+import com.neo4j.bench.common.Neo4jConfigBuilder
 
 @BenchmarkEnabled(true)
 class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {

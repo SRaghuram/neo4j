@@ -7,9 +7,9 @@ package com.neo4j.bench.macro.cli;
 
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
 import io.airlift.airline.Command;

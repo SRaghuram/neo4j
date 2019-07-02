@@ -139,11 +139,13 @@ public class BenchmarkUtil
         {
             assertDirectoryExists( dir );
 
-            Files.walk( dir )
+            try ( Stream<Path> paths = Files.walk( dir ) )
+            {
+            paths
                 .sorted( Comparator.reverseOrder() )
                 .map( Path::toFile )
                 .forEach( File::delete );
-
+            }
         }
         catch ( IOException e )
         {

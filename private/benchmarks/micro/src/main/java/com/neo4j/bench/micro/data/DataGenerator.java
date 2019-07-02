@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;

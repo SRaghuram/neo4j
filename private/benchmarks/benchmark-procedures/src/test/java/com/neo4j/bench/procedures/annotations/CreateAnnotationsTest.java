@@ -10,7 +10,7 @@ import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;

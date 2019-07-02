@@ -93,7 +93,7 @@ public class Neo4jConfig
         return new Neo4jConfig( new HashMap<>( config ), newJvmArgs );
     }
 
-    Neo4jConfig withStringSetting( String setting, String value )
+    public Neo4jConfig withSetting( String setting, String value )
     {
         HashMap<String,String> newConfig = new HashMap<>( config );
         newConfig.put( setting, value );

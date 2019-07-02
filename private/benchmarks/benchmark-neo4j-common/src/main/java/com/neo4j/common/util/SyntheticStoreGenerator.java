@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.util;
+package com.neo4j.common.util;
 
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.ClientUtil;
@@ -30,10 +30,11 @@ import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunError;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
-import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.SubmitTestRun;
 import com.neo4j.bench.client.queries.SubmitTestRunResult;
+import com.neo4j.bench.client.util.RichRandom;
+import com.neo4j.bench.common.queries.AttachMetricsAnnotation;
+import com.neo4j.bench.common.queries.AttachTestRunAnnotation;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;

@@ -38,40 +38,41 @@
         </license>
     </licenses>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-import-tool</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-common</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>airline</artifactId>
-            <version>${airline.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-results-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+	<dependencies>
 		<dependency>
-            <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-neo4j-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>        
-    </dependencies>
+			<groupId>org.neo4j</groupId>
+			<artifactId>neo4j-enterprise</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.neo4j</groupId>
+			<artifactId>neo4j-import-tool</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.neo4j</groupId>
+			<artifactId>neo4j-common</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+		</dependency>
+		<dependency>
+			<groupId>io.airlift</groupId>
+			<artifactId>airline</artifactId>
+			<version>${airline.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.neo4j.bench</groupId>
+			<artifactId>benchmark-results-client</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.neo4j.bench</groupId>
+			<artifactId>benchmark-neo4j-common</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+
     <profiles>
         <profile>
             <build>

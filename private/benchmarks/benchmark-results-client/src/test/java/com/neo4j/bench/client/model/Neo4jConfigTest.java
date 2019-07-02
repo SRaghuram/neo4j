@@ -10,7 +10,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,14 @@ public class Neo4jConfigTest
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
+    public void shouldSerialize() throws IOException
+    {
+        assertSerialization( Neo4jConfig.empty() );
+        assertSerialization( Neo4jConfig.empty().withSetting( "setting0", "value0" ) );
+        assertSerialization( Neo4jConfig.empty().setJvmArgs( Arrays.asList( "-Xmx1G" ) ) );
+    }
+
+    @Test
     public void shouldBeImmutable()
     {
         // empty
@@ -33,7 +43,7 @@ public class Neo4jConfigTest
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
 
         // add one setting
-        Neo4jConfig config1 = config0.withStringSetting( "record_format", "high_limit" );
+        Neo4jConfig config1 = config0.withSetting( "record_format", "high_limit" );
         assertThat( config0.toMap().size(), equalTo( 0 ) );
         assertThat( config1.toMap().size(), equalTo( 1 ) );
 
@@ -43,7 +53,7 @@ public class Neo4jConfigTest
         assertThat( config1.getJvmArgs(), equalTo( new ArrayList<>() ) );
 
         // overwrite setting
-        Neo4jConfig config2 = config1.withStringSetting( "record_format", "standard" );
+        Neo4jConfig config2 = config1.withSetting( "record_format", "standard" );
         assertThat( config0.toMap().size(), equalTo( 0 ) );
         assertThat( config1.toMap().size(), equalTo( 1 ) );
         assertThat( config2.toMap().size(), equalTo( 1 ) );
@@ -98,13 +108,13 @@ public class Neo4jConfigTest
         Neo4jConfig config0 = Neo4jConfig.empty()
                                          .setJvmArgs( Lists.newArrayList( "-Xms1g" ) )
                                          .addJvmArg( "-Xmx2g" )
-                                         .withStringSetting( "setting1", "oldValue");
+                                         .withSetting( "setting1", "oldValue");
 
         Neo4jConfig config1 = Neo4jConfig.empty()
                                          .setJvmArgs( Lists.newArrayList( "-Xmx2g" ) )
                                          .addJvmArg( "-XX:+UseG1GC" )
-                                         .withStringSetting( "setting2", "false" )
-                                         .withStringSetting( "setting1", "newValue" );
+                                         .withSetting( "setting2", "false" )
+                                         .withSetting( "setting1", "newValue" );
 
         Neo4jConfig config2 = config0.mergeWith( config1 );
 
@@ -134,6 +144,13 @@ public class Neo4jConfigTest
         Neo4jConfig config2 = config1.setJvmArgs( Lists.newArrayList( "-Xmx1g" ) );
         assertThat( config2.getJvmArgs(), equalTo( Lists.newArrayList( "-Xmx1g" ) ) );
         assertThat( config2.toMap(), equalTo( config1.toMap() ) );
+    }
+
+    private void assertSerialization( Neo4jConfig config0 ) throws IOException
+    {
+        String json = config0.toJson();
+        Neo4jConfig config1 = Neo4jConfig.fromJson( json );
+        assertThat( config0, equalTo( config1 ) );
     }
 
 }

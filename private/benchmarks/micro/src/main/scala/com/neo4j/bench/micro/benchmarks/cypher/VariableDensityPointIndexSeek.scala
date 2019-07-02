@@ -25,7 +25,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.mutable
-import com.neo4j.bench.client.model.Neo4jConfigBuilder
+import com.neo4j.bench.common.Neo4jConfigBuilder
 
 @BenchmarkEnabled(true)
 class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {

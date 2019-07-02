@@ -3,9 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.model;
+package com.neo4j.bench.common;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
@@ -20,8 +21,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Neo4jConfigBuilderTest
 {
@@ -34,7 +38,6 @@ public class Neo4jConfigBuilderTest
     @Test
     public void shouldSerialize() throws IOException
     {
-        assertSerialization( Neo4jConfig.empty() );
         assertSerialization( Neo4jConfigBuilder.withDefaults().build() );
         assertSerialization( Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile ).build() );
     }
@@ -94,6 +97,18 @@ public class Neo4jConfigBuilderTest
         Neo4jConfig after = (Neo4jConfig) serializeAndDeserialize( before );
         assertThat( before.toMap().get( "key1" ), equalTo( after.toMap().get( "key1" ) ) );
         assertThat( before.toMap().get( "key2" ), equalTo( after.toMap().get( "key2" ) ) );
+    }
+
+    @Test
+    public void shouldStoreSettingInFile() throws Exception
+    {
+        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile )
+        .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
+        .writeToFile( neo4jConfigFile );
+
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+        assertEquals( "false", neo4jConfig.toMap().get( GraphDatabaseSettings.auth_enabled.name() ) );
     }
 
     private Object serializeAndDeserialize( Object before ) throws IOException

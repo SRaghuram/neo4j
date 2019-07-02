@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 
 import java.io.File;
 import java.io.IOException;

@@ -7,11 +7,11 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;

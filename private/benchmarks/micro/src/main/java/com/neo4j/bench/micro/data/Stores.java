@@ -8,9 +8,9 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Neo4jConfigBuilder;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
 
 import java.io.IOException;

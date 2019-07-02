@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.model;
+package com.neo4j.bench.common;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
@@ -70,7 +71,7 @@ public class Neo4jConfigBuilder
                 else
                 {
                     String settingValue = config.getString( settingName );
-                    neo4jConfig = neo4jConfig.withStringSetting( settingName, settingValue );
+                    neo4jConfig = neo4jConfig.withSetting( settingName, settingValue );
                 }
             }
             return new Neo4jConfigBuilder( neo4jConfig );
@@ -99,7 +100,7 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder withSetting( Setting setting, String value )
     {
-        neo4jConfig.withStringSetting( setting.name(), value );
+        neo4jConfig = neo4jConfig.withSetting( setting.name(), value );
         return this;
     }
 
@@ -132,7 +133,7 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder setBoltUri( String boltUri )
     {
-        neo4jConfig.withStringSetting( BOLT_ADDRESS_SETTING, boltUri );
+        neo4jConfig.withSetting( BOLT_ADDRESS_SETTING, boltUri );
         return this;
     }
 
