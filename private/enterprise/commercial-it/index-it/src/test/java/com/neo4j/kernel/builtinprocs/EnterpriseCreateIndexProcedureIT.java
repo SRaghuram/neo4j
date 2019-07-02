@@ -6,15 +6,15 @@
 package com.neo4j.kernel.builtinprocs;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -41,72 +41,72 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
-@RunWith( Parameterized.class )
-public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
+class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 {
     private static final GraphDatabaseSettings.SchemaIndex nonDefaultSchemaIndex = NATIVE30;
 
-    @Parameterized.Parameters( name = "{2}" )
-    public static Collection<Object[]> parameters()
+    private static Stream<Arguments> parameters()
     {
-        return Arrays.asList(
-                new Object[]{false, false, "createIndex", "index created"},
-                new Object[]{false, true, "createUniquePropertyConstraint", "uniqueness constraint online"},
-                new Object[]{true, true, "createNodeKey", "node key constraint online"}
+        return Stream.of(
+                arguments( false, false, "createIndex", "index created"),
+                arguments( false, true, "createUniquePropertyConstraint", "uniqueness constraint online"),
+                arguments( true, true, "createNodeKey", "node key constraint online")
         );
     }
 
-    @Parameterized.Parameter()
-    public static boolean existenceConstraint;
+    private boolean existenceConstraint;
+    private boolean uniquenessConstraint;
+    private String indexProcedureName;
+    private String expectedSuccessfulCreationStatus;
 
-    @Parameterized.Parameter( 1 )
-    public static boolean uniquenessConstraint;
-
-    @Parameterized.Parameter( 2 )
-    public static String indexProcedureName;
-
-    @Parameterized.Parameter( 3 )
-    public static String expectedSuccessfulCreationStatus;
-
-    @Test
-    public void createIndexWithGivenProvider() throws KernelException
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void createIndexWithGivenProvider( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws KernelException
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         testCreateIndexWithGivenProvider( "Person", "name" );
     }
 
-    @Test
-    public void createIndexWithGivenProviderComposite() throws KernelException
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void createIndexWithGivenProviderComposite( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws KernelException
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         testCreateIndexWithGivenProvider( "NinjaTurtle", "favoritePizza", "favoriteBrother" );
     }
 
-    @Test
-    public void shouldCreateNonExistingLabelAndPropertyToken() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void shouldCreateNonExistingLabelAndPropertyToken( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
         String label = "MyLabel";
         String propKey = "myKey";
         Transaction transaction = newTransaction( AnonymousContext.read() );
-        assertEquals( "label token should not exist", TokenRead.NO_TOKEN, transaction.tokenRead().nodeLabel( label ) );
-        assertEquals( "property token should not exist", TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ) );
+        assertEquals( TokenRead.NO_TOKEN, transaction.tokenRead().nodeLabel( label ), "label token should not exist" );
+        assertEquals( TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ), "property token should not exist" );
         commit();
 
         // when
@@ -116,13 +116,24 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // then
         transaction = newTransaction( AnonymousContext.read() );
-        assertNotEquals( "label token should exist", TokenRead.NO_TOKEN, transaction.tokenRead().nodeLabel( label ) );
-        assertNotEquals( "property token should exist", TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ) );
+        assertNotEquals( TokenRead.NO_TOKEN, transaction.tokenRead().nodeLabel( label ), "label token should exist" );
+        assertNotEquals( TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ), "property token should exist" );
     }
 
-    @Test
-    public void throwIfNullProvider() throws Exception
+    private void init( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
     {
+        this.existenceConstraint = existenceConstraint;
+        this.uniquenessConstraint = uniquenessConstraint;
+        this.indexProcedureName = indexProcedureName;
+        this.expectedSuccessfulCreationStatus = expectedSuccessfulCreationStatus;
+    }
+
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwIfNullProvider( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
+        throws Exception
+    {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
         Transaction transaction = newTransaction( AnonymousContext.writeToken() );
         transaction.tokenWrite().labelGetOrCreateForName( "Person" );
@@ -139,9 +150,12 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         commit();
     }
 
-    @Test
-    public void throwIfNonExistingProvider() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwIfNonExistingProvider( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
         Transaction transaction = newTransaction( AnonymousContext.writeToken() );
         transaction.tokenWrite().labelGetOrCreateForName( "Person" );
@@ -160,17 +174,20 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         {
             // then
             assertThat( e.getMessage(), allOf(
-                    containsString( "Failed to invoke procedure" ),
-                    containsString( "Tried to get index provider" ),
-                    containsString( "available providers in this session being" ),
-                    containsString( "default being" )
+                containsString( "Failed to invoke procedure" ),
+                containsString( "Tried to get index provider" ),
+                containsString( "available providers in this session being" ),
+                containsString( "default being" )
             ) );
         }
     }
 
-    @Test
-    public void throwIfIndexAlreadyExists() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwIfIndexAlreadyExists( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
         String label = "Superhero";
         String propertyKey = "primaryPower";
@@ -196,7 +213,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private int[] createProperties( Transaction transaction, String... properties ) throws KernelException
+    private static int[] createProperties( Transaction transaction, String... properties ) throws KernelException
     {
         int[] propertyKeyIds = new int[properties.length];
         for ( int i = 0; i < properties.length; i++ )
@@ -206,7 +223,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return propertyKeyIds;
     }
 
-    private long createNodeWithPropertiesAndLabel( Transaction transaction, int labelId, int[] propertyKeyIds, TextValue value ) throws KernelException
+    private static long createNodeWithPropertiesAndLabel( Transaction transaction, int labelId, int[] propertyKeyIds, TextValue value ) throws KernelException
     {
         long node = transaction.dataWrite().nodeCreate();
         transaction.dataWrite().nodeAddLabel( node, labelId );
@@ -217,7 +234,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return node;
     }
 
-    private String indexPattern( String label, String... properties )
+    private static String indexPattern( String label, String... properties )
     {
         StringJoiner pattern = new StringJoiner( ",", ":" + label + "(", ")" );
         for ( String property : properties )
@@ -263,7 +280,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
-        RawIterator<AnyValue[],ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
+        RawIterator<AnyValue[], ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
         // then
         assertThat( Arrays.asList( result.next() ), contains( stringValue( pattern ), stringValue( specifiedProvider ),
                 stringValue( expectedSuccessfulCreationStatus ) ) );
@@ -279,7 +296,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         commit();
     }
 
-    private void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexReference index )
+    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexReference index )
             throws KernelException
     {
         try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor() )
@@ -297,34 +314,43 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexReference index )
+    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexReference index )
     {
-        assertEquals( "provider key", nonDefaultSchemaIndex.providerKey(), index.providerKey() );
-        assertEquals( "provider version", nonDefaultSchemaIndex.providerVersion(), index.providerVersion() );
+        assertEquals( nonDefaultSchemaIndex.providerKey(), index.providerKey(), "provider key" );
+        assertEquals( nonDefaultSchemaIndex.providerVersion(), index.providerVersion(), "provider version" );
         assertEquals( expectedUnique, index.isUnique() );
-        assertEquals( "label id", labelId, index.schema().getEntityTokenIds()[0] );
+        assertEquals( labelId, index.schema().getEntityTokenIds()[0], "label id" );
         for ( int i = 0; i < propertyKeyIds.length; i++ )
         {
-            assertEquals( "property key id", propertyKeyIds[i], index.properties()[i] );
+            assertEquals( propertyKeyIds[i], index.properties()[i], "property key id" );
         }
     }
 
-    @Test
-    public void throwOnUniquenessViolation() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwOnUniquenessViolation( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         testThrowOnUniquenessViolation( "MyLabel", "oneKey" );
     }
 
-    @Test
-    public void throwOnUniquenessViolationComposite() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwOnUniquenessViolationComposite( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         testThrowOnUniquenessViolation( "MyLabel", "oneKey", "anotherKey" );
     }
 
-    @Test
-    public void throwOnNonUniqueStore() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwOnNonUniqueStore( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
+        throws Exception
     {
-        assumeThat( "Only relevant for uniqueness constraints", uniquenessConstraint, is( true ) );
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
+        assumeTrue( uniquenessConstraint, "Only relevant for exuniqueness constraints" );
 
         // given
         String label = "SomeLabel";
@@ -351,10 +377,13 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    @Test
-    public void throwOnExistenceViolation() throws Exception
+    @ParameterizedTest
+    @MethodSource( "parameters" )
+    void throwOnExistenceViolation( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName,
+        String expectedSuccessfulCreationStatus ) throws Exception
     {
-        assumeThat( "Only relevant for existence constraints", existenceConstraint, is( true ) );
+        assumeTrue( existenceConstraint, "Only relevant for existence constraints" );
+        init( existenceConstraint, uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
 
         // given
         String label = "label";
@@ -381,7 +410,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     @SuppressWarnings( "SameParameterValue" )
     private void testThrowOnUniquenessViolation( String label, String... properties ) throws Exception
     {
-        assumeThat( "Only relevant for uniqueness constraints", uniquenessConstraint, is( true ) );
+        assumeTrue( uniquenessConstraint, "Only relevant for uniqueness constraints" );
 
         // given
         Transaction transaction = newTransaction( AnonymousContext.writeToken() );

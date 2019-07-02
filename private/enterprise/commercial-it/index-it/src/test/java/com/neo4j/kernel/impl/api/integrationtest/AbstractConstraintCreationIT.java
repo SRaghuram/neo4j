@@ -6,8 +6,8 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Collections;
@@ -25,7 +25,6 @@ import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Transaction;
@@ -43,16 +42,17 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.Iterators.asCollection;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
 
-public abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescriptor, DESCRIPTOR extends SchemaDescriptor>
+abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescriptor, DESCRIPTOR extends SchemaDescriptor>
         extends KernelIntegrationTest
 {
     static final String KEY = "Foo";
@@ -79,8 +79,8 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
 
     abstract DESCRIPTOR makeDescriptor( int typeId, int propertyKeyId );
 
-    @Before
-    public void createKeys() throws Exception
+    @BeforeEach
+    void createKeys() throws Exception
     {
         TokenWrite tokenWrite = tokenWriteInNewTransaction();
         this.typeId = initializeLabelOrRelType( tokenWrite, KEY );
@@ -96,7 +96,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldBeAbleToStoreAndRetrieveConstraint() throws Exception
+    void shouldBeAbleToStoreAndRetrieveConstraint() throws Exception
     {
         // given
         Transaction transaction = newTransaction( AUTH_DISABLED );
@@ -120,7 +120,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldBeAbleToStoreAndRetrieveConstraintAfterRestart() throws Exception
+    void shouldBeAbleToStoreAndRetrieveConstraintAfterRestart() throws Exception
     {
         // given
         Transaction transaction = newTransaction( AUTH_DISABLED );
@@ -146,7 +146,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldNotPersistConstraintCreatedInAbortedTransaction() throws Exception
+    void shouldNotPersistConstraintCreatedInAbortedTransaction() throws Exception
     {
         // given
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
@@ -160,12 +160,12 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
 
         // then
         Iterator<?> constraints = transaction.schemaRead().constraintsGetAll();
-        assertFalse( "should not have any constraints", constraints.hasNext() );
+        assertFalse( constraints.hasNext(), "should not have any constraints" );
         commit();
     }
 
     @Test
-    public void shouldNotStoreConstraintThatIsRemovedInTheSameTransaction() throws Exception
+    void shouldNotStoreConstraintThatIsRemovedInTheSameTransaction() throws Exception
     {
         // given
         Transaction transaction = newTransaction( AUTH_DISABLED );
@@ -176,7 +176,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         dropConstraint( transaction.schemaWrite(), constraint );
 
         // then
-        assertFalse( "should not have any constraints", transaction.schemaRead().constraintsGetAll().hasNext() );
+        assertFalse( transaction.schemaRead().constraintsGetAll().hasNext(), "should not have any constraints" );
 
         // when
         commit();
@@ -184,12 +184,12 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
        transaction = newTransaction();
 
         // then
-        assertFalse( "should not have any constraints", transaction.schemaRead().constraintsGetAll().hasNext() );
+        assertFalse( transaction.schemaRead().constraintsGetAll().hasNext(), "should not have any constraints" );
         commit();
     }
 
     @Test
-    public void shouldDropConstraint() throws Exception
+    void shouldDropConstraint() throws Exception
     {
         // given
         Constraint constraint;
@@ -211,13 +211,13 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
             Transaction transaction = newTransaction();
 
             // then
-            assertFalse( "should not have any constraints", transaction.schemaRead().constraintsGetAll().hasNext() );
+            assertFalse( transaction.schemaRead().constraintsGetAll().hasNext(), "should not have any constraints" );
             commit();
         }
     }
 
     @Test
-    public void shouldNotCreateConstraintThatAlreadyExists() throws Exception
+    void shouldNotCreateConstraintThatAlreadyExists() throws Exception
     {
         // given
         {
@@ -226,25 +226,13 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
             commit();
         }
 
-        // when
-        try
-        {
-            SchemaWrite statement = schemaWriteInNewTransaction();
-
-            createConstraint( statement, descriptor );
-
-            fail( "Should not have validated" );
-        }
-        // then
-        catch ( AlreadyConstrainedException e )
-        {
-            // good
-        }
+        SchemaWrite statement = schemaWriteInNewTransaction();
+        assertThrows( AlreadyConstrainedException.class, () -> createConstraint( statement, descriptor ) );
         commit();
     }
 
     @Test
-    public void shouldNotRemoveConstraintThatGetsReAdded() throws Exception
+    void shouldNotRemoveConstraintThatGetsReAdded() throws Exception
     {
         // given
         Constraint constraint;
@@ -278,7 +266,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldClearSchemaStateWhenConstraintIsCreated() throws Exception
+    void shouldClearSchemaStateWhenConstraintIsCreated() throws Exception
     {
         // given
         SchemaStateCheck schemaState = new SchemaStateCheck().setUp();
@@ -295,7 +283,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldClearSchemaStateWhenConstraintIsDropped() throws Exception
+    void shouldClearSchemaStateWhenConstraintIsDropped() throws Exception
     {
         // given
         Constraint constraint;
@@ -322,7 +310,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldNotDropConstraintThatDoesNotExist() throws Exception
+    void shouldNotDropConstraintThatDoesNotExist() throws Exception
     {
         // given
         Constraint constraint = newConstraintObject( descriptor );
@@ -331,15 +319,8 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
 
-            try
-            {
-                dropConstraint( statement, constraint );
-                fail( "Should not have dropped constraint" );
-            }
-            catch ( DropConstraintFailureException e )
-            {
-                assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
-            }
+            var e = assertThrows( DropConstraintFailureException.class, () -> dropConstraint( statement, constraint ) );
+            assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
             commit();
         }
 
@@ -352,7 +333,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint()
+    void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint()
     {
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -364,28 +345,25 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         // when
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            createConstraintInRunningTx( db, KEY, PROP );
-
-            tx.success();
-            fail( "expected failure" );
-        }
-        catch ( QueryExecutionException e )
-        {
+            var e = assertThrows( QueryExecutionException.class, () ->
+            {
+                createConstraintInRunningTx( db, KEY, PROP );
+                tx.success();
+            } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
         }
 
         // then
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            assertEquals( Collections.<ConstraintDefinition>emptyList(), Iterables.asList( db.schema().getConstraints() ) );
-            assertEquals( Collections.<IndexDefinition,Schema.IndexState>emptyMap(),
-                    indexesWithState( db.schema() ) );
+            assertEquals( Collections.<ConstraintDefinition>emptyList(), asList( db.schema().getConstraints() ) );
+            assertEquals( Collections.<IndexDefinition, Schema.IndexState>emptyMap(), indexesWithState( db.schema() ) );
             tx.success();
         }
     }
 
     @Test
-    public void shouldBeAbleToResolveConflictsAndRecreateConstraintAfterFailingToCreateItDueToConflict()
+    void shouldBeAbleToResolveConflictsAndRecreateConstraintAfterFailingToCreateItDueToConflict()
             throws Exception
     {
         // given
@@ -398,13 +376,11 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         // when
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            createConstraintInRunningTx( db, KEY, PROP );
-
-            tx.success();
-            fail( "expected failure" );
-        }
-        catch ( QueryExecutionException e )
-        {
+            var e = assertThrows( QueryExecutionException.class, () ->
+            {
+                createConstraintInRunningTx( db, KEY, PROP );
+                tx.success();
+            } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
         }
 
@@ -421,7 +397,7 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Test
-    public void changedConstraintsShouldResultInTransientFailure()
+    void changedConstraintsShouldResultInTransientFailure()
     {
         // Given
         Runnable constraintCreation = () ->
@@ -434,23 +410,27 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         };
 
         // When
+        var executorService = Executors.newSingleThreadExecutor();
         try
         {
-            try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
+            var e = assertThrows( TransientTransactionFailureException.class, () ->
             {
-                Executors.newSingleThreadExecutor().submit( constraintCreation ).get();
-                db.createNode();
-                tx.success();
-            }
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
+                try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
+                {
+                    executorService.submit( constraintCreation ).get();
+                    db.createNode();
+                    tx.success();
+                }
+            } );
+
             // Then
-            assertThat( e, instanceOf( TransientTransactionFailureException.class ) );
             assertThat( e.getCause(), instanceOf( TransactionFailureException.class ) );
             TransactionFailureException cause = (TransactionFailureException) e.getCause();
             assertEquals( Status.Transaction.ConstraintsChanged, cause.status() );
+        }
+        finally
+        {
+            executorService.shutdown();
         }
     }
 
@@ -487,20 +467,19 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
         {
             int count = invocationCount;
             checkState( transaction );
-            assertEquals( "schema state should have been cleared.", count + 1, invocationCount );
+            assertEquals( count + 1, invocationCount, "schema state should have been cleared." );
         }
 
         void assertNotCleared( Transaction transaction )
         {
             int count = invocationCount;
             checkState( transaction );
-            assertEquals( "schema state should not have been cleared.", count, invocationCount );
+            assertEquals( count, invocationCount, "schema state should not have been cleared." );
         }
 
-        private SchemaStateCheck checkState( Transaction transaction )
+        private void checkState( Transaction transaction )
         {
             assertEquals( Integer.valueOf( 7 ), transaction.schemaRead().schemaStateGetOrCreate( "7", this ) );
-            return this;
         }
     }
 }

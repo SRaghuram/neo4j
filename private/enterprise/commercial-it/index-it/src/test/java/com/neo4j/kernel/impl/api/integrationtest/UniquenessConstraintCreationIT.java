@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
@@ -48,21 +48,20 @@ import org.neo4j.values.storable.Values;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.stringContainsInOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 
-public class UniquenessConstraintCreationIT
-        extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>
+class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor, LabelSchemaDescriptor>
 {
     private static final String DUPLICATED_VALUE = "apa";
+    private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
     private IndexDescriptor uniqueIndex;
-    private AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
 
     @Override
     protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
@@ -130,7 +129,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void shouldAbortConstraintCreationWhenDuplicatesExist() throws Exception
+    void shouldAbortConstraintCreationWhenDuplicatesExist() throws Exception
     {
         // given
         Transaction transaction = newTransaction( AnonymousContext.writeToken() );
@@ -152,29 +151,23 @@ public class UniquenessConstraintCreationIT
 
         // when
         LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( foo, name );
-        try
+        var e = assertThrows( CreateConstraintFailureException.class, () ->
         {
             SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
             schemaWriteOperations.uniquePropertyConstraintCreate( descriptor );
+        } );
 
-            fail( "expected exception" );
-        }
-        // then
-        catch ( CreateConstraintFailureException ex )
-        {
-            assertEquals( ConstraintDescriptorFactory.uniqueForSchema( descriptor ), ex.constraint() );
-            Throwable cause = ex.getCause();
-            assertThat( cause, instanceOf( ConstraintValidationException.class ) );
+        assertEquals( ConstraintDescriptorFactory.uniqueForSchema( descriptor ), e.constraint() );
+        Throwable cause = e.getCause();
+        assertThat( cause, instanceOf( ConstraintValidationException.class ) );
 
-            String expectedMessage = String.format(
-                    "Both Node(%d) and Node(%d) have the label `Foo` and property `name` = 'foo'", node1, node2 );
-            String actualMessage = userMessage( (ConstraintValidationException) cause );
-            assertEquals( expectedMessage, actualMessage );
-        }
+        String expectedMessage = String.format( "Both Node(%d) and Node(%d) have the label `Foo` and property `name` = 'foo'", node1, node2 );
+        String actualMessage = userMessage( (ConstraintValidationException) cause );
+        assertEquals( expectedMessage, actualMessage );
     }
 
     @Test
-    public void shouldCreateAnIndexToGoAlongWithAUniquePropertyConstraint() throws Exception
+    void shouldCreateAnIndexToGoAlongWithAUniquePropertyConstraint() throws Exception
     {
         // when
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
@@ -188,7 +181,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void shouldDropCreatedConstraintIndexWhenRollingBackConstraintCreation() throws Exception
+    void shouldDropCreatedConstraintIndexWhenRollingBackConstraintCreation() throws Exception
     {
         // given
         Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
@@ -205,7 +198,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void shouldNotDropUniquePropertyConstraintThatDoesNotExistWhenThereIsAPropertyExistenceConstraint()
+    void shouldNotDropUniquePropertyConstraintThatDoesNotExistWhenThereIsAPropertyExistenceConstraint()
             throws Exception
     {
         // given
@@ -214,22 +207,21 @@ public class UniquenessConstraintCreationIT
         commit();
 
         // when
-        try
+        var e = assertThrows( DropConstraintFailureException.class, () ->
         {
-            SchemaWrite statement = schemaWriteInNewTransaction();
-            statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( descriptor ) );
+            try
+            {
+                SchemaWrite statement = schemaWriteInNewTransaction();
+                statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( descriptor ) );
+            }
+            finally
+            {
+                rollback();
+            }
+        } );
 
-            fail( "expected exception" );
-        }
         // then
-        catch ( DropConstraintFailureException e )
-        {
-            assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
-        }
-        finally
-        {
-            rollback();
-        }
+        assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
 
         // then
         {
@@ -243,7 +235,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void committedConstraintRuleShouldCrossReferenceTheCorrespondingIndexRule() throws Exception
+    void committedConstraintRuleShouldCrossReferenceTheCorrespondingIndexRule() throws Exception
     {
         // when
         SchemaWrite statement = schemaWriteInNewTransaction();
@@ -261,7 +253,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void shouldIncludeConflictWhenThrowingOnConstraintViolation()
+    void shouldIncludeConflictWhenThrowingOnConstraintViolation()
     {
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -274,20 +266,17 @@ public class UniquenessConstraintCreationIT
         }
 
         // when
-        try
+        var e = assertThrows( Exception.class, () ->
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
             statement.uniquePropertyConstraintCreate( descriptor );
             commit();
-            fail( "Expected to fail on constraint violation" );
-        }
-        catch ( Throwable t )
-        {
-            // then
-            Throwable rootCause = Exceptions.rootCause( t );
-            assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
-            assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
-        }
+        } );
+
+        // then
+        Throwable rootCause = Exceptions.rootCause( e );
+        assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
+        assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
         assertableLogProvider.rawMessageMatcher().assertContains( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );
     }
 
@@ -302,7 +291,7 @@ public class UniquenessConstraintCreationIT
     }
 
     @Test
-    public void shouldDropConstraintIndexWhenDroppingConstraint() throws Exception
+    void shouldDropConstraintIndexWhenDroppingConstraint() throws Exception
     {
         // given
         Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );

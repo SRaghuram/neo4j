@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 
@@ -26,14 +26,13 @@ import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 
-public class NodePropertyExistenceConstraintCreationIT
-        extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>
+class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>
 {
     @Override
     int initializeLabelOrRelType( TokenWrite tokenWrite, String name ) throws KernelException
@@ -92,7 +91,7 @@ public class NodePropertyExistenceConstraintCreationIT
     }
 
     @Test
-    public void shouldNotDropPropertyExistenceConstraintThatDoesNotExistWhenThereIsAUniquePropertyConstraint()
+    void shouldNotDropPropertyExistenceConstraintThatDoesNotExistWhenThereIsAUniquePropertyConstraint()
             throws Exception
     {
         // given
@@ -104,22 +103,19 @@ public class NodePropertyExistenceConstraintCreationIT
         }
 
         // when
-        try
+        var e = assertThrows( DropConstraintFailureException.class, () ->
         {
-            SchemaWrite statement = schemaWriteInNewTransaction();
-            statement.constraintDrop( ConstraintDescriptorFactory.existsForSchema( constraint.schema() ) );
-
-            fail( "expected exception" );
-        }
-        // then
-        catch ( DropConstraintFailureException e )
-        {
-            assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
-        }
-        finally
-        {
-            rollback();
-        }
+            try
+            {
+                SchemaWrite statement = schemaWriteInNewTransaction();
+                statement.constraintDrop( ConstraintDescriptorFactory.existsForSchema( constraint.schema() ) );
+            }
+            finally
+            {
+                rollback();
+            }
+        } );
+        assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
 
         // then
         {

@@ -6,7 +6,7 @@
 package com.neo4j.kernel.impl.index.schema;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -15,7 +15,7 @@ import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.kernel.impl.index.schema.IndexCreateIT;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-public class IndexCreateEnterpriseIT extends IndexCreateIT
+class IndexCreateEnterpriseIT extends IndexCreateIT
 {
     private static final IndexCreator NODE_KEY_CREATOR = SchemaWrite::nodeKeyConstraintCreate;
 
@@ -26,13 +26,13 @@ public class IndexCreateEnterpriseIT extends IndexCreateIT
     }
 
     @Test
-    public void shouldCreateNodeKeyConstraintWithSpecificExistingProviderName() throws KernelException
+    void shouldCreateNodeKeyConstraintWithSpecificExistingProviderName() throws KernelException
     {
         shouldCreateWithSpecificExistingProviderName( NODE_KEY_CREATOR );
     }
 
     @Test
-    public void shouldFailCreateNodeKeyWithNonExistentProviderName() throws KernelException
+    void shouldFailCreateNodeKeyWithNonExistentProviderName() throws KernelException
     {
         shouldFailWithNonExistentProviderName( NODE_KEY_CREATOR );
     }
