@@ -130,12 +130,12 @@ class SecurityDDLLoggingIT
         // This test will still show the logging of the command but nothing will actually get executed.
 
         // WHEN
-        execute( adminContext, "SET MY PASSWORD FROM '???' TO 'baz'" );
+        execute( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '???' TO 'baz'" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 1 ) );
-        assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "SET OWN PASSWORD FROM '******' TO '******'" ) ) );
+        assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" ) ) );
     }
 
     @Test

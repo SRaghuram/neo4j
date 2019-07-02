@@ -151,7 +151,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case AlterUser(_, _, Some(_), _, _) =>
       throw new IllegalStateException("Did not resolve parameters correctly.")
 
-    // SET MY PASSWORD FROM 'currentPassword' TO 'newPassword'
+    // ALTER CURRENT USER SET PASSWORD FROM 'currentPassword' TO 'newPassword'
     case SetOwnPassword(Some(newPassword), None, Some(currentPassword), None) => (_, _, securityContext) =>
       // Needs to be in both community and enterprise since enterprise needs to clear the user cache
       val query =
@@ -162,13 +162,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           |RETURN oldCredentials""".stripMargin
       val currentUser = securityContext.subject().username()
 
-      UpdatingSystemCommandExecutionPlan("SetOwnPassword", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("AlterCurrentUserSetPassword", normalExecutionEngine,
         query,
         VirtualValues.map(Array("name", "credentials"),
           Array(Values.stringValue(currentUser),
             Values.stringValue(authManager.createCredentialForPassword(validatePassword(newPassword)).serialize()))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"User '$currentUser' does not exist."))) // TODO should be current user so can this even happen?
           .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to change its own password.", e))
           .handleResult((_, value) => {
             val maybeThrowable = {

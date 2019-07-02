@@ -774,7 +774,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO 'baz'")
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
@@ -790,7 +790,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO '!bAr%'")
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO '!bAr%'")
 
     // THEN
     testUserLogin("foo", "!bAr%", AuthenticationResult.SUCCESS)
@@ -806,7 +806,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", passwordChangeRequired = false))
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO 'baz'")
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
@@ -823,7 +823,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO ''")
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO ''")
       // THEN
     } should have message "A password cannot be empty."
 
@@ -832,7 +832,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy {// the InvalidArgumentsException gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO 'bar'")
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'bar'")
       // THEN
     } should have message "Old password and new password cannot be the same."
 
@@ -852,7 +852,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     parameter.put("password", "baz")
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO $password", params = parameter)
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO $password", params = parameter)
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
@@ -875,7 +875,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterWrongTypeException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO $password", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO $password", params = parameter)
       // THEN
     } should have message "Only string values are accepted as password, got: List"
 
@@ -893,7 +893,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO $password")
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO $password")
       // THEN
     } should have message "Expected parameter(s): password"
 
@@ -913,7 +913,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     parameter.put("password", "bar")
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $password TO 'baz'", params = parameter)
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $password TO 'baz'", params = parameter)
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
@@ -933,7 +933,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterWrongTypeException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $password TO 'bar'", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $password TO 'bar'", params = parameter)
       // THEN
     } should have message "Only string values are accepted as password, got: Integer"
 
@@ -951,7 +951,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $password TO 'baz'")
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $password TO 'baz'")
       // THEN
     } should have message "Expected parameter(s): password"
 
@@ -972,7 +972,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     parameter.put("newPassword", "baz")
 
     // WHEN
-    executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
+    executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
@@ -993,7 +993,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
       // THEN
     } should have message "Invalid principal or credentials."
 
@@ -1015,7 +1015,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
       // THEN
     } should have message "Expected parameter(s): newPassword"
 
@@ -1036,7 +1036,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
       // THEN
     } should have message "Expected parameter(s): currentPassword"
 
@@ -1054,7 +1054,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     val e = the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM $currentPassword TO $newPassword")
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword")
     }
     // THEN
     e.getMessage should (be("Expected parameter(s): newPassword") or be("Expected parameter(s): currentPassword"))
@@ -1076,7 +1076,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val exception = the[QueryExecutionException] thrownBy { // the Syntax exception gets wrapped
-      executeOnSystem("foo", "bar", "SET MY PASSWORD FROM 'bar' TO 'imAString'+$password", params = parameter)
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'imAString'+$password", params = parameter)
     }
     // THEN
     exception.getMessage should include("Invalid input '+': expected whitespace, ';' or end of input")
@@ -1094,9 +1094,10 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
      the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
       // WHEN
-       executeOnDefault("neo4j", "neo", "SET MY PASSWORD FROM 'neo' TO 'baz'")
+       executeOnDefault("neo4j", "neo", "ALTER CURRENT USER SET PASSWORD FROM 'neo' TO 'baz'")
       // THEN
-    } should have message "This is a DDL command and it should be executed against the system database: SET OWN PASSWORD"
+    } should have message
+       "This is a DDL command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
   }
 
   // Tests for user management with restricted privileges
