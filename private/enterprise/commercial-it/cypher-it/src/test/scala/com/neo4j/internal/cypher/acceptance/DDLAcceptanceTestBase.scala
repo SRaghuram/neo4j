@@ -96,6 +96,13 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
+  def setupUserJoeWithCustomRole(): Unit = {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE custom TO joe")
+  }
+
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
     def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
 
