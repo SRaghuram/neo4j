@@ -21,7 +21,6 @@ import org.neo4j.internal.schema.IndexDescriptor2;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
-import org.neo4j.kernel.impl.index.schema.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -60,8 +59,8 @@ class InconsistencyReportReaderTest
         logger.error( RecordType.INDEX, new IndexEntry( someIndexDescriptor(), idTokenNameLookup, indexNodeId ), "Some index error",
                 "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
-                      IndexDescriptorFactory.forSchema( forLabel( 1, 2 ),
-                                              new IndexProviderDescriptor( "key", "version" ) ).withId( indexId ).toString() );
+                      IndexPrototype.forSchema( forLabel( 1, 2 ),
+                                              new IndexProviderDescriptor( "key", "version" ) ).materialise( indexId ).toString() );
         logger.error( RecordType.LABEL_SCAN_DOCUMENT, new LabelScanDocument( new NodeLabelRange( 0, new long[0][] ) ),
                 "Some label index error", new NodeRecord( nodeNotInTheLabelIndexId ) );
         String text = out.toString();
