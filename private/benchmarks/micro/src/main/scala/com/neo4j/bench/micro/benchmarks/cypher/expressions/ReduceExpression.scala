@@ -90,7 +90,7 @@ class ReduceExpressionThreadState {
   @Setup
   def setUp(benchmarkState: ReduceExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.ReduceExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     list = VirtualValues.list((1 to benchmarkState.ReduceExpression_size).map(Values.intValue).toArray: _*)
     params = VirtualValues.map(Array("x", "list"),

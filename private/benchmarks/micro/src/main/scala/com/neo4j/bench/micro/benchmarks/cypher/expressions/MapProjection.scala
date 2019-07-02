@@ -95,7 +95,7 @@ class MapProjectionThreadState {
   @Setup
   def setUp(benchmarkState: MapProjection, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.MapProjection_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("map", "list"),
                                Array(

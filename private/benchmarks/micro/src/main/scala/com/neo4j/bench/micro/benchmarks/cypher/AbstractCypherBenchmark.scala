@@ -94,7 +94,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     def cypherRuntimeOption(cypherRuntime: CypherRuntime): CypherRuntimeOption =
       cypherRuntime match {
         case Interpreted            => CypherRuntimeOption.interpreted
-        case EnterpriseInterpreted  => CypherRuntimeOption.slotted
+        case Slotted                => CypherRuntimeOption.slotted
         case CompiledByteCode       => CypherRuntimeOption.compiled
         case CompiledSourceCode     => CypherRuntimeOption.compiled
         case Morsel                 => CypherRuntimeOption.morsel

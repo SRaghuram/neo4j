@@ -23,8 +23,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class IndexScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
+    base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var IndexScan_runtime: String = _
 

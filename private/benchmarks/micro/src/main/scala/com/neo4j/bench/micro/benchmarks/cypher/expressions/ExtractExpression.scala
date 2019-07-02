@@ -83,7 +83,7 @@ class ExtractExpressionThreadState {
   @Setup
   def setUp(benchmarkState: ExtractExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.ExtractExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     list = VirtualValues.list((1 to benchmarkState.ExtractExpression_size).map(Values.intValue).toArray: _*)
     params = VirtualValues.map(Array("x", "list"),

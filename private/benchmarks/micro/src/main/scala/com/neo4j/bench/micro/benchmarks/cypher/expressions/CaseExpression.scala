@@ -93,7 +93,7 @@ class CaseExpressionThreadState {
   @Setup
   def setUp(benchmarkState: CaseExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.CaseExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
 
     paramBuilder.add("list", CaseExpression.VALUES)

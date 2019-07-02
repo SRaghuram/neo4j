@@ -112,7 +112,7 @@ class InThreadState {
   @Setup
   def setUp(benchmarkState: In): Unit = {
     val useCompiledExpressions = benchmarkState.In_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     paramBuilder.add("list", In.VALUES)
     paramBuilder.add("foo", stringValue("FOO"))
