@@ -7,7 +7,6 @@ package com.neo4j.upgrade;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 
-import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.storemigration.StoreUpgraderTest;
 
 /**
@@ -15,11 +14,6 @@ import org.neo4j.kernel.impl.storemigration.StoreUpgraderTest;
  */
 public class StandardToEnterpriseStoreUpgraderTest extends StoreUpgraderTest
 {
-    public StandardToEnterpriseStoreUpgraderTest( RecordFormats recordFormats )
-    {
-        super( recordFormats );
-    }
-
     @Override
     protected String getRecordFormatsName()
     {

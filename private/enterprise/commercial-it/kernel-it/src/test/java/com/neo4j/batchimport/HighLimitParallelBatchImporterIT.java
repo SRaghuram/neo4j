@@ -9,7 +9,6 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
 import org.neo4j.internal.batchimport.ParallelBatchImporterTest;
-import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 
 /**
@@ -17,11 +16,6 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
  */
 public class HighLimitParallelBatchImporterIT extends ParallelBatchImporterTest
 {
-    public HighLimitParallelBatchImporterIT( InputIdGenerator inputIdGenerator, IdType idType )
-    {
-        super( inputIdGenerator, idType );
-    }
-
     @Override
     public RecordFormats getFormat()
     {

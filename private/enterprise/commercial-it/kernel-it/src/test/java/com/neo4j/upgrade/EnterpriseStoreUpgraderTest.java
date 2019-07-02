@@ -8,7 +8,6 @@ package com.neo4j.upgrade;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
-import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,13 +22,7 @@ import org.neo4j.test.Unzip;
 
 public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
 {
-    public EnterpriseStoreUpgraderTest( RecordFormats recordFormats )
-    {
-        super( recordFormats );
-    }
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<RecordFormats> versions()
+    private static Collection<RecordFormats> versions()
     {
         return Arrays.asList( HighLimitV3_0_0.RECORD_FORMATS,  HighLimitV3_4_0.RECORD_FORMATS );
     }
