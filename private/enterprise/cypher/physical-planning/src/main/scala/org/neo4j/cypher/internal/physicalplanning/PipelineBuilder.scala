@@ -39,21 +39,17 @@ object PipelineBuilder {
   }
 
   private def mapBuffer(bufferDefinition: BufferDefinitionBuild): BufferDefinition = {
-    val downstreamReducers = bufferDefinition.downstreamStates.collect { case d: DownstreamReduce => d.id }
-    val workCancellers = bufferDefinition.downstreamStates.collect { case d: DownstreamWorkCanceller => mapArgumentStateDefinition(d.state) }
-    val downstreamStates = bufferDefinition.downstreamStates.collect { case d: DownstreamState => mapArgumentStateDefinition(d.state) }
-
     bufferDefinition match {
       case b: ApplyBufferDefinitionBuild =>
-        ApplyBufferDefinition(b.id, b.argumentSlotOffset, downstreamReducers, workCancellers, downstreamStates, b.reducersOnRHS.map(mapArgumentStateDefinition), b.delegates)
+        ApplyBufferDefinition(b.id, b.argumentSlotOffset, bufferDefinition.downstreamStates, b.reducersOnRHS.map(mapArgumentStateDefinition), b.delegates)
       case b: ArgumentStateBufferDefinitionBuild =>
-        ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, downstreamReducers, workCancellers, downstreamStates)
+        ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, bufferDefinition.downstreamStates)
       case b: MorselBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, downstreamReducers, workCancellers, downstreamStates)
+        MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
       case b: DelegateBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, downstreamReducers, workCancellers, downstreamStates)
+        MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
       case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>
-        LHSAccumulatingRHSStreamingBufferDefinition(b.id, b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId, downstreamReducers, workCancellers, downstreamStates)
+        LHSAccumulatingRHSStreamingBufferDefinition(b.id, b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId, bufferDefinition.downstreamStates)
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }
@@ -61,5 +57,6 @@ object PipelineBuilder {
 
   private def mapArgumentStateDefinition(build: ArgumentStateDefinitionBuild): ArgumentStateDefinition =
     ArgumentStateDefinition(build.id, build.planId, build.argumentSlotOffset)
+
 
 }

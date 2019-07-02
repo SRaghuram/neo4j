@@ -66,15 +66,21 @@ class Buffers(numBuffers: Int,
     if (buffers(i) != null)
       return
 
-    val reducers = bufferDefinition.reducers.map(asmId => findRHSAccumulatingStateBuffer(i, asmId))
-    val workCancellers = bufferDefinition.workCancellers.map(_.id)
-    val downstreamStates = bufferDefinition.downstreamStates.map(_.id)
+    val reducers = bufferDefinition.downstreamStates.collect {
+      case DownstreamReduce(asmId) => findRHSAccumulatingStateBuffer(i, asmId)
+    }
+    val workCancellerIDs = bufferDefinition.downstreamStates.collect{
+      case DownstreamWorkCanceller(asmId) => asmId
+    }
+    val simpleDownstreamStateIDs = bufferDefinition.downstreamStates.collect {
+      case DownstreamState(asmId) => asmId
+    }
 
     buffers(i) =
       bufferDefinition match {
         case x: ApplyBufferDefinition =>
           val reducerOnRHSDefs = x.reducersOnRHS
-          val argumentStatesToInitiate = workCancellers ++ downstreamStates
+          val argumentStatesToInitiate = workCancellerIDs ++ simpleDownstreamStateIDs
           // argumentReducersForThis in reverse order, since upstream reducers possibly
           // need to increment counts on their downstreams, which have to be initialized
           // first in order to do that
@@ -105,7 +111,7 @@ class Buffers(numBuffers: Int,
                                                 stateFactory)
 
         case _: BufferDefinition =>
-          new MorselBuffer(tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer())
+          new MorselBuffer(tracker, reducers, workCancellerIDs, argumentStateMaps, stateFactory.newBuffer())
       }
   }
 

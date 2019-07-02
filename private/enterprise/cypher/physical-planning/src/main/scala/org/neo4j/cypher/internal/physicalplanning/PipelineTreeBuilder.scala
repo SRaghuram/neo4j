@@ -41,11 +41,6 @@ object PipelineTreeBuilder {
                                           argumentSlotOffset: Int,
                                           counts: Boolean)
 
-  sealed trait DownstreamStateOperator
-  case class DownstreamReduce(id: ArgumentStateMapId) extends DownstreamStateOperator
-  case class DownstreamWorkCanceller(state: ArgumentStateDefinitionBuild) extends DownstreamStateOperator
-  case class DownstreamState(state: ArgumentStateDefinitionBuild) extends DownstreamStateOperator
-
   /**
     * Builder for [[BufferDefinition]]
     */
@@ -267,13 +262,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Limit =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, false)
-        markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm))
+        markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
         source.middlePlans += plan
         source
 
       case _: Distinct =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, false)
-        argument.downstreamStates += DownstreamState(asm)
+        argument.downstreamStates += DownstreamState(asm.id)
         source.middlePlans += plan
         source
 
