@@ -75,7 +75,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
     File[] listReplayableFiles() throws IOException
     {
         try ( Stream<StoreFileMetadata> stream = neoStoreDataSource.getNeoStoreFileListing().builder().excludeLogFiles()
-                .excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders().build().stream() )
+                .excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders().build().stream() )
         {
             return stream.filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );
         }
