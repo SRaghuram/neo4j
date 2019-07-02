@@ -66,7 +66,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
     File[] listReplayableFiles() throws IOException
     {
         try ( Stream<StoreFileMetadata> stream = database.getDatabaseFileListing().builder().excludeLogFiles()
-                .excludeSchemaIndexStoreFiles().excludeAdditionalProviders().build().stream() )
+                .excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders().build().stream() )
         {
             return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );
         }
