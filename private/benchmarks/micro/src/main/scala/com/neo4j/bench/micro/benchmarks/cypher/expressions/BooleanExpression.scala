@@ -88,7 +88,7 @@ class BooleanExpressionThreadState {
   @Setup
   def setUp(benchmarkState: BooleanExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.BooleanExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),
                                Array(

@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.Main
-import com.neo4j.bench.micro.benchmarks.cypher.{AbstractCypherBenchmark, EnterpriseInterpreted, ExecutablePlan}
+import com.neo4j.bench.micro.benchmarks.cypher.{AbstractCypherBenchmark, Slotted, ExecutablePlan}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
 import org.neo4j.cypher.internal.logical.plans
@@ -93,7 +93,7 @@ class PathExpressionThreadState {
   @Setup
   def setUp(benchmarkState: PathExpression): Unit = {
     val useCompiledExpressions = benchmarkState.PathExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
   }
 

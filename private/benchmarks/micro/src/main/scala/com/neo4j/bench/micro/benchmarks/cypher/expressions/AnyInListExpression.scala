@@ -64,7 +64,7 @@ class AnyInListExpressionThreadState {
   @Setup
   def setUp(benchmarkState: AnyInListExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.AnyInListExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = benchmarkState.getParams(benchmarkState.AnyInListExpression_size)
   }

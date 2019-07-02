@@ -32,8 +32,8 @@ import scala.collection.mutable
 @BenchmarkEnabled(true)
 class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(EnterpriseInterpreted.NAME))
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
+    base = Array(Slotted.NAME))
   @Param(Array[String]())
   var CircleDistancePointIndexSeek_runtime: String = _
 

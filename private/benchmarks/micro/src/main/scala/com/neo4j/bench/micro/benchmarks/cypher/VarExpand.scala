@@ -27,8 +27,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class VarExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
+    base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var VarExpand_runtime: String = _
 

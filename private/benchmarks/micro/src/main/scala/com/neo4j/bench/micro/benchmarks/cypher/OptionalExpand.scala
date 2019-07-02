@@ -23,8 +23,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class OptionalExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(EnterpriseInterpreted.NAME, Morsel.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
+    base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var OptionalExpand_runtime: String = _
 
