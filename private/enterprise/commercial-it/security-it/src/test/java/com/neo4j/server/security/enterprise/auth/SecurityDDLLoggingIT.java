@@ -117,9 +117,25 @@ class SecurityDDLLoggingIT
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 3 ) ); // First line is from setting up the user to delete later
+        assertThat( logLines, hasSize( 3 ) ); // First line is from setting up the user to alter later
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD '******' CHANGE REQUIRED" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "ALTER USER foo SET STATUS SUSPENDED" ) ) );
+    }
+
+    @Test
+    void shouldLogSetOwnPassword() throws IOException
+    {
+        // GIVEN
+        // adminContext is a user that doesn't exist in the system graph and does not have a password.
+        // This test will still show the logging of the command but nothing will actually get executed.
+
+        // WHEN
+        execute( adminContext, "SET MY PASSWORD FROM '???' TO 'baz'" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 1 ) );
+        assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "SET OWN PASSWORD FROM '******' TO '******'" ) ) );
     }
 
     @Test
