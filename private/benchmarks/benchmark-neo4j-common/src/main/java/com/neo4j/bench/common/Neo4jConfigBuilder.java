@@ -139,7 +139,7 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder addJvmArgs( List<String> additionalJvmArgs )
     {
-        neo4jConfig.addJvmArgs( additionalJvmArgs );
+        neo4jConfig = neo4jConfig.addJvmArgs( additionalJvmArgs );
         return this;
     }
 
