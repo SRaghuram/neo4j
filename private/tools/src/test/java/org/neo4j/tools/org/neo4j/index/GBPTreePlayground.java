@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
 import org.neo4j.index.internal.gbptree.SimpleLongLayout;
 import org.neo4j.index.internal.gbptree.Writer;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -25,9 +25,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.tools.console.input.Command;
 import org.neo4j.tools.console.input.ConsoleInput;
 
-import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
-import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
-import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.tools.console.input.ConsoleUtil.staticPrompt;
 
@@ -48,13 +45,12 @@ public class GBPTreePlayground
         this.pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler() );
     }
 
-    private void setupIndex() throws IOException
+    private void setupIndex()
     {
-        tree = new GBPTree<>( pageCache, indexFile, layout, pageSize, NO_MONITOR, NO_HEADER_READER, NO_HEADER_WRITER,
-                RecoveryCleanupWorkCollector.immediate() );
+        tree = new GBPTreeBuilder<>( pageCache, indexFile, layout ).withIndexPageSize( pageSize ).build();
     }
 
-    private void run() throws InterruptedException, IOException
+    private void run() throws InterruptedException
     {
         System.out.println( "Working on: " + indexFile.getAbsolutePath() );
         setupIndex();
@@ -114,7 +110,7 @@ public class GBPTreePlayground
     private class Checkpoint implements Command
     {
         @Override
-        public void run( String[] args, PrintStream out ) throws Exception
+        public void run( String[] args, PrintStream out )
         {
             tree.checkpoint( IOLimiter.UNLIMITED );
         }
