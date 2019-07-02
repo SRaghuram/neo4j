@@ -358,4 +358,419 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     } should have message
       "This is a DDL command and it should be executed against the system database: DROP ROLE"
   }
+
+  // Tests for granting roles to users
+
+  test("should grant role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom TO user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "user"))
+  }
+
+  test("should grant roles and list users with roles") {
+    // GIVEN
+    // User  : Roles
+    // neo4j : admin
+    // Bar   : dragon, fairy
+    // Baz   :
+    // Zet   : fairy
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE USER Zet SET PASSWORD 'NeX'")
+    execute("CREATE ROLE dragon")
+    execute("CREATE ROLE fairy")
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+    execute("GRANT ROLE fairy TO Bar")
+    execute("GRANT ROLE fairy TO Zet")
+
+    // THEN
+    val result = execute("SHOW USERS")
+    result.toSet shouldBe Set(
+      neo4jUser,
+      user("Bar", Seq("fairy", "dragon")),
+      user("Baz"),
+      user("Zet", Seq("fairy"))
+    )
+  }
+
+  test("should grant role to several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom TO userA, userB")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userB"))
+  }
+
+  test("should grant multiple roles to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom1, custom2 TO userA")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA"))
+  }
+
+  test("should grant multiple roles to several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE custom1, custom2 TO userA, userB")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers
+      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userB")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA")
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userB"))
+  }
+
+  test("should be able to grant already granted role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    execute("GRANT ROLE dragon TO Bar")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+
+    // WHEN
+    execute("GRANT ROLE dragon TO Bar")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+  }
+
+  test("should fail when granting non-existing role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    // and an invalid (non-existing) one
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE `` TO Bar")
+      // THEN
+    } should have message "Cannot grant non-existent role '' to user 'Bar'"
+
+    // AND
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+  }
+
+  test("should fail when granting role to non-existing user") {
+    // GIVEN
+    val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "isBuiltIn" -> false, "member" -> null))
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE dragon")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message "Cannot grant role 'dragon' to non-existent user 'Bar'"
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    // and an invalid (non-existing) one
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO ``")
+      // THEN
+    } should have message "Cannot grant role 'dragon' to non-existent user ''"
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+  }
+
+  test("should fail when granting non-existing role to non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+
+    // and an invalid (non-existing) ones
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE `` TO ``")
+      // THEN
+    } should have message "Cannot grant non-existent role '' to user ''"
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+  }
+
+  test("should fail when granting role to user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT ROLE"
+
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO Bar")
+      // THEN
+    } should have message
+      "This is a DDL command and it should be executed against the system database: GRANT ROLE"
+  }
+
+  // Tests for revoking roles from users
+
+  test("should revoke role from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should revoke role from several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO userA")
+    execute("GRANT ROLE custom TO userB")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM userA, userB")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should revoke multiple roles from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom1 TO userA")
+    execute("GRANT ROLE custom2 TO userA")
+
+    // WHEN
+    execute("REVOKE ROLE custom1, custom2 FROM userA")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should revoke multiple roles from several users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+    execute("CREATE USER userC SET PASSWORD 'neo'")
+    execute("CREATE USER userD SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom1 TO userA")
+    execute("GRANT ROLE custom1 TO userB")
+    execute("GRANT ROLE custom1 TO userC")
+    execute("GRANT ROLE custom2 TO userA")
+    execute("GRANT ROLE custom2 TO userB")
+    execute("GRANT ROLE custom2 TO userD")
+
+    // WHEN
+    execute("REVOKE ROLE custom1, custom2 FROM userA, userB, userC, userD")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
+      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should be able to revoke already revoked role from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+    execute("REVOKE ROLE custom FROM user")
+
+    // WHEN
+    execute("REVOKE ROLE custom FROM user").toSet should be(Set.empty)
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should grant and revoke multiple roles to multiple users") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE USER Baz SET PASSWORD 'NEO'")
+    execute("CREATE ROLE foo")
+    execute("CREATE ROLE fum")
+    val admin = Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")
+
+    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "isBuiltIn" -> false)
+
+    // WHEN using single user and role version of GRANT
+    execute("GRANT ROLE foo TO Bar")
+    execute("GRANT ROLE foo TO Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz")))
+
+    // WHEN using single user and role version of REVOKE
+    execute("REVOKE ROLE foo FROM Bar")
+    execute("REVOKE ROLE foo FROM Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+
+    // WHEN granting with multiple users and roles version
+    execute("GRANT ROLE foo, fum TO Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking only one of many
+    execute("REVOKE ROLE foo FROM Bar")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+
+    // WHEN revoking with multiple users and roles version
+    execute("REVOKE ROLE foo, fum FROM Bar, Baz")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+  }
+
+  test("should fail revoking non-existent role from (existing) user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should fail revoking role from non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke role 'custom' from non-existent user 'user'"
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should fail revoking non-existing role from non-existing user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE custom FROM user")
+      // THEN
+    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
+
+    // AND
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should fail when revoking role from user when not on system database") {
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE dragon FROM Bar")
+      // THEN
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE ROLE"
+
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    execute("CREATE ROLE dragon")
+    execute("GRANT ROLE dragon TO Bar")
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+
+    the[DatabaseManagementException] thrownBy {
+      // WHEN
+      execute("REVOKE ROLE dragon FROM Bar")
+      // THEN
+    } should have message
+      "This is a DDL command and it should be executed against the system database: REVOKE ROLE"
+  }
 }
