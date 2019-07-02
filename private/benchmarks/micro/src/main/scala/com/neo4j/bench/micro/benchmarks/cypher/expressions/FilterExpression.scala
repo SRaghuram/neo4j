@@ -64,7 +64,7 @@ class FilterExpressionThreadState {
   @Setup
   def setUp(benchmarkState: FilterExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.FilterExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = benchmarkState.getParams(benchmarkState.FilterExpression_size)
   }

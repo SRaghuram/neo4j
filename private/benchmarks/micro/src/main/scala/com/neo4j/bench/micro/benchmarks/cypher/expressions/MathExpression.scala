@@ -92,7 +92,7 @@ class MathExpressionThreadState {
   @Setup
   def setUp(benchmarkState: MathExpression, rngState: RNGState): Unit = {
     val useCompiledExpressions = benchmarkState.MathExpression_engine == CompiledExpressionEngine.NAME
-    executablePlan = benchmarkState.buildPlan(EnterpriseInterpreted, useCompiledExpressions)
+    executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),
       Array(
