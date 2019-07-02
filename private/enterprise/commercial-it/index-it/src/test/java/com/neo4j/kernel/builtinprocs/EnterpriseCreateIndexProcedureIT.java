@@ -21,10 +21,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Label;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -33,6 +31,8 @@ import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -273,13 +273,13 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // and then
         transaction = newTransaction( AnonymousContext.read() );
         SchemaRead schemaRead = transaction.schemaRead();
-        IndexReference index = schemaRead.index( labelId, propertyKeyIds );
+        IndexDescriptor2 index = schemaRead.index( labelId, propertyKeyIds );
         assertCorrectIndex( labelId, propertyKeyIds, uniquenessConstraint, index );
         assertIndexData( transaction, propertyKeyIds, value, node, index );
         commit();
     }
 
-    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexReference index )
+    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor2 index )
             throws KernelException
     {
         try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor() )
@@ -297,15 +297,15 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexReference index )
+    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexDescriptor2 index )
     {
-        assertEquals( nonDefaultSchemaIndex.providerKey(), index.providerKey(), "provider key" );
-        assertEquals( nonDefaultSchemaIndex.providerVersion(), index.providerVersion(), "provider version" );
+        assertEquals( nonDefaultSchemaIndex.providerKey(), index.getIndexProvider().getKey(), "provider key" );
+        assertEquals( nonDefaultSchemaIndex.providerVersion(), index.getIndexProvider().getVersion(), "provider version" );
         assertEquals( expectedUnique, index.isUnique() );
         assertEquals( labelId, index.schema().getEntityTokenIds()[0], "label id" );
         for ( int i = 0; i < propertyKeyIds.length; i++ )
         {
-            assertEquals( propertyKeyIds[i], index.properties()[i], "property key id" );
+            assertEquals( propertyKeyIds[i], index.schema().getPropertyIds()[i], "property key id" );
         }
     }
 

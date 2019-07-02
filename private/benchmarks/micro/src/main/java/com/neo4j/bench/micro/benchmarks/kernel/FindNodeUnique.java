@@ -28,12 +28,12 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexOrder;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.LABEL;
@@ -127,7 +127,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
         int labelId;
         int propertyKey;
         ValueGeneratorFun valueFun;
-        IndexReference index;
+        IndexDescriptor2 index;
         IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;

@@ -27,12 +27,12 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -53,7 +53,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
@@ -132,7 +131,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     public static class TxState extends AbstractKernelBenchmark.TxState
     {
         int propertyKey;
-        IndexReference index;
+        IndexDescriptor2 index;
         IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;

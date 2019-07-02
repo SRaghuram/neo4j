@@ -24,12 +24,12 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -146,7 +146,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
         int lowSelectivityMin;
         int lowSelectivityMax;
 
-        IndexReference index;
+        IndexDescriptor2 index;
         IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;

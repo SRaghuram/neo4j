@@ -37,8 +37,8 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
+import org.neo4j.internal.schema.IndexDescriptor2;
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.Arabic;
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.UrlOrEmail;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
@@ -62,8 +62,8 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE_WITH_CONFIG;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asProcedureConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asProcedureConfigMap;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 public class FulltextIndexCausalClusterIT
@@ -227,7 +227,7 @@ public class FulltextIndexCausalClusterIT
 
     private Map<String,Value> getIndexConfig( GraphDatabaseFacade db, String indexName ) throws IndexNotFoundKernelException
     {
-        IndexReference indexReference = db.kernelTransaction().schemaRead().indexGetForName( indexName );
+        IndexDescriptor2 indexReference = db.kernelTransaction().schemaRead().indexGetForName( indexName );
         IndexingService indexingService = db.getDependencyResolver().resolveDependency( IndexingService.class );
         IndexProxy indexProxy = indexingService.getIndexProxy( indexReference.schema() );
         return indexProxy.indexConfig();
