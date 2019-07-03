@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.profiling;
+package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.model.Plan;

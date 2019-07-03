@@ -6,37 +6,31 @@
 package com.neo4j.bench.client.model;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.ext.udc.UdcSettings.udc_enabled;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 public class Neo4jConfigTest
 {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    private File defaultNeo4jConfigFile = FileUtils.toFile( Neo4jConfigTest.class.getResource( "/neo4j.conf" ) );
-
     @Test
     public void shouldSerialize() throws IOException
     {
         assertSerialization( Neo4jConfig.empty() );
-        assertSerialization( Neo4jConfig.withDefaults() );
-        assertSerialization( Neo4jConfig.fromFile( defaultNeo4jConfigFile ) );
+        assertSerialization( Neo4jConfig.empty().withSetting( "setting0", "value0" ) );
+        assertSerialization( Neo4jConfig.empty().setJvmArgs( Arrays.asList( "-Xmx1G" ) ) );
     }
 
     @Test
@@ -49,23 +43,23 @@ public class Neo4jConfigTest
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
 
         // add one setting
-        Neo4jConfig config1 = config0.withSetting( record_format, "high_limit" );
+        Neo4jConfig config1 = config0.withSetting( "record_format", "high_limit" );
         assertThat( config0.toMap().size(), equalTo( 0 ) );
         assertThat( config1.toMap().size(), equalTo( 1 ) );
 
-        assertThat( config1.toMap().get( record_format.name() ), equalTo( "high_limit" ) );
+        assertThat( config1.toMap().get( "record_format" ), equalTo( "high_limit" ) );
 
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config1.getJvmArgs(), equalTo( new ArrayList<>() ) );
 
         // overwrite setting
-        Neo4jConfig config2 = config1.withSetting( record_format, "standard" );
+        Neo4jConfig config2 = config1.withSetting( "record_format", "standard" );
         assertThat( config0.toMap().size(), equalTo( 0 ) );
         assertThat( config1.toMap().size(), equalTo( 1 ) );
         assertThat( config2.toMap().size(), equalTo( 1 ) );
 
-        assertThat( config1.toMap().get( record_format.name() ), equalTo( "high_limit" ) );
-        assertThat( config2.toMap().get( record_format.name() ), equalTo( "standard" ) );
+        assertThat( config1.toMap().get( "record_format" ), equalTo( "high_limit" ) );
+        assertThat( config2.toMap().get( "record_format" ), equalTo( "standard" ) );
 
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config1.getJvmArgs(), equalTo( new ArrayList<>() ) );
@@ -78,9 +72,9 @@ public class Neo4jConfigTest
         assertThat( config2.toMap().size(), equalTo( 1 ) );
         assertThat( config3.toMap().size(), equalTo( 1 ) );
 
-        assertThat( config1.toMap().get( record_format.name() ), equalTo( "high_limit" ) );
-        assertThat( config2.toMap().get( record_format.name() ), equalTo( "standard" ) );
-        assertThat( config3.toMap().get( record_format.name() ), equalTo( "standard" ) );
+        assertThat( config1.toMap().get( "record_format" ), equalTo( "high_limit" ) );
+        assertThat( config2.toMap().get( "record_format" ), equalTo( "standard" ) );
+        assertThat( config3.toMap().get( "record_format" ), equalTo( "standard" ) );
 
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config1.getJvmArgs(), equalTo( new ArrayList<>() ) );
@@ -94,43 +88,16 @@ public class Neo4jConfigTest
         assertThat( config2.toMap().size(), equalTo( 1 ) );
         assertThat( config3.toMap().size(), equalTo( 1 ) );
         assertThat( config4.toMap().size(), equalTo( 1 ) );
-        assertThat( config1.toMap().get( record_format.name() ), equalTo( "high_limit" ) );
-        assertThat( config2.toMap().get( record_format.name() ), equalTo( "standard" ) );
-        assertThat( config3.toMap().get( record_format.name() ), equalTo( "standard" ) );
-        assertThat( config4.toMap().get( record_format.name() ), equalTo( "standard" ) );
+        assertThat( config1.toMap().get( "record_format" ), equalTo( "high_limit" ) );
+        assertThat( config2.toMap().get( "record_format" ), equalTo( "standard" ) );
+        assertThat( config3.toMap().get( "record_format" ), equalTo( "standard" ) );
+        assertThat( config4.toMap().get( "record_format" ), equalTo( "standard" ) );
 
         assertThat( config0.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config1.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config2.getJvmArgs(), equalTo( new ArrayList<>() ) );
         assertThat( config3.getJvmArgs(), equalTo( Lists.newArrayList( "-Xms1g" ) ) );
         assertThat( config4.getJvmArgs(), equalTo( Lists.newArrayList( "-Xms2g", "-Xmx4g" ) ) );
-    }
-
-    @Test
-    public void shouldReadFromFile()
-    {
-        Neo4jConfig config = Neo4jConfig.fromFile( defaultNeo4jConfigFile );
-
-        List<String> expectedJvmArgs = Lists.newArrayList( "-XX:+UseG1GC",
-                                                           "-XX:-OmitStackTraceInFastThrow",
-                                                           "-XX:+AlwaysPreTouch",
-                                                           "-XX:+UnlockExperimentalVMOptions",
-                                                           "-XX:+TrustFinalNonStaticFields",
-                                                           "-XX:+DisableExplicitGC",
-                                                           "-Djdk.tls.ephemeralDHKeySize=2048",
-                                                           "-Djdk.tls.rejectClientInitiatedRenegotiation=true",
-                                                           "-Dunsupported.dbms.udc.source=tarball" );
-
-        Map<String,String> expectedSettings = new HashMap<>();
-        expectedSettings.put( "dbms.directories.import", "import" );
-        expectedSettings.put( "dbms.connector.bolt.enabled", "true" );
-        expectedSettings.put( "dbms.connector.http.enabled", "true" );
-        expectedSettings.put( "dbms.connector.https.enabled", "true" );
-        expectedSettings.put( "ha.pull_interval", "10" );
-        expectedSettings.put( "dbms.windows_service_name", "neo4j" );
-
-        assertThat( config.getJvmArgs(), equalTo( expectedJvmArgs ) );
-        assertThat( config.toMap(), equalTo( expectedSettings ) );
     }
 
     @Test
@@ -141,21 +108,21 @@ public class Neo4jConfigTest
         Neo4jConfig config0 = Neo4jConfig.empty()
                                          .setJvmArgs( Lists.newArrayList( "-Xms1g" ) )
                                          .addJvmArg( "-Xmx2g" )
-                                         .withSetting( record_format, "high_limit" );
+                                         .withSetting( "setting1", "oldValue");
 
         Neo4jConfig config1 = Neo4jConfig.empty()
                                          .setJvmArgs( Lists.newArrayList( "-Xmx2g" ) )
                                          .addJvmArg( "-XX:+UseG1GC" )
-                                         .withSetting( udc_enabled, "false" )
-                                         .withSetting( record_format, "standard" );
+                                         .withSetting( "setting2", "false" )
+                                         .withSetting( "setting1", "newValue" );
 
         Neo4jConfig config2 = config0.mergeWith( config1 );
 
         List<String> expectedJvmArgs = Lists.newArrayList( "-Xms1g", "-Xmx2g", "-XX:+UseG1GC" );
 
         Map<String,String> expectedSettings = new HashMap<>();
-        expectedSettings.put( udc_enabled.name(), "false" );
-        expectedSettings.put( record_format.name(), "standard" );
+        expectedSettings.put( "setting1", "newValue" );
+        expectedSettings.put( "setting2", "false" );
 
         assertThat( config2.toMap(), equalTo( expectedSettings ) );
         assertThat( config2.getJvmArgs(), equalTo( expectedJvmArgs ) );
@@ -181,12 +148,9 @@ public class Neo4jConfigTest
 
     private void assertSerialization( Neo4jConfig config0 ) throws IOException
     {
-        Path configFile = temporaryFolder.newFile().toPath();
-        config0.writeToFile( configFile );
-        Neo4jConfig config1 = Neo4jConfig.fromFile( configFile );
+        String json = config0.toJson();
+        Neo4jConfig config1 = Neo4jConfig.fromJson( json );
         assertThat( config0, equalTo( config1 ) );
-        String json = config1.toJson();
-        Neo4jConfig config2 = Neo4jConfig.fromJson( json );
-        assertThat( config1, equalTo( config2 ) );
     }
+
 }

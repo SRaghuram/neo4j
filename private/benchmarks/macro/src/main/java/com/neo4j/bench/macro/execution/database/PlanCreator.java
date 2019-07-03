@@ -11,7 +11,6 @@ import com.neo4j.bench.client.model.Plan;
 import com.neo4j.bench.client.model.PlanCompilationMetrics;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.PlannerDescription;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;

@@ -18,6 +18,7 @@ import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Rule;
@@ -146,8 +147,9 @@ public class RunExportCommandIT
                 new BenchmarkTool( Repository.MICRO_BENCH, "2", "Trinity", "master" );
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
 
-        int expectedConfigSize = Neo4jConfig.withDefaults()
-                                            .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
+        int expectedConfigSize = Neo4jConfigBuilder.withDefaults()
+                                            .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                            .build()
                                             .toMap()
                                             .size();
 

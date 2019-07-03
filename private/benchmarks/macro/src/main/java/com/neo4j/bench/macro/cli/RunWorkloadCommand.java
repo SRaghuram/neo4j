@@ -32,6 +32,7 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
@@ -352,14 +353,15 @@ public class RunWorkloadCommand implements Runnable
             {
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigPath );
             }
-            Neo4jConfig neo4jConfig = Neo4jConfig.withDefaults()
-                                                 .mergeWith( Neo4jConfig.fromFile( neo4jConfigPath ) )
+            Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
+                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
                                                  .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
                                                  .removeSetting( load_csv_file_url_root );
             if ( executionMode.equals( ExecutionMode.PLAN ) )
             {
-                neo4jConfig = neo4jConfig.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
+                neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
             }
+            Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
 
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 

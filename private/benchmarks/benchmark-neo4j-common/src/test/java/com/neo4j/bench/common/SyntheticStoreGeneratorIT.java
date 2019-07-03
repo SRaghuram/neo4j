@@ -3,13 +3,16 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.common;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.Main;
+import com.neo4j.bench.client.QueryRetrier;
+import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;

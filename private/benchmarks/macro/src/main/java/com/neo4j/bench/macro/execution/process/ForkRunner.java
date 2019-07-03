@@ -16,6 +16,7 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.execution.database.PlanCreator;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
@@ -57,7 +58,7 @@ public class ForkRunner
                 String forkName = "profiler-fork-" + profiler.name().toLowerCase();
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, singletonList( profiler ) );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-                neo4jConfig.writeToFile( neo4jConfigFile );
+                Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
                 RunnableFork profilerFork = fork( launcher,
                                                   query,
                                                   store,
@@ -78,7 +79,7 @@ public class ForkRunner
                 String forkName = "measurement-fork-" + forkNumber;
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, emptyList() );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
-                neo4jConfig.writeToFile( neo4jConfigFile );
+                Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
                 RunnableFork measurementFork = fork( launcher,
                                                      query,

@@ -9,6 +9,7 @@ import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.execution.database.Neo4jServerWrapper.Neo4jServerConnection;
 
 import java.net.URI;
@@ -40,7 +41,7 @@ public class ServerDatabase implements Database
                                               Redirect errorRedirect,
                                               Path copyLogsToOnClose )
     {
-        Neo4jConfig.fromFile( neo4jConfigFile )
+        Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                    .setBoltUri( generateBoltUriString() )
                    .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
                    .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )

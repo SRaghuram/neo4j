@@ -3,9 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.queries;
+package com.neo4j.bench.common.queries;
 
 import com.neo4j.bench.client.model.Annotation;
+import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.util.Resources;
 
 import java.util.HashMap;
@@ -25,17 +26,25 @@ import static com.neo4j.bench.client.ClientUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class AttachTestRunAnnotation implements Query<Void>, EmbeddedQuery<Node>
+public class AttachMetricsAnnotation implements Query<Void>, EmbeddedQuery<Node>
 {
-    private static final String ATTACH_ANNOTATION = Resources.fileToString( "/queries/write/attach_test_run_annotation.cypher" );
+    private static final String ATTACH_ANNOTATION = Resources.fileToString( "/queries/write/attach_metrics_annotation.cypher" );
 
     private String testRunId;
     private Annotation annotation;
+    private String benchmarkName;
+    private String benchmarkGroupName;
 
-    public AttachTestRunAnnotation( String testRunId, Annotation annotation )
+    public AttachMetricsAnnotation(
+            String testRunId,
+            String benchmarkName,
+            String benchmarkGroupName,
+            Annotation annotation )
     {
         this.testRunId = requireNonNull( testRunId );
         this.annotation = requireNonNull( annotation );
+        this.benchmarkName = requireNonNull( benchmarkName );
+        this.benchmarkGroupName = requireNonNull( benchmarkGroupName );
     }
 
     @Override
@@ -47,9 +56,17 @@ public class AttachTestRunAnnotation implements Query<Void>, EmbeddedQuery<Node>
             int annotationsCreated = statementResult.consume().counters().nodesCreated();
             if ( 1 != annotationsCreated )
             {
-                throw new RuntimeException( format(
-                        "Expected to create 1 annotation but created %s\n" +
-                        "Failed to attach annotation %s to test run %s", annotationsCreated, annotation, testRunId ) );
+                throw new RuntimeException(
+                        format( "Expected to create 1 annotation but created %s\n" +
+                                "Failed to create annotation %s for:\n" +
+                                " * Test run '%s'\n" +
+                                " * Benchmark '%s'\n" +
+                                " * Benchmark group '%s'",
+                                annotationsCreated,
+                                annotation,
+                                testRunId,
+                                benchmarkName,
+                                benchmarkGroupName ) );
             }
         }
         return null;
@@ -64,9 +81,17 @@ public class AttachTestRunAnnotation implements Query<Void>, EmbeddedQuery<Node>
             int annotationsCreated = result.getQueryStatistics().getNodesCreated();
             if ( 1 != annotationsCreated )
             {
-                throw new RuntimeException( format(
-                        "Expected to create 1 annotation but created %s\n" +
-                        "Failed to attach annotation %s to test run %s", annotationsCreated, annotation, testRunId ) );
+                throw new RuntimeException(
+                        format( "Expected to create 1 annotation but created %s\n" +
+                                "Failed to create annotation %s for:\n" +
+                                " * Test run '%s'\n" +
+                                " * Benchmark '%s'\n" +
+                                " * Benchmark group '%s'",
+                                annotationsCreated,
+                                annotation,
+                                testRunId,
+                                benchmarkName,
+                                benchmarkGroupName ) );
             }
             tx.success();
             return (Node) result.next().get( "a" );
@@ -77,6 +102,8 @@ public class AttachTestRunAnnotation implements Query<Void>, EmbeddedQuery<Node>
     {
         Map<String,Object> params = new HashMap<>();
         params.put( "test_run_id", testRunId );
+        params.put( "benchmark_name", benchmarkName );
+        params.put( "benchmark_group_name", benchmarkGroupName );
         params.put( "annotation", annotation.toMap() );
         return params;
     }

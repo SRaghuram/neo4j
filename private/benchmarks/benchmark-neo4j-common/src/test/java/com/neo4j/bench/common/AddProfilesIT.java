@@ -3,10 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client;
+package com.neo4j.bench.common;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.client.AddProfilesCommand;
+import com.neo4j.bench.client.Main;
+import com.neo4j.bench.client.SubmitTestRunsAndPlansIT;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkConfig;
 import com.neo4j.bench.client.model.BenchmarkGroup;
