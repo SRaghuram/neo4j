@@ -5,9 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.codegen.Expression.{constant, invoke, newInstance}
+import org.neo4j.codegen.MethodReference
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{LessThanEqual, MethodStructure}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{LessThan, LessThanEqual, MethodStructure}
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
 
 case class DecreaseAndReturnWhenZero(opName: String, variableName: String, action: Instruction, startValue: CodeGenExpression)
   extends Instruction {
@@ -16,6 +20,14 @@ case class DecreaseAndReturnWhenZero(opName: String, variableName: String, actio
     startValue.init(generator)
     val expression = generator.box(startValue.generateExpression(generator), startValue.codeGenType)
     generator.declareCounter(variableName, expression)
+
+    generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
+      val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
+        MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
+        constant(s"LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
+      onTrue.throwException(exception)
+    }
+
     generator.ifStatement(generator.checkInteger(variableName, LessThanEqual, 0L)) { onTrue =>
       onTrue.returnSuccessfully()
     }

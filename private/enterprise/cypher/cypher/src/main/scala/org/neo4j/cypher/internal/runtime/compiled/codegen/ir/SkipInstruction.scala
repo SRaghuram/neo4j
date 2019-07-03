@@ -5,9 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.codegen.Expression.{constant, invoke, newInstance}
+import org.neo4j.codegen.MethodReference
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{LessThan, MethodStructure}
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
 
 case class SkipInstruction(opName: String, variableName: String, action: Instruction, numberToSkip: CodeGenExpression)
   extends Instruction {
@@ -16,6 +20,14 @@ case class SkipInstruction(opName: String, variableName: String, action: Instruc
     numberToSkip.init(generator)
     val expression = generator.box(numberToSkip.generateExpression(generator), numberToSkip.codeGenType)
     generator.declareCounter(variableName, expression)
+
+    generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
+      val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
+        MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
+        constant(s"SKIP: Invalid input. Must be a non-negative integer."), constant(null))
+      onTrue.throwException(exception)
+    }
+
     action.init(generator)
   }
 

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 
+import org.neo4j.codegen.Expression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
@@ -184,6 +185,7 @@ trait MethodStructure[E] {
   def ifNonNullStatement(test: E, codeGenType: CodeGenType)(block: MethodStructure[E] => Unit): Unit
   def ternaryOperator(test: E, onTrue: E, onFalse: E): E
   def returnSuccessfully(): Unit
+  def throwException(exception: Expression)
 
   // results
   def materializeNode(nodeIdVar: String, codeGenType: CodeGenType): E

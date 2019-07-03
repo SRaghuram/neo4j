@@ -184,6 +184,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     }
   }
 
+  def throwException(exception: Expression) = {
+    generator.throwException(exception)
+  }
+
   override def ifNotStatement(test: Expression)(block: MethodStructure[Expression] => Unit) = {
     using(generator.ifStatement(not(test))) { body =>
       block(copy(generator = body))

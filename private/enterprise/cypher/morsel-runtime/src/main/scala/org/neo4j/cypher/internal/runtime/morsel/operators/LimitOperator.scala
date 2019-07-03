@@ -10,14 +10,15 @@ import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
+import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
 
 /**
@@ -40,10 +41,14 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                        resources.expressionVariables(state.nExpressionSlots),
                                        state.subscriber)
 
-    val count = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
+    val limit = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
+
+    if (limit < 0) {
+      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
+    }
 
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-                                                                      new LimitStateFactory(count)))
+                                                                      new LimitStateFactory(limit)))
   }
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {

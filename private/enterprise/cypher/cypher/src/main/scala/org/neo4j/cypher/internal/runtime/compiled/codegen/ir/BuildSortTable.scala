@@ -5,9 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.codegen.Expression.{constant, invoke, newInstance}
+import org.neo4j.codegen.MethodReference
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
 
 case class BuildSortTable(opName: String, tableName: String, columnVariables: Map[String, Variable],
                           sortItems: Iterable[SortItem], estimateCardinality: Double)
@@ -37,6 +41,14 @@ case class BuildTopTable(opName: String, tableName: String, countExpression: Cod
     // Return early on limit <= 0 (this unifies the behaviour with the normal limit implementation)
     val variableName = context.namer.newVarName()
     generator.declareCounter(variableName, generator.box(countExpression.generateExpression(generator), countExpression.codeGenType))
+
+    generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
+      val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
+        MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
+        constant(s"LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
+      onTrue.throwException(exception)
+    }
+
     generator.ifStatement(generator.checkInteger(variableName, LessThanEqual, 0L)) { onTrue =>
       onTrue.returnSuccessfully()
     }
