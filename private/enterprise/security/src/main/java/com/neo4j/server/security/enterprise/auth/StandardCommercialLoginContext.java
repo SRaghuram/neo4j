@@ -353,7 +353,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
 
             private boolean allowReadAllPropertiesAllRelTypes;
-            private MutableIntSet allowedRelTypeSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntSet allowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
             private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
             private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllRelTypes;
@@ -391,7 +391,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         allowReadAllPropertiesAllLabels,
                         allowReadAllPropertiesAllRelTypes,
                         allowedNodeSegmentForAllProperties,
-                        allowedRelTypeSegmentForAllProperties,
+                        allowedRelationshipSegmentForAllProperties,
                         allowedNodeSegmentForProperty,
                         allowedRelationshipSegmentForProperty,
                         whitelistNodeProperties,
@@ -504,7 +504,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             else
                             {
                                 int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                                allowedRelTypeSegmentForAllProperties.add( relTypeId );
+                                allowedRelationshipSegmentForAllProperties.add( relTypeId );
                             }
                         }
                         else

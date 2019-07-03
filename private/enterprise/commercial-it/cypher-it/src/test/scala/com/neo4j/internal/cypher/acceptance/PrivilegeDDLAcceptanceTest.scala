@@ -1316,7 +1316,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       "This is a DDL command and it should be executed against the system database: GRANT MATCH"
   }
 
-
   // Tests for granting write privileges
 
   test("should grant write privilege to custom role for all databases and all labels") {
@@ -2227,20 +2226,6 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().role("custom").node("A").map,
       grantRead().role("custom").relationship("A").map
     ))
-  }
-
-  test("should rollback transaction") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    val tx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
-    try {
-      val result: Result = new RichGraphDatabaseQueryService(graph).execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
-      result.accept(_ => true)
-      tx.failure()
-    } finally {
-      tx.close()
-    }
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should fail revoke elements privilege when granted only nodes or relationships") {
@@ -3485,6 +3470,20 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
+  }
+
+  test("should rollback transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    val tx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
+    try {
+      val result: Result = new RichGraphDatabaseQueryService(graph).execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+      result.accept(_ => true)
+      tx.failure()
+    } finally {
+      tx.close()
+    }
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
   // Tests for granting roles to users
