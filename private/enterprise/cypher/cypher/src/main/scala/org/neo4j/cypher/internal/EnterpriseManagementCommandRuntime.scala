@@ -458,12 +458,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
-    case EnsureValidNonDefaultDatabase(normalizedName, action) => (_, _, _) =>
+    case EnsureValidNonSystemDatabase(normalizedName, action) => (_, _, _) =>
       val dbName = normalizedName.name
       if (dbName.equals(SYSTEM_DATABASE_NAME))
         throw new DatabaseManagementException("Not allowed to " + action + " system database.")
 
-      UpdatingSystemCommandExecutionPlan("EnsureValidNonDefaultDatabase", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
           |RETURN db.name as name""".stripMargin,
         VirtualValues.map(
