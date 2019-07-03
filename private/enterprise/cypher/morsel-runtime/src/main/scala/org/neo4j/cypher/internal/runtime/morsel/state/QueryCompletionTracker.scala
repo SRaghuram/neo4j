@@ -127,11 +127,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def cancel(): Unit = {
-    try {
-      cancelled = true
-    } finally {
-      tracer.stopQuery()
-    }
+    cancelled = true
   }
 
   override def await(): Boolean = {

@@ -71,6 +71,16 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.cancel()
 
     // then
+    verify(subscriber, never()).onError(any())
+    verify(subscriber, never()).onResultCompleted(stats)
+    verify(tracer, never()).stopQuery()
+    verify(transaction, never()).thawLocks()
+    x.isCompleted shouldBe false
+
+    // when
+    x.decrement() // The clean shutdown happens automatically when all tasks finished after a call to cancel
+
+    // then
     verify(subscriber, never()).onResultCompleted(any())
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
