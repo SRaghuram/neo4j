@@ -27,8 +27,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").node("*").map,
-      grantWrite().role("custom").relationship("*").map
+      write().role("custom").node("*").map,
+      write().role("custom").relationship("*").map
     ))
   }
 
@@ -43,8 +43,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").database("foo").node("*").map,
-      grantWrite().role("custom").database("foo").relationship("*").map
+      write().role("custom").database("foo").node("*").map,
+      write().role("custom").database("foo").relationship("*").map
     ))
   }
 
@@ -61,8 +61,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val expected: Seq[PrivilegeMapBuilder] = Seq(
-      grantWrite().database("foo").node("*"),
-      grantWrite().database("foo").relationship("*")
+      write().database("foo").node("*"),
+      write().database("foo").relationship("*")
     )
 
     execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -115,12 +115,12 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").node("*").map,
-      grantWrite().role("custom").node("*").database("foo").map,
-      grantWrite().role("custom").node("*").database("bar").map,
-      grantWrite().role("custom").relationship("*").map,
-      grantWrite().role("custom").relationship("*").database("foo").map,
-      grantWrite().role("custom").relationship("*").database("bar").map
+      write().role("custom").node("*").map,
+      write().role("custom").node("*").database("foo").map,
+      write().role("custom").node("*").database("bar").map,
+      write().role("custom").relationship("*").map,
+      write().role("custom").relationship("*").database("foo").map,
+      write().role("custom").relationship("*").database("bar").map
     ))
 
     // WHEN
@@ -128,10 +128,10 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").node("*").map,
-      grantWrite().role("custom").node("*").database("bar").map,
-      grantWrite().role("custom").relationship("*").map,
-      grantWrite().role("custom").relationship("*").database("bar").map
+      write().role("custom").node("*").map,
+      write().role("custom").node("*").database("bar").map,
+      write().role("custom").relationship("*").map,
+      write().role("custom").relationship("*").database("bar").map
     ))
 
     // WHEN
@@ -139,8 +139,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantWrite().role("custom").node("*").database("bar").map,
-      grantWrite().role("custom").relationship("*").database("bar").map
+      write().role("custom").node("*").database("bar").map,
+      write().role("custom").relationship("*").database("bar").map
     ))
   }
 

@@ -400,8 +400,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      read().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      traverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
 
     // WHEN
@@ -459,8 +459,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database("foo").user("joe").role("custom").map,
-      grantTraverse().database("foo").user("joe").role("custom").map
+      read().database("foo").user("joe").role("custom").map,
+      traverse().database("foo").user("joe").role("custom").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -503,8 +503,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      grantRead().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      grantTraverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      read().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      traverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)

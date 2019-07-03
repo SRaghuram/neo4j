@@ -28,8 +28,6 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
 
-  val grantMap: Map[String, String] = Map("grant" -> "GRANTED", "graph" -> "*")
-
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
     Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
     Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true, "member" -> null),
@@ -39,41 +37,41 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
-    grantTraverse().role("reader").node("*").map,
-    grantTraverse().role("reader").relationship("*").map,
-    grantRead().role("reader").node("*").map,
-    grantRead().role("reader").relationship("*").map,
+    traverse().role("reader").node("*").map,
+    traverse().role("reader").relationship("*").map,
+    read().role("reader").node("*").map,
+    read().role("reader").relationship("*").map,
 
-    grantTraverse().role("editor").node("*").map,
-    grantTraverse().role("editor").relationship("*").map,
-    grantRead().role("editor").node("*").map,
-    grantRead().role("editor").relationship("*").map,
-    grantWrite().role("editor").node("*").map,
-    grantWrite().role("editor").relationship("*").map,
+    traverse().role("editor").node("*").map,
+    traverse().role("editor").relationship("*").map,
+    read().role("editor").node("*").map,
+    read().role("editor").relationship("*").map,
+    write().role("editor").node("*").map,
+    write().role("editor").relationship("*").map,
 
-    grantTraverse().role("publisher").node("*").map,
-    grantTraverse().role("publisher").relationship("*").map,
-    grantRead().role("publisher").node("*").map,
-    grantRead().role("publisher").relationship("*").map,
-    grantWrite().role("publisher").node("*").map,
-    grantWrite().role("publisher").relationship("*").map,
+    traverse().role("publisher").node("*").map,
+    traverse().role("publisher").relationship("*").map,
+    read().role("publisher").node("*").map,
+    read().role("publisher").relationship("*").map,
+    write().role("publisher").node("*").map,
+    write().role("publisher").relationship("*").map,
     grantToken().role("publisher").map,
 
-    grantTraverse().role("architect").node("*").map,
-    grantTraverse().role("architect").relationship("*").map,
-    grantRead().role("architect").node("*").map,
-    grantRead().role("architect").relationship("*").map,
-    grantWrite().role("architect").node("*").map,
-    grantWrite().role("architect").relationship("*").map,
+    traverse().role("architect").node("*").map,
+    traverse().role("architect").relationship("*").map,
+    read().role("architect").node("*").map,
+    read().role("architect").relationship("*").map,
+    write().role("architect").node("*").map,
+    write().role("architect").relationship("*").map,
     grantToken().role("architect").map,
     grantSchema().role("architect").map,
 
-    grantTraverse().role("admin").node("*").map,
-    grantTraverse().role("admin").relationship("*").map,
-    grantRead().role("admin").node("*").map,
-    grantRead().role("admin").relationship("*").map,
-    grantWrite().role("admin").node("*").map,
-    grantWrite().role("admin").relationship("*").map,
+    traverse().role("admin").node("*").map,
+    traverse().role("admin").relationship("*").map,
+    read().role("admin").node("*").map,
+    read().role("admin").relationship("*").map,
+    write().role("admin").node("*").map,
+    write().role("admin").relationship("*").map,
     grantToken().role("admin").map,
     grantSchema().role("admin").map,
     grantSystem().role("admin").map,
@@ -119,13 +117,15 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
 
-  def grantTraverse(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "graph")).action("find")
-  def grantRead(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).action("read")
-  def grantWrite(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "all_properties")).action("write")
+  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("grant" -> grant, "graph" -> "*")
 
-  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "token")).action("write").node("*")
-  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "schema")).action("write").node("*")
-  def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(grantMap + ("resource" -> "system")).action("write").node("*")
+  def traverse(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("find")
+  def read(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
+  def write(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
+
+  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "token")).action("write").node("*")
+  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "schema")).action("write").node("*")
+  def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "system")).action("write").node("*")
 
   def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
