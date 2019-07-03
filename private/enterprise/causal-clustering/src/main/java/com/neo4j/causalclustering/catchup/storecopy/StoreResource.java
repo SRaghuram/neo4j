@@ -37,6 +37,11 @@ class StoreResource
         return path;
     }
 
+    File file()
+    {
+        return file;
+    }
+
     int recordSize()
     {
         return recordSize;
