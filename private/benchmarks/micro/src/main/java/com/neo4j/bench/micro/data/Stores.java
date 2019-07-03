@@ -5,12 +5,13 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
@@ -65,7 +66,7 @@ public class Stores
 
     public Neo4jConfig neo4jConfigFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
     {
-        return Neo4jConfig.fromFile( findNeo4jConfigFor( FullBenchmarkName.from( benchmarkGroup, benchmark ) ) );
+        return Neo4jConfigBuilder.fromFile( findNeo4jConfigFor( FullBenchmarkName.from( benchmarkGroup, benchmark ) ) ).build();
     }
 
     StoreAndConfig prepareDb(
@@ -146,7 +147,7 @@ public class Stores
         Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
         System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         forceRecreateFile( neo4jConfigFile );
-        neo4jConfig.writeToFile( neo4jConfigFile );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;
     }
 

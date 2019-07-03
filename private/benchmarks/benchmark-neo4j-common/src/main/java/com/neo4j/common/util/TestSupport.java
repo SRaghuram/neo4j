@@ -3,9 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.util;
+package com.neo4j.common.util;
 
-import com.neo4j.bench.client.database.Store;
+import com.neo4j.bench.common.Store;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;

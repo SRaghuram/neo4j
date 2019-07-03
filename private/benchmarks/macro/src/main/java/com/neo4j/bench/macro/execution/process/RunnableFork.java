@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.process.JvmArgs;
 import com.neo4j.bench.client.profiling.ExternalProfiler;
@@ -13,6 +12,7 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;

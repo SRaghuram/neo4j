@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -96,11 +96,12 @@ public class Expand extends AbstractCoreBenchmark
                 .withOutRelationships( RELATIONSHIP_DEFINITIONS )
                 .withRelationshipLocality( Expand_locality )
                 .withRelationshipOrder( Order.SHUFFLED )
-                .withNeo4jConfig( Neo4jConfig
+                .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
                                           .setDense( Expand_dense )
                                           .withSetting( record_format, Expand_format )
-                                          .setTransactionMemory( Expand_txMemory ) )
+                                          .setTransactionMemory( Expand_txMemory )
+                                          .build() )
                 .isReusableStore( true )
                 .build();
     }

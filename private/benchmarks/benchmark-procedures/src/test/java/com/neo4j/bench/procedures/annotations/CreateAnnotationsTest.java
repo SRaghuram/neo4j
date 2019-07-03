@@ -10,7 +10,7 @@ import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,13 +37,14 @@ import static com.neo4j.bench.client.model.Annotation.COMMENT;
 import static com.neo4j.bench.client.model.Annotation.DATE;
 import static com.neo4j.bench.client.model.Annotation.EVENT_ID;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 
 public class CreateAnnotationsTest

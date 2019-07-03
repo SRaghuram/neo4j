@@ -10,7 +10,7 @@ import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -125,7 +125,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBen
                 .withNodeCount( NODE_COUNT )
                 .withNeo4jConfig(
                         // remove one variable. cost of creating (non) dense nodes is covered by another test
-                        Neo4jConfig.empty().withSetting( dense_node_threshold, NODES_ARE_NEVER_DENSE ) )
+                        Neo4jConfigBuilder.empty().withSetting( dense_node_threshold, NODES_ARE_NEVER_DENSE ).build() )
                 .withMandatoryRelationshipConstraints( new RelationshipKeyDefinition( TYPE, KEY ) )
                 .isReusableStore( false )
                 .build();

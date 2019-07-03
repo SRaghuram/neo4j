@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -85,11 +86,12 @@ public class ReadRelationship extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Neo4jConfig neo4jConfig = Neo4jConfig
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder
                 .empty()
                 .withSetting( dense_node_threshold, denseNodeThreshold() )
                 .withSetting( record_format, ReadRelationship_format )
-                .setTransactionMemory( ReadRelationship_txMemory );
+                .setTransactionMemory( ReadRelationship_txMemory )
+                .build();
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIP_DEFINITIONS )

@@ -6,11 +6,11 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.process.HasPid;
 import com.neo4j.bench.client.process.Pid;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import picocli.CommandLine;

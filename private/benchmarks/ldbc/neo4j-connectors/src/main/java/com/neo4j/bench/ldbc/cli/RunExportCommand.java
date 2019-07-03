@@ -51,6 +51,7 @@ import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.JvmVersion;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
@@ -516,12 +517,12 @@ public class RunExportCommand implements Runnable
             FileUtils.tryCreateDirs( resultsDir, false );
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jPackageForJvmArgs );
 
-            Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile )
-                                                 .mergeWith( Neo4jConfig.fromFile( neo4jBenchmarkConfigFile ) );
+            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile )
+                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jBenchmarkConfigFile ).build() ).build();
             System.out.println( "Merged Neo4j config:\n" + neo4jConfig.toString() );
 
             Path mergedNeo4jConfigPath = new File( resultsDir, "merged-neo4j.conf" ).toPath();
-            neo4jConfig.writeToFile( mergedNeo4jConfigPath );
+            Neo4jConfigBuilder.writeToFile( neo4jConfig, mergedNeo4jConfigPath );
             System.out.println( "Merged Neo4j config file written into: " + mergedNeo4jConfigPath.toString() );
 
             Map<String,String> benchmarkParams = new HashMap<>();

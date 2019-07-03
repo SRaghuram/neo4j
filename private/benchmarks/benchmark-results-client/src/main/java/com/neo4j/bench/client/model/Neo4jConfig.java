@@ -7,81 +7,27 @@ package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.apache.commons.configuration.PropertiesConfiguration;
-
-import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.neo4j.configuration.ExternalSettings;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.config.Setting;
-
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
-import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
-import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
 
 public class Neo4jConfig
 {
-    private static final String BOLT_ADDRESS_SETTING = "dbms.connector.bolt.listen_address";
-
-    public static Neo4jConfig withDefaults()
-    {
-        return empty().withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
-                      .withSetting( GraphDatabaseSettings.fail_on_missing_files, "false" );
-    }
 
     public static Neo4jConfig empty()
     {
         return new Neo4jConfig();
     }
 
-    public static Neo4jConfig fromFile( File neo4jConfigFile )
+    public static Neo4jConfig from( Map<String,String> config, List<String> jvmArgs )
     {
-        return fromFile( null == neo4jConfigFile ? null : neo4jConfigFile.toPath() );
-    }
-
-    public static Neo4jConfig fromFile( Path neo4jConfigFile )
-    {
-        Neo4jConfig neo4jConfig = Neo4jConfig.empty();
-        if ( null == neo4jConfigFile )
-        {
-            return neo4jConfig;
-        }
-        try
-        {
-            PropertiesConfiguration config = new PropertiesConfiguration( neo4jConfigFile.toFile() );
-            Iterator<String> keys = config.getKeys();
-            while ( keys.hasNext() )
-            {
-                String settingName = keys.next();
-                if ( settingName.startsWith( ExternalSettings.additionalJvm.name() ) )
-                {
-                    for ( Object settingValue : config.getList( settingName ) )
-                    {
-                        neo4jConfig = neo4jConfig.addJvmArg( (String) settingValue );
-                    }
-                }
-                else
-                {
-                    String settingValue = config.getString( settingName );
-                    neo4jConfig = neo4jConfig.withStringSetting( settingName, settingValue );
-                }
-            }
-            return neo4jConfig;
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error loading neo4j configuration from: " + neo4jConfigFile.toAbsolutePath(), e );
-        }
+        return new Neo4jConfig( config, jvmArgs );
     }
 
     public static Neo4jConfig fromJson( String json )
@@ -147,43 +93,7 @@ public class Neo4jConfig
         return new Neo4jConfig( new HashMap<>( config ), newJvmArgs );
     }
 
-    public Neo4jConfig withSetting( Setting setting, String value )
-    {
-        return withStringSetting( setting.name(), value );
-    }
-
-    public Neo4jConfig removeSetting( Setting setting )
-    {
-        HashMap<String,String> newConfig = new HashMap<>( config );
-        newConfig.remove( setting.name() );
-        return new Neo4jConfig( newConfig, new ArrayList<>( jvmArgs ) );
-    }
-
-    public Neo4jConfig setDense( boolean isDense )
-    {
-        String denseNodeThreshold = isDense
-                                    // dense node threshold set to min --> all nodes are dense
-                                    ? "1"
-                                    // dense node threshold set to max --> no nodes are dense
-                                    : Integer.toString( Integer.MAX_VALUE );
-
-        return withSetting( dense_node_threshold, denseNodeThreshold );
-    }
-
-    public Neo4jConfig setTransactionMemory( String setting )
-    {
-        String translatedValue = setting.equals( "on_heap" )
-                                 ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
-                                 : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
-        return withSetting( tx_state_memory_allocation, translatedValue );
-    }
-
-    public Neo4jConfig setBoltUri( String boltUri )
-    {
-        return withStringSetting( BOLT_ADDRESS_SETTING, boltUri );
-    }
-
-    private Neo4jConfig withStringSetting( String setting, String value )
+    public Neo4jConfig withSetting( String setting, String value )
     {
         HashMap<String,String> newConfig = new HashMap<>( config );
         newConfig.put( setting, value );
@@ -195,15 +105,6 @@ public class Neo4jConfig
         Neo4jConfig newNeo4jConfig = new Neo4jConfig( new HashMap<>( config ), new ArrayList<>( jvmArgs ) );
         newNeo4jConfig.config.putAll( otherNeo4jConfig.config );
         return newNeo4jConfig.addJvmArgs( otherNeo4jConfig.jvmArgs );
-    }
-
-    public void writeToFile( Path file )
-    {
-        List<String> lines = new ArrayList<>();
-        config.forEach( ( key, value ) -> lines.add( key + "=" + value ) );
-        jvmArgs.forEach( jvmArg -> lines.add( ExternalSettings.additionalJvm.name() + "=" + jvmArg ) );
-        String contents = String.join( "\n", lines ) + "\n";
-        BenchmarkUtil.stringToFile( contents, file );
     }
 
     public String toJson()
@@ -223,13 +124,14 @@ public class Neo4jConfig
             return false;
         }
         Neo4jConfig that = (Neo4jConfig) o;
-        return Objects.equals( config, that.config );
+        return Objects.equals( config, that.config ) &&
+               Objects.equals( jvmArgs, that.jvmArgs );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( config );
+        return Objects.hash( config, jvmArgs );
     }
 
     @Override

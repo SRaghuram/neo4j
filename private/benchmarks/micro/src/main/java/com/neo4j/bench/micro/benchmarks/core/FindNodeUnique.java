@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -112,7 +112,7 @@ public class FindNodeUnique extends AbstractCoreBenchmark
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
                 .withNodeProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( FindNodeUnique_txMemory ) )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( FindNodeUnique_txMemory ).build() )
                 .isReusableStore( true );
         switch ( FindNodeUnique_index )
         {

@@ -8,7 +8,7 @@ package com.neo4j.bench.ldbc.cli;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.util.MapUtils;
-import com.neo4j.bench.client.database.Store;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;

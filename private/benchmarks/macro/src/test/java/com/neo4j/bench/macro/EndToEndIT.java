@@ -12,7 +12,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.Parameters;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
@@ -23,14 +22,16 @@ import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.results.RunPhase;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.client.util.TestSupport;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+
+import com.neo4j.common.util.TestSupport;
 import io.findify.s3mock.S3Mock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -166,7 +167,7 @@ class EndToEndIT
 
             // prepare neo4j config file
             Path neo4jConfig = absoluteTempPath.resolve( "neo4j.config" );
-            Neo4jConfig.withDefaults().writeToFile( neo4jConfig );
+            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
             // create empty store
             Path dbPath = absoluteTempPath.resolve( "db" );

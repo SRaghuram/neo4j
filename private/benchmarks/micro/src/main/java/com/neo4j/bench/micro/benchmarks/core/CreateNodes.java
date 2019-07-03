@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
@@ -63,10 +63,11 @@ public class CreateNodes extends AbstractCoreBenchmark
     protected DataGeneratorConfig getConfig()
     {
         return new DataGeneratorConfigBuilder()
-                .withNeo4jConfig( Neo4jConfig
+                .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
                                           .withSetting( record_format, CreateNodes_format )
-                                          .setTransactionMemory( CreateNodes_txMemory ) )
+                                          .setTransactionMemory( CreateNodes_txMemory )
+                                          .build())
                 .isReusableStore( false )
                 .build();
     }

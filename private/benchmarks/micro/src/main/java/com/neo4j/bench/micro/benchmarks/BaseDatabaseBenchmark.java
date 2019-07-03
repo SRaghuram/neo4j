@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;

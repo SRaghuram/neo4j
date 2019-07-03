@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 

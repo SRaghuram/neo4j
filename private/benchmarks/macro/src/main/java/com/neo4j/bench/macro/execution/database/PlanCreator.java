@@ -5,15 +5,14 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Plan;
 import com.neo4j.bench.client.model.PlanCompilationMetrics;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.PlannerDescription;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;

@@ -8,8 +8,9 @@ package com.neo4j.bench.micro.data;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -60,7 +61,7 @@ public class DataGeneratorTestUtil
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
-        config.neo4jConfig().writeToFile( NEO4J_CONFIG );
+        Neo4jConfigBuilder.writeToFile( config.neo4jConfig(), NEO4J_CONFIG );
 
         generator.generate( store, NEO4J_CONFIG );
 

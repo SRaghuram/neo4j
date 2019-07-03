@@ -20,7 +20,6 @@
         <guava.version>27.1-jre</guava.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
-        <neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -39,12 +38,6 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${commons.io.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial</artifactId>
-            <version>${neo4j.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -96,13 +89,14 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>com.neo4j.test</groupId>
-            <artifactId>neo4j-harness-commercial</artifactId>
-            <version>${neo4j.version}</version>
+            <groupId>org.neo4j</groupId>
+            <artifactId>io-test-utils</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+        
+
     </dependencies>
 
     <build>
@@ -149,7 +143,7 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!-- Shading signed JARs will fail without 
+                                    <!-- Shading signed JARs will fail without
                                         this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
                                     <artifact>*:*</artifact>
                                     <excludes>

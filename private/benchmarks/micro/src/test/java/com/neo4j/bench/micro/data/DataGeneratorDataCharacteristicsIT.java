@@ -5,14 +5,15 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.TestSupport;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
+import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +41,7 @@ class DataGeneratorDataCharacteristicsIT
     @Inject
     private TestDirectory temporaryFolder;
 
-    private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfig.withDefaults();
+    private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfigBuilder.withDefaults().build();
 
     private static final double TOLERANCE = 0.05;
     private static final long RNG_SEED = 42;
@@ -56,14 +57,14 @@ class DataGeneratorDataCharacteristicsIT
                 .withRngSeed( RNG_SEED );
         Path absoluteTempPath = temporaryFolder.absolutePath().toPath();
         neo4jConfigPath = absoluteTempPath.resolve( "neo4j.config" );
-        NEO4J_CONFIG.writeToFile( neo4jConfigPath );
+        Neo4jConfigBuilder.writeToFile( NEO4J_CONFIG, neo4jConfigPath );
     }
 
     @Test
     void shouldCreateEmptyGraph() throws IOException
     {
         // Given
-        Store store = TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
+        Store store = com.neo4j.common.util.TestSupport.createEmptyStore( temporaryFolder.storeDir().toPath(), neo4jConfigPath );
 
         builder
                 .withNeo4jConfig( NEO4J_CONFIG )

@@ -22,6 +22,7 @@ import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.queries.SubmitTestRun;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
@@ -161,7 +162,7 @@ public class Main
     {
         BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
-        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
+        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
         String storeDir = new File( "store" ).getAbsolutePath();
 
         for ( String size : sizes )

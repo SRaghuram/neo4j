@@ -6,7 +6,6 @@
 package com.neo4j.bench.macro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
@@ -15,6 +14,8 @@ import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
@@ -172,15 +173,16 @@ class ConvenientLocalExecutionIT
     {
         Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
         Neo4jConfig neo4jConfig = neo4jConfig();
-        neo4jConfig.writeToFile( neo4jConfigFile );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;
     }
 
     private Neo4jConfig neo4jConfig()
     {
         // Unless NEO4J_CONFIG points to a real file, this is equivalent to Neo4jConfig.empty()
-        return Neo4jConfig.fromFile( NEO4J_CONFIG )
+        return Neo4jConfigBuilder.fromFile( NEO4J_CONFIG )
                           // Additional settings you wish to run with
-                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" );
+                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" )
+                          .build();
     }
 }

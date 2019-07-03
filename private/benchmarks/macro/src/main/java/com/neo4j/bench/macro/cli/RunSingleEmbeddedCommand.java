@@ -6,7 +6,6 @@
 package com.neo4j.bench.macro.cli;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.Parameters;
@@ -18,6 +17,8 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.Database;
@@ -170,7 +171,7 @@ public class RunSingleEmbeddedCommand implements Runnable
             {
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             }
-            Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
+            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
             QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
                                                                   forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
             Pid clientPid = HasPid.getPid();
@@ -199,7 +200,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                                             ForkDirectory forkDirectory )
     {
         Path neo4jConfigFile = forkDirectory.create( "neo4j-executing.conf" );
-        neo4jConfig.writeToFile( neo4jConfigFile );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return EmbeddedDatabase.startWith( store, edition, neo4jConfigFile );
     }
 

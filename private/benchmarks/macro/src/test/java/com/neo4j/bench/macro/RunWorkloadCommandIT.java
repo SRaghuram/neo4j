@@ -7,18 +7,17 @@ package com.neo4j.bench.macro;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.AddProfilesCommand;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.Store;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.client.util.TestSupport;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
@@ -29,6 +28,7 @@ import com.neo4j.bench.macro.workload.Workload;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.neo4j.common.util.TestSupport;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -226,7 +226,7 @@ class RunWorkloadCommandIT
             Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
             Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
             Path neo4jConfiguration = createTempFilePath( temporaryFolder.absolutePath() );
-            Neo4jConfig.withDefaults().writeToFile( neo4jConfiguration );
+            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfiguration );
             Store store = createEmptyStoreFor( workload, neo4jConfiguration );
             Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -83,7 +83,7 @@ public class ReadLabel extends AbstractCoreBenchmark
                 .withLabelOrder( Order.ORDERED )
                 .withLabelLocality( ReadLabel_locality )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( ReadLabel_txMemory ) )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( ReadLabel_txMemory ).build() )
                 .build();
     }
 

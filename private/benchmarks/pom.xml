@@ -22,6 +22,7 @@
         <neo4j-java-driver.version>1.7.3</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
+		<neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -74,6 +75,7 @@
         <module>macro</module>
         <module>import</module>
         <module>benchmark-infra</module>
+        <module>benchmark-neo4j-common</module>
     </modules>
 
     <profiles>

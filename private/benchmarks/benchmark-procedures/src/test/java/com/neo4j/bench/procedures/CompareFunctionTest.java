@@ -9,8 +9,6 @@ import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator;
-import com.neo4j.bench.client.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.bench.procedures.detection.CompareFunction;
 import com.neo4j.bench.procedures.detection.DateTimeFunction;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
@@ -22,6 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.net.URI;
+import com.neo4j.common.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
+
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;

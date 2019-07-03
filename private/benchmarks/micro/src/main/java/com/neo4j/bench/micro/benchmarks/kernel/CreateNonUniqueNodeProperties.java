@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -149,7 +149,7 @@ public class CreateNonUniqueNodeProperties extends AbstractKernelBenchmark
                 .withSchemaIndexes( schemaIndexes( KEYS ) )
                 .withUniqueConstraints( uniquenessConstraints( KEYS ) )
                 .isReusableStore( false )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( CreateNonUniqueNodeProperties_txMemory ) )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateNonUniqueNodeProperties_txMemory ).build() )
                 .build();
     }
 

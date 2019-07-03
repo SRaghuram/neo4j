@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.client.model.Neo4jConfig
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
@@ -26,6 +25,7 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.mutable
+import com.neo4j.bench.common.Neo4jConfigBuilder
 
 @BenchmarkEnabled(true)
 class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
@@ -160,12 +160,13 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .withNeo4jConfig(
-        Neo4jConfig
+        Neo4jConfigBuilder
         .empty()
         .withSetting(space_filling_curve_max_bits, FixedDensityPointIndexSeek_maxBits.toString)
         .withSetting(space_filling_curve_extra_levels, FixedDensityPointIndexSeek_extraLevels.toString)
         .withSetting(space_filling_curve_top_threshold, FixedDensityPointIndexSeek_thresholdTop.toString)
-        .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString))
+        .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
+        .build())
       .build()
   }
 

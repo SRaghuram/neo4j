@@ -23,6 +23,7 @@ import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.jmh.api.Runner;
@@ -226,10 +227,11 @@ public class RunExportCommand implements Runnable
             required = true )
     private String triggeredBy;
 
-    static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfig.empty()
+    static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfigBuilder.empty()
                                                             .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
                                                             .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                            .withSetting( new HttpConnector( "https" ).enabled, "false" );
+                                                            .withSetting( new HttpConnector( "https" ).enabled, "false" )
+                                                            .build();
 
     @Override
     public void run()
@@ -244,9 +246,10 @@ public class RunExportCommand implements Runnable
         // trim anything like '-M01' from end of Neo4j version string
         neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
 
-        Neo4jConfig baseNeo4jConfig = Neo4jConfig.withDefaults()
-                                                 .mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) )
-                                                 .mergeWith( ADDITIONAL_CONFIG );
+        Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
+                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                 .mergeWith( ADDITIONAL_CONFIG )
+                                                 .build();
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );
