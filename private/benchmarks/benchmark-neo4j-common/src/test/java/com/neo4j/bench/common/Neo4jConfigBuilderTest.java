@@ -27,6 +27,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import static java.util.Arrays.asList;
+
 public class Neo4jConfigBuilderTest
 {
 
@@ -39,6 +41,9 @@ public class Neo4jConfigBuilderTest
     public void shouldSerialize() throws IOException
     {
         assertSerialization( Neo4jConfigBuilder.withDefaults().build() );
+        assertSerialization( Neo4jConfigBuilder.empty().setBoltUri( "http://localhost:7678" ).build() );
+        assertSerialization( Neo4jConfigBuilder.empty().setDense( false ).setTransactionMemory( "native" ).build() );
+        assertSerialization( Neo4jConfigBuilder.empty().addJvmArgs( asList( "-Xmx4g", "-Xms4g" ) ).build() );
         assertSerialization( Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile ).build() );
     }
 
@@ -67,17 +72,6 @@ public class Neo4jConfigBuilderTest
 
         assertThat( config.getJvmArgs(), equalTo( expectedJvmArgs ) );
         assertThat( config.toMap(), equalTo( expectedSettings ) );
-    }
-
-    private void assertSerialization( Neo4jConfig config0 ) throws IOException
-    {
-        Path configFile = temporaryFolder.newFile().toPath();
-        Neo4jConfigBuilder.writeToFile( config0, configFile );
-        Neo4jConfig config1 = Neo4jConfigBuilder.fromFile( configFile ).build();
-        assertThat( config0, equalTo( config1 ) );
-        String json = config1.toJson();
-        Neo4jConfig config2 = Neo4jConfig.fromJson( json );
-        assertThat( config1, equalTo( config2 ) );
     }
 
     @Test
@@ -120,4 +114,14 @@ public class Neo4jConfigBuilderTest
         return after;
     }
 
+    private void assertSerialization( Neo4jConfig config0 ) throws IOException
+    {
+        Path configFile = temporaryFolder.newFile().toPath();
+        Neo4jConfigBuilder.writeToFile( config0, configFile );
+        Neo4jConfig config1 = Neo4jConfigBuilder.fromFile( configFile ).build();
+        assertThat( config0, equalTo( config1 ) );
+        String json = config1.toJson();
+        Neo4jConfig config2 = Neo4jConfig.fromJson( json );
+        assertThat( config1, equalTo( config2 ) );
+    }
 }

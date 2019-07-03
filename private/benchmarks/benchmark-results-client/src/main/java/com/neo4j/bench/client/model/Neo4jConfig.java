@@ -124,13 +124,14 @@ public class Neo4jConfig
             return false;
         }
         Neo4jConfig that = (Neo4jConfig) o;
-        return Objects.equals( config, that.config );
+        return Objects.equals( config, that.config ) &&
+               Objects.equals( jvmArgs, that.jvmArgs );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( config );
+        return Objects.hash( config, jvmArgs );
     }
 
     @Override

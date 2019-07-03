@@ -133,7 +133,7 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder setBoltUri( String boltUri )
     {
-        neo4jConfig.withSetting( BOLT_ADDRESS_SETTING, boltUri );
+        neo4jConfig = neo4jConfig.withSetting( BOLT_ADDRESS_SETTING, boltUri );
         return this;
     }
 
