@@ -116,7 +116,7 @@ public class DbmsReconciler
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue, precedence ) );
     }
 
-    static Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators, BinaryOperator<OperatorState> precedence )
+    private static Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators, BinaryOperator<OperatorState> precedence )
     {
         return operators.stream()
                 .map( DbmsOperator::getDesired )

@@ -57,10 +57,14 @@ class ShutdownOperatorTest
 
         assertEquals( triggerCalls.size(), 2 );
         var initialDesired = triggerCalls.get( 0 ).first();
-        assertNotEquals( initialDesired.get( databaseIdRepository.systemDatabase() ), STOPPED );
+        var expected = databases.stream()
+                .filter( id -> !databaseIdRepository.systemDatabase().equals( id ) )
+                .collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
+        assertEquals( expected, initialDesired );
 
         var subsequentDesired = triggerCalls.get( 1 ).first();
-        assertEquals( subsequentDesired.get( databaseIdRepository.systemDatabase() ), STOPPED );
+        expected.put( databaseIdRepository.systemDatabase(), STOPPED );
+        assertEquals( expected, subsequentDesired );
     }
 
     @Test
