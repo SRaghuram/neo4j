@@ -91,7 +91,7 @@ class Worker(val workerId: Int,
             } else {
               pipelineTask.close(resources)
             }
-      }
+        }
         true
       } catch {
         // Failure while executing `task`

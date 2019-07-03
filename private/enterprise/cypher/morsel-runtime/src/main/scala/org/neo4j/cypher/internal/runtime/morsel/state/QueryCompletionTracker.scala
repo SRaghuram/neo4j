@@ -195,7 +195,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (newCount == 0) {
       try {
         status.compareAndExchange(Running, CountReachedZero) match {
-          //case CountReachedZero is impossible by design
+          case CountReachedZero =>
+            throw new IllegalStateException("Someone else updated the state to CountReachedZero. That should not happen.")
           case Errors =>
             subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
           case Running =>
@@ -215,8 +216,9 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def error(throwable: Throwable): Unit = {
-    status.set(Errors)
+    // First add and then set the status, to avoid the situation where decrement encounters the status `Error` but has no error to report.
     errors.add(throwable)
+    status.set(Errors)
   }
 
   override def isCompleted: Boolean = count.get() == 0
@@ -245,6 +247,9 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def request(numberOfRecords: Long): Unit = {
+    // Instead of just adding demand when the state is `Running`, we also do it in the case of error or cancel.
+    // Otherwise we would count down the latch immediatly on any subsequent `await` call, and not allow
+    // for proper cleanup of in-flight tasks.
     if (status.get() != CountReachedZero) {
       //there is new demand make sure to reset the latch
       if (numberOfRecords > 0) {
