@@ -5,10 +5,12 @@
  */
 package org.neo4j.cypher.internal
 
-import java.util.concurrent.ThreadFactory
+import java.util.concurrent.{ThreadFactory, TimeUnit}
 
 import org.neo4j.cypher.internal.runtime.morsel.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
 import org.neo4j.kernel.lifecycle.LifecycleAdapter
+
+import scala.concurrent.duration.Duration
 
 /**
   * Worker which polls scheduler tracer data and writes it to a [[DataPointFlusher]]. Makes sure to close
@@ -17,6 +19,8 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter
 class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
                                   dataBuffers: SingleConsumerDataBuffers,
                                   threadFactory: ThreadFactory) extends LifecycleAdapter {
+
+  private val threadJoinWait = Duration(1, TimeUnit.MINUTES)
 
   @volatile
   private var isTimeToStop = false
@@ -43,6 +47,6 @@ class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
 
   override def stop(): Unit = {
     isTimeToStop = true
-    thread.join(1000)
+    thread.join(threadJoinWait.toMillis)
   }
 }

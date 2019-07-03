@@ -5,20 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.locks.LockSupport
+import java.util.concurrent.{ThreadFactory, TimeUnit}
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManager}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.lifecycle.Lifecycle
 import org.neo4j.values.AnyValue
+
+import scala.concurrent.duration.Duration
 
 /**
   * [[QueryExecutor]] implementation which uses a fixed number (n) of workers to execute
@@ -30,11 +32,13 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 transactionBinder: TransactionBinder,
                                 queryResourceFactory: () => QueryResources)
   extends WorkerManager(numberOfWorkers, new QueryManager, queryResourceFactory)
-    with QueryExecutor
-    with WorkerWaker
-    with Lifecycle {
+  with QueryExecutor
+  with WorkerWaker
+  with Lifecycle {
 
   // ========== LIFECYCLE ===========
+
+  private val threadJoinWait = Duration(1, TimeUnit.MINUTES)
 
   @volatile private var workerThreads: Array[Thread] = _
 
@@ -42,6 +46,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   override def start(): Unit = {
     DebugLog.log("starting worker threads")
+    workers.foreach(_.isTimeToStop = false)
     workerThreads = workers.map(threadFactory.newThread(_))
     workerThreads.foreach(_.start())
     DebugLog.logDiff("done")
@@ -49,9 +54,9 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   override def stop(): Unit = {
     DebugLog.log("stopping worker threads")
-    workers.foreach(_.stop())
+    workers.foreach(_.isTimeToStop = true)
     workerThreads.foreach(LockSupport.unpark)
-    workerThreads.foreach(_.join(1000))
+    workerThreads.foreach(_.join(threadJoinWait.toMillis))
     workers.foreach(_.close())
     DebugLog.logDiff("done")
   }
@@ -121,7 +126,6 @@ class FixedWorkersQueryExecutor(morselSize: Int,
       } else {
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)
       }
-
 
     val executingQuery = new ExecutingQuery(executionState,
                                             queryContext,
