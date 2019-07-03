@@ -54,7 +54,6 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
@@ -161,12 +160,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
         var internalOperator = new ClusterInternalDbmsOperator();
 
         //TODO: Pass internal operator to database manager so it can pass to factories
-        var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, log, catchupComponentsProvider::createDatabaseComponents,
+        var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig );
 
         TransactionEventService txEventService = new SystemDatabaseOnlyTransactionEventService();

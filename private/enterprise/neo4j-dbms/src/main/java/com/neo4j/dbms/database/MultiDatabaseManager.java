@@ -28,15 +28,14 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
 
-    //TODO: Why do we bother to pass a Log all the way down from DatabaseManagementServiceFactory. Why not use create one here?
-    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
+    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition )
     {
-        this( globalModule, edition, log, false );
+        this( globalModule, edition, false );
     }
 
-    MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, boolean manageDatabasesOnStartAndStop )
+    MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, boolean manageDatabasesOnStartAndStop )
     {
-        super( globalModule, edition, log, manageDatabasesOnStartAndStop );
+        super( globalModule, edition, manageDatabasesOnStartAndStop );
         maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
     }
 

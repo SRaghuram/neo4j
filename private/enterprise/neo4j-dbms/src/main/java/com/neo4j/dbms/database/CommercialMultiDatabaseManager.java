@@ -14,9 +14,9 @@ import org.neo4j.logging.Log;
 
 public class CommercialMultiDatabaseManager extends MultiDatabaseManager<StandaloneDatabaseContext>
 {
-    public CommercialMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log )
+    public CommercialMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition )
     {
-        super( globalModule, edition, log );
+        super( globalModule, edition );
     }
 
     @Override

@@ -40,10 +40,10 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final CatchupComponentsFactory catchupComponentsFactory;
     private final Set<DatabaseId> shouldRecreateContext;
 
-    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
+    public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
-        super( globalModule, edition, log );
+        super( globalModule, edition );
         this.contextFactory = DefaultClusteredDatabaseContext::new;
         this.logProvider = logProvider;
         this.fs = fs;

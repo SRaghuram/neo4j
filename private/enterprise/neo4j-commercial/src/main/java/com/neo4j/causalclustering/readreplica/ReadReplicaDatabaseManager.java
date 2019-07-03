@@ -28,10 +28,10 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final ReadReplicaEditionModule edition;
 
-    ReadReplicaDatabaseManager( GlobalModule globalModule, ReadReplicaEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
+    ReadReplicaDatabaseManager( GlobalModule globalModule, ReadReplicaEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
-        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config );
+        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config );
         this.edition = edition;
     }
 

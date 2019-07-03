@@ -25,7 +25,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
 
     public StubMultiDatabaseManager()
     {
-        super( globalModule, null, NullLog.getInstance(), true );
+        super( globalModule, null, true );
     }
 
     @Override

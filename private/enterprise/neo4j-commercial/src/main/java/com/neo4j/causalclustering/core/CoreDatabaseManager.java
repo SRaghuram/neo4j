@@ -39,10 +39,10 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final CoreEditionModule edition;
 
-    CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, Log log, CatchupComponentsFactory catchupComponentsFactory,
+    CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
     {
-        super( globalModule, edition, log, catchupComponentsFactory, fs, pageCache, logProvider, config );
+        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config );
         this.edition = edition;
     }
 

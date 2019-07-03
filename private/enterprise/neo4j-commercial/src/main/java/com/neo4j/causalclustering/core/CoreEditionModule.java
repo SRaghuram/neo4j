@@ -91,7 +91,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
@@ -308,12 +307,12 @@ public class CoreEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule, Log log )
+    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
         var internalOperator = new ClusterInternalDbmsOperator();
 
         //TODO: Pass internal operator to database manager so it can pass to factories
-        var databaseManager = new CoreDatabaseManager( globalModule, this, log, catchupComponentsProvider::createDatabaseComponents,
+        var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig() );
 
         TransactionEventService txEventService = new SystemDatabaseOnlyTransactionEventService();
