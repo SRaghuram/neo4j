@@ -7,7 +7,11 @@ package com.neo4j.metrics.output;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
+import com.codahale.metrics.jmx.ObjectNameFactory;
 import com.neo4j.metrics.MetricsSettings;
+
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -25,6 +29,7 @@ import static com.neo4j.metrics.MetricsSettings.graphiteServer;
 import static com.neo4j.metrics.MetricsSettings.metricsPrefix;
 import static com.neo4j.metrics.MetricsSettings.prometheusEnabled;
 import static com.neo4j.metrics.MetricsSettings.prometheusEndpoint;
+import static javax.management.ObjectName.quote;
 
 public class EventReporterBuilder
 {
@@ -82,7 +87,8 @@ public class EventReporterBuilder
 
         if ( config.get( MetricsSettings.jmxEnabled ) )
         {
-            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + METRICS_JMX_BEAN_SUFFIX ).build();
+            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + METRICS_JMX_BEAN_SUFFIX )
+                    .createsObjectNamesWith( new MetricsObjectNameFactory() ).build();
             life.add( new JmxOutput( jmxReporter ) );
         }
 
@@ -92,5 +98,32 @@ public class EventReporterBuilder
     private String createMetricsPrefix( Config config )
     {
         return config.get( metricsPrefix );
+    }
+
+    private static class MetricsObjectNameFactory implements ObjectNameFactory
+    {
+        private static final String NAME = "name";
+
+        @Override
+        public ObjectName createName( String type, String domain, String name )
+        {
+            try
+            {
+                ObjectName objectName = new ObjectName( domain, NAME, name );
+                String validatedName = objectName.isPropertyValuePattern() ? quote( name ) : name;
+                return new ObjectName( domain, NAME, validatedName );
+            }
+            catch ( MalformedObjectNameException e )
+            {
+                try
+                {
+                    return new ObjectName( domain, NAME, quote( name ) );
+                }
+                catch ( MalformedObjectNameException ne )
+                {
+                    throw new RuntimeException( ne );
+                }
+            }
+        }
     }
 }
