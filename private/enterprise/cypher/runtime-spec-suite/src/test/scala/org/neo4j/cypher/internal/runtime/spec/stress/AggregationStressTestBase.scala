@@ -39,7 +39,7 @@ abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntim
           (g, rowsForXAndY) <- rowsForX.groupBy(_ (1).getId.toInt % 2) // group by y.prop % 2
           amount = rowsForXAndY.map { row =>
             val Array(x, y) = row
-            x.getId + y.getId
+            x.getProperty("propWithDuplicates").asInstanceOf[Int] + y.getId
           }.sum
         } yield Array(g, amount)
       ,

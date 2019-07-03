@@ -243,7 +243,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - node and property") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
           .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
@@ -253,7 +253,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - single node") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
           .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
@@ -265,7 +265,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("should pass cached property through distinct when it's not part of a distinct column - multiple nodes") {
     execute("MATCH (n:Awesome {prop1: 40})-[:R]-(b) MERGE (b)-[:R2]->()")
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1",
       executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
@@ -277,7 +277,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with renaming of node") {
-    val config = Configs.InterpretedAndSlotted + Configs.Compiled
+    val config = Configs.All
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
     val result = executeWith(config, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
@@ -327,7 +327,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    val result = executeWith(Configs.All, query)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")

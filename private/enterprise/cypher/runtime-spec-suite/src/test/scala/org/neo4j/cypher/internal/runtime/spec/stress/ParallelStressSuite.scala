@@ -70,11 +70,12 @@ abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeConte
 
   def init(): Unit = {
     nodes = nodePropertyGraph(graphSize, {
-      case i => Map("prop" -> i, "propWithDuplicates" -> ((i/2) * 2))
+      case i => Map("prop" -> i, "text" -> i.toString, "propWithDuplicates" -> ((i/2) * 2))
     }, "Label")
     try {
       index("Label", "prop")
       index("Label", "text")
+      index("Label", "propWithDuplicates")
     } catch {
       case e:IllegalStateException =>
         // TODO This is to investigate flaky tests
@@ -185,7 +186,7 @@ trait RHSOfApplyOneChildStressSuite {
       .produceResults(resultColumns: _*)
       .apply()
       .|.theOperator(op)
-      .|.nodeIndexOperator("y:Label(propWithDuplicates < 50)", argumentIds = Set("x", "prop"))
+      .|.nodeIndexOperator("y:Label(propWithDuplicates < 100)", argumentIds = Set("x", "prop"))
       .projection("x.propWithDuplicates AS prop")
       .input(nodes = Seq("x"))
       .build()

@@ -439,7 +439,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values for DISTINCT before aggregation") {
     val query = "MATCH (n: Awesome) WITH DISTINCT n.prop2 as prop RETURN count(prop)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop2\\]".r)

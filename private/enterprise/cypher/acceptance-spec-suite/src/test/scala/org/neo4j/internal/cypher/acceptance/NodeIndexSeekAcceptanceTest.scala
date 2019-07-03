@@ -293,7 +293,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("uuid" -> "z"), "Company")
 
     // When
-    val result = executeWith(Configs.All - Configs.Morsel,
+    val result = executeWith(Configs.All,
       "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array("a", "b", "c")))
@@ -311,7 +311,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("uuid" -> 6), "Company")
 
     // When
-    val result = executeWith(Configs.All - Configs.Morsel,
+    val result = executeWith(Configs.All,
       "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array(1, 2, 3)))
