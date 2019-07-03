@@ -99,7 +99,7 @@ public class DbmsReconciler
     Reconciliation reconcile( List<DbmsOperator> operators, boolean force )
     {
         var dbsToReconcile = operators.stream()
-                .flatMap( op -> op.getDesired().keySet().stream() )
+                .flatMap( op -> op.desired().keySet().stream() )
                 .distinct();
 
         var reconciliation = dbsToReconcile
@@ -119,7 +119,7 @@ public class DbmsReconciler
     private static Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators, BinaryOperator<OperatorState> precedence )
     {
         return operators.stream()
-                .map( DbmsOperator::getDesired )
+                .map( DbmsOperator::desired )
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 

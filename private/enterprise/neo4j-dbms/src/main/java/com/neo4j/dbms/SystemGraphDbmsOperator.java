@@ -21,41 +21,16 @@ import static com.neo4j.dbms.OperatorState.STOPPED;
 /**
  * Operator driving database management operations in response to changes in the system database
  */
-public class SystemGraphDbmsOperator implements DbmsOperator
+public final class SystemGraphDbmsOperator extends DbmsOperator
 {
-    private final Map<DatabaseId,OperatorState> desired;
     private final SystemGraphDbmsModel dbmsModel;
 
-    private volatile OperatorConnector connector;
     private long mostRecentlySeenTx;
 
     SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, DatabaseIdRepository databaseIdRepository )
     {
         this.dbmsModel = dbmsModel;
-        this.desired = new ConcurrentHashMap<>( Collections.singletonMap( databaseIdRepository.systemDatabase(), STARTED ) );
-    }
-
-    @Override
-    public void connect( OperatorConnector connector )
-    {
-        Objects.requireNonNull( connector );
-        this.connector = connector;
-        connector.register( this );
-    }
-
-    @Override
-    public Map<DatabaseId,OperatorState> getDesired()
-    {
-        return desired;
-    }
-
-    Reconciliation trigger()
-    {
-        if ( connector == null )
-        {
-            return Reconciliation.EMPTY;
-        }
-        return connector.trigger();
+        this.desired.put( databaseIdRepository.systemDatabase(), STARTED );
     }
 
     void transactionCommitted( long txId, Collection<DatabaseId> databasesToAwait )
@@ -67,7 +42,7 @@ public class SystemGraphDbmsOperator implements DbmsOperator
         mostRecentlySeenTx = txId;
 
         updateDesiredStates(); // TODO: Handle exceptions from this!
-        Reconciliation reconciliation = trigger();
+        Reconciliation reconciliation = trigger( false );
 
         // TODO: Remove below when Standalone tests( e.g.SystemDatabaseDatabaseManagementIT ) no longer depend on blocking behaviour of create.
         // Clustered version of this listener does *not * block

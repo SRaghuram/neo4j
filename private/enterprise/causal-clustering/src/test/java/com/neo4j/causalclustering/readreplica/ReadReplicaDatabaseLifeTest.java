@@ -92,7 +92,7 @@ class ReadReplicaDatabaseLifeTest
             ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
     {
         return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(), nullLogProvider(),
-                topologyService, () -> catchupComponents, mock( LifeSupport.class ), mock( ClusterInternalDbmsOperator.class, RETURNS_MOCKS ) );
+                topologyService, () -> catchupComponents, mock( LifeSupport.class ), new ClusterInternalDbmsOperator() );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException
@@ -106,8 +106,7 @@ class ReadReplicaDatabaseLifeTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext(
-                kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, mock( ClusterInternalDbmsOperator.class ) );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
     }
 
     private ReadReplicaDatabaseContext failToReadLocalStoreId( DatabaseId databaseId, Class<? extends Throwable> throwableClass ) throws IOException
@@ -120,8 +119,7 @@ class ReadReplicaDatabaseLifeTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext(
-                kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, mock( ClusterInternalDbmsOperator.class ) );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
     }
 
     @Test

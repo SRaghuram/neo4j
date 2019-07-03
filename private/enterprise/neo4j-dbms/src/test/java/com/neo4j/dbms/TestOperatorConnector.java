@@ -36,7 +36,7 @@ public class TestOperatorConnector extends OperatorConnector
     @Override
     public Reconciliation trigger( boolean force )
     {
-        var desired = new HashMap<>( operator.getDesired() );
+        var desired = new HashMap<>( operator.desired() );
         triggerCalls.add( Pair.of( desired, force )  );
         return reconciler.reconcile( Collections.singletonList( operator ), force );
     }

@@ -42,23 +42,12 @@ import static com.neo4j.dbms.OperatorState.STORE_COPYING;
  * databases back to their original state when they are done: marking databases as successfully
  * boostrapped, or as ready for restarting after a store copy.
  */
-public class ClusterInternalDbmsOperator implements DbmsOperator
+public final class ClusterInternalDbmsOperator extends DbmsOperator
 {
     private final List<StoreCopyHandle> storeCopying = new CopyOnWriteArrayList<>();
     private final Set<DatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
 
-    private OperatorConnector connector;
-
-    @Override
-    public void connect( OperatorConnector connector )
-    {
-        Objects.requireNonNull( connector );
-        this.connector = connector;
-        connector.register( this );
-    }
-
-    @Override
-    public Map<DatabaseId,OperatorState> getDesired()
+    protected Map<DatabaseId,OperatorState> desired0()
     {
         return storeCopying.stream()
                 .filter( handle -> !bootstrapping.contains( handle.databaseId ) )
@@ -84,7 +73,7 @@ public class ClusterInternalDbmsOperator implements DbmsOperator
 
         if ( !bootstrapping.contains( databaseId ) )
         {
-            trigger().await( databaseId );
+            trigger( false ).await( databaseId );
         }
         return storeCopyHandle;
     }
@@ -101,15 +90,6 @@ public class ClusterInternalDbmsOperator implements DbmsOperator
     {
         bootstrapping.add( databaseId );
         return new BootstrappingHandle( databaseId );
-    }
-
-    private Reconciliation trigger()
-    {
-        if ( connector == null )
-        {
-            return Reconciliation.EMPTY;
-        }
-        return connector.trigger();
     }
 
     public class StoreCopyHandle
@@ -131,7 +111,7 @@ public class ClusterInternalDbmsOperator implements DbmsOperator
 
             if ( !bootstrapping.contains( databaseId ) )
             {
-                trigger().await( databaseId );
+                trigger( false ).await( databaseId );
             }
         }
 

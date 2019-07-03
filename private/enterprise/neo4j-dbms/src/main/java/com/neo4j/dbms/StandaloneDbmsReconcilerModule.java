@@ -62,14 +62,14 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private void startInitialDatabases()
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger().await( databaseIdRepository.systemDatabase() );
+        systemOperator.trigger( false ).await( databaseIdRepository.systemDatabase() );
 
         GraphDatabaseService systemDatabase = getSystemDatabase( databaseManager );
         dbmsModel.setSystemDatabase( systemDatabase );
 
         //Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
-        systemOperator.trigger().awaitAll();
+        systemOperator.trigger( false ).awaitAll();
     }
 
     /**

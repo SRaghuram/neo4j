@@ -14,7 +14,7 @@ public class OperatorConnector
     private final DbmsReconciler reconciler;
     private final List<DbmsOperator> operators = new CopyOnWriteArrayList<>();
 
-    public OperatorConnector( DbmsReconciler reconciler )
+    OperatorConnector( DbmsReconciler reconciler )
     {
         this.reconciler = reconciler;
     }
@@ -22,11 +22,6 @@ public class OperatorConnector
     void register( DbmsOperator operator )
     {
         operators.add( operator );
-    }
-
-    public Reconciliation trigger()
-    {
-        return trigger( false );
     }
 
     /**

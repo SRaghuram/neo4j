@@ -86,8 +86,7 @@ class CoreDatabaseLifeTest
         var snapshotService = mock( CoreSnapshotService.class );
         var downloaderService = mock( CoreDownloaderService.class );
         var recoveryFacade = mock( RecoveryFacade.class );
-        var internalOperator = mock( ClusterInternalDbmsOperator.class );
-        when( internalOperator.bootstrap( any() ) ).thenReturn( mock( BootstrappingHandle.class ) );
+        var internalOperator = new ClusterInternalDbmsOperator();
 
         return new CoreDatabaseLife( raftMachine, database, raftBinder, applicationProcess, messageHandler, snapshotService,
                 downloaderService, recoveryFacade, life, internalOperator, topologyService );

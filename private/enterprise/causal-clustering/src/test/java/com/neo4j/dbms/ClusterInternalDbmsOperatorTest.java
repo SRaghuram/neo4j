@@ -32,14 +32,14 @@ class ClusterInternalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger() ).thenReturn( Reconciliation.EMPTY );
+        when( connector.trigger( false ) ).thenReturn( Reconciliation.EMPTY );
         operator.connect( connector );
     }
 
     @Test
     void shouldNotDesireAnythingInitially()
     {
-        assertEquals( operator.getDesired(), Collections.emptyMap() );
+        assertEquals( operator.desired(), Collections.emptyMap() );
     }
 
     @Test
@@ -52,13 +52,13 @@ class ClusterInternalDbmsOperatorTest
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
 
         // then
-        verify( connector, times( 1 ) ).trigger();
+        verify( connector, times( 1 ) ).trigger( false );
 
         // when
         stoppedDatabase.restart();
 
         // then
-        verify( connector, times( 2 ) ).trigger();
+        verify( connector, times( 2 ) ).trigger( false );
     }
 
     @Test
@@ -72,56 +72,56 @@ class ClusterInternalDbmsOperatorTest
         var stopA1 = operator.stopForStoreCopy( databaseA );
 
         // then
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseA ) );
-        assertNull( operator.getDesired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
+        assertNull( operator.desired().get( databaseB ) );
 
         // when
         var stopA2 = operator.stopForStoreCopy( databaseA );
 
         // then
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseA ) );
-        assertNull( operator.getDesired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
+        assertNull( operator.desired().get( databaseB ) );
 
         // when
         var stopB1 = operator.stopForStoreCopy( databaseB );
 
         // then
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
 
         // when
         var stopB2 = operator.stopForStoreCopy( databaseB );
 
         // then
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
 
         // when
         stopA1.restart();
 
         // then
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
 
         // when
         stopA2.restart();
 
         // then
-        assertNull( operator.getDesired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseB ) );
+        assertNull( operator.desired().get( databaseA ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
 
         // when
         stopB1.restart();
 
         // then
-        assertNull( operator.getDesired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.getDesired().get( databaseB ) );
+        assertNull( operator.desired().get( databaseA ) );
+        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
 
         // when
         stopB2.restart();
 
         // then
-        assertEquals( operator.getDesired(), Collections.emptyMap() );
+        assertEquals( operator.desired(), Collections.emptyMap() );
     }
 
     @Test
@@ -147,18 +147,18 @@ class ClusterInternalDbmsOperatorTest
         var storeCopying = operator.stopForStoreCopy( someDb );
 
         // then
-        assertNotEquals( operator.getDesired().get( someDb ), STORE_COPYING );
+        assertNotEquals( operator.desired().get( someDb ), STORE_COPYING );
 
         // when
         bootstrapping.bootstrapped();
 
         // then
-        assertEquals( operator.getDesired().get( someDb ), STORE_COPYING );
+        assertEquals( operator.desired().get( someDb ), STORE_COPYING );
 
         // when
         storeCopying.restart();
 
         // then
-        assertNull( operator.getDesired().get( someDb ) );
+        assertNull( operator.desired().get( someDb ) );
     }
 }

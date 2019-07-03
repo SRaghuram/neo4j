@@ -18,7 +18,7 @@ class OperatorConnectorTest
     private OperatorConnector connector = new OperatorConnector( reconciler );
 
     @Test
-    void shouldInvokeWithRegisteredOperators() throws Exception
+    void shouldInvokeWithRegisteredOperators()
     {
         // given
         DbmsOperator operatorA = mock( DbmsOperator.class );
@@ -28,7 +28,7 @@ class OperatorConnectorTest
         connector.register( operatorB );
 
         // when
-        connector.trigger();
+        connector.trigger( false );
 
         // then
         List<DbmsOperator> operatorList = List.of( operatorA, operatorB );

@@ -163,7 +163,7 @@ class StoreDownloaderTest
 
         LogFiles transactionLogs = mock( LogFiles.class );
 
-        return new StoreDownloadContext( database, storeFiles, transactionLogs, mock( ClusterInternalDbmsOperator.class ) );
+        return new StoreDownloadContext( database, storeFiles, transactionLogs, new ClusterInternalDbmsOperator() );
     }
 
     private RemoteStore mockRemoteSuccessfulStore( DatabaseId databaseId ) throws StoreIdDownloadFailedException
