@@ -15,91 +15,117 @@ import scala.collection.Map
 
 class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
-  // Tests for granting write privileges
+  // Tests for granting and denying write privileges
 
-  test("should grant write privilege to custom role for all databases and all elements") {
+  Seq(
+    ("grant", "GRANT", "GRANTED" ),
+    ("deny", "DENY", "DENIED" ),
+  ).foreach {
+    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+
+      test(s"should $grantOrDeny write privilege to custom role for all databases and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+         write(grantOrDenyRelType).role("custom").node("*").map,
+         write(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
+      }
+
+      test(s"should $grantOrDeny write privilege to custom role for a specific database and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").database("foo").node("*").map,
+          write(grantOrDenyRelType).role("custom").database("foo").relationship("*").map
+        ))
+      }
+
+      test(s"should $grantOrDeny write privilege to multiple roles in a single grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE ROLE role3")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO role1, role2, role3")
+
+        // THEN
+        val expected: Seq[PrivilegeMapBuilder] = Seq(
+          write(grantOrDenyRelType).database("foo").node("*"),
+          write(grantOrDenyRelType).database("foo").relationship("*")
+        )
+
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+        execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+      }
+
+      test(s"should fail ${grantOrDeny}ing write privilege for all databases and all elements to non-existing role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+
+        // WHEN
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+          // THEN
+        } should have message "Role 'custom' does not exist."
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
+      }
+
+      test(s"should fail when ${grantOrDeny}ing write privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        the[DatabaseNotFoundException] thrownBy {
+          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+        } should have message "Database 'foo' does not exist."
+      }
+
+      test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+          // THEN
+        } should have message s"This is a DDL command and it should be executed against the system database: $grantOrDenyCommand WRITE"
+      }
+
+  }
+
+  test("should be able to have both grant and deny privilege for write") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write().role("custom").node("*").map,
-      write().role("custom").relationship("*").map
+      write().role("custom").relationship("*").map,
+      write("DENIED").role("custom").node("*").map,
+      write("DENIED").role("custom").relationship("*").map
     ))
-  }
-
-  test("should grant write privilege to custom role for a specific database and all elements") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").database("foo").node("*").map,
-      write().role("custom").database("foo").relationship("*").map
-    ))
-  }
-
-  test("should grant write privilege to multiple roles in a single grant") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE role1")
-    execute("CREATE ROLE role2")
-    execute("CREATE ROLE role3")
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO role1, role2, role3")
-
-    // THEN
-    val expected: Seq[PrivilegeMapBuilder] = Seq(
-      write().database("foo").node("*"),
-      write().database("foo").relationship("*")
-    )
-
-    execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-    execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-    execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-  }
-
-  test("should fail granting write privilege for all databases and all elements to non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-      // THEN
-    } should have message "Role 'custom' does not exist."
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
-  }
-
-  test("should fail when granting write privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    the[DatabaseNotFoundException] thrownBy {
-      execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-    } should have message "Database 'foo' does not exist."
-  }
-
-  test("should fail when granting write privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-      // THEN
-    } should have message "This is a DDL command and it should be executed against the system database: GRANT WRITE"
   }
 
   // Tests for revoking write privileges
