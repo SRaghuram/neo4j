@@ -40,12 +40,15 @@ case class BuildTopTable(opName: String, tableName: String, countExpression: Cod
 
     // Return early on limit <= 0 (this unifies the behaviour with the normal limit implementation)
     val variableName = context.namer.newVarName()
-    generator.declareCounter(variableName, generator.box(countExpression.generateExpression(generator), countExpression.codeGenType))
+    generator.declareCounter(variableName,
+      generator.box(countExpression.generateExpression(generator), countExpression.codeGenType),
+      "LIMIT: Invalid input. Must be a non-negative integer."
+    )
 
     generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
       val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
         MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
-        constant(s"LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
+        constant("LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
       onTrue.throwException(exception)
     }
 

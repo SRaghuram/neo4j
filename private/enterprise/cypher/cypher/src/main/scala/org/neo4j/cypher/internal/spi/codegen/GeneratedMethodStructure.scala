@@ -227,10 +227,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.returns()
   }
 
-  override def declareCounter(name: String, initialValue: Expression): Unit = {
+  override def declareCounter(name: String, initialValue: Expression, errorOnFloatingPoint: String): Unit = {
     val variable = generator.declare(typeRef[Long], name)
     locals += (name -> variable)
-    generator.assign(variable, invoke(mathCastToLong, initialValue))
+    generator.assign(variable, invoke(mathCastToLongOrFail, initialValue, constant(errorOnFloatingPoint)))
   }
 
   override def decrementInteger(name: String) = {

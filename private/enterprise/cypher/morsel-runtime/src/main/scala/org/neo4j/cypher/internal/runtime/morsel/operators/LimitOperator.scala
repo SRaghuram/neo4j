@@ -19,14 +19,15 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryS
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.storable.NumberValue
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
+import org.neo4j.values.storable.{FloatingPointValue, NumberValue}
 
 /**
   * Limit the number of rows to `countExpression` per argument.
   */
 class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
-                    countExpression: Expression) extends MiddleOperator {
+                    countExpression: Expression) extends MiddleOperator with NumericHelper {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           queryContext: QueryContext,
@@ -41,7 +42,12 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                        resources.expressionVariables(state.nExpressionSlots),
                                        state.subscriber)
 
-    val limit = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
+    val limitNumber = asNumber(countExpression(ExecutionContext.empty, queryState))
+    if (limitNumber.isInstanceOf[FloatingPointValue]) {
+      val limit = limitNumber.doubleValue()
+      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
+    }
+    val limit = limitNumber.longValue()
 
     if (limit < 0) {
       throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")

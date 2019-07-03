@@ -19,12 +19,12 @@ case class DecreaseAndReturnWhenZero(opName: String, variableName: String, actio
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     startValue.init(generator)
     val expression = generator.box(startValue.generateExpression(generator), startValue.codeGenType)
-    generator.declareCounter(variableName, expression)
+    generator.declareCounter(variableName, expression, "LIMIT: Invalid input. Must be a non-negative integer.")
 
     generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
       val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
         MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
-        constant(s"LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
+        constant("LIMIT: Invalid input. Must be a non-negative integer."), constant(null))
       onTrue.throwException(exception)
     }
 

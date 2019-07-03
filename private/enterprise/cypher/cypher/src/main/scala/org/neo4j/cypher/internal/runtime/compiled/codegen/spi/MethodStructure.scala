@@ -37,7 +37,7 @@ trait MethodStructure[E] {
   def declareAndInitialize(varName: String, codeGenType: CodeGenType): Unit
   def declare(varName: String, codeGenType: CodeGenType): Unit
   def declareProperty(name: String): Unit
-  def declareCounter(name: String, initialValue: E): Unit
+  def declareCounter(name: String, initialValue: E, errorOnFloatingPoint: String): Unit
   def putField(tupleDescriptor: TupleDescriptor, value: E, fieldName: String, localVar: String): Unit
   def updateProbeTable(tupleDescriptor: TupleDescriptor, tableVar: String, tableType: RecordingJoinTableType, keyVars: Seq[String], element: E): Unit
   def probe(tableVar: String, tableType: JoinTableType, keyVars: Seq[String])(block: MethodStructure[E]=>Unit): Unit

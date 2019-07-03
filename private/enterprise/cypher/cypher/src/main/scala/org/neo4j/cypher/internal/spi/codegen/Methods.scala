@@ -71,6 +71,7 @@ object Methods {
   val mathMod: MethodReference = method[CompiledMathHelper, Object]("modulo", typeRef[Object], typeRef[Object])
   val mathCastToInt: MethodReference = method[CompiledMathHelper, Int]("transformToInt", typeRef[Object])
   val mathCastToLong: MethodReference = method[CompiledMathHelper, Long]("transformToLong", typeRef[Object])
+  val mathCastToLongOrFail: MethodReference = method[CompiledMathHelper, Long]("transformToLongOrFail", typeRef[Object], typeRef[String])
   val mapGet: MethodReference = method[util.Map[String, Object], Object]("get", typeRef[Object])
   val mapContains: MethodReference = method[util.Map[String, Object], Boolean]("containsKey", typeRef[Object])
   val setContains: MethodReference = method[util.Set[Object], Boolean]("contains", typeRef[Object])

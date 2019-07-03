@@ -19,12 +19,12 @@ case class SkipInstruction(opName: String, variableName: String, action: Instruc
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     numberToSkip.init(generator)
     val expression = generator.box(numberToSkip.generateExpression(generator), numberToSkip.codeGenType)
-    generator.declareCounter(variableName, expression)
+    generator.declareCounter(variableName, expression, "SKIP: Invalid input. Must be a non-negative integer.")
 
     generator.ifStatement(generator.checkInteger(variableName, LessThan, 0L)) { onTrue =>
       val exception = invoke(newInstance(typeRef[InvalidArgumentException]),
         MethodReference.constructorReference(typeRef[InvalidArgumentException], typeRef[String], typeRef[Throwable]),
-        constant(s"SKIP: Invalid input. Must be a non-negative integer."), constant(null))
+        constant("SKIP: Invalid input. Must be a non-negative integer."), constant(null))
       onTrue.throwException(exception)
     }
 
