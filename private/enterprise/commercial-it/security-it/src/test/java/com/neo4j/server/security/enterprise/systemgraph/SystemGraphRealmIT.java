@@ -340,20 +340,22 @@ class SystemGraphRealmIT
                 .mayPerformMigration()
                 .build(), securityLog, dbManager, defaultConfig );
 
-        // When
-        Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
-
-        // Then
-        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( Action.READ, new Resource.GraphResource(), LabelSegment.ALL );
+        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
         ResourcePrivilege findNodePrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), LabelSegment.ALL );
         ResourcePrivilege findRelPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), RelTypeSegment.ALL );
-        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.GraphResource(), LabelSegment.ALL );
+        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( Action.WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
         ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
         ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL );
         ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
 
+        // When
+        Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
+
+        // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, findNodePrivilege, findRelPrivilege )
+                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege )
         );
 
         // When
@@ -361,8 +363,8 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege )
+                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
+                writeNodePrivilege, writeRelPrivilege )
         );
 
         // When
@@ -370,8 +372,8 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, tokenNodePrivilege )
+                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
+                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege )
         );
 
         // When
@@ -379,8 +381,8 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, tokenNodePrivilege, schemaNodePrivilege )
+                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
+                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege )
         );
 
         // When
@@ -388,8 +390,8 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, tokenNodePrivilege, schemaNodePrivilege, adminNodePrivilege )
+                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
+                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege, adminNodePrivilege )
         );
     }
 
