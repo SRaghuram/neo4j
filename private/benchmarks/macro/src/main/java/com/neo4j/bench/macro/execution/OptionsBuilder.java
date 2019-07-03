@@ -11,6 +11,7 @@ import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
@@ -68,7 +69,7 @@ public class OptionsBuilder
                 edition,
                 outputDir,
                 storeDir,
-                Neo4jConfig.fromFile( neo4jConfigFile ),
+                Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build(),
                 forks,
                 warmupCount,
                 measurementCount,

@@ -26,6 +26,6 @@ public class DeleteAnnotation
             @Name( "eventId" ) String eventId )
     {
         Annotation annotation = new Annotation( comment, date, eventId, author );
-        new com.neo4j.bench.client.queries.DeleteAnnotation( annotation ).execute( db );
+        new com.neo4j.bench.common.queries.DeleteAnnotation( annotation ).execute( db );
     }
 }

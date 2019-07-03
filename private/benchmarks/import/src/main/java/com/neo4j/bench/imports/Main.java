@@ -42,6 +42,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.neo4j.test.proc.ProcessUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+
 import org.neo4j.tooling.ImportTool;
 
 import static com.neo4j.bench.client.model.Repository.IMPORT_BENCH;
@@ -159,7 +161,7 @@ public class Main
     {
         BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
-        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
+        Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
 
         for ( String size : sizes )
         {

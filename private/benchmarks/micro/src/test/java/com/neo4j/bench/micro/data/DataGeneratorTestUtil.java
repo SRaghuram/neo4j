@@ -9,6 +9,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class DataGeneratorTestUtil
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
-        config.neo4jConfig().writeToFile( NEO4J_CONFIG );
+        Neo4jConfigBuilder.writeToFile( config.neo4jConfig(), NEO4J_CONFIG );
 
         generator.generate( storeDir.toPath(), NEO4J_CONFIG );
 

@@ -7,9 +7,8 @@ package com.neo4j.bench.macro;
 
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.client.util.TestSupport;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.OptionsBuilder;
@@ -17,6 +16,7 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.common.util.TestSupport;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -47,7 +47,7 @@ public class InteractiveExecutionIT
             Store store = createEmptyStoreFor( workload );
 
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
-            Neo4jConfig.withDefaults().writeToFile( neo4jConfigFile );
+            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             OptionsBuilder optionsBuilder = new OptionsBuilder()
                     .withNeo4jConfig( neo4jConfigFile )
                     .withForks( 0 )
