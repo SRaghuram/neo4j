@@ -246,12 +246,15 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     *  - drop any new data being put into the execution state
     *  - take and close all continuations and data we find in the execution state
     *
+    *  This method is intended to be called only once, but written in a way that allows
+    *  multiple calls to it that behave idempotent. This is needed if several threads encounter
+    *  Exceptions simultaneously.
+    *
     * @param resources      resources where to hand-back any open cursors
     * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
     *                       the failure happened outside of pipeline execution
     */
   private def closeOutstandingWork(resources: QueryResources, failedPipeline: ExecutablePipeline): Unit = {
-
     queryStatus.cancelled = true
 
     buffers.clearAll()

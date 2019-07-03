@@ -25,7 +25,6 @@ object ParallelStressSuite {
 abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     ENTERPRISE.PARALLEL.copyWith(
-      GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free",
       GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
       GraphDatabaseSettings.cypher_worker_count -> WORKERS.toString),
     runtime) {

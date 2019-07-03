@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
