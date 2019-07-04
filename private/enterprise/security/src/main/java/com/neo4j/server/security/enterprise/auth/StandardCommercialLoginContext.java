@@ -119,6 +119,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final IntSet whitelistTraverseLabels;
         private final IntSet whitelistTraverseRelTypes;
 
+        private final boolean disallowsTraverseAllLabels;
+        private final IntSet blacklistTraverseLabels;
+
         private final boolean allowsReadAllPropertiesAllLabels;
         private final boolean allowsReadAllPropertiesAllRelTypes;
         private final IntSet whitelistedNodeProperties;
@@ -138,8 +141,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 Set<String> roles,
                 IntPredicate propertyPermissions,
                 boolean allowsTraverseAllLabels,
-                boolean allowsTraverseAllRelTypes, IntSet whitelistTraverseLabels,
+                boolean allowsTraverseAllRelTypes,
+                IntSet whitelistTraverseLabels,
                 IntSet whitelistTraverseRelTypes,
+                boolean disallowsTraverseAllLabels,
+                IntSet blacklistTraverseLabels,
                 boolean allowsReadAllPropertiesAllLabels,
                 boolean allowsReadAllPropertiesAllRelTypes, IntSet whitelistedLabelsForAllProperties,
                 IntSet whitelistedRelTypesForAllProperties, IntObjectMap<IntSet> whitelistedLabelsForProperty,
@@ -163,6 +169,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.whitelistTraverseLabels = whitelistTraverseLabels;
             this.allowsTraverseAllRelTypes = allowsTraverseAllRelTypes;
             this.whitelistTraverseRelTypes = whitelistTraverseRelTypes;
+            this.disallowsTraverseAllLabels = disallowsTraverseAllLabels;
+            this.blacklistTraverseLabels = blacklistTraverseLabels;
             this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
             this.whitelistedRelTypesForAllProperties = whitelistedRelTypesForAllProperties;
             this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
@@ -201,26 +209,37 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsTraverseAllLabels()
         {
-            return allowsTraverseAllLabels;
+            return allowsTraverseAllLabels && !disallowsTraverseAllLabels && blacklistTraverseLabels.isEmpty();
         }
 
         @Override
         public boolean allowsTraverseLabels( long... labels )
         {
-            if ( allowsTraverseAllLabels )
+            if ( allowsTraverseAllLabels() )
             {
                 return true;
             }
+            else if ( disallowsTraverseAllLabels )
+            {
+                return false;
+            }
+
+            boolean allowedTraverseAnyLabel = false;
+
             for ( long labelAsLong : labels )
             {
                 int label = (int) labelAsLong;
-                if ( whitelistTraverseLabels.contains( label ) )
+                if ( blacklistTraverseLabels.contains( label ) )
                 {
-                    return true;
+                    return false;
+                }
+                else if ( whitelistTraverseLabels.contains( label ) )
+                {
+                    allowedTraverseAnyLabel = true;
                 }
             }
 
-            return false;
+            return allowedTraverseAnyLabel || allowsTraverseAllLabels;
         }
 
         @Override
@@ -351,6 +370,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllLabels;
             private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
+            private boolean disallowsTraverseAllLabels;
+            private MutableIntSet blacklistTraverseLabels = IntSets.mutable.empty();
 
             private boolean allowReadAllPropertiesAllRelTypes;
             private MutableIntSet allowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
@@ -388,6 +409,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         allowsTraverseAllRelTypes,
                         whitelistTraverseLabels,
                         whitelistTraverseRelTypes,
+                        disallowsTraverseAllLabels,
+                        blacklistTraverseLabels,
                         allowReadAllPropertiesAllLabels,
                         allowReadAllPropertiesAllRelTypes,
                         allowedNodeSegmentForAllProperties,
@@ -403,6 +426,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 Resource resource = privilege.getResource();
                 Segment segment = privilege.getSegment();
+                boolean allowed = privilege.isAllowed();
+
                 switch ( privilege.getAction() )
                 {
                 case FIND:
@@ -411,12 +436,26 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     {
                         if ( segment.equals( LabelSegment.ALL ) )
                         {
-                            allowsTraverseAllLabels = true;
+                            if ( allowed )
+                            {
+                                allowsTraverseAllLabels = true;
+                            }
+                            else
+                            {
+                                disallowsTraverseAllLabels = true;
+                            }
                         }
                         else
                         {
                             int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                            whitelistTraverseLabels.add( labelId );
+                            if ( allowed )
+                            {
+                                whitelistTraverseLabels.add( labelId );
+                            }
+                            else
+                            {
+                                blacklistTraverseLabels.add( labelId );
+                            }
                         }
                     }
                     else if ( segment instanceof RelTypeSegment )

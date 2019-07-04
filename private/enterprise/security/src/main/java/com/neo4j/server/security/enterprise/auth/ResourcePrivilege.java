@@ -14,23 +14,26 @@ public class ResourcePrivilege
     private final Segment segment;
     private final String dbName;
     private final boolean allDatabases;
+    private final boolean allowed;
 
-    public ResourcePrivilege( Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
+    public ResourcePrivilege( Action action, Resource resource, Segment segment, Boolean allowed ) throws InvalidArgumentsException
     {
         this.action = action;
         this.resource = resource;
         this.segment = segment;
         this.dbName = "";
+        this.allowed = allowed;
         this.allDatabases = true;
         resource.assertValidCombination( action );
     }
 
-    public ResourcePrivilege( Action action, Resource resource, Segment segment, String dbName ) throws InvalidArgumentsException
+    public ResourcePrivilege( Action action, Resource resource, Segment segment, Boolean allowed, String dbName ) throws InvalidArgumentsException
     {
         this.action = action;
         this.resource = resource;
         this.segment = segment;
         this.dbName = dbName;
+        this.allowed = allowed;
         this.allDatabases = false;
         resource.assertValidCombination( action );
     }
@@ -55,6 +58,11 @@ public class ResourcePrivilege
         return this.dbName;
     }
 
+    public boolean isAllowed()
+    {
+        return allowed;
+    }
+
     public boolean isAllDatabases()
     {
         return allDatabases;
@@ -63,7 +71,16 @@ public class ResourcePrivilege
     @Override
     public String toString()
     {
-        return String.format( "(%s, %s, %s)", getAction(), getResource(), getSegment() );
+        String grant;
+        if ( allowed )
+        {
+            grant = "GRANT";
+        }
+        else
+        {
+            grant = "DENY";
+        }
+        return String.format( "(%s, %s, %s, %s)", grant, getAction(), getResource(), getSegment() );
     }
 
     @Override
@@ -82,6 +99,7 @@ public class ResourcePrivilege
                     && other.resource.equals( this.resource )
                     && other.segment.equals( this.segment )
                     && other.dbName.equals( this.dbName )
+                    && other.allowed == this.allowed
                     && other.allDatabases == this.allDatabases;
         }
         return false;

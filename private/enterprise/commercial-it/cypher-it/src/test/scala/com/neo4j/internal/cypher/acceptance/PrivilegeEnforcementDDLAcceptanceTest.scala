@@ -13,9 +13,10 @@ import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 
+// Tests for actual behaviour of authorization rules for restricted users based on privileges
 class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
-  // Tests for actual behaviour of authorization rules for restricted users based on privileges
+  // Tests for node privileges
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -85,6 +86,31 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
+  }
+
+  test("should read properties when granted MATCH privilege to custom role for a specific database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (:B {name:'b'})")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name:'a'})")
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    setupUserJoeWithCustomRole()
+
+    // WHEN
+    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
+    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("read privilege for node should not imply traverse privilege") {
@@ -420,6 +446,204 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(2)
   }
 
+  test("should not be able to traverse labels when denied all traversal") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    setupMultiLabelData2
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (id) ON GRAPH * TO custom")
+
+    val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    val expected = List((0, ":A"),(3, ":A:B"), (4, ":A:C"), (6, ":A:B:C"))  // Nodes with label :A
+
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.get("n.id"), row.get("labels")) should be(expected(index))
+      }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+  }
+
+  test("should not be able to traverse labels when denied all traversal even if granted all traversal") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    setupMultiLabelData2
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (id) ON GRAPH * TO custom")
+
+    val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    val expected = // All nodes
+      List(
+        (0, ":A"),
+        (1, ":B"),
+        (2, ":C"),
+        (3, ":A:B"),
+        (4, ":A:C"),
+        (5, ":B:C"),
+        (6, ":A:B:C"),
+        (7, "")
+      )
+
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.get("n.id"), row.get("labels")) should be(expected(index))
+      }) should be(8)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+  }
+
+  test("should see correct nodes and labels with grant traversal on all labels and deny on specific label") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    setupMultiLabelData2
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (id) ON GRAPH * TO custom")
+
+    val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    val expected1 = // All nodes
+      List(
+        (0, ":A"),
+        (1, ":B"),
+        (2, ":C"),
+        (3, ":A:B"),
+        (4, ":A:C"),
+        (5, ":B:C"),
+        (6, ":A:B:C"),
+        (7, "")
+      )
+
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.get("n.id"), row.get("labels")) should be(expected1(index))
+      }) should be(8)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+    // THEN
+
+    val expected2 = // All nodes without label :B
+      List(
+        (0, ":A"),
+        (2, ":C"),
+        (4, ":A:C"),
+        (7, "")
+      )
+
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.get("n.id"), row.get("labels")) should be(expected2(index))
+      }) should be(4)
+  }
+
+  test("should see correct nodes and labels with grant and deny on specific labels") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    setupMultiLabelData2
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (id) ON GRAPH * TO custom")
+
+    val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+    // THEN
+    val expected = List((0, ":A"),(4, ":A:C"))  // Nodes with label :A but not :B
+
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.get("n.id"), row.get("labels")) should be(expected(index))
+      }) should be(2)
+  }
+
+  test("should get correct labels from procedure") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+
+    // Currently you need to have some kind of traverse or read access to be able to call the procedure at all
+    execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:A:B:E), (:B:C), (:C:D)")
+
+    val query = "CALL db.labels() YIELD label, nodeCount as count RETURN label, count ORDER BY label"
+
+    // WHEN..THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("result should be empty")
+    }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    val expected = List(("A", 2), ("B", 1), ("E", 1))
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("label"), row.get("count")) should be(expected(index))
+    }) should be(3)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.get("label"), row.get("count")) should be(("A", 1))
+    }) should be(1)
+  }
+
+  // Tests for relationship privileges
+
   test("should find relationship when granted traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -530,7 +754,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
   }
 
-  test("should get relationship types and count from procedure") {
+  test("should get correct relationship types and count from procedure") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserJoeWithCustomRole()
@@ -913,30 +1137,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(3)
   }
 
-  test("should read properties when granted MATCH privilege to custom role for a specific database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE DATABASE foo")
-    selectDatabase("foo")
-    execute("CREATE (:B {name:'b'})")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A {name:'a'})")
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    setupUserJoeWithCustomRole()
-
-    // WHEN
-    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should be("a")
-    }) should be(1)
-
-    the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
-  }
+  // Mixed tests
 
   test("should rollback transaction") {
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -960,5 +1161,17 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE (n:B {foo:3, bar:4})")
     execute("CREATE (n:A:B {foo:5, bar:6})")
     execute("CREATE (n {foo:7, bar:8})")
+  }
+
+  private def setupMultiLabelData2 = {
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A     {id:0})")
+    execute("CREATE (:B     {id:1})")
+    execute("CREATE (:C     {id:2})")
+    execute("CREATE (:A:B   {id:3})")
+    execute("CREATE (:A:C   {id:4})")
+    execute("CREATE (:B:C   {id:5})")
+    execute("CREATE (:A:B:C {id:6})")
+    execute("CREATE (       {id:7})")
   }
 }

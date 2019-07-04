@@ -213,30 +213,36 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SystemResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SystemResource(), LabelSegment.ALL, true ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SchemaResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SchemaResource(), LabelSegment.ALL, true ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new TokenResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new TokenResource(), LabelSegment.ALL, true ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL, true ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new GraphResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.FIND, new GraphResource(), RelTypeSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.FIND, new GraphResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.FIND, new GraphResource(), RelTypeSegment.ALL, true  ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.READ, new AllPropertiesResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL, true ) );
             }
         }
     }

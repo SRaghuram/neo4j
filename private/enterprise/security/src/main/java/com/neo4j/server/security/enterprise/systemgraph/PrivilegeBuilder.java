@@ -36,6 +36,11 @@ class PrivilegeBuilder
         return new PrivilegeBuilder( true, action );
     }
 
+    static PrivilegeBuilder deny( String action )
+    {
+        return new PrivilegeBuilder( false, action );
+    }
+
     PrivilegeBuilder forAllDatabases()
     {
         this.allDatabases = true;
@@ -131,11 +136,11 @@ class PrivilegeBuilder
     {
         if ( allDatabases )
         {
-            return new ResourcePrivilege( action, resource, segment );
+            return new ResourcePrivilege( action, resource, segment, allowed );
         }
         else
         {
-            return new ResourcePrivilege( action, resource, segment, dbName );
+            return new ResourcePrivilege( action, resource, segment, allowed, dbName );
         }
     }
 }

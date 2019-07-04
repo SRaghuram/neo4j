@@ -300,12 +300,12 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         if ( lookupPrivileges )
         {
             String query =
-                    "MATCH (r:Role)-[:GRANTED]->(a:Action)-[:SCOPE]->(segment:Segment), " +
+                    "MATCH (r:Role)-[rel]->(a:Action)-[:SCOPE]->(segment:Segment), " +
                             "(a)-[:APPLIES_TO]->(res) " +
                             "WHERE r.name IN $roles " +
                             "MATCH (segment)-[:FOR]->(db) " +
                             "MATCH (segment)-[:QUALIFIED]->(q) " +
-                            "RETURN r.name, db.name, db, a.action, res, q";
+                            "RETURN r.name, db.name, db, a.action, res, q, type(rel) as grant";
 
             final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
             {
@@ -334,12 +334,27 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                     String actionValue = ((TextValue) fields[3]).stringValue();
                     NodeValue resource = (NodeValue) fields[4];
                     NodeValue qualifier = (NodeValue) fields[5];
+                    String type = ((TextValue) fields[6]).stringValue();
 
                     try
                     {
-                        PrivilegeBuilder privilegeBuilder = PrivilegeBuilder.grant( actionValue )
-                                .withinScope( qualifier )
-                                .onResource( resource );
+
+                        PrivilegeBuilder privilegeBuilder;
+                        if ( type.equals( "GRANTED") )
+                        {
+                            privilegeBuilder = PrivilegeBuilder.grant( actionValue );
+                        }
+                        else if ( type.equals( "DENIED" ) )
+                        {
+                            privilegeBuilder = PrivilegeBuilder.deny( actionValue );
+                        }
+                        else
+                        {
+                            throw new IllegalStateException( "Invalid grant:" + type );
+                        }
+
+                        privilegeBuilder.withinScope( qualifier ).onResource( resource );
+
                         assert database.labels().length() == 1;
                         switch ( database.labels().stringValue( 0 ) )
                         {
