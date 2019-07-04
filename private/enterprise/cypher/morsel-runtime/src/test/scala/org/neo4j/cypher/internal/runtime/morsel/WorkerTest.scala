@@ -13,9 +13,9 @@ class WorkerTest extends CypherFunSuite {
 
   test("should not reset sleeper when no queries") {
     val ATTEMPTS = 100
+    val countDown = new CountDown[ExecutingQuery](ATTEMPTS, null)
     val queryManager: QueryManager =
       new QueryManager {
-        private val countDown = new CountDown[ExecutingQuery](ATTEMPTS, null)
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = countDown.next()
       }
     val schedulingPolicy = new SchedulingPolicy {
@@ -25,6 +25,7 @@ class WorkerTest extends CypherFunSuite {
     val sleeper = mock[Sleeper]
 
     val worker = new Worker(1, queryManager, schedulingPolicy, sleeper,  null)
+    countDown.worker = worker
     worker.run()
 
     verify(sleeper, never()).reportStopWorkUnit()
@@ -38,16 +39,16 @@ class WorkerTest extends CypherFunSuite {
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = mock[ExecutingQuery]
       }
 
+    val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
     val schedulingPolicy: SchedulingPolicy =
       new SchedulingPolicy {
-        private val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
         override def nextTask(executingQuery: ExecutingQuery,
                               queryResources: QueryResources): PipelineTask = countDown.next()
       }
 
     val sleeper = mock[Sleeper]
-
     val worker = new Worker(1, queryManager, schedulingPolicy,  sleeper, null)
+    countDown.worker = worker
     worker.run()
 
     verify(sleeper, never()).reportStopWorkUnit()
@@ -57,10 +58,11 @@ class WorkerTest extends CypherFunSuite {
   class NoMoreAttemptsException() extends IllegalArgumentException
 
   class CountDown[T](var count: Int, val t: T) {
+    var worker: Worker = _
     def next(): T = {
       count -= 1
       if (count == 0)
-        Thread.currentThread().interrupt()
+        worker.stop()
       t
     }
   }

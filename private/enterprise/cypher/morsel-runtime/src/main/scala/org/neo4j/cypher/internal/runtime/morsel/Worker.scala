@@ -27,7 +27,15 @@ class Worker(val workerId: Int,
              val resources: QueryResources) extends Runnable {
 
   @volatile
-  var isTimeToStop = true
+  private var isTimeToStop = false
+
+  def reset(): Unit = {
+    isTimeToStop = false
+  }
+
+  def stop(): Unit = {
+    isTimeToStop = true
+  }
 
   def isSleeping: Boolean = sleeper.isSleeping
 

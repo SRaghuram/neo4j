@@ -46,7 +46,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   override def start(): Unit = {
     DebugLog.log("starting worker threads")
-    workers.foreach(_.isTimeToStop = false)
+    workers.foreach(_.reset())
     workerThreads = workers.map(threadFactory.newThread(_))
     workerThreads.foreach(_.start())
     DebugLog.logDiff("done")
@@ -54,7 +54,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
   override def stop(): Unit = {
     DebugLog.log("stopping worker threads")
-    workers.foreach(_.isTimeToStop = true)
+    workers.foreach(_.stop())
     workerThreads.foreach(LockSupport.unpark)
     workerThreads.foreach(_.join(threadJoinWait.toMillis))
     workers.foreach(_.close())
