@@ -83,8 +83,8 @@ class HalfCreatedConstraintIT
             }
         } );
         assertThat( exception.getMessage(), containsString(
-                    "Index IndexDefinition[label:MARKER on:property] (IndexRule[id=1, descriptor=Index( UNIQUE, :label[0](property[0]) ), " +
-                            "provider={key=native-btree, version=1.0}, owner=null]) entered a FAILED state. Please see database logs.: Cause of failure:" ) );
+                    "Index IndexDefinition[label:MARKER on:property] (Index( 1, 'index_1', UNIQUE, :label[0](property[0]), native-btree-1.0 )) " +
+                            "entered a FAILED state. Please see database logs.: Cause of failure:" ) );
     }
 
     private static void addIndex( GraphDatabaseService database ) throws SchemaKernelException

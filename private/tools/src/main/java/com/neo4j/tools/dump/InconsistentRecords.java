@@ -36,7 +36,7 @@ public class InconsistentRecords
 
         public long extractId( String line )
         {
-            int bracket = line.indexOf( '[' );
+            int bracket = InconsistencyReportReader.indexOfBracket( line );
             if ( bracket > -1 )
             {
                 int separator = min( getSeparatorIndex( ',', line, bracket ),
@@ -46,7 +46,8 @@ public class InconsistentRecords
                 int startPosition = (isNotPlainId( bracket, separator, equally ) ? equally : bracket) + 1;
                 if ( separator > -1 )
                 {
-                    return Long.parseLong( line.substring( startPosition, separator ) );
+                    String idString = line.substring( startPosition, separator ).trim();
+                    return Long.parseLong( idString );
                 }
             }
             return NO_ID;

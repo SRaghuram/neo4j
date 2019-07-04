@@ -121,7 +121,8 @@ public class InconsistencyReportReader
             return InconsistentRecords.Type.PROPERTY;
         case "RelationshipGroup":
             return InconsistentRecords.Type.RELATIONSHIP_GROUP;
-        case "IndexRule":
+        case "Index":
+        case "IndexRule": // "IndexRule" may show up in older reports.
             return InconsistentRecords.Type.SCHEMA_INDEX;
         case "IndexEntry":
             return InconsistentRecords.Type.NODE;
@@ -135,7 +136,23 @@ public class InconsistencyReportReader
 
     private String entityType( String line )
     {
-        int bracket = line.indexOf( '[' );
+        int bracket = indexOfBracket( line );
         return bracket == -1 ? null : line.substring( 0, bracket );
+    }
+
+    static int indexOfBracket( String line )
+    {
+        int bracket = -1;
+        int len = line.length();
+        for ( int i = 0; i < len; i++ )
+        {
+            char ch = line.charAt( i );
+            if ( ch == '[' || ch == '(' )
+            {
+                bracket = i;
+                break;
+            }
+        }
+        return bracket;
     }
 }
