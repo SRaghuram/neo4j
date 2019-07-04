@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.neo4j.bench.infra.BenchmarkArgs;
+import com.neo4j.bench.infra.JobId;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -72,7 +73,7 @@ class AWSBatchJobSchedulerTest
                 );
 
         // when
-        List<String> jobIds = jobScheduler.schedule(
+        List<JobId> jobIds = jobScheduler.schedule(
                 "musicbrainz",
                 "musicbrainz",
                 new BenchmarkArgs( parameters, URI.create( "s3://benchmarking.neohq.net/worker.jar" ) ) );
