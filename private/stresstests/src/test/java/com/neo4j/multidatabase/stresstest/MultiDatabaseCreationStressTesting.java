@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
@@ -54,14 +55,11 @@ class MultiDatabaseCreationStressTesting
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDirectory )
                 .setConfig( CommercialEditionSettings.maxNumberOfDatabases, valueOf( Long.MAX_VALUE ) )
                 .build();
-        GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
-        DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
-        assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );
-
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
+
         try
         {
-            executeMultiDatabaseCommands( durationInMinutes, threads, databaseManager, executorPool );
+            executeMultiDatabaseCommands( durationInMinutes, threads, managementService, executorPool );
         }
         finally
         {
@@ -70,7 +68,7 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    private static void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager<?> databaseManager, ExecutorService executorPool )
+    private static void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManagementService dbms, ExecutorService executorPool )
             throws InterruptedException
     {
         long finishTimeMillis = System.currentTimeMillis() + MINUTES.toMillis( durationInMinutes );
@@ -78,7 +76,7 @@ class MultiDatabaseCreationStressTesting
         List<CommandExecutor> commandExecutors = new ArrayList<>( threads );
         for ( int i = 0; i < threads; i++ )
         {
-            CommandExecutor commandExecutor = new CommandExecutor( databaseManager, executorLatch, finishTimeMillis );
+            CommandExecutor commandExecutor = new CommandExecutor( dbms, executorLatch, finishTimeMillis );
             commandExecutors.add( commandExecutor );
             executorPool.submit( commandExecutor );
         }
@@ -87,10 +85,5 @@ class MultiDatabaseCreationStressTesting
         {
             commandExecutor.checkExecutionResults();
         }
-    }
-
-    private static DatabaseManager<?> getDatabaseManager( GraphDatabaseAPI databaseService )
-    {
-        return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

@@ -12,13 +12,14 @@ import com.neo4j.multidatabase.stresstest.commands.ExecuteTransactionCommand;
 import com.neo4j.multidatabase.stresstest.commands.StopStartManagerCommand;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
@@ -31,12 +32,13 @@ import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
     private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private final DatabaseManager<?> databaseManager;
+    private final DatabaseManagementService dbms;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
     private final ThreadLocalRandom random;
@@ -47,9 +49,9 @@ class CommandExecutor implements Runnable
     private int stopStartCommands;
     private int dropCommands;
 
-    CommandExecutor( DatabaseManager<?> databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
+    CommandExecutor( DatabaseManagementService dbms, CountDownLatch executionLatch, long finishTimeMillis )
     {
-        this.databaseManager = databaseManager;
+        this.dbms = dbms;
         this.executionLatch = executionLatch;
         this.finishTimeMillis = finishTimeMillis;
         this.random = ThreadLocalRandom.current();
@@ -62,40 +64,39 @@ class CommandExecutor implements Runnable
         {
             try
             {
-                List<DatabaseId> databases = databaseManager.registeredDatabases()
-                        .keySet()
-                        .stream()
-                        .filter( dbId -> !DatabaseId.isSystemDatabase( dbId ) )
+                var databases = dbms.listDatabases().stream()
+                        .filter( dbName -> !Objects.equals( dbName, SYSTEM_DATABASE_NAME ) )
                         .collect( Collectors.toList() );
+
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
                 {
-                    command = new CreateManagerCommand( databaseManager, createDatabaseId() );
+                    command = new CreateManagerCommand( dbms, createDatabaseName() );
                     createCommands++;
                 }
                 else
                 {
-                    DatabaseId database = getRandomDatabaseName( databases );
+                    String databaseName = getRandomDatabaseName( databases );
                     int operation = random.nextInt( 100 );
                     if ( operation < 80 )
                     {
-                        command = new ExecuteTransactionCommand( databaseManager, database );
+                        command = new ExecuteTransactionCommand( dbms, databaseName );
                         executionCommands++;
                     }
                     else if ( operation < 90 )
                     {
-                        command = new StopStartManagerCommand( databaseManager, database );
+                        command = new StopStartManagerCommand( dbms, databaseName );
                         stopStartCommands++;
                     }
                     else if ( operation < 95 )
                     {
-                        command = new CreateManagerCommand( databaseManager, createDatabaseId() );
+                        command = new CreateManagerCommand( dbms, createDatabaseName() );
                         createCommands++;
                     }
                     else
                     {
-                        command = new DropManagerCommand( databaseManager, database );
+                        command = new DropManagerCommand( dbms, databaseName );
                         dropCommands++;
                     }
                 }
@@ -120,12 +121,12 @@ class CommandExecutor implements Runnable
         executionLatch.countDown();
     }
 
-    private static DatabaseId createDatabaseId()
+    private static String createDatabaseName()
     {
-        return DATABASE_ID_REPOSITORY.get( "database" + dbCounter.getAndIncrement() );
+        return "database" + dbCounter.getAndIncrement();
     }
 
-    private DatabaseId getRandomDatabaseName( List<DatabaseId> databases )
+    private String getRandomDatabaseName( List<String> databases )
     {
         int knownDatabases = databases.size();
         return databases.get( random.nextInt( knownDatabases ) );

@@ -5,6 +5,8 @@
  */
 package com.neo4j.multidatabase.stresstest.commands;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -14,33 +16,39 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class ExecuteTransactionCommand extends DatabaseManagerCommand
 {
-    public ExecuteTransactionCommand( DatabaseManager<?> manager, DatabaseId databaseId )
+    public ExecuteTransactionCommand( DatabaseManagementService dbms, String databaseName )
     {
-        super( manager, databaseId );
+        super( dbms, databaseName );
     }
 
     @Override
-    void execute( DatabaseManager<?> manager, DatabaseId databaseId )
+    void execute( DatabaseManagementService dbms, String databaseName )
     {
-        var databaseContext = manager.getDatabaseContext( databaseId );
-        if ( databaseContext.isPresent() )
+        GraphDatabaseFacade databaseFacade;
+
+        try
         {
-            GraphDatabaseFacade databaseFacade = databaseContext.get().databaseFacade();
-            try ( Transaction transaction = databaseFacade.beginTx() )
+            databaseFacade = (GraphDatabaseFacade) dbms.database( databaseName );
+        }
+        catch ( DatabaseNotFoundException e )
+        {
+            return; //A non existent database is ignored
+        }
+
+        try ( Transaction transaction = databaseFacade.beginTx() )
+        {
+            Node node1 = databaseFacade.createNode();
+            Node node2 = databaseFacade.createNode();
+            node1.setProperty( "a", "b" );
+            node2.setProperty( "c", "d" );
+            node1.createRelationshipTo( node2, RelationshipType.withName( "some" ) );
+            transaction.success();
+        }
+        catch ( IllegalStateException e )
+        {
+            if ( !e.getMessage().contains( "Kernel is not running" ) )
             {
-                Node node1 = databaseFacade.createNode();
-                Node node2 = databaseFacade.createNode();
-                node1.setProperty( "a", "b" );
-                node2.setProperty( "c", "d" );
-                node1.createRelationshipTo( node2, RelationshipType.withName( "some" ) );
-                transaction.success();
-            }
-            catch ( IllegalStateException e )
-            {
-                if ( !e.getMessage().contains( "Kernel is not running" ) )
-                {
-                    throw e;
-                }
+                throw e;
             }
         }
     }

@@ -5,20 +5,21 @@
  */
 package com.neo4j.multidatabase.stresstest.commands;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class DropManagerCommand extends DatabaseManagerCommand
 {
-    public DropManagerCommand( DatabaseManager<?> manager, DatabaseId databaseId )
+    public DropManagerCommand( DatabaseManagementService dbms, String databaseName )
     {
-        super( manager, databaseId );
+        super( dbms, databaseName );
     }
 
     @Override
-    void execute( DatabaseManager<?> manager, DatabaseId databaseId ) throws DatabaseNotFoundException
+    void execute( DatabaseManagementService dbms, String databaseName ) throws DatabaseNotFoundException
     {
-        manager.dropDatabase( databaseId );
+        dbms.dropDatabase( databaseName );
     }
 }
