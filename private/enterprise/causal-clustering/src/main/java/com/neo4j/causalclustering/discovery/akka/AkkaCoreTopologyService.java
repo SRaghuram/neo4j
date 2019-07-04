@@ -13,9 +13,9 @@ import akka.event.EventStream;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
+import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
@@ -41,6 +41,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
@@ -48,12 +49,13 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
 
-public class AkkaCoreTopologyService extends AbstractCoreTopologyService
+public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopologyService
 {
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
@@ -62,6 +64,13 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final Executor executor;
     private final Clock clock;
+    private final Config config;
+    private final MemberId myself;
+    private final Log log;
+    private final Log userLog;
+
+    private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
+    private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
 
     private volatile ActorRef coreTopologyActorRef;
     private volatile ActorRef directoryActorRef;
@@ -71,7 +80,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
             DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock )
     {
-        super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
@@ -79,6 +87,10 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         this.discoveryMemberFactory = discoveryMemberFactory;
         this.executor = executor;
         this.clock = clock;
+        this.config = config;
+        this.myself = myself;
+        this.log = logProvider.getLog( getClass() );
+        this.userLog = userLogProvider.getLog( getClass() );
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
     }
 
@@ -132,12 +144,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
-    private ActorRef startRestartNeededListeningActor( Cluster cluster )
+    private void startRestartNeededListeningActor( Cluster cluster )
     {
         Runnable restart = () -> executor.execute( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
         Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
-        return actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
+        actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
     private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
@@ -155,6 +167,19 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         actorSystemLifecycle.shutdown();
 
         globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
+    }
+
+    @Override
+    public void addLocalCoreTopologyListener( Listener listener )
+    {
+        listenerService.addCoreTopologyListener( listener );
+        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.databaseId() ) );
+    }
+
+    @Override
+    public void removeLocalCoreTopologyListener( Listener listener )
+    {
+        listenerService.removeCoreTopologyListener( listener );
     }
 
     @Override
@@ -234,24 +259,45 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo, DatabaseId databaseId )
+    public void setLeader( LeaderInfo newLeaderInfo, DatabaseId databaseId )
     {
-        var directoryActor = directoryActorRef;
-        if ( directoryActor != null && (leaderInfo.memberId() != null || leaderInfo.isSteppingDown()) )
+        var currentLeaderInfo = getLocalLeader( databaseId );
+        if ( currentLeaderInfo.term() < newLeaderInfo.term() )
         {
-            directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, databaseId ), noSender() );
+            log.info( "Leader %s updating leader info for database %s and term %s", memberId(), databaseId.name(), newLeaderInfo.term() );
+            localLeadersByDatabaseId.put( databaseId, newLeaderInfo );
+            sendLeaderInfoIfNeeded( newLeaderInfo, databaseId );
         }
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown, DatabaseId databaseId )
+    public void handleStepDown( long term, DatabaseId databaseId )
     {
-        setLeader0( steppingDown, databaseId );
+        var currentLeaderInfo = getLocalLeader( databaseId );
+
+        var wasLeaderForTerm =
+                Objects.equals( memberId(), currentLeaderInfo.memberId() ) &&
+                term == currentLeaderInfo.term();
+
+        if ( wasLeaderForTerm )
+        {
+            log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
+                      "to follower.", memberId(), databaseId.name(), currentLeaderInfo.term() );
+
+            var newLeaderInfo = currentLeaderInfo.stepDown();
+            localLeadersByDatabaseId.put( databaseId, newLeaderInfo );
+            sendLeaderInfoIfNeeded( newLeaderInfo, databaseId );
+        }
     }
 
     @Override
-    protected RoleInfo coreRole0( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
     {
+        var leaderInfo = localLeadersByDatabaseId.get( databaseId );
+        if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
+        {
+            return RoleInfo.LEADER;
+        }
         return globalTopologyState.coreRole( databaseId, memberId );
     }
 
@@ -292,14 +338,34 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         }
     }
 
+    @Override
+    public MemberId memberId()
+    {
+        return myself;
+    }
+
     @VisibleForTesting
     GlobalTopologyState topologyState()
     {
         return globalTopologyState;
     }
 
+    private void sendLeaderInfoIfNeeded( LeaderInfo leaderInfo, DatabaseId databaseId )
+    {
+        var directoryActor = directoryActorRef;
+        if ( directoryActor != null && (leaderInfo.memberId() != null || leaderInfo.isSteppingDown()) )
+        {
+            directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, databaseId ), noSender() );
+        }
+    }
+
     private GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, CoreTopologyListenerService listenerService )
     {
         return new GlobalTopologyState( logProvider, listenerService::notifyListeners );
+    }
+
+    private LeaderInfo getLocalLeader( DatabaseId databaseId )
+    {
+        return localLeadersByDatabaseId.getOrDefault( databaseId, LeaderInfo.INITIAL );
     }
 }
