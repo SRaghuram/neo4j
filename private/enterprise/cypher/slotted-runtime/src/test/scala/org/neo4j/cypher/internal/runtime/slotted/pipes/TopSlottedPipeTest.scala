@@ -98,14 +98,6 @@ class TopSlottedPipeTest extends CypherFunSuite {
     result should equal(List.empty)
   }
 
-  test("should handle negative limit") {
-    val input = randomlyShuffledIntDataFromZeroUntil(5)
-    val result = singleColumnTopWithInput(
-      input, orderBy = AscendingOrder, limit = -1
-    )
-    result should equal(List.empty)
-  }
-
   test("should handle limit of Int.MaxValue") {
     val input = randomlyShuffledIntDataFromZeroUntil(5)
     val result = singleColumnTopWithInput(
