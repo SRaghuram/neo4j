@@ -6,7 +6,6 @@
 package com.neo4j.multidatabase.stresstest;
 
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.jupiter.api.Test;
 
@@ -19,10 +18,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static com.neo4j.helper.StressTestingHelper.fromEnv;
@@ -30,9 +25,6 @@ import static java.lang.Integer.parseInt;
 import static java.lang.String.valueOf;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
 
 class MultiDatabaseCreationStressTesting
