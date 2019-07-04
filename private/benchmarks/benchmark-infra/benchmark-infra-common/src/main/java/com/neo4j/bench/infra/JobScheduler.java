@@ -15,16 +15,14 @@ public interface JobScheduler
 {
 
     /**
-     * Schedules a benchmarking runs.
+     * Schedules a benchmarking run.
+     *
      * @param workloads
      * @param dbs
      * @param args
-     * @return list of scheduled job IDs.
+     * @return IDs of scheduled jobs.
      */
-    List<String> schedule(
-            String workloads,
-            String dbs,
-            BenchmarkArgs args );
+    List<JobId> schedule( String workloads, String dbs, BenchmarkArgs args );
 
     /**
      * Fetches statues of scheduled jobs.
@@ -32,5 +30,5 @@ public interface JobScheduler
      * @param jobIds
      * @return job statuses
      */
-    List<JobStatus> jobsStatuses( List<String> jobIds );
+    List<JobStatus> jobsStatuses( List<JobId> jobIds );
 }

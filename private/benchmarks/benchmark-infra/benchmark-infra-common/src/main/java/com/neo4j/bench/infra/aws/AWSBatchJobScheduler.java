@@ -15,6 +15,7 @@ import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.google.common.collect.Streams;
 import com.neo4j.bench.infra.BenchmarkArgs;
+import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import org.slf4j.Logger;
@@ -58,7 +59,7 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public List<String> schedule(
+    public List<JobId> schedule(
             String workloads,
             String dbs,
             BenchmarkArgs args )
@@ -75,9 +76,10 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public List<JobStatus> jobsStatuses( List<String> jobIds )
+    public List<JobStatus> jobsStatuses( List<JobId> jobIds )
     {
-        List<JobStatus> jobsStatuses = awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIds ) )
+        List<String> jobIdsAsStrings = jobIds.stream().map( JobId::id ).collect( toList() );
+        List<JobStatus> jobsStatuses = awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIdsAsStrings ) )
             .getJobs()
             .stream()
             .map(AWSBatchJobScheduler::jobStatus)
@@ -86,11 +88,12 @@ public class AWSBatchJobScheduler implements JobScheduler
         return jobsStatuses;
     }
 
-    private List<String> schedule( List<SubmitJobRequest> submitJobRequests )
+    private List<JobId> schedule( List<SubmitJobRequest> submitJobRequests )
     {
         return submitJobRequests.stream()
                 .map( awsBatch::submitJob )
                 .map( SubmitJobResult::getJobId )
+                .map( JobId::new )
                 .collect( toList() );
     }
 
