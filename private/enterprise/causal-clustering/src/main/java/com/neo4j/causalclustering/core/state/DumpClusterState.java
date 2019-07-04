@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
@@ -24,7 +25,7 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 
 public class DumpClusterState
 {
-    private final CoreStateStorageFactory storageFactory;
+    private final ClusterStateStorageFactory storageFactory;
     private final PrintStream out;
     private final String databaseToDump;
 
@@ -131,9 +132,9 @@ public class DumpClusterState
         }
     }
 
-    private static CoreStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, File dataDirectory )
+    private static ClusterStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, File dataDirectory )
     {
         ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory );
-        return new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults() );
+        return new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults() );
     }
 }

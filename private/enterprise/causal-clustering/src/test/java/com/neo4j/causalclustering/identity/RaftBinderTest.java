@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.identity;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -35,6 +36,7 @@ import org.neo4j.time.FakeClock;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,6 +62,22 @@ class RaftBinderTest
     }
 
     @Test
+    void shouldThrowOnRaftIdDatabaseIdMismatch()
+    {
+        // given
+        var previouslyBoundRaftId = RaftIdFactory.random();
+
+        var raftIdStorage = new InMemorySimpleStorage<RaftId>();
+        raftIdStorage.writeState( previouslyBoundRaftId );
+
+        var binder = raftBinder( raftIdStorage, mock( CoreTopologyService.class ) );
+        var exception = IllegalStateException.class;
+
+        // when / then
+        assertThrows( exception, binder::bindToRaft );
+    }
+
+    @Test
     void shouldTimeoutWhenNotBootstrappableAndNobodyElsePublishesRaftId() throws Throwable
     {
         // given
@@ -67,20 +85,10 @@ class RaftBinderTest
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology );
 
-        RaftBinder binder = raftBinder( new StubSimpleStorage<>(), topologyService );
+        RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
 
-        try
-        {
-            // when
-            binder.bindToRaft();
-            fail( "Should have timed out" );
-        }
-        catch ( TimeoutException e )
-        {
-            // expected
-        }
-
-        // then
+        // when / then
+        assertThrows( TimeoutException.class, binder::bindToRaft );
         verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( databaseId );
     }
 
@@ -88,14 +96,14 @@ class RaftBinderTest
     void shouldBindToRaftIdPublishedByAnotherMember() throws Throwable
     {
         // given
-        RaftId publishedRaftId = new RaftId( UUID.randomUUID() );
+        RaftId publishedRaftId = RaftId.from( databaseId );
         DatabaseCoreTopology unboundTopology = new DatabaseCoreTopology( databaseId, null, emptyMap() );
         DatabaseCoreTopology boundTopology = new DatabaseCoreTopology( databaseId, publishedRaftId, emptyMap() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( unboundTopology ).thenReturn( boundTopology );
 
-        RaftBinder binder = raftBinder( new StubSimpleStorage<>(), topologyService );
+        RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
 
         // when
         binder.bindToRaft();
@@ -111,12 +119,12 @@ class RaftBinderTest
     void shouldPublishStoredRaftIdIfPreviouslyBound() throws Throwable
     {
         // given
-        RaftId previouslyBoundRaftId = new RaftId( UUID.randomUUID() );
+        RaftId previouslyBoundRaftId = RaftId.from( databaseId );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.setRaftId( previouslyBoundRaftId, databaseId ) ).thenReturn( true );
 
-        StubSimpleStorage<RaftId> raftIdStorage = new StubSimpleStorage<>();
+        InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
 
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
@@ -132,29 +140,21 @@ class RaftBinderTest
     }
 
     @Test
-    void shouldFailToPublishMismatchingStoredRaftId() throws Throwable
+    void shouldThrowWhenFailsToPublishStoredRaftId() throws Throwable
     {
         // given
-        RaftId previouslyBoundRaftId = new RaftId( UUID.randomUUID() );
+        RaftId previouslyBoundRaftId = RaftId.from( databaseId );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.setRaftId( previouslyBoundRaftId, databaseId ) ).thenReturn( false );
 
-        StubSimpleStorage<RaftId> raftIdStorage = new StubSimpleStorage<>();
+        InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
 
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
-        // when
-        try
-        {
-            binder.bindToRaft();
-            fail( "Should have thrown exception" );
-        }
-        catch ( BindingException e )
-        {
-            // expected
-        }
+        // when / then
+        assertThrows( BindingException.class, binder::bindToRaft );
     }
 
     @Test
@@ -174,7 +174,7 @@ class RaftBinderTest
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
         when( raftBootstrapper.bootstrap( any() ) ).thenReturn( snapshot );
 
-        RaftBinder binder = raftBinder( new StubSimpleStorage<>(), topologyService );
+        RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
 
         // when
         BoundState boundState = binder.bindToRaft();
@@ -183,31 +183,9 @@ class RaftBinderTest
         verify( raftBootstrapper ).bootstrap( any() );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
+        assertEquals( raftId.get().uuid(), databaseId.uuid() );
         verify( topologyService ).setRaftId( raftId.get(), databaseId );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
-    }
-
-    private class StubSimpleStorage<T> implements SimpleStorage<T>
-    {
-        private T state;
-
-        @Override
-        public boolean exists()
-        {
-            return state != null;
-        }
-
-        @Override
-        public T readState()
-        {
-            return state;
-        }
-
-        @Override
-        public void writeState( T state )
-        {
-            this.state = state;
-        }
     }
 }

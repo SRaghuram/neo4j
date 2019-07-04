@@ -57,8 +57,17 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
                 throw new DatabaseManagementException(
                         format( "Reached maximum number of active databases. Fail to create new database `%s`.", databaseId.name() ) );
             }
-            log.info( "Creating '%s' database.", databaseId.name() );
-            DB databaseContext = createDatabaseContext( databaseId );
+            DB databaseContext;
+            try
+            {
+                log.info( "Creating '%s' database.", databaseId.name() );
+                databaseContext = createDatabaseContext( databaseId );
+            }
+            catch ( Exception e )
+            {
+                throw new DatabaseManagementException(
+                        format( "An error occured: %s. Fail to create new database `%s`.", e.getMessage(), databaseId.name() ), e );
+            }
             // TODO: Autostart only used in tests, update tests to create -> start
             if ( autoStart && databaseManagerStarted )
             {
@@ -157,6 +166,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         log.info( "Drop '%s' database.", databaseId.name() );
         Database database = context.database();
         database.drop();
+        databaseIdRepository().invalidate( databaseId );
         return null;
     }
 

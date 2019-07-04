@@ -196,6 +196,15 @@ public final class CausalClusteringTestHelpers
         } );
     }
 
+    public static void dropDatabase( String databaseName, Cluster cluster ) throws Exception
+    {
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "DROP DATABASE " + databaseName );
+            tx.commit();
+        } );
+    }
+
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
@@ -214,10 +223,22 @@ public final class CausalClusteringTestHelpers
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), is( true ), 1, MINUTES );
     }
 
+    public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
+                () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), is( true ), 1, MINUTES );
+    }
+
     public static void assertDatabaseDoesNotExist( String databaseName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), is( true ), 1, MINUTES );
+    }
+
+    public static void assertDatabaseDoesNotExist( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
+                () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), is( true ), 1, MINUTES );
     }
 
     private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )

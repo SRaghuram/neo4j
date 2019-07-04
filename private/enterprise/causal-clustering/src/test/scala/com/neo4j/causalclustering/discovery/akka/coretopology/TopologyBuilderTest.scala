@@ -100,7 +100,7 @@ class TopologyBuilderTest
 
     implicit val cluster = mock[Cluster]
     val databaseId = randomDatabaseId()
-    val raftId = new RaftId(UUID.randomUUID)
+    val raftId = RaftId.from(databaseId)
 
     def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head) =
       new TopologyBuilder(self, NullLogProvider.getInstance())

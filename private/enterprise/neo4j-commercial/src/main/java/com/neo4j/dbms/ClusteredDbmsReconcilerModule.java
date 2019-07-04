@@ -6,6 +6,7 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 
 import java.util.stream.Stream;
 
@@ -18,13 +19,16 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
 {
     private final ReplicatedTransactionEventListeners txEventService;
     private final ClusterInternalDbmsOperator internalOperator;
+    private final ClusterStateStorageFactory stateStorageFactory;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedTransactionEventListeners txEventService, ClusterInternalDbmsOperator internalOperator, ReconciledTransactionTracker reconciledTxTracker )
+            ReplicatedTransactionEventListeners txEventService, ClusterInternalDbmsOperator internalOperator,
+            ClusterStateStorageFactory stateStorageFactory, ReconciledTransactionTracker reconciledTxTracker )
     {
         super( globalModule, databaseManager, reconciledTxTracker );
         this.txEventService = txEventService;
         this.internalOperator = internalOperator;
+        this.stateStorageFactory = stateStorageFactory;
         //TODO: don't need if we do end up injecting
         globalModule.getGlobalDependencies().satisfyDependencies( internalOperator );
     }
@@ -45,6 +49,6 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     protected ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager )
     {
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
-                globalModule.getJobScheduler() );
+                globalModule.getJobScheduler(), stateStorageFactory );
     }
 }

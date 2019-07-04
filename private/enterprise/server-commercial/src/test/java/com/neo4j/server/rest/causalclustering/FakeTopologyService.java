@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -33,7 +34,6 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
     private static final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
     private final Map<MemberId,RoleInfo> roles;
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
@@ -42,7 +42,6 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     FakeTopologyService( Collection<MemberId> cores, Collection<MemberId> replicas, MemberId myself, RoleInfo myselfRole )
     {
         this.myself = myself;
-        raftId = new RaftId( UUID.randomUUID() );
         roles = new HashMap<>();
         coreMembers = new HashMap<>();
 
@@ -113,7 +112,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
+        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coreMembers );
     }
 
     @Override

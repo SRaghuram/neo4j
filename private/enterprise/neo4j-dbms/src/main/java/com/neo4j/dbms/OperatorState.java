@@ -5,6 +5,9 @@
  */
 package com.neo4j.dbms;
 
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+
 import static java.util.Comparator.comparingInt;
 import static java.util.Comparator.nullsLast;
 
@@ -19,7 +22,9 @@ public enum OperatorState
     STOPPED( "stopped", 100 ),
     STORE_COPYING( "store_copying", 200 ),
     STARTED( "started", 300 ),
-    DROPPED( "dropped", 0 );
+    DROPPED( "dropped", 0 ),
+    UNKNOWN( "unknown", 400 ),
+    INITIAL( "initial", 500 );
 
     private final String description;
     private final int precedence;
@@ -60,5 +65,20 @@ public enum OperatorState
     {
         var precedenceCompare = nullsLast( comparingInt( OperatorState::precedence ) );
         return precedenceCompare.compare( left, right ) <= 0 ? left : right;
+    }
+
+    /**
+     * Returns a binary operator for comparing objects by their OperatorState using {@code minByPrecedence}
+     * @see DatabaseState
+     */
+    static <T> BinaryOperator<T> minByOperatorState( Function<T,OperatorState> toOperatorState )
+    {
+        return ( left, right ) ->
+        {
+            var leftState = toOperatorState.apply( left );
+            var rightState = toOperatorState.apply( right );
+            var min = minByPrecedence( leftState, rightState );
+            return min == leftState ? left : right;
+        };
     }
 }

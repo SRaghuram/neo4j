@@ -11,12 +11,15 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
@@ -34,6 +37,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -56,8 +60,8 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 
 class ReadReplicaDatabaseLifeTest
 {
-    private final RaftId raftId = new RaftId( UUID.randomUUID() );
     private final DatabaseId databaseA = TestDatabaseIdRepository.randomDatabaseId();
+    private final RaftId raftId = RaftId.from( databaseA );
     private final MemberId memberA = new MemberId( UUID.randomUUID() );
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
@@ -91,8 +95,15 @@ class ReadReplicaDatabaseLifeTest
     private ReadReplicaDatabaseLife createReadReplicaDatabaseLife( TopologyService topologyService, CatchupComponents catchupComponents,
             ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
     {
-        return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(), nullLogProvider(),
-                topologyService, () -> catchupComponents, mock( LifeSupport.class ), new ClusterInternalDbmsOperator(), mock( PanicService.class ) );
+        return createReadReplicaDatabaseLife( topologyService, catchupComponents, localContext, catchupProcess, new InMemorySimpleStorage<>() );
+    }
+
+    private ReadReplicaDatabaseLife createReadReplicaDatabaseLife( TopologyService topologyService, CatchupComponents catchupComponents,
+            ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess, SimpleStorage<RaftId> raftIdStorage )
+    {
+        return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(),
+                nullLogProvider(), topologyService, () -> catchupComponents, mock( LifeSupport.class ),
+                new ClusterInternalDbmsOperator(), raftIdStorage, mock( PanicService.class ) );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException
@@ -120,6 +131,27 @@ class ReadReplicaDatabaseLifeTest
 
         LogFiles txLogs = mock( LogFiles.class );
         return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
+    }
+
+    @Test
+    void shouldFailToStartOnRaftIdDatabaseIdMismatch() throws Throwable
+    {
+        // given
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+
+        var raftIdB = RaftIdFactory.random();
+        var raftIdStorage = new InMemorySimpleStorage<RaftId>();
+        raftIdStorage.writeState( raftIdB );
+
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, raftIdStorage );
+        var exception = IllegalStateException.class;
+
+        // when / then
+        assertThrows( exception, readReplicaDatabaseLife::init );
+        assertNeverStarted( databaseContext.database(), catchupProcess );
     }
 
     @Test

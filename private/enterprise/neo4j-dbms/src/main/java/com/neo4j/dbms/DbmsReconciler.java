@@ -5,12 +5,14 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.Transitions.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -18,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,6 +41,7 @@ import org.neo4j.scheduler.JobScheduler;
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.OperatorState.INITIAL;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
 
@@ -74,17 +76,17 @@ public class DbmsReconciler
 {
     private final ExponentialBackoffStrategy backoffStrategy;
     private final Executor executor;
-    private final Set<DatabaseId> reconciling;
+    private final Set<String> reconciling;
     private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
-    private final BinaryOperator<OperatorState> precedence;
+    private final BinaryOperator<DatabaseState> precedence;
     private final Log log;
     private final boolean canRetry;
-    private final Map<DatabaseId,DatabaseReconcilerState> currentStates;
+    protected final Map<String,DatabaseReconcilerEntry> currentStates;
+    private final Transitions transitions;
 
     DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
     {
         this.databaseManager = databaseManager;
-
         this.backoffStrategy = new ExponentialBackoffStrategy(
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
@@ -93,45 +95,80 @@ public class DbmsReconciler
         this.currentStates = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
         this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
-        this.precedence = OperatorState::minByPrecedence;
+        this.precedence = OperatorState.minByOperatorState( DatabaseState::operationalState );
+        this.transitions = prepareLifecycleTransitionSteps();
     }
 
     Reconciliation reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
     {
-        var dbsToReconcile = operators.stream()
+        var namesOfDbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
                 .distinct();
 
-        var reconciliation = dbsToReconcile
-                .map( dbId -> Pair.of( dbId, reconcile( dbId, request, operators ) ) )
+        var reconciliation = namesOfDbsToReconcile
+                .map( dbName -> Pair.of( dbName, reconcile( dbName, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new Reconciliation( reconciliation );
     }
 
-    private static Map<DatabaseId,OperatorState> combineDesiredStates( Map<DatabaseId,OperatorState> combined, Map<DatabaseId,OperatorState> operator,
-            BinaryOperator<OperatorState> precedence )
+    private static Map<String,DatabaseState> combineDesiredStates( Map<String,DatabaseState> combined, Map<String,DatabaseState> operator,
+            BinaryOperator<DatabaseState> precedence )
     {
         return Stream.concat( combined.entrySet().stream(), operator.entrySet().stream() )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue, precedence ) );
     }
 
-    private static Map<DatabaseId,OperatorState> desiredStates( List<DbmsOperator> operators, BinaryOperator<OperatorState> precedence )
+    private static Map<String,DatabaseState> desiredStates( List<DbmsOperator> operators, BinaryOperator<DatabaseState> precedence )
     {
         return operators.stream()
                 .map( DbmsOperator::desired )
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    private CompletableFuture<ReconcilerStepResult> reconcile( DatabaseId databaseId, ReconcilerRequest request, List<DbmsOperator> operators )
+    private ReconcilerStepResult reconcileSteps( DatabaseState currentState, Stream<Transition> steps, DatabaseState desiredState )
     {
-        var work = preReconcile( databaseId, operators )
+        return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+    }
+
+    private ReconcilerStepResult reconcileSteps0( Iterator<Transition> steps, ReconcilerStepResult result )
+    {
+        if ( !steps.hasNext() )
+        {
+            return result;
+        }
+
+        try
+        {
+            var nextState = steps.next().doTransition();
+            return reconcileSteps0( steps, result.withState( nextState ) );
+        }
+        catch ( DatabaseManagementException e )
+        {
+            return result.withError( e );
+        }
+        catch ( Exception e )
+        {
+            return null;
+        }
+    }
+
+    protected DatabaseReconcilerEntry getReconcilerEntryFor( DatabaseId databaseId )
+    {
+        return currentStates.getOrDefault( databaseId.name(), DatabaseReconcilerEntry.initial( databaseId ) );
+    }
+
+    private CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
+    {
+        var work = preReconcile( databaseName, operators )
                 .thenCompose( desiredState ->
                 {
-                    var reconcilerEntry = currentStates.getOrDefault( databaseId, DatabaseReconcilerState.INITIAL );
-                    var initialResult = new ReconcilerStepResult( reconcilerEntry.state(), null, desiredState );
+                    var reconcilerEntry = getReconcilerEntryFor( desiredState.databaseId() );
 
-                    if ( reconcilerEntry.state() == desiredState )
+                    DatabaseState currentState = reconcilerEntry.state();
+                    var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
+
+                    if ( currentState.equals( desiredState ) )
                     {
                         return CompletableFuture.completedFuture( initialResult );
                     }
@@ -139,21 +176,22 @@ public class DbmsReconciler
                     if ( reconcilerEntry.hasFailed() && !request.forceReconciliation() )
                     {
                         var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
-                                databaseId.name(), desiredState.description() );
+                                databaseName, desiredState.operationalState().description() );
                         return CompletableFuture.completedFuture( initialResult.withError( new DatabaseManagementException( message ) ) );
                     }
 
                     var backoff = backoffStrategy.newTimeout();
-                    var steps = prepareLifeCycleTransitionSteps( reconcilerEntry.state(), databaseId, desiredState );
+                    var steps = getLifecycleTransitionSteps( currentState, desiredState );
 
-                    return CompletableFuture.supplyAsync( () -> reconcileSteps( initialResult.state(), steps, databaseId, desiredState ), executor  )
+                    DatabaseId databaseId = desiredState.databaseId();
+                    return CompletableFuture.supplyAsync( () -> reconcileSteps( initialResult.state(), steps, desiredState ), executor  )
                             .thenCompose( result -> retry( databaseId, desiredState, result, executor, backoff, 0 ) );
                 } );
 
-        return postReconcile( work, databaseId, request );
+        return postReconcile( work, databaseName, request );
     }
 
-    private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, OperatorState desiredState, ReconcilerStepResult result, Executor executor,
+    private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, DatabaseState desiredState, ReconcilerStepResult result, Executor executor,
             TimeoutStrategy.Timeout backoff, int retries )
     {
         boolean isFatalError = result.error() != null && !isTransientError( result.error() );
@@ -163,28 +201,34 @@ public class DbmsReconciler
         }
 
         var attempt = retries + 1;
-        log.warn( "Retrying reconciliation of database %s to state '%s'. This is attempt %d.", databaseId.name(), desiredState.description(), attempt );
+        log.warn( "Retrying reconciliation of database %s to state '%s'. This is attempt %d.", databaseId.name(),
+                desiredState.operationalState().description(), attempt );
 
-        var remainingSteps = prepareLifeCycleTransitionSteps( result.state(), databaseId, desiredState );
-        return CompletableFuture.supplyAsync( () -> reconcileSteps( result.state(), remainingSteps, databaseId, desiredState ),
+        var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );
+        return CompletableFuture.supplyAsync( () -> reconcileSteps( result.state(), remainingSteps, desiredState ),
                 delayedExecutor( backoff.getAndIncrement(), TimeUnit.MILLISECONDS, executor ) )
                 .thenCompose( retryResult -> retry( databaseId, desiredState, retryResult, executor, backoff, attempt ) );
     }
 
-    private CompletableFuture<OperatorState> preReconcile( DatabaseId databaseId, List<DbmsOperator> operators )
+    private CompletableFuture<DatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators )
     {
         return CompletableFuture.supplyAsync( () ->
         {
             try
             {
-                acquireLockOn( databaseId );
+                acquireLockOn( databaseName );
 
-                var desiredState = desiredStates( operators, precedence ).get( databaseId );
+                var desiredState = desiredStates( operators, precedence ).get( databaseName );
                 if ( desiredState == null )
                 {
                     var cause = new NullPointerException( format( "No operator desires a state for database %s any more. " +
-                            "This is likely an error!", databaseId ) );
-                    //TODO: investigate whether we need to wrap
+                            "This is likely an error!", databaseName ) );
+                    throw new CompletionException( cause );
+                }
+                else if ( !Objects.equals( databaseName, desiredState.databaseId().name() ) )
+                {
+                    var cause = new IllegalStateException( format( "The supplied database name %s does not match that stored " +
+                            "in its desired state %s!", databaseName, desiredState.databaseId().name() ) );
                     throw new CompletionException( cause );
                 }
                 return desiredState;
@@ -198,38 +242,38 @@ public class DbmsReconciler
         }, executor );
     }
 
-    private CompletableFuture<ReconcilerStepResult> postReconcile( CompletableFuture<ReconcilerStepResult> work, DatabaseId databaseId,
+    private CompletableFuture<ReconcilerStepResult> postReconcile( CompletableFuture<ReconcilerStepResult> work, String databaseName,
             ReconcilerRequest request )
     {
         return work.whenComplete( ( result, throwable ) ->
         {
-            currentStates.compute( databaseId, ( id, entry ) ->
+            currentStates.compute( databaseName, ( name, entry ) ->
             {
                 if ( throwable != null )
                 {
-                    log.error( format( "Encountered unexpected error when attempting to reconcile database %s", databaseId.name() ), throwable );
-                    return entry == null ? DatabaseReconcilerState.INITIAL.failed() : entry.failed();
+                    log.error( format( "Encountered unexpected error when attempting to reconcile database %s", databaseName ), throwable );
+                    return entry == null ? DatabaseReconcilerEntry.initial( null ).failed() : entry.failed();
                 }
                 else if ( result.error() != null )
                 {
                     log.error( format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                            databaseId.name(), result.state(), result.desiredState().description() ), result.error() );
-                    return new DatabaseReconcilerState( result.state() ).failed();
+                            databaseName, result.state(), result.desiredState().operationalState().description() ), result.error() );
+                    return new DatabaseReconcilerEntry( result.state() ).failed();
                 }
                 //TODO: Should we panic the database in both failure cases above? In the case of certain errors (OOM) should we panic the whole DBMS?
 
-                var reconcilerState = new DatabaseReconcilerState( result.state() );
-                if ( shouldFailDatabaseStateAfterSuccessfulReconcile( databaseId, entry, request ) )
+                var reconcilerState = new DatabaseReconcilerEntry( result.state() );
+                if ( shouldFailDatabaseStateAfterSuccessfulReconcile( result.state().databaseId(), entry, request ) )
                 {
                     return reconcilerState.failed();
                 }
                 return reconcilerState;
             } );
-            releaseLockOn( databaseId );
+            releaseLockOn( databaseName );
         } );
     }
 
-    private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerState currentState,
+    private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerEntry currentState,
             ReconcilerRequest request )
     {
         if ( request.forceReconciliation() )
@@ -245,24 +289,24 @@ public class DbmsReconciler
         return request.shouldFailAfterReconciliation( databaseId );
     }
 
-    private void releaseLockOn( DatabaseId databaseId )
+    private void releaseLockOn( String databaseName )
     {
         synchronized ( reconciling )
         {
-            reconciling.remove( databaseId );
+            reconciling.remove( databaseName );
             reconciling.notifyAll();
         }
     }
 
-    private void acquireLockOn( DatabaseId databaseId ) throws InterruptedException
+    private void acquireLockOn( String databaseName ) throws InterruptedException
     {
         synchronized ( reconciling )
         {
-            while ( reconciling.contains( databaseId ) )
+            while ( reconciling.contains( databaseName ) )
             {
                 reconciling.wait();
             }
-            reconciling.add( databaseId );
+            reconciling.add( databaseName );
         }
     }
 
@@ -271,104 +315,55 @@ public class DbmsReconciler
         return canRetry && !( t instanceof Error );
     }
 
-    private ReconcilerStepResult reconcileSteps( OperatorState currentState, Stream<Function<DatabaseId,OperatorState>> steps, DatabaseId databaseId,
-            OperatorState desiredState )
+    protected Transitions prepareLifecycleTransitionSteps()
     {
-        return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ), databaseId );
+        return Transitions.builder()
+                .from( INITIAL ).to( DROPPED ).doNothing()
+                .from( INITIAL ).to( STOPPED ).doTransitions( this::create )
+                .from( INITIAL ).to( STARTED ).doTransitions( this::create, this::start )
+                .from( STOPPED ).to( STARTED ).doTransitions( this::start )
+                .from( STARTED ).to( STOPPED ).doTransitions( this::stop )
+                .from( STOPPED ).to( DROPPED ).doTransitions( this::drop )
+                .from( STARTED ).to( DROPPED ).doTransitions( this::prepareDrop, this::stop, this::drop )
+                .build();
     }
 
-    private ReconcilerStepResult reconcileSteps0( Iterator<Function<DatabaseId,OperatorState>> steps, ReconcilerStepResult result, DatabaseId databaseId )
+    private Stream<Transition> getLifecycleTransitionSteps( DatabaseState currentState, DatabaseState desiredState )
     {
-        if ( !steps.hasNext() )
-        {
-            return result;
-        }
-
-        try
-        {
-            var nextState = steps.next().apply( databaseId );
-            return reconcileSteps0( steps, result.withState( nextState ), databaseId );
-        }
-        catch ( DatabaseManagementException e )
-        {
-            return result.withError( e );
-        }
-        catch ( Exception e )
-        {
-            System.out.println("Hola");
-            return null;
-        }
-    }
-
-    protected Stream<Function<DatabaseId,OperatorState>> prepareLifeCycleTransitionSteps( OperatorState currentState, DatabaseId databaseId,
-            OperatorState desiredState )
-    {
-        if ( currentState == desiredState || ( currentState == null && desiredState == DROPPED ) )
-        {
-            //If the current and desired state are the same, or if current state is null and desired is DROPPED,
-            // then there are no lifecycle transitions to be performed
-            return Stream.of( ignored -> desiredState );
-        }
-        else if ( currentState == null )
-        {
-            return Stream.concat( Stream.of( this::create ), prepareLifeCycleTransitionSteps( STOPPED, databaseId, desiredState ) );
-        }
-        else if ( currentState == STOPPED && desiredState == STARTED )
-        {
-            return Stream.of( this::start );
-        }
-        else if ( currentState == STARTED && desiredState == STOPPED )
-        {
-            return Stream.of( this::stop );
-        }
-        else if ( currentState == STOPPED && desiredState == DROPPED )
-        {
-            return Stream.of( this::drop );
-        }
-        else if ( currentState == STARTED && desiredState == DROPPED )
-        {
-            return Stream.of( this::prepareDrop, this::stop, this::drop );
-        }
-        else if ( currentState == DROPPED )
-        {
-            throw new IllegalArgumentException( format( "Trying to set database %s to %s, but is 'dropped'. 'dropped' is a final state for databases!",
-                    databaseId.name(), desiredState.description() ) );
-        }
-
-        throw new IllegalArgumentException( format( "'%s' -> '%s' is an unsupported state transition for the database %s!", currentState.description(),
-                desiredState.description(), databaseId.name() ) );
+        return transitions.fromCurrent( currentState ).toDesired( desiredState );
     }
 
     /* Operator Steps */
-    protected final OperatorState stop( DatabaseId databaseId )
+    protected final DatabaseState stop( DatabaseId databaseId )
     {
         databaseManager.stopDatabase( databaseId );
-        return STOPPED;
+        return new DatabaseState( databaseId, STOPPED );
     }
 
-    protected final OperatorState prepareDrop( DatabaseId databaseId )
+    private DatabaseState prepareDrop( DatabaseId databaseId )
     {
         databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
                 .ifPresent( Database::prepareToDrop );
-        return STARTED;
+        return new DatabaseState( databaseId, STARTED );
     }
 
-    protected final OperatorState drop( DatabaseId databaseId )
+    protected final DatabaseState drop( DatabaseId databaseId )
     {
         databaseManager.dropDatabase( databaseId );
-        return DROPPED;
+        return new DatabaseState( databaseId, DROPPED );
     }
 
-    protected final OperatorState start( DatabaseId databaseId )
+    protected final DatabaseState start( DatabaseId databaseId )
     {
         databaseManager.startDatabase( databaseId );
-        return STARTED;
+        return new DatabaseState( databaseId, STARTED );
     }
 
-    protected final OperatorState create( DatabaseId databaseId )
+    protected final DatabaseState create( DatabaseId databaseId )
     {
         databaseManager.createDatabase( databaseId, false );
-        return STOPPED;
+        return new DatabaseState( databaseId, STOPPED );
     }
+
 }

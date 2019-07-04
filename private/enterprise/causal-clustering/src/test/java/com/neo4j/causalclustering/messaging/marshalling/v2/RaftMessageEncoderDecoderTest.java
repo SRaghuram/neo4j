@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
@@ -124,7 +125,7 @@ class RaftMessageEncoderDecoderTest
     {
         setupChannels( raftProtocol );
 
-        RaftId raftId = new RaftId( UUID.randomUUID() );
+        RaftId raftId = RaftIdFactory.random();
         RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> idAwareMessage =
                 RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId, raftMessage );
 

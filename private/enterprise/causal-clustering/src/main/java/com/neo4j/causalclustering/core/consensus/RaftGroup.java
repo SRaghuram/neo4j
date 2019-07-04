@@ -27,7 +27,7 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
@@ -68,7 +68,7 @@ public class RaftGroup
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout clusterState, CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, DatabaseId databaseId )
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, DatabaseId databaseId )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -125,7 +125,7 @@ public class RaftGroup
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
-            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, DatabaseId defaultDatabaseId )
+            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, DatabaseId databaseId )
     {
         RaftLogImplementation raftLogImplementation = RaftLogImplementation.valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
         switch ( raftLogImplementation )
@@ -143,11 +143,7 @@ public class RaftGroup
             CoreLogPruningStrategy pruningStrategy = new CoreLogPruningStrategyFactory(
                     config.get( CausalClusteringSettings.raft_log_pruning_strategy ), logProvider ).newInstance();
 
-            // Default database name is used here temporarily because both system and default database
-            // live in a single Raft group and append to the same Raft log under `cluster-state/db/neo4j/raft-log` directory.
-            // This will change once we have multiple Raft logs, then the correct database name will be used here.
-            // E.g. system will use "system" to append to a Raft log located under `cluster-state/db/system/raft-log`
-            File directory = layout.raftLogDirectory( defaultDatabaseId.name() );
+            File directory = layout.raftLogDirectory( databaseId.name() );
 
             return life.add(
                     new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,

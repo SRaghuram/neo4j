@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientI
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -99,7 +100,7 @@ class NettyInstalledProtocolsIT
         // given
         RaftMessages.Heartbeat raftMessage = new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 1, 2, 3 );
         RaftMessages.RaftIdAwareMessage<RaftMessages.Heartbeat> networkMessage =
-                RaftMessages.RaftIdAwareMessage.of( new RaftId( UUID.randomUUID() ), raftMessage );
+                RaftMessages.RaftIdAwareMessage.of( RaftIdFactory.random(), raftMessage );
 
         // when
         client.send( networkMessage ).syncUninterruptibly();

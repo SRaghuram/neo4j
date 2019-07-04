@@ -6,12 +6,10 @@
 package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
@@ -52,15 +50,15 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
 
-        Assertions.assertEquals( triggerCalls.size(), 2 );
+        assertEquals( triggerCalls.size(), 2 );
         var initialDesired = triggerCalls.get( 0 ).first();
         var expected = databases.stream()
                 .filter( id -> !SYSTEM_DATABASE_ID.equals( id ) )
-                .collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
+                .collect( Collectors.toMap( DatabaseId::name, id -> new DatabaseState( id, STOPPED ) ) );
         assertEquals( expected, initialDesired );
 
         var subsequentDesired = triggerCalls.get( 1 ).first();
-        expected.put( SYSTEM_DATABASE_ID, STOPPED );
+        expected.put( SYSTEM_DATABASE_ID.name(), new DatabaseState( SYSTEM_DATABASE_ID, STOPPED ) );
         assertEquals( expected, subsequentDesired );
     }
 
@@ -70,8 +68,7 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
         var finalTrigger = triggerCalls.get( triggerCalls.size() - 1 );
-        Assertions.assertTrue( finalTrigger.first().keySet().containsAll( databases ) );
-        var expected = databases.stream().collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
-        Assertions.assertEquals( expected, finalTrigger.first() );
+        var expected = databases.stream().collect( Collectors.toMap( DatabaseId::name, id -> new DatabaseState( id, STOPPED ) ) );
+        assertEquals( expected, finalTrigger.first() );
     }
 }

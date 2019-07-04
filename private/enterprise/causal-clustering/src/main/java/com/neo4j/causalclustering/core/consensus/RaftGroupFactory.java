@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -24,10 +24,10 @@ public class RaftGroupFactory
     private final GlobalModule globalModule;
     private final ClusterStateLayout clusterState;
     private final CoreTopologyService topologyService;
-    private final CoreStateStorageFactory storageFactory;
+    private final ClusterStateStorageFactory storageFactory;
 
     public RaftGroupFactory( MemberId myself, GlobalModule globalModule, ClusterStateLayout clusterState,
-            CoreTopologyService topologyService, CoreStateStorageFactory storageFactory )
+            CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory )
     {
         this.myself = myself;
         this.globalModule = globalModule;

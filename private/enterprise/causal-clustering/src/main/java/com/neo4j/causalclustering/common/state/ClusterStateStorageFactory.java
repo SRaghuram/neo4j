@@ -3,12 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state;
+package com.neo4j.causalclustering.common.state;
 
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
@@ -19,21 +21,28 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Objects;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemUtils;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLog;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 
-public class CoreStateStorageFactory
+import static java.lang.String.format;
+
+public class ClusterStateStorageFactory
 {
     private final FileSystemAbstraction fs;
     private final LogProvider globalLogProvider;
     private final ClusterStateLayout layout;
     private final Config config;
 
-    public CoreStateStorageFactory( FileSystemAbstraction fs, ClusterStateLayout layout, LogProvider globalLogProvider, Config config )
+    public ClusterStateStorageFactory( FileSystemAbstraction fs, ClusterStateLayout layout, LogProvider globalLogProvider, Config config )
     {
         this.fs = fs;
         this.globalLogProvider = globalLogProvider;
@@ -96,6 +105,37 @@ public class CoreStateStorageFactory
         DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider );
         life.add( storage );
         return storage;
+    }
+
+    /**
+     * Check that the cluster state directory does not contain cluster state for a previous database of the same name.
+     * If it does, then do our best to delete all said cluster state.
+     * @param id the id of the new database to be created
+     * @param logProvider the logger for this new database
+     */
+    public void clearFor( DatabaseId id, DatabaseLogProvider logProvider ) throws IOException
+    {
+        File clusterStateForDb = layout.raftGroupDir( id.name() );
+        if ( !clusterStateForDb.exists() )
+        {
+            return;
+        }
+
+        var idStateFile = layout.raftIdStateFile( id.name() );
+        if ( idStateFile.exists() )
+        {
+            var raftIdSimpleStorage = createSimpleStorage( layout.raftIdStateFile( id.name() ), CoreStateFiles.RAFT_ID, logProvider );
+            RaftId raftId = raftIdSimpleStorage.readState();
+
+            if ( !Objects.equals( id.uuid(), raftId.uuid() ) )
+            {
+                DatabaseLog log = logProvider.getLog( getClass() );
+                log.warn( format( "There was orphan cluster state belonging to a previous database %s with a different id {Old:%s New:%s} " +
+                        "This likely means a previous DROP did not complete successfully, you can find the old state here",
+                        id.name(), raftId.uuid(), id.uuid() ) );
+                FileSystemUtils.deleteFile( fs, clusterStateForDb );
+            }
+        }
     }
 
     public ClusterStateLayout layout()

@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -35,10 +36,15 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
     @Parameterized.Parameters
     public static Collection<DatabaseCoreTopology> data()
     {
+
+        var dbId1 = randomDatabaseId();
+        var dbId2 = randomDatabaseId();
+        var dbId3 = randomDatabaseId();
+
         return Arrays.asList(
-                new DatabaseCoreTopology( randomDatabaseId(), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( randomDatabaseId(), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
-                new DatabaseCoreTopology( randomDatabaseId(), null, coreServerInfos( 4 ) )
+                new DatabaseCoreTopology( dbId1, RaftId.from( dbId1 ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( dbId2, RaftId.from( dbId2 ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( dbId3, null, coreServerInfos( 4 ) )
         );
     }
 

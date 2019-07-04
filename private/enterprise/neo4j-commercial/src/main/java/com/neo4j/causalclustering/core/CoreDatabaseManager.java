@@ -10,13 +10,18 @@ import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
@@ -34,19 +39,21 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 
-public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
+import static java.lang.String.format;
+
+public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final CoreEditionModule edition;
 
     CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
-            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
+            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
-        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config );
+        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config, clusterStateLayout );
         this.edition = edition;
     }
 
     @Override
-    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
+    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId ) throws Exception
     {
         // TODO: Remove need for resolving this dependency? Remove internal operator completely?
         ClusterInternalDbmsOperator internalDbmsOperator = globalModule.getGlobalDependencies().resolveDependency( ClusterInternalDbmsOperator.class );
@@ -97,6 +104,64 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var globalProcedures = edition.getGlobalProcedures();
         return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
                                                    coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig );
+    }
+
+    @Override
+    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    {
+        super.dropDatabase( databaseId, context );
+
+        cleanupClusterState( databaseId.name() );
+
+        return null;
+    }
+
+    @Override
+    public void cleanupClusterState( String databaseName )
+    {
+        try
+        {
+            deleteCoreStateThenRaftId( databaseName );
+        }
+        catch ( IOException e )
+        {
+            throw new DatabaseManagementException( "Was unable to delete cluster state as part of drop. ", e );
+        }
+    }
+
+    /**
+     * When deleting the core state for a database we attempt to delete the raft id for that database last, as
+     * in extremis if some other IO failure occurs, the existence of a raft-id indicates that more cleanup may be required.
+     */
+    private void deleteCoreStateThenRaftId( String databaseName ) throws IOException
+    {
+        File raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
+        File raftIdStateDir = raftIdState.getParentFile();
+        File raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
+        assert raftIdStateDir.getParentFile().equals( raftGroupDir );
+
+        File[] files = fs.listFiles( raftGroupDir, ( ignored, name ) -> !raftIdStateDir.getName().equals( name ) );
+
+        for ( File file : files )
+        {
+            if ( file.isDirectory() )
+            {
+                fs.deleteRecursively( file );
+            }
+            else if ( !fs.deleteFile( file ) )
+            {
+                throw new IOException( format( "Unable to delete file %s when dropping database %s", file.getAbsolutePath(), databaseName ) );
+            }
+        }
+
+        tryForceDirectory( raftGroupDir );
+
+        if ( !fs.deleteFile( raftIdState ) )
+        {
+            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.getAbsolutePath(), databaseName ) );
+        }
+
+        fs.deleteRecursively( raftGroupDir );
     }
 
 }

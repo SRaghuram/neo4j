@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
 import static java.util.stream.Collectors.toSet;
@@ -140,6 +142,11 @@ public class ClusterStateLayout
         checkScope( coreStateFiles, DATABASE );
         File databaseDirectory = new File( dbDirectory(), databaseName );
         return new File( databaseDirectory, stateDirectoryName( coreStateFiles ) );
+    }
+
+    public File raftGroupDir( String databaseName )
+    {
+        return new File( dbDirectory(), databaseName );
     }
 
     private File dbDirectory()

@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
@@ -33,6 +35,9 @@ import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
+import java.io.File;
+import java.util.Optional;
+
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -44,6 +49,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
@@ -77,6 +83,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
+    private final ClusterStateStorageFactory storageFactory;
+    private final ClusterStateLayout clusterStateLayout;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
     {
@@ -108,6 +116,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
+
+        final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
+
+        final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
+        clusterStateLayout = ClusterStateLayout.of( dataDir );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
         satisfyCommercialOnlyDependencies( this.globalModule );
 
@@ -157,7 +171,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         //TODO: Pass internal operator to database manager so it can pass to factories
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
-                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig );
+                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig, clusterStateLayout );
 
         ReplicatedTransactionEventListeners txEventListeners = new SystemDbOnlyReplicatedTransactionEventListeners();
         createDatabaseManagerDependentModules( databaseManager, txEventListeners );
@@ -168,7 +182,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalModule.getGlobalLife().add( databaseManager );
         dependencies.satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator, reconciledTxTracker );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
+                storageFactory, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );
 
@@ -198,9 +213,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         backupServerOptional.ifPresent( globalLife::add );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
-        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler, topologyService, myIdentity,
-                catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(), catchupClientFactory, txEventService,
-                panicService );
+        readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
+                topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(),
+                catchupClientFactory, txEventService, storageFactory, panicService );
     }
 
     @Override
@@ -245,4 +260,5 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         return readReplicaDatabaseFactory;
     }
+
 }

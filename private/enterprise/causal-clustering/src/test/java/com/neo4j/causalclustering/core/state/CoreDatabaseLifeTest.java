@@ -11,13 +11,11 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.util.UUID;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -78,7 +76,7 @@ class CoreDatabaseLifeTest
         when( database.getDatabaseId() ).thenReturn( databaseId );
 
         var raftBinder = mock( RaftBinder.class );
-        when( raftBinder.bindToRaft() ).thenReturn( new BoundState( new RaftId( UUID.randomUUID() ) ) );
+        when( raftBinder.bindToRaft() ).thenReturn( new BoundState( RaftIdFactory.random() ) );
 
         var applicationProcess = mock( CommandApplicationProcess.class );
         var messageHandler = mock( LifecycleMessageHandler.class );

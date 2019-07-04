@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.After;
 import org.junit.Before;
@@ -52,7 +53,7 @@ public class BatchingMessageHandlerTest
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
-    private RaftId localRaftId = new RaftId( UUID.randomUUID() );
+    private RaftId localRaftId = RaftIdFactory.random();
     private ContinuousJob mockJob = mock( ContinuousJob.class );
     private Function<Runnable,ContinuousJob> jobSchedulerFactory = ignored -> mockJob;
 
@@ -406,7 +407,7 @@ public class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
-        RaftId raftId = new RaftId( UUID.randomUUID() );
+        RaftId raftId = RaftIdFactory.random();
 
         // when
         batchHandler.start( raftId );
@@ -435,7 +436,7 @@ public class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
-        RaftId raftId = new RaftId( UUID.randomUUID() );
+        RaftId raftId = RaftIdFactory.random();
 
         // when
         batchHandler.start( raftId );

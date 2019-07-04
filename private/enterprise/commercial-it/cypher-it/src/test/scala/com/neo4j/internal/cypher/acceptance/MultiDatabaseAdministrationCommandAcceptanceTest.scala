@@ -28,7 +28,6 @@ import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExe
 import scala.collection.Map
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
-//TODO: Reinstate ignored tests after database Id work is merged
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
@@ -405,7 +404,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db("foo")))
   }
 
-  ignore("should create default database on re-start after being dropped") {
+  test("should create default database on re-start after being dropped") {
     // GIVEN
     setup(defaultConfig)
     execute("CREATE ROLE custom")
@@ -458,7 +457,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
   }
 
-  ignore("should have no access on a re-created database") {
+  test("should have no access on a re-created database") {
     // GIVEN
     setup(defaultConfig)
     execute("CREATE DATABASE foo")
@@ -504,7 +503,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
 
-  ignore("should have no access on a re-created default database"){
+  test("should have no access on a re-created default database"){
     // GIVEN
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1147,12 +1146,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
     graphOps = managementService.database(SYSTEM_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
-    databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
 
     initSystemGraph(config)
   }
 
   private def initSystemGraph(config: Config): Unit = {
+    val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
     val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge())
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)

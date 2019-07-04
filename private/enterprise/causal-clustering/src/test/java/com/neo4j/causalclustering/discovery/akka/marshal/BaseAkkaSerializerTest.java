@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -62,13 +63,12 @@ public class BaseAkkaSerializerTest
     public static Collection<Object[]> data()
     {
         String actorPath = String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name );
+        var randomDbId = randomDatabaseId();
+        var randomRaftId = RaftId.from( randomDbId );
         return Arrays.asList(
-                new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ),
-                        new LeaderInfoSerializer()},
-                new Object[]{new RaftId( UUID.randomUUID() ),
-                        new RaftIdSerializer()},
-                new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ),
-                        new UniqueAddressSerializer()},
+                new Object[]{new LeaderInfo( new MemberId( UUID.randomUUID() ), 37L ), new LeaderInfoSerializer()},
+                new Object[]{RaftIdFactory.random(), new RaftIdSerializer()},
+                new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
                         new UniqueAddressSerializer()},
                 new Object[]{new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
@@ -83,7 +83,7 @@ public class BaseAkkaSerializerTest
                         new MemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                         new ReadReplicaInfoSerializer()},
-                new Object[]{new DatabaseCoreTopology( randomDatabaseId(), new RaftId( UUID.randomUUID() ),
+                new Object[]{new DatabaseCoreTopology( randomDbId, randomRaftId,
                         CoreTopologyMarshalTest.coreServerInfos( 3 ) ), new CoreTopologySerializer()},
                 new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                         new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},

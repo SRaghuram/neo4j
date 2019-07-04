@@ -47,7 +47,7 @@ final class GlobalTopologyStateTestUtil
             }
         }
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, new RaftId( UUID.randomUUID() ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coreMembers );
         topologyState.onTopologyUpdate( coreTopology );
     }
 

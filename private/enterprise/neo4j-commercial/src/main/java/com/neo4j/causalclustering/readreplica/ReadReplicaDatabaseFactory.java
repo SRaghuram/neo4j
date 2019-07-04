@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
@@ -54,11 +55,13 @@ class ReadReplicaDatabaseFactory
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CatchupClientFactory catchupClientFactory;
     private final ReplicatedTransactionEventListeners txEventService;
+    private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
             MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier,
-            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService, PanicService panicService )
+            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService,
+            ClusterStateStorageFactory clusterStateFactory, PanicService panicService )
     {
         this.config = config;
         this.clock = clock;
@@ -70,6 +73,7 @@ class ReadReplicaDatabaseFactory
         this.catchupClientFactory = catchupClientFactory;
         this.txEventService = txEventService;
         this.panicService = panicService;
+        this.clusterStateFactory = clusterStateFactory;
     }
 
     ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
@@ -96,12 +100,14 @@ class ReadReplicaDatabaseFactory
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
                 pageCursorTracerSupplier, config, txCommitNotifier );
 
+        var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
+
         // TODO: Fix lifecycle issue.
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseId ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseId.name() ) ) );
 
         return new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
-                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, panicService );
+                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, raftIdStorage, panicService );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

@@ -13,14 +13,21 @@ import java.util.UUID;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.util.VisibleForTesting;
 
-public class RaftId
+public final class RaftId
 {
     private final UUID uuid;
 
-    public RaftId( UUID uuid )
+    RaftId( UUID uuid )
     {
         this.uuid = uuid;
+    }
+
+    public static RaftId from( DatabaseId databaseId )
+    {
+        return new RaftId( databaseId.uuid() );
     }
 
     @Override

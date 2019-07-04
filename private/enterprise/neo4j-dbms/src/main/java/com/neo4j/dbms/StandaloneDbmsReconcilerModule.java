@@ -15,6 +15,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -30,6 +31,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final SystemGraphDbmsModel dbmsModel;
     private final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
+    protected final DatabaseIdRepository databaseIdRepository;
     private final ReconciledTransactionTracker reconciledTxTracker;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, ReconciledTransactionTracker reconciledTxTracker )
@@ -39,7 +41,8 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
 
         this.globalModule = globalModule;
         this.databaseManager = databaseManager;
-        this.localOperator = new LocalDbmsOperator( databaseManager.databaseIdRepository() );
+        this.databaseIdRepository = databaseManager.databaseIdRepository();
+        this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
         this.dbmsModel = new SystemGraphDbmsModel();
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
@@ -66,12 +69,12 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private void startInitialDatabases()
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger( ReconcilerRequest.simple() ).await( SYSTEM_DATABASE_ID );
+        systemOperator.trigger( ReconcilerRequest.simple() ).await( SYSTEM_DATABASE_ID.name() );
 
         var systemDatabase = getSystemDatabase( databaseManager );
         dbmsModel.setSystemDatabase( systemDatabase );
 
-        //Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
+        // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
         systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
 

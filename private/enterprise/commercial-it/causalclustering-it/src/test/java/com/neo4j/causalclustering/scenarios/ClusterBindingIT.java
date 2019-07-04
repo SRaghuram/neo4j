@@ -9,9 +9,10 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -211,9 +212,9 @@ class ClusterBindingIT
     private void changeRaftId( CoreClusterMember coreMember, String databaseName ) throws IOException
     {
         var layout = coreMember.clusterStateLayout();
-        var storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
+        var storageFactory = new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
         var raftIdStorage = storageFactory.createRaftIdStorage( databaseName, nullDatabaseLogProvider() );
-        raftIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
+        raftIdStorage.writeState( RaftIdFactory.random() );
     }
 
     private void changeStoreId( DatabaseLayout databaseLayout ) throws Exception

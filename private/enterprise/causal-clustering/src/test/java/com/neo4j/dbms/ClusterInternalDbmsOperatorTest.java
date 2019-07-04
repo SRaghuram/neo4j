@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Optional;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -17,6 +18,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static com.neo4j.dbms.OperatorState.STORE_COPYING;
+import static com.neo4j.dbms.OperatorState.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -76,50 +78,50 @@ class ClusterInternalDbmsOperatorTest
         var stopA1 = operator.stopForStoreCopy( databaseA );
 
         // then
-        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
-        assertNull( operator.desired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operatorState( databaseA ) );
+        assertNull( operator.desired().get( databaseB.name() ) );
 
         // when
         var stopA2 = operator.stopForStoreCopy( databaseA );
 
         // then
-        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
-        assertNull( operator.desired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operatorState( databaseA ) );
+        assertNull( operator.desired().get( databaseB.name() ) );
 
         // when
         var stopB1 = operator.stopForStoreCopy( databaseB );
 
         // then
-        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operatorState( databaseA ) );
+        assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
         var stopB2 = operator.stopForStoreCopy( databaseB );
 
         // then
-        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operatorState( databaseA ) );
+        assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
         stopA1.restart();
 
         // then
-        assertEquals( STORE_COPYING, operator.desired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
+        assertEquals( STORE_COPYING, operatorState( databaseA ) );
+        assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
         stopA2.restart();
 
         // then
-        assertNull( operator.desired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
+        assertNull( operatorState( databaseA ) );
+        assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
         stopB1.restart();
 
         // then
-        assertNull( operator.desired().get( databaseA ) );
-        assertEquals( STORE_COPYING, operator.desired().get( databaseB ) );
+        assertNull( operatorState( databaseA ) );
+        assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
         stopB2.restart();
@@ -151,19 +153,26 @@ class ClusterInternalDbmsOperatorTest
         var storeCopying = operator.stopForStoreCopy( someDb );
 
         // then
-        assertNotEquals( operator.desired().get( someDb ), STORE_COPYING );
+        assertNotEquals( STORE_COPYING, operatorState( someDb ) );
 
         // when
         bootstrapping.bootstrapped();
 
         // then
-        assertEquals( operator.desired().get( someDb ), STORE_COPYING );
+        assertEquals( STORE_COPYING, operatorState( someDb ) );
 
         // when
         storeCopying.restart();
 
         // then
-        assertNull( operator.desired().get( someDb ) );
+        assertNull( operator.desired().get( someDb.name() ) );
+    }
+
+    private OperatorState operatorState( DatabaseId databaseId )
+    {
+        return Optional.ofNullable( operator.desired().get( databaseId.name() ) )
+                .map( DatabaseState::operationalState )
+                .orElse( UNKNOWN );
     }
 
     @Test
@@ -217,8 +226,8 @@ class ClusterInternalDbmsOperatorTest
     {
         when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenAnswer( invocation ->
         {
-            var desiredState = operator.desired().get( databaseId );
-            stateRef.set( desiredState );
+            var desiredState = operator.desired().get( databaseId.name() );
+            stateRef.set( desiredState.operationalState() );
             return Reconciliation.EMPTY;
         } );
     }

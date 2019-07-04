@@ -31,7 +31,6 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
     private static final boolean DEBUG = false;
 
     static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
-    static final RaftId RAFT_ID = new RaftId( UUID.randomUUID() );
     private final LocalNetworkPlatform platform = new LocalNetworkPlatform();
     private Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler;
     private RaftMessages.RaftIdAwareMessage<RaftMessages.RaftMessage> message;

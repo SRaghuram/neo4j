@@ -47,7 +47,7 @@ class RaftMonitorTest
     @Test
     void shouldNotDuplicateToAnyLog()
     {
-        var raftId = new RaftId( UUID.randomUUID() );
+        var raftId = RaftId.from( databaseId );
         raftBinderMonitor.boundToRaft( databaseId, raftId );
 
         var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", databaseId.name(), raftId.uuid() ) );

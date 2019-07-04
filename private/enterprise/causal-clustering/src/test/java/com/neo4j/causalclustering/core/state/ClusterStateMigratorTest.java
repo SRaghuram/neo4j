@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,7 +127,7 @@ class ClusterStateMigratorTest
     {
         assertFalse( fs.fileExists( file ) );
         var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), logProvider );
-        clusterIdStorage.writeState( new RaftId( UUID.randomUUID() ) );
+        clusterIdStorage.writeState( RaftIdFactory.random() );
         assertTrue( fs.fileExists( file ) );
     }
 

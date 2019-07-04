@@ -41,8 +41,8 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.addCoreTopologyListener( listener3 );
 
-        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, new RaftId( UUID.randomUUID() ), Map.of() );
-        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, new RaftId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, RaftId.from( id1 ), Map.of() );
+        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, RaftId.from( id2 ), Map.of() );
 
         listenerService.notifyListeners( coreTopology1 );
         listenerService.notifyListeners( coreTopology2 );
@@ -66,7 +66,7 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.removeCoreTopologyListener( listener1 );
 
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, new RaftId( UUID.randomUUID() ), Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, RaftId.from( id1 ), Map.of() );
 
         listenerService.notifyListeners( coreTopology );
 

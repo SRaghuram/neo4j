@@ -9,13 +9,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.kernel.database.DatabaseId;
-
 public abstract class DbmsOperator
 {
     private OperatorConnector connector;
-    final Map<DatabaseId,OperatorState> desired = new ConcurrentHashMap<>();
+    final Map<String,DatabaseState> desired = new ConcurrentHashMap<>();
 
+    /**
+     * Connects the operator to the reconciler via a connector
+     */
     final void connect( OperatorConnector connector )
     {
         Objects.requireNonNull( connector );
@@ -23,12 +24,15 @@ public abstract class DbmsOperator
         connector.register( this );
     }
 
-    protected Map<DatabaseId,OperatorState> desired0()
+    protected Map<String,DatabaseState> desired0()
     {
         return desired;
     }
 
-    final Map<DatabaseId,OperatorState> desired()
+    /**
+     * @return the states that the operator desires for each database it cares about
+     */
+    final Map<String,DatabaseState> desired()
     {
         return Map.copyOf( desired0() );
     }

@@ -6,76 +6,130 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.identity.RaftId;
 
-import java.util.function.Function;
-import java.util.stream.Stream;
+import java.io.IOException;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static com.neo4j.dbms.OperatorState.STORE_COPYING;
+import static com.neo4j.dbms.OperatorState.UNKNOWN;
+import static java.lang.String.format;
 
 public class ClusteredDbmsReconciler extends DbmsReconciler
 {
     private final ClusteredMultiDatabaseManager databaseManager;
+    private final LogProvider logProvider;
+    private final ClusterStateStorageFactory stateStorageFactory;
 
-    ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
+    ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
+            ClusterStateStorageFactory stateStorageFactory )
     {
         super( databaseManager, config, logProvider, scheduler );
         this.databaseManager = databaseManager;
+        this.logProvider = logProvider;
+        this.stateStorageFactory = stateStorageFactory;
     }
 
     @Override
-    protected Stream<Function<DatabaseId,OperatorState>> prepareLifeCycleTransitionSteps( OperatorState currentState, DatabaseId databaseId,
-            OperatorState desiredState )
+    protected DatabaseReconcilerEntry getReconcilerEntryFor( DatabaseId databaseId )
     {
-        if ( currentState == null )
+        return currentStates.getOrDefault( databaseId.name(), initial( databaseId ) );
+    }
+
+    private DatabaseReconcilerEntry initial( DatabaseId databaseId )
+    {
+        var raftIdOpt = readRaftIdForDatabase( databaseId, databaseLogProvider( databaseId ) );
+        if ( raftIdOpt.isPresent() )
         {
-            // in clustering we always call create from stopped
-            return Stream.concat( Stream.of( this::create ), prepareLifeCycleTransitionSteps( STOPPED, databaseId, desiredState ) );
+            var raftId = raftIdOpt.get();
+            var previousDatabaseId = DatabaseIdFactory.from( databaseId.name(), raftId.uuid() );
+            if ( !Objects.equals( databaseId, previousDatabaseId ) )
+            {
+                return DatabaseReconcilerEntry.unknown( previousDatabaseId );
+            }
         }
-        else if ( currentState == STORE_COPYING && desiredState == DROPPED )
+        return DatabaseReconcilerEntry.initial( databaseId );
+    }
+
+    private Optional<RaftId> readRaftIdForDatabase( DatabaseId databaseId, DatabaseLogProvider logProvider )
+    {
+        var databaseName = databaseId.name();
+        var raftIdStorage = stateStorageFactory.createRaftIdStorage( databaseName, logProvider );
+
+        if ( ! raftIdStorage.exists() )
         {
-            // No prepareDrop step needed here as the database will be stopped for store copying anyway
-            return Stream.of( this::stop, this::drop );
-        }
-        else if ( currentState == STORE_COPYING && desiredState == STOPPED )
-        {
-            // Some Cluster components still need stopped when store copying.
-            //   This will attempt to stop the kernel database again, but that should be idempotent.
-            return Stream.of( this::stop );
-        }
-        else if ( currentState == STORE_COPYING && desiredState == STARTED )
-        {
-            return Stream.of( this::startAfterStoreCopy );
-        }
-        else if ( currentState == STARTED && desiredState == STORE_COPYING )
-        {
-            return Stream.of( this::stopBeforeStoreCopy );
-        }
-        else if ( currentState == STOPPED && desiredState == STORE_COPYING )
-        {
-            return Stream.of( this::start, this::stopBeforeStoreCopy );
+            return Optional.empty();
         }
 
-        return super.prepareLifeCycleTransitionSteps( currentState, databaseId, desiredState );
+        try
+        {
+            return Optional.ofNullable( raftIdStorage.readState() );
+        }
+        catch ( IOException e )
+        {
+            throw new DatabaseManagementException( format( "Unable to read potentially dirty cluster state while starting %s.", databaseName ) );
+        }
+    }
+
+    @Override
+    protected Transitions prepareLifecycleTransitionSteps()
+    {
+        Transitions standaloneTransitions = super.prepareLifecycleTransitionSteps();
+        Transitions clusteredTransitions = Transitions.builder()
+                .from( UNKNOWN ).to( DROPPED ).doTransitions( this::logCleanupAndDrop )
+                // No prepareDrop step needed here as the database will be stopped for store copying anyway
+                .from( STORE_COPYING ).to( DROPPED ).doTransitions( this::stop, this::drop )
+                // Some Cluster components still need stopped when store copying.
+                //   This will attempt to stop the kernel database again, but that should be idempotent.
+                .from( STORE_COPYING ).to( STOPPED ).doTransitions( this::stop )
+                .from( STORE_COPYING ).to( STARTED ).doTransitions( this::startAfterStoreCopy )
+                .from( STARTED ).to( STORE_COPYING ).doTransitions( this::stopBeforeStoreCopy )
+                .from( STOPPED ).to( STORE_COPYING ).doTransitions( this::start, this::stopBeforeStoreCopy )
+                .build();
+
+        return standaloneTransitions.extendWith( clusteredTransitions );
     }
 
     /* Operator Steps */
-    private OperatorState startAfterStoreCopy( DatabaseId databaseId )
+    private DatabaseState startAfterStoreCopy( DatabaseId databaseId )
     {
         databaseManager.startDatabaseAfterStoreCopy( databaseId );
-        return STARTED;
+        return new DatabaseState( databaseId, STARTED );
     }
 
-    private OperatorState stopBeforeStoreCopy( DatabaseId databaseId )
+    private DatabaseState stopBeforeStoreCopy( DatabaseId databaseId )
     {
         databaseManager.stopDatabaseBeforeStoreCopy( databaseId );
-        return STORE_COPYING;
+        return new DatabaseState( databaseId, STORE_COPYING );
     }
+
+    private DatabaseState logCleanupAndDrop( DatabaseId databaseId )
+    {
+        var log = logProvider.getLog( getClass() );
+        log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
+                "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. You may need to re-seed",
+                databaseId.uuid(), databaseId.name() ) );
+        databaseManager.dropDatabase( databaseId );
+        return new DatabaseState( databaseId, DROPPED );
+    }
+
+    private DatabaseLogProvider databaseLogProvider( DatabaseId databaseId )
+    {
+       return new DatabaseLogProvider( new DatabaseNameLogContext( databaseId ), this.logProvider );
+    }
+
 }

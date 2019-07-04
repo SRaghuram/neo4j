@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -96,17 +96,15 @@ class ClusterStateMigrationIT
 
         // remove all version files to force migrator to recreate cluster-state directories
         // this is expected because cluster-state directory without a version file is considered to be from an old neo4j version
-        clusterStateVersionFiles.forEach( FileUtils::deleteFile );
+        boolean filesDeleted = clusterStateVersionFiles.stream().allMatch( FileUtils::deleteFile );
+
+        assertTrue( filesDeleted );
 
         cluster.start();
 
         for ( var member : cluster.coreMembers() )
         {
-            // all members should have new raft IDs as result of cluster-state recreation
-            assertTrue( serverIdToRaftIdMap.containsKey( member.serverId() ) );
-            assertNotEquals( serverIdToRaftIdMap.get( member.serverId() ), readRaftId( member ) );
-
-            // version files should exist
+            // version files should exist having been recreated
             var versionStorage = clusterStateVersionStorage( member );
             assertTrue( versionStorage.exists() );
             assertEquals( new ClusterStateVersion( 1, 0 ), versionStorage.readState() );
@@ -149,11 +147,11 @@ class ClusterStateMigrationIT
         return storageFactory.createClusterStateVersionStorage();
     }
 
-    private static CoreStateStorageFactory storageFactory( ClusterMember member )
+    private static ClusterStateStorageFactory storageFactory( ClusterMember member )
     {
         var clusterStateLayout = clusterStateLayout( member );
         var fs = member.defaultDatabase().getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
-        return new CoreStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults() );
+        return new ClusterStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults() );
     }
 
     private static ClusterStateLayout clusterStateLayout( ClusterMember member )

@@ -91,7 +91,7 @@ class GetRoutingTableProcedureForSingleDCTest
 {
     private DatabaseManager<?> databaseManager;
     private DatabaseId databaseId;
-    private final RaftId raftId = new RaftId( UUID.randomUUID() );
+    private RaftId raftId;
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -114,6 +114,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         var databaseManager = new StubClusteredDatabaseManager();
         this.databaseId = databaseManager.databaseIdRepository().get( "my_test_database" ).get();
+        this.raftId = RaftId.from( databaseId );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
         this.databaseManager = databaseManager;
     }

@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -106,7 +107,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     {
         if ( raftIdStorage.exists() )
         {
+            // If raft id state exists, read it and verify that it corresponds to the database being started
             raftId = raftIdStorage.readState();
+            if ( !Objects.equals( raftId.uuid(), databaseId.uuid() ) )
+            {
+                throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
+                        "This may indicate a previous DROP operation for %s did not complete.", raftId.uuid(), databaseId.uuid(), databaseId.name() ) );
+            }
             publishRaftId( raftId );
             monitor.boundToRaft( databaseId, raftId );
             return new BoundState( raftId );
@@ -127,7 +134,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             }
             else if ( hostShouldBootstrapRaft( topology ) )
             {
-                raftId = new RaftId( UUID.randomUUID() );
+                raftId = RaftId.from( databaseId );
                 snapshot = raftBootstrapper.bootstrap( topology.members().keySet() );
                 monitor.bootstrapped( snapshot, databaseId, raftId );
                 publishRaftId( raftId );

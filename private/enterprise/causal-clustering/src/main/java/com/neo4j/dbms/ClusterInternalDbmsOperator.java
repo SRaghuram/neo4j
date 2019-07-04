@@ -49,21 +49,22 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     private final Set<DatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
     private final Set<DatabaseId> panicked = ConcurrentHashMap.newKeySet();
 
-    protected Map<DatabaseId,OperatorState> desired0()
+    protected Map<String,DatabaseState> desired0()
     {
-        var result = new HashMap<DatabaseId,OperatorState>();
+        var result = new HashMap<String,DatabaseState>();
 
         for ( var storeCopyHandle : storeCopying )
         {
-            if ( !bootstrapping.contains( storeCopyHandle.databaseId ) )
+            var id = storeCopyHandle.databaseId;
+            if ( !bootstrapping.contains( id ) )
             {
-                result.put( storeCopyHandle.databaseId, STORE_COPYING );
+                result.put( id.name(), new DatabaseState( id, STORE_COPYING ) );
             }
         }
 
-        for ( var databaseId : panicked )
+        for ( var id : panicked )
         {
-            result.put( databaseId, STOPPED );
+            result.put( id.name(), new DatabaseState( id, STOPPED ) );
         }
 
         return result;
@@ -99,7 +100,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     {
         if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
         {
-            trigger( ReconcilerRequest.simple() ).await( databaseId );
+            trigger( ReconcilerRequest.simple() ).await( databaseId.name() );
         }
     }
 

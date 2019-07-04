@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -110,7 +110,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 {
     private final IdentityModule identityModule;
     private final SslPolicyLoader sslPolicyLoader;
-    private final CoreStateStorageFactory storageFactory;
+    private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
     private final CatchupComponentsProvider catchupComponentsProvider;
     private final DiscoveryServiceFactory discoveryServiceFactory;
@@ -154,7 +154,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
-        storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
@@ -312,7 +312,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         //TODO: Pass internal operator to database manager so it can pass to factories
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
-                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig() );
+                globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig(), clusterStateLayout );
 
         ReplicatedTransactionEventListeners txEventListeners = new SystemDbOnlyReplicatedTransactionEventListeners();
         createDatabaseManagerDependentModules( databaseManager, txEventListeners );
@@ -323,7 +323,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalModule.getGlobalLife().add( databaseManager );
         dependencies.satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator, reconciledTxTracker );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
+                storageFactory, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );
 
@@ -370,7 +371,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     }
 
     private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,
-            CoreStateStorageFactory storageFactory )
+            ClusterStateStorageFactory storageFactory )
     {
         var clusterStateVersionStorage = storageFactory.createClusterStateVersionStorage();
         var fs = globalModule.getFileSystem();

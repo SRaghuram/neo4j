@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.junit.jupiter.api.Test;
 
@@ -85,7 +86,7 @@ class ConnectToRandomCoreServerStrategyTest
     {
         assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
 
-        RaftId raftId = new RaftId( UUID.randomUUID() );
+        RaftId raftId = RaftIdFactory.random();
         Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
 
         int offset = 0;

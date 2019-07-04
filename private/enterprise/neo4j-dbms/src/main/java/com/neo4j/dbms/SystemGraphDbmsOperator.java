@@ -10,14 +10,11 @@ import java.util.Map;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Collections.emptySet;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
@@ -37,7 +34,7 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;
         this.reconciledTxTracker = reconciledTxTracker;
-        this.desired.put( SYSTEM_DATABASE_ID, STARTED );
+        this.desired.put( SYSTEM_DATABASE_ID.name(), new DatabaseState( SYSTEM_DATABASE_ID, STARTED ) );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -70,26 +67,11 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
      */
     synchronized void updateDesiredStates()
     {
-        Map<DatabaseId,SystemGraphDbmsModel.DatabaseState> systemStates = dbmsModel.getDatabaseStates();
-        systemStates.forEach( ( key, value ) -> desired.put( key, toOperatorState( value ) ) );
+        Map<String,DatabaseState> systemStates = dbmsModel.getDatabaseStates();
+        systemStates.forEach( desired::put );
     }
 
-    private OperatorState toOperatorState( SystemGraphDbmsModel.DatabaseState dbmsState )
-    {
-        switch ( dbmsState )
-        {
-        case ONLINE:
-            return STARTED;
-        case OFFLINE:
-            return STOPPED;
-        case DELETED:
-            return DROPPED;
-        default:
-            throw new IllegalArgumentException( "Unsupported database state: " + dbmsState );
-        }
-    }
-
-    private Collection<DatabaseId> extractUpdatedDatabases( TransactionData transactionData )
+    private Collection<String> extractUpdatedDatabases( TransactionData transactionData )
     {
         if ( transactionData == null )
         {

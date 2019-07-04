@@ -82,10 +82,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
             } );
     }
 
-    protected void handleCustomEvents( ReceiveBuilder builder )
-    {
-
-    }
+    protected abstract void handleCustomEvents( ReceiveBuilder builder );
 
     protected abstract void handleIncomingData( T newData );
 

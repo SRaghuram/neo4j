@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
-import java.util.UUID
-
 import akka.actor.ActorRef
 import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
@@ -23,7 +21,8 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
-      replicatedDataActorRef ! new RaftIdSettingMessage(new RaftId(UUID.randomUUID()), randomDatabaseId())
+      val databaseId = randomDatabaseId()
+      replicatedDataActorRef ! new RaftIdSettingMessage(RaftId.from(databaseId), databaseId)
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
@@ -31,8 +30,10 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "send raft ID to core topology actor from replicator" in new Fixture {
       Given("raft IDs for databases")
-      val db1 = LWWMap.empty.put(cluster, randomDatabaseId(), new RaftId(UUID.randomUUID()))
-      val db2 = LWWMap.empty.put(cluster, randomDatabaseId(), new RaftId(UUID.randomUUID()))
+      val db1Id = randomDatabaseId()
+      val db2Id = randomDatabaseId()
+      val db1 = LWWMap.empty.put(cluster, db1Id, RaftId.from(db1Id))
+      val db2 = LWWMap.empty.put(cluster, db2Id, RaftId.from(db2Id))
 
       When("raft IDs updated from replicator")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(db1)

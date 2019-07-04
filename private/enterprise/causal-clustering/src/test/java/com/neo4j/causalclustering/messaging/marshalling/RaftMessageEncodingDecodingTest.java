@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageEncoder;
 import io.netty.buffer.ByteBuf;
@@ -39,7 +40,7 @@ import static org.mockito.Mockito.when;
 
 public class RaftMessageEncodingDecodingTest
 {
-    private RaftId raftId = new RaftId( UUID.randomUUID() );
+    private RaftId raftId = RaftIdFactory.random();
 
     @Test
     public void shouldSerializeAppendRequestWithMultipleEntries() throws Exception

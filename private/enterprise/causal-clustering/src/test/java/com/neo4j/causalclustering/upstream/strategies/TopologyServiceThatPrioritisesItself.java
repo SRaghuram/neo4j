@@ -61,7 +61,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( DATABASE_ID, new RaftId( new UUID( 99, 88 ) ), allCoreServers() );
+        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), allCoreServers() );
     }
 
     @Override
@@ -74,7 +74,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     @Override
     public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseReadReplicaTopology( DATABASE_ID, allReadReplicas() );
+        return new DatabaseReadReplicaTopology( databaseId, allReadReplicas() );
     }
 
     @Override

@@ -195,7 +195,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     val databaseId = randomDatabaseId()
-    val raftId = new RaftId(UUID.randomUUID())
+    val raftId = RaftId.from(databaseId)
 
     val replicatorProbe = TestProbe("replicator")
 

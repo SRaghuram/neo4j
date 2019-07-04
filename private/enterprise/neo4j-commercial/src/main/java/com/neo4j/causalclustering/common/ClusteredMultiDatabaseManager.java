@@ -7,9 +7,13 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import org.apache.commons.lang3.SystemUtils;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,10 +31,12 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.util.Collections.singleton;
 
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext>
 {
-    private final FileSystemAbstraction fs;
+    protected final FileSystemAbstraction fs;
     private final PageCache pageCache;
     protected final ClusteredDatabaseContextFactory contextFactory;
     protected final LogProvider logProvider;
@@ -38,10 +44,11 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final Config config;
     protected final StoreFiles storeFiles;
     protected final CatchupComponentsFactory catchupComponentsFactory;
+    protected final ClusterStateLayout clusterStateLayout;
     private final Set<DatabaseId> shouldRecreateContext;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
-            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
+            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition );
         this.contextFactory = DefaultClusteredDatabaseContext::new;
@@ -53,6 +60,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.catchupComponentsFactory = catchupComponentsFactory;
         this.shouldRecreateContext = new HashSet<>();
         this.storeFiles = new StoreFiles( fs, pageCache );
+        this.clusterStateLayout = clusterStateLayout;
     }
 
     @Override
@@ -94,13 +102,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
     }
 
-    @Override
-    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
-    {
-        //TODO: Should clean up cluster state here for core members
-        throw new UnsupportedOperationException( "Not implemented" );
-    }
-
     public void stopDatabaseBeforeStoreCopy( DatabaseId databaseId )
     {
         forSingleDatabase( databaseId, ( id, context ) ->
@@ -135,6 +136,8 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         } );
     }
 
+    public abstract void cleanupClusterState( String databaseName );
+
     protected final LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
     {
         try
@@ -145,5 +148,29 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             throw new RuntimeException( e );
         }
+    }
+
+    protected void tryForceDirectory( File directory ) throws IOException
+    {
+        if ( !directory.exists() )
+        {
+            throw new NoSuchFileException( format( "The directory %s does not exist!", directory.getAbsolutePath() ) );
+        }
+        else if ( !directory.isDirectory() )
+        {
+            throw new IllegalArgumentException( format( "The path %s must refer to a directory!", directory.getAbsolutePath() ) );
+        }
+
+        if ( SystemUtils.IS_OS_WINDOWS )
+        {
+            // Windows doesn't allow us to open a FileChannel against a directory for reading, so we can't attempt to "fsync" there
+            return;
+        }
+
+        // Attempts to fsync the directory, guaranting e.g. file creation/deletion/rename events are durable
+        // See http://mail.openjdk.java.net/pipermail/nio-dev/2015-May/003140.html
+        // See also https://github.com/apache/lucene-solr/blob/master/lucene/core/src/java/org/apache/lucene/util/IOUtils.java#L452-L484
+        var raftGroupChannel = fs.open( directory, singleton( READ ) );
+        raftGroupChannel.force( true );
     }
 }

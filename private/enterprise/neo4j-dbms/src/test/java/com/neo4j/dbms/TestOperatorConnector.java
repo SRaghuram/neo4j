@@ -12,11 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.DatabaseId;
 
 public class TestOperatorConnector extends OperatorConnector
 {
-    private List<Pair<Map<DatabaseId,OperatorState>,ReconcilerRequest>> triggerCalls;
+    private List<Pair<Map<String,DatabaseState>,ReconcilerRequest>> triggerCalls;
     private DbmsOperator operator;
     private DbmsReconciler reconciler;
 
@@ -41,7 +40,7 @@ public class TestOperatorConnector extends OperatorConnector
         return reconciler.reconcile( Collections.singletonList( operator ), request );
     }
 
-    List<Pair<Map<DatabaseId,OperatorState>,ReconcilerRequest>> triggerCalls()
+    List<Pair<Map<String,DatabaseState>,ReconcilerRequest>> triggerCalls()
     {
         return triggerCalls;
     }

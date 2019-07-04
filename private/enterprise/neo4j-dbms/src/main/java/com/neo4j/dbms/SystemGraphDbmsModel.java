@@ -21,9 +21,9 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 
-import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.DELETED;
-import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.OFFLINE;
-import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.ONLINE;
+import static com.neo4j.dbms.OperatorState.DROPPED;
+import static com.neo4j.dbms.OperatorState.STARTED;
+import static com.neo4j.dbms.OperatorState.STOPPED;
 import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
 import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_NAME_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_STATUS_PROPERTY;
@@ -35,12 +35,6 @@ import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LA
  */
 public class SystemGraphDbmsModel
 {
-    enum DatabaseState
-    {
-        ONLINE,
-        OFFLINE,
-        DELETED
-    }
 
     private GraphDatabaseService systemDatabase;
 
@@ -49,41 +43,44 @@ public class SystemGraphDbmsModel
         this.systemDatabase = systemDatabase;
     }
 
-    Collection<DatabaseId> updatedDatabases( TransactionData transactionData )
+    Collection<String> updatedDatabases( TransactionData transactionData )
     {
-        Collection<DatabaseId> updatedDatabases;
+        Collection<String> updatedDatabases;
 
         try ( var tx = systemDatabase.beginTx() )
         {
             var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
                     .map( PropertyEntry::entity )
                     .filter( n -> n.hasLabel( DATABASE_LABEL ) )
-                    .map( this::getDatabaseId )
+                    .map( this::getDatabaseName )
                     .distinct();
 
             var deletedDatabases = Iterables.stream( transactionData.assignedLabels() )
                     .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
                     .map( LabelEntry::node )
-                    .map( this::getDatabaseId );
+                    .map( this::getDatabaseName );
 
-            updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect(Collectors.toList() );
+            updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect( Collectors.toList() );
             tx.commit();
         }
 
         return updatedDatabases;
     }
 
-    Map<DatabaseId,DatabaseState> getDatabaseStates()
+    Map<String,DatabaseState> getDatabaseStates()
     {
-        Map<DatabaseId,DatabaseState> databases = new HashMap<>();
+        Map<String,DatabaseState> databases = new HashMap<>();
 
         try ( var tx = systemDatabase.beginTx() )
         {
-            var existingDatabases = systemDatabase.findNodes( DATABASE_LABEL ).stream().collect( Collectors.toList() );
-            existingDatabases.forEach( node -> databases.put( getDatabaseId( node ), getOnlineStatus( node ) ) );
-
             var deletedDatabases = systemDatabase.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
-            deletedDatabases.forEach( node -> databases.put( getDatabaseId( node ), DELETED ) );
+            deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), DROPPED ) ) );
+
+            // existing databases supersede dropped databases of the same name, because they represent a later state
+            // there can only ever be exactly 0 or 1 existing database for a particular name and
+            // database nodes can only ever go from the existing to the dropped state
+            var existingDatabases = systemDatabase.findNodes( DATABASE_LABEL ).stream().collect( Collectors.toList() );
+            existingDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), getOnlineStatus( node ) ) ) );
 
             tx.commit();
         }
@@ -92,16 +89,16 @@ public class SystemGraphDbmsModel
         return databases;
     }
 
-    private DatabaseState getOnlineStatus( Node node )
+    private OperatorState getOnlineStatus( Node node )
     {
         String onlineStatus = (String) node.getProperty( DATABASE_STATUS_PROPERTY );
 
         switch ( onlineStatus )
         {
         case "online":
-            return ONLINE;
+            return STARTED;
         case "offline":
-            return OFFLINE;
+            return STOPPED;
         default:
             throw new IllegalArgumentException( "Unsupported database status: " + onlineStatus );
         }
@@ -112,5 +109,10 @@ public class SystemGraphDbmsModel
         var name = (String) node.getProperty( DATABASE_NAME_PROPERTY );
         var uuid = UUID.fromString( (String) node.getProperty( DATABASE_UUID_PROPERTY ) );
         return DatabaseIdFactory.from( name, uuid );
+    }
+
+    private String getDatabaseName( Node node )
+    {
+        return (String) node.getProperty( DATABASE_NAME_PROPERTY );
     }
 }

@@ -12,15 +12,19 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -46,6 +50,7 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     private final Log userLog;
     private final TimeoutStrategy syncRetryStrategy;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
+    private final SimpleStorage<RaftId> raftIdStorage;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final TopologyService topologyService;
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
@@ -55,13 +60,15 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
 
     ReadReplicaDatabaseLife( ReadReplicaDatabaseContext databaseContext, Lifecycle catchupProcess, UpstreamDatabaseStrategySelector selectionStrategy,
             LogProvider debugLogProvider, LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
-            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator, PanicService panicService )
+            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator,
+            SimpleStorage<RaftId> raftIdStorage, PanicService panicService )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
         this.catchupProcess = catchupProcess;
         this.selectionStrategy = selectionStrategy;
         this.panicService = panicService;
+        this.raftIdStorage = raftIdStorage;
         this.syncRetryStrategy = new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS );
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
@@ -73,6 +80,23 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     @Override
     public void init() throws Exception
     {
+        if ( raftIdStorage.exists() )
+        {
+            // If raft id state exists, read it and verify that it corresponds to the database being started
+            var raftId = raftIdStorage.readState();
+            var dbId = databaseContext.databaseId();
+            if ( !Objects.equals( raftId.uuid(), dbId.uuid() ) )
+            {
+                throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
+                        "This may indicate a previous DROP operation for %s did not complete.", raftId.uuid(), dbId.uuid(), dbId.name() ) );
+            }
+        }
+        else
+        {
+            // If the raft id state doesn't exist, create it. RaftId must correspond to the database id
+            var raftId = RaftId.from( databaseContext.databaseId() );
+            raftIdStorage.writeState( raftId );
+        }
         addPanicEventHandlers();
         var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
         clusterComponentsLife.init();

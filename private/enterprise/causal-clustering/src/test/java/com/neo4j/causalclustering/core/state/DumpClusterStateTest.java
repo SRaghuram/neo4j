@@ -5,11 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,13 +46,13 @@ class DumpClusterStateTest
     private LifeSupport life;
 
     private File dataDir;
-    private CoreStateStorageFactory storageFactory;
+    private ClusterStateStorageFactory storageFactory;
 
     @BeforeEach
     void setup()
     {
         dataDir = testDirectory.directory( "data" );
-        storageFactory = new CoreStateStorageFactory( testDirectory.getFileSystem(), ClusterStateLayout.of( dataDir ),
+        storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), ClusterStateLayout.of( dataDir ),
                 NullLogProvider.getInstance(), Config.defaults() );
     }
 
@@ -62,7 +64,7 @@ class DumpClusterStateTest
         MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
         TermState nonDefaultTermState = new TermState();
         nonDefaultTermState.update( 1L );
-        RaftId nonDefaultRaftId = new RaftId( UUID.randomUUID() );
+        RaftId nonDefaultRaftId = RaftIdFactory.random();
         createStates( nonDefaultMember, nonDefaultRaftId, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DumpClusterState dumpTool = new DumpClusterState( testDirectory.getFileSystem(), dataDir, new PrintStream( out ), DEFAULT_DATABASE_NAME );

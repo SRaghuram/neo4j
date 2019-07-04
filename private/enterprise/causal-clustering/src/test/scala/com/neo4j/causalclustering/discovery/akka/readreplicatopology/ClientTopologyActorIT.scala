@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage,
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
-import com.neo4j.causalclustering.identity.{MemberId, RaftId}
+import com.neo4j.causalclustering.identity.{MemberId, RaftId, RaftIdFactory}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
@@ -50,9 +50,11 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     "running" should {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
+        val dbId = randomDatabaseId()
+        val raftId = RaftId.from(dbId)
         val newCoreTopology = new DatabaseCoreTopology(
-          randomDatabaseId(),
-          new RaftId(UUID.randomUUID()),
+          dbId,
+          raftId,
           Map(
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)

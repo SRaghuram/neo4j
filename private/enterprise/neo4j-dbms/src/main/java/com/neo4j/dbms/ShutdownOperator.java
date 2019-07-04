@@ -5,10 +5,10 @@
  */
 package com.neo4j.dbms;
 
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
@@ -29,13 +29,19 @@ class ShutdownOperator extends DbmsOperator
     void stopAll()
     {
         desired.clear();
-        var desireAllStopped = databaseManager.registeredDatabases().entrySet().stream()
-                .filter( e -> !e.getKey().equals( SYSTEM_DATABASE_ID ) )
-                .collect( Collectors.toMap( Map.Entry::getKey, ignored -> STOPPED ) );
+        var desireAllStopped = databaseManager.registeredDatabases().keySet().stream()
+                .filter( e -> !e.equals( SYSTEM_DATABASE_ID ) )
+                .collect( Collectors.toMap( DatabaseId::name, this::stoppedState ) );
         desired.putAll( desireAllStopped );
         trigger( ReconcilerRequest.force() ).awaitAll();
 
-        desired.put( SYSTEM_DATABASE_ID, STOPPED );
-        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID );
+        desired.put( SYSTEM_DATABASE_ID.name(), stoppedState( SYSTEM_DATABASE_ID ) );
+        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID.name() );
     }
+
+    private DatabaseState stoppedState( DatabaseId id )
+    {
+        return new DatabaseState( id, STOPPED );
+    }
+
 }

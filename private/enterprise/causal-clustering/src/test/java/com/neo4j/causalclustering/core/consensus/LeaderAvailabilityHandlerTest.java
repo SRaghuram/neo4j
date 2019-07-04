@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -25,7 +26,7 @@ public class LeaderAvailabilityHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = Mockito.mock( LeaderAvailabilityTimers.class );
-    private RaftId raftId = new RaftId( UUID.randomUUID() );
+    private RaftId raftId = RaftIdFactory.random();
     private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
     private LongSupplier term = () -> 3;
 

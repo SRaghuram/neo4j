@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.messaging.marshalling.v2.decoding;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.Test;
 
 import java.time.Clock;
@@ -87,6 +88,6 @@ public class RaftIdAwareMessageComposerTest
 
     private RaftMessageDecoder.RaftIdAwareMessageComposer messageCreator( RaftMessageDecoder.LazyComposer composer )
     {
-        return new RaftMessageDecoder.RaftIdAwareMessageComposer( composer, new RaftId( UUID.randomUUID() ) );
+        return new RaftMessageDecoder.RaftIdAwareMessageComposer( composer, RaftIdFactory.random() );
     }
 }

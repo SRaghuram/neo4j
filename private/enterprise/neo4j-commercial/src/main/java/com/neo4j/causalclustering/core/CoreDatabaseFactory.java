@@ -29,7 +29,7 @@ import com.neo4j.causalclustering.core.state.CoreDatabaseLife;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
@@ -148,7 +148,7 @@ class CoreDatabaseFactory
 
     private final PanicService panicService;
     private final CoreTopologyService topologyService;
-    private final CoreStateStorageFactory storageFactory;
+    private final ClusterStateStorageFactory storageFactory;
 
     private final TemporaryDatabaseFactory temporaryDatabaseFactory;
     private final Map<DatabaseId,DatabaseInitializer> databaseInitializers;
@@ -164,7 +164,7 @@ class CoreDatabaseFactory
     private final ReplicatedTransactionEventListeners txEventService;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
+            CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<DatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
             RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, ReplicatedTransactionEventListeners txEventService )
@@ -198,7 +198,7 @@ class CoreDatabaseFactory
     }
 
     CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
-            BootstrapContext bootstrapContext, DatabaseLogService logService )
+            BootstrapContext bootstrapContext, DatabaseLogService logService ) throws Exception
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
@@ -324,12 +324,14 @@ class CoreDatabaseFactory
                 messageHandler, snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService, panicService );
     }
 
-    private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, CoreStateStorageFactory storageFactory,
+    private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
-            DatabaseLogProvider debugLog )
+            DatabaseLogProvider debugLog ) throws Exception
     {
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem,
                 debugLog, storageEngineFactory, config );
+
+        storageFactory.clearFor( databaseId, debugLog );
 
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId.name(), debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );

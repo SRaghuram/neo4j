@@ -8,12 +8,16 @@ package com.neo4j.dbms;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.OperatorState.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -41,7 +45,7 @@ class LocalDbmsOperatorTest
         operator.dropDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( DROPPED, operator.desired().get( databaseIdRepository.get( databaseName ).get() ) );
+        assertEquals( DROPPED, operatorState( databaseIdRepository.get( databaseName ) ) );
     }
 
     @Test
@@ -50,7 +54,7 @@ class LocalDbmsOperatorTest
         operator.startDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( STARTED, operator.desired().get( databaseIdRepository.get( databaseName ).get() ) );
+        assertEquals( STARTED, operatorState( databaseIdRepository.get( databaseName ) ) );
     }
 
     @Test
@@ -59,6 +63,14 @@ class LocalDbmsOperatorTest
         operator.stopDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( STOPPED, operator.desired().get( databaseIdRepository.get( databaseName ).get() ) );
+        assertEquals( STOPPED, operatorState( databaseIdRepository.get( databaseName ) ) );
+    }
+
+    @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
+    private OperatorState operatorState( Optional<DatabaseId> databaseId )
+    {
+        return databaseId.flatMap( id -> Optional.ofNullable( operator.desired().get( id.name() ) ) )
+                .map( DatabaseState::operationalState )
+                .orElse( UNKNOWN );
     }
 }

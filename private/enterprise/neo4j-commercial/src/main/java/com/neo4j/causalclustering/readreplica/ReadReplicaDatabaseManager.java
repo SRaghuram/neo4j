@@ -9,10 +9,14 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+
+import java.io.IOException;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -20,18 +24,19 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+
+import static java.lang.String.format;
 
 public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final ReadReplicaEditionModule edition;
 
     ReadReplicaDatabaseManager( GlobalModule globalModule, ReadReplicaEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
-            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config )
+            FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
-        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config );
+        super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config, clusterStateLayout );
         this.edition = edition;
     }
 
@@ -55,5 +60,48 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
 
         return contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 readReplicaDatabase, readReplicaMonitors );
+    }
+
+    @Override
+    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    {
+        super.dropDatabase( databaseId, context );
+
+        cleanupClusterState( databaseId.name() );
+
+        return null;
+    }
+
+    @Override
+    public void cleanupClusterState( String databaseName )
+    {
+        try
+        {
+            deleteRaftId( databaseName );
+        }
+        catch ( IOException e )
+        {
+            throw new DatabaseManagementException( "Was unable to delete cluster state as part of drop. ", e );
+        }
+    }
+
+    /**
+     * When deleting a read replica we must subsequently clear out its raft id from the cluster state.
+     * in extremis if some other IO failure occurs, the existence of a raft-id indicates that more cleanup may be required.
+     */
+    private void deleteRaftId( String databaseName ) throws IOException
+    {
+        var raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
+        var raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
+        var raftIdStateDir = raftIdState.getParentFile();
+
+        if ( !fs.deleteFile( raftIdState ) )
+        {
+            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.getAbsolutePath(), databaseName ) );
+        }
+
+        tryForceDirectory( raftIdStateDir );
+
+        fs.deleteRecursively( raftGroupDir );
     }
 }

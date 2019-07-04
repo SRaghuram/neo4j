@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
-
 /**
  * Simple holder for a Collection of concurrently executing {@link CompletableFuture}s
  * returned from {@link DbmsReconciler#reconcile(List, ReconcilerRequest)}. Provides the ability
@@ -27,27 +25,27 @@ public final class Reconciliation
 {
     public static final Reconciliation EMPTY = new Reconciliation( Collections.emptyMap() );
 
-    private final Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures;
+    private final Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures;
     private final CompletableFuture<Void> completedFuture;
 
-    Reconciliation( Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
+    Reconciliation( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         this.reconciliationFutures = reconciliationFutures;
         this.completedFuture = buildCompletedFuture( reconciliationFutures );
     }
 
-    public void await( DatabaseId databaseId )
+    public void await( String databaseName )
     {
-        var future = reconciliationFutures.get( databaseId );
+        var future = reconciliationFutures.get( databaseName );
         if ( future != null )
         {
             future.join();
         }
     }
 
-    public void await( Collection<DatabaseId> databaseIds )
+    public void await( Collection<String> databaseNames )
     {
-        var futures = databaseIds.stream()
+        var futures = databaseNames.stream()
                 .map( reconciliationFutures::get )
                 .flatMap( Stream::ofNullable )
                 .toArray( CompletableFuture<?>[]::new );
@@ -65,7 +63,7 @@ public final class Reconciliation
         completedFuture.whenComplete( ( ignore, error ) -> action.run() );
     }
 
-    private static CompletableFuture<Void> buildCompletedFuture( Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
+    private static CompletableFuture<Void> buildCompletedFuture( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         var allFutures = reconciliationFutures.values().toArray( CompletableFuture<?>[]::new );
         return CompletableFuture.allOf( allFutures );
