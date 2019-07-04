@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
+import java.util.ArrayList;
+
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -12,11 +14,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.util.ArrayList;
-
 import org.neo4j.graphdb.Node;
-import org.neo4j.internal.id.IdContainer;
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.Inject;
@@ -54,10 +55,11 @@ class IdFilesSanityCheckIT
     }
 
     @Test
-    void shouldRemoveIdFilesFromUnboundInstance() throws Exception
+    public void unbindingStateShouldNotAffectIdGeneratorState() throws Exception
     {
+        // Creates a few nodes on the leader, deletes them, unbinds the leader. The free id count should remain correct
         // given
-        var nodeCount = 100;
+        var nodeCount = 102;
 
         var nodes = new ArrayList<Node>( nodeCount );
 
@@ -81,23 +83,13 @@ class IdFilesSanityCheckIT
         fs.deleteRecursively( leader.clusterStateDirectory() ); // "unbind"
         leader.start();
 
-        // then
-        leader.shutdown(); // we need to shutdown to access the ID-files "raw"
-        var freeIdCount = getFreeIdCount( leader.databaseLayout().idNodeStore() );
-        assertEquals( 0, freeIdCount );
-    }
+        IdGenerator nodeIds =
+                leader.database( "neo4j" ).getDependencyResolver()
+                        .resolveDependency( IdGeneratorFactory.class ).get( IdType.NODE );
+        long idsUnused = nodeIds.getDefragCount();
+        leader.shutdown(); // test is over, we can shut this down
 
-    private long getFreeIdCount( File idFile )
-    {
-        var idContainer = new IdContainer( fs, idFile, 1024, true );
-        idContainer.init();
-        try
-        {
-            return idContainer.getFreeIdCount();
-        }
-        finally
-        {
-            idContainer.close( 0 );
-        }
+        // then
+        assertEquals( nodeCount, idsUnused );
     }
 }

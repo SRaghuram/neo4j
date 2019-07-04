@@ -5,6 +5,12 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import java.io.IOException;
+import java.time.Clock;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -12,14 +18,9 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.test.causalclustering.ClusterRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.time.Clock;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -98,6 +99,7 @@ public class CoreToCoreCopySnapshotIT
     }
 
     @Test
+    @Ignore("Pending fixes for transactional ids")
     public void shouldBeAbleToDownloadToRejoinedInstanceAfterPruning() throws Exception
     {
         // given
