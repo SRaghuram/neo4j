@@ -107,12 +107,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
     {
         private final boolean allowsReads;
         private final boolean allowsWrites;
-        private final boolean allowsSchemaWrites;
         private final boolean allowsTokenCreates;
+        private final boolean allowsSchemaWrites;
+        private final boolean isAdmin;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
         private final IntPredicate propertyPermissions;
-        private final boolean isAdmin;
 
         private final boolean allowsTraverseAllLabels;
         private final boolean allowsTraverseAllRelTypes;
@@ -120,14 +120,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final IntSet whitelistTraverseRelTypes;
 
         private final boolean disallowsTraverseAllLabels;
+        private final boolean disallowsTraverseAllRelTypes;
         private final IntSet blacklistTraverseLabels;
+        private final IntSet blacklistTraverseRelTypes;
 
         private final boolean allowsReadAllPropertiesAllLabels;
         private final boolean allowsReadAllPropertiesAllRelTypes;
-        private final IntSet whitelistedNodeProperties;
-        private final IntSet whitelistedRelationshipProperties;
         private final IntSet whitelistedLabelsForAllProperties;
         private final IntSet whitelistedRelTypesForAllProperties;
+        private final IntSet whitelistedNodeProperties;
+        private final IntSet whitelistedRelationshipProperties;
         private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
         private final IntObjectMap<IntSet> whitelistedRelTypesForProperty;
 
@@ -140,17 +142,26 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 boolean passwordChangeRequired,
                 Set<String> roles,
                 IntPredicate propertyPermissions,
+
                 boolean allowsTraverseAllLabels,
                 boolean allowsTraverseAllRelTypes,
                 IntSet whitelistTraverseLabels,
                 IntSet whitelistTraverseRelTypes,
+
                 boolean disallowsTraverseAllLabels,
+                boolean disallowsTraverseAllRelTypes,
                 IntSet blacklistTraverseLabels,
+                IntSet blacklistTraverseRelTypes,
+
                 boolean allowsReadAllPropertiesAllLabels,
-                boolean allowsReadAllPropertiesAllRelTypes, IntSet whitelistedLabelsForAllProperties,
-                IntSet whitelistedRelTypesForAllProperties, IntObjectMap<IntSet> whitelistedLabelsForProperty,
-                IntObjectMap<IntSet> whitelistedRelTypesForProperty, IntSet whitelistedNodeProperties,
-                IntSet whitelistedRelationshipProperties )
+                boolean allowsReadAllPropertiesAllRelTypes,
+                IntSet whitelistedLabelsForAllProperties,
+                IntSet whitelistedRelTypesForAllProperties,
+                IntSet whitelistedNodeProperties,
+                IntSet whitelistedRelationshipProperties,
+                IntObjectMap<IntSet> whitelistedLabelsForProperty,
+                IntObjectMap<IntSet> whitelistedRelTypesForProperty
+        )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
@@ -160,19 +171,24 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
+
+            this.allowsTraverseAllLabels = allowsTraverseAllLabels;
+            this.allowsTraverseAllRelTypes = allowsTraverseAllRelTypes;
+            this.whitelistTraverseLabels = whitelistTraverseLabels;
+            this.whitelistTraverseRelTypes = whitelistTraverseRelTypes;
+
+            this.disallowsTraverseAllLabels = disallowsTraverseAllLabels;
+            this.disallowsTraverseAllRelTypes = disallowsTraverseAllRelTypes;
+            this.blacklistTraverseLabels = blacklistTraverseLabels;
+            this.blacklistTraverseRelTypes = blacklistTraverseRelTypes;
+
             this.allowsReadAllPropertiesAllLabels = allowsReadAllPropertiesAllLabels;
             this.allowsReadAllPropertiesAllRelTypes = allowsReadAllPropertiesAllRelTypes;
             this.whitelistedLabelsForAllProperties = whitelistedLabelsForAllProperties;
-            this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
-            this.whitelistedNodeProperties = whitelistedNodeProperties;
-            this.allowsTraverseAllLabels = allowsTraverseAllLabels;
-            this.whitelistTraverseLabels = whitelistTraverseLabels;
-            this.allowsTraverseAllRelTypes = allowsTraverseAllRelTypes;
-            this.whitelistTraverseRelTypes = whitelistTraverseRelTypes;
-            this.disallowsTraverseAllLabels = disallowsTraverseAllLabels;
-            this.blacklistTraverseLabels = blacklistTraverseLabels;
-            this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
             this.whitelistedRelTypesForAllProperties = whitelistedRelTypesForAllProperties;
+            this.whitelistedNodeProperties = whitelistedNodeProperties;
+            this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
+            this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
             this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
         }
 
@@ -219,7 +235,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 return true;
             }
-            else if ( disallowsTraverseAllLabels )
+            if ( disallowsTraverseAllLabels )
             {
                 return false;
             }
@@ -245,17 +261,22 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsTraverseAllRelTypes()
         {
-            return allowsTraverseAllRelTypes;
+            return allowsTraverseAllRelTypes && !disallowsTraverseAllRelTypes && blacklistTraverseRelTypes.isEmpty();
         }
 
         @Override
         public boolean allowsTraverseRelType( int relType )
         {
-            if ( allowsTraverseAllRelTypes )
+            if ( allowsTraverseAllRelTypes() )
             {
                 return true;
             }
-            return whitelistTraverseRelTypes.contains( relType );
+            if ( disallowsTraverseAllRelTypes || blacklistTraverseRelTypes.contains( relType ) )
+            {
+                return false;
+            }
+
+            return whitelistTraverseRelTypes.contains( relType ) || allowsTraverseAllRelTypes;
         }
 
         @Override
@@ -363,22 +384,25 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean schema;
             private boolean admin;
             private IntPredicate propertyPermissions;
-            private boolean allowReadAllPropertiesAllLabels;
-            private MutableIntSet allowedNodeSegmentForAllProperties = IntSets.mutable.empty();
 
-            private MutableIntObjectMap<IntSet> allowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
-            private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllLabels;
-            private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
-            private boolean disallowsTraverseAllLabels;
-            private MutableIntSet blacklistTraverseLabels = IntSets.mutable.empty();
-
-            private boolean allowReadAllPropertiesAllRelTypes;
-            private MutableIntSet allowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
-            private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
-            private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
             private boolean allowsTraverseAllRelTypes;
+            private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
             private MutableIntSet whitelistTraverseRelTypes = IntSets.mutable.empty();
+
+            private boolean disallowsTraverseAllLabels;
+            private boolean disallowsTraverseAllRelTypes;
+            private MutableIntSet blacklistTraverseLabels = IntSets.mutable.empty();
+            private MutableIntSet blackListTraverseRelTypes = IntSets.mutable.empty();
+
+            private boolean allowReadAllPropertiesAllLabels;
+            private boolean allowReadAllPropertiesAllRelTypes;
+            private MutableIntSet allowedNodeSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntSet allowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
+            private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
+            private MutableIntObjectMap<IntSet> allowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
+            private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -410,16 +434,17 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         whitelistTraverseLabels,
                         whitelistTraverseRelTypes,
                         disallowsTraverseAllLabels,
+                        disallowsTraverseAllRelTypes,
                         blacklistTraverseLabels,
+                        blackListTraverseRelTypes,
                         allowReadAllPropertiesAllLabels,
                         allowReadAllPropertiesAllRelTypes,
                         allowedNodeSegmentForAllProperties,
                         allowedRelationshipSegmentForAllProperties,
-                        allowedNodeSegmentForProperty,
-                        allowedRelationshipSegmentForProperty,
                         whitelistNodeProperties,
-                        whitelistRelationshipProperties
-                );
+                        whitelistRelationshipProperties,
+                        allowedNodeSegmentForProperty,
+                        allowedRelationshipSegmentForProperty );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
@@ -462,12 +487,26 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     {
                         if ( segment.equals( RelTypeSegment.ALL ) )
                         {
-                            allowsTraverseAllRelTypes = true;
+                            if ( allowed )
+                            {
+                                allowsTraverseAllRelTypes = true;
+                            }
+                            else
+                            {
+                                disallowsTraverseAllRelTypes = true;
+                            }
                         }
                         else
                         {
                             int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                            whitelistTraverseRelTypes.add( relTypeId );
+                            if ( allowed )
+                            {
+                                whitelistTraverseRelTypes.add( relTypeId );
+                            }
+                            else
+                            {
+                                blackListTraverseRelTypes.add( relTypeId );
+                            }
                         }
                     }
                     else

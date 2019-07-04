@@ -446,7 +446,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(2)
   }
 
-  test("should not be able to traverse labels when denied all traversal") {
+  test("should not be able to traverse labels when denied all label traversal") {
     // GIVEN
     setupUserJoeWithCustomRole()
     setupMultiLabelData2
@@ -478,7 +478,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(0)
   }
 
-  test("should not be able to traverse labels when denied all traversal even if granted all traversal") {
+  test("should not be able to traverse labels with grant and deny on all label traversal") {
     // GIVEN
     setupUserJoeWithCustomRole()
     setupMultiLabelData2
@@ -672,6 +672,127 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
   }
 
+  test("should not find relationship when denied all reltype traversal") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+
+    val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+  }
+
+  test("should not find relationship with grant and deny on all reltype traversal") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+
+    val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected = List("a", "b")
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("n.name") should be(expected(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
+  }
+
+  test("should find correct relationships with grant traversal on all reltypes and deny on specific reltype") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+
+    val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected = List("a", "b")
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("n.name") should be(expected(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS HATES TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+  }
+
+  test("should find correct relationships with grant and deny on specific reltypes") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+
+    val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS HATES TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("n.name") should be("a")
+    }) should be(1)
+  }
+
   test("should get correct count for all relationships with traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -684,18 +805,31 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       row.get("count(r)") should be(0)
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(0)
     }) should be(1)
   }
 
@@ -711,18 +845,31 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       row.get("count(r)") should be(0)
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH (*) ON GRAPH * NODES B TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(0)
     }) should be(1)
   }
 
@@ -733,24 +880,59 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserJoeWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()")
 
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+      val node = row.get("a").asInstanceOf[Node]
+      node.getDegree() should be(0)
+      node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getDegree() should be(1)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A"))
     }) should be(1)
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
+    // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getDegree() should be(2)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A", "B"))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+      val node = row.get("a").asInstanceOf[Node]
+      node.getDegree() should be(1)
+      node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("B"))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+      val node = row.get("a").asInstanceOf[Node]
+      node.getDegree() should be(0)
+      node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
     }) should be(1)
   }
 
@@ -806,6 +988,25 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("reltype"), row.get("count")) should be(expected2(index))
     }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("reltype") should be("B")
+      row.get("count") should be(2)
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("should get no result")
+    }) should be(0)
   }
 
   test("should only see properties on relationship with read privilege") {
