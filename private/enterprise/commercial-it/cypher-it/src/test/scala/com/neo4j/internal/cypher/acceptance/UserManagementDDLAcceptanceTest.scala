@@ -878,6 +878,22 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       resultHandler = (row, _) => row.get("name").equals(DEFAULT_DATABASE_NAME))
   }
 
+  test("should allow show default database for non admin user") {
+    import org.neo4j.cypher.internal.DatabaseStatus.Online
+
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO alice")
+
+    // WHEN / THEN
+    executeOnSystem("alice", "abc", "SHOW DEFAULT DATABASE",
+      resultHandler = (row, _) => {
+        row.get("name").equals(DEFAULT_DATABASE_NAME)
+        row.get("status").equals(Online.stringValue())
+      })
+  }
+
   test("should fail when altering user when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
