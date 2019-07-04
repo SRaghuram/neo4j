@@ -379,7 +379,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private final IdLookup resolver;
 
             private boolean read;
-            private boolean write;
+            private boolean allowsWrite;
+            private boolean disallowsWrite;
             private boolean token;
             private boolean schema;
             private boolean admin;
@@ -422,7 +423,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 return new StandardAccessMode(
                         isAuthenticated && read,
-                        isAuthenticated && write,
+                        isAuthenticated && allowsWrite && !disallowsWrite,
                         isAuthenticated && token,
                         isAuthenticated && schema,
                         isAuthenticated && admin,
@@ -599,7 +600,14 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case GRAPH:
                     case PROPERTY:
                     case ALL_PROPERTIES:
-                        write = true;
+                        if ( allowed )
+                        {
+                            allowsWrite = true;
+                        }
+                        else
+                        {
+                            disallowsWrite = true;
+                        }
                         break;
                     case TOKEN:
                         token = true;

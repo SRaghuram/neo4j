@@ -236,7 +236,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN n.name")
+      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 as dummy")
     }
 
     // WHEN
@@ -249,6 +249,48 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
 
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+  }
+
+  test("should not be able to create node when denied WRITE privilege to custom role for all databases")
+  {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.execute("CREATE (n:A {name:'a'})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
+      row.get("dummy") should be(1)
+    }) should be(1)
+
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'c'}) RETURN 1 as dummy")
+    }
+
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'd'}) RETURN 1 as dummy")
+    }
+
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+
   }
 
   test("should read you own writes on nodes when granted TRAVERSE and WRITE privilege to custom role for all databases and all labels") {
@@ -418,6 +460,36 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     execute(s"GRANT WRITE (*) ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
+      row.get("dummy") should be(1)
+    }) should be(1)
+
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    selectDatabase("foo")
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
+  }
+
+  test("should not be able to create nodes when denied WRITE privilege to custom role for a specific database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (:B {name:'b'})")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name:'a'})")
+
+    setupUserJoeWithCustomRole()
+
+    // WHEN
+    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
