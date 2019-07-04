@@ -9,6 +9,7 @@ import com.amazonaws.SdkClientException;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkArgs;
 import com.neo4j.bench.infra.InfraCommand;
+import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
@@ -83,12 +84,12 @@ public class ScheduleMacro extends InfraCommand
             LOG.info( "upload build artifacts into {}", buildArtifactsUri );
 
             // schedule them
-            List<String> jobIds = jobScheduler.schedule( workloads, dbs, benchmarkArgs );
-            LOG.info( "jobs are scheduled, with ids\n{}", jobIds.stream().collect( joining( "\n" ) ) );
+            List<JobId> jobIds = jobScheduler.schedule( workloads, dbs, benchmarkArgs );
+            LOG.info( "jobs are scheduled, with ids\n{}", jobIds.stream().map( JobId::id ).collect( joining( "\n" ) ) );
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
                     .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
-                    .withDelay( Duration.ofMinutes( 5 ))
+                    .withDelay( Duration.ofMinutes( 5 ) )
                     .withMaxAttempts( -1 );
 
             List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobScheduler.jobsStatuses(jobIds));
