@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import java.util.concurrent.{Executors, ThreadLocalRandom}
+import java.util.concurrent.{CountDownLatch, Executors, ThreadLocalRandom}
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -15,60 +15,61 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
 
-  private val SIZE = 1000
+  private val SIZE = 100000
+  private val THREADS = 10
 
   test("should handle concurrent access") {
     val tracker = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
-                                                       mock[QueryContext](RETURNS_DEEP_STUBS),
-                                                       mock[QueryExecutionTracer])
-    reset(tracker)
+      mock[QueryContext](RETURNS_DEEP_STUBS),
+      mock[QueryExecutionTracer])
+    (1 to SIZE * THREADS) foreach { _ =>
+      tracker.increment()
+    }
 
     // When
-    val executor = Executors.newFixedThreadPool(2)
-    executor.submit(new DemandServingThread(tracker))
-    executor.submit(new DecrementThread(tracker))
-    val random = ThreadLocalRandom.current()
+    val executor = Executors.newFixedThreadPool(THREADS)
 
     // Then
-    1 to SIZE foreach { _ =>
-      val request = random.nextLong(SIZE)
-      tracker.request(request)
+    val request = SIZE * THREADS
+    tracker.request(request)
+    val latch = new CountDownLatch(THREADS)
 
-      //if tracker.await returns false there is no more data then we know that we eventually should
-      //call onComplete on the subscriber. However if tracker says it has more data we cannot be completely
-      //sure it will not finish soon after.
-      if (!tracker.await()) {
-        tracker.isCompleted shouldBe true
-        reset(tracker)
-      }
-    }
+    val threads = (1 to THREADS).map { _ => new DemandServingThread(tracker, request / THREADS, latch) }
+    threads.foreach(executor.submit)
+
+    tracker.await() shouldBe false
+    tracker.isCompleted shouldBe true
 
     executor.shutdown()
   }
-
-  private def reset(tracker: ConcurrentQueryCompletionTracker): Unit =  {
-    1 to SIZE foreach { _ =>
-      tracker.increment()
-    }
-  }
 }
 
-class DecrementThread(tracker: ConcurrentQueryCompletionTracker) extends Runnable {
+class DemandServingThread(tracker: ConcurrentQueryCompletionTracker,
+                          var count: Long,
+                          latch: CountDownLatch) extends Runnable {
+
+  private val random = ThreadLocalRandom.current()
 
   override def run(): Unit = {
-    while (true) {
-      if (!tracker.isCompleted && tracker.hasDemand) {
+    latch.countDown()
+    latch.await()
+    while (count > 0) {
+      count = count - 1
+
+      val incDecCount = random.nextInt(10)
+      val reqServeCount = random.nextInt(10)
+
+      (1 to incDecCount).foreach { _ =>
+        tracker.increment()
         tracker.decrement()
       }
-    }
-  }
-}
-
-class DemandServingThread(tracker: ConcurrentQueryCompletionTracker) extends Runnable {
-  override def run(): Unit = {
-    while (true) {
-      if (!tracker.isCompleted && tracker.hasDemand)
+      (1 to reqServeCount).foreach{_ =>
+        tracker.request(1)
         tracker.addServed(1)
+      }
+
+      tracker.addServed(1)
+      tracker.decrement()
     }
   }
 }

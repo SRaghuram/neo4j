@@ -180,6 +180,13 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private val status = new AtomicReference[Status](Running)
 
   override def increment(): Long = {
+    AssertionRunner.runUnderAssertion { () =>
+      status.get() match {
+        case CountReachedZero =>
+          throw new IllegalStateException(s"Increment called even though CountReachedZero. That should not happen. Current count: ${count.get()}")
+        case _ => // Nothing to do
+      }
+    }
     val newCount = count.incrementAndGet()
     DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName}. New count: $newCount")
     newCount
