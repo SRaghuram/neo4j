@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+
 /**
   * The [[QueryManager]] keeps track of currently executing queries
   * and selects the next one to work on.
@@ -16,6 +18,7 @@ class QueryManager {
   private val runningQueries = new ConcurrentLinkedQueue[ExecutingQuery]()
 
   def addQuery(query: ExecutingQuery): Unit = {
+    DebugSupport.logQueries(s" Adding query $query")
     runningQueries.add(query)
   }
 
@@ -26,6 +29,7 @@ class QueryManager {
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
     var query = runningQueries.peek()
     while (query != null && query.executionState.isCompleted) {
+      DebugSupport.logQueries(s"Removing query $query")
       runningQueries.remove(query)
       query = runningQueries.peek()
     }

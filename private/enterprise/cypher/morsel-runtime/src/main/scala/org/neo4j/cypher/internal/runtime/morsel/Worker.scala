@@ -112,7 +112,8 @@ class Worker(val workerId: Int,
     try {
       executingQuery.bindTransactionToThread()
 
-      DebugLog.log("[WORKER%2d] working on %s".format(workerId, task))
+      DebugLog.log(f"[WORKER$workerId%2d] working on $task")
+      DebugSupport.logWorker(f"[WORKER$workerId%2d] working on $task of $executingQuery")
 
       sleeper.reportStartWorkUnit()
       workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()

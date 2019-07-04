@@ -135,8 +135,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
     queryContext.transactionalContext.transaction.freezeLocks()
 
-    queryManager.addQuery(executingQuery)
     executionState.initializeState()
+    queryManager.addQuery(executingQuery)
     ProfiledQuerySubscription(executingQuery, queryProfile)
   }
 }

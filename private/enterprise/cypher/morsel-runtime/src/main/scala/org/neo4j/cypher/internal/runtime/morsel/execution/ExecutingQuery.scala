@@ -35,4 +35,6 @@ class ExecutingQuery(val executionState: ExecutionState,
   override def await(): Boolean = {
     flowControl.await()
   }
+
+  override def toString: String = s"ExecutingQuery ${System.identityHashCode(this)}"
 }

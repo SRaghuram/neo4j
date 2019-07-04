@@ -188,13 +188,13 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       }
     }
     val newCount = count.incrementAndGet()
-    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName}. New count: $newCount")
+    DebugSupport.logTracker(s"Incremented $toString. New count: $newCount")
     newCount
   }
 
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
-    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $newCount")
+    DebugSupport.logTracker(s"Decremented $toString. New count: $newCount")
     if (newCount == 0) {
       try {
         status.compareAndExchange(Running, CountReachedZero) match {
@@ -226,7 +226,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def isCompleted: Boolean = count.get() == 0
 
-  override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
+  override def toString: String = s"ConcurrentQueryCompletionTracker ${System.identityHashCode(this)}(${count.get()})"
 
   // We avoid ProduceResults (which reads this) doing any more work if the query is cancelled or had an error
   override def getDemand: Long = if (status.get() != Running) 0 else demand.get()
@@ -234,7 +234,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   override def hasDemand: Boolean = getDemand > 0
 
   override def addServed(newlyServed: Long): Unit = {
-    DebugSupport.logTracker(s"Subtracting $newlyServed of demand")
+    DebugSupport.logTracker(s"Subtracting $newlyServed of demand in $toString")
     val newDemand = demand.addAndGet(-newlyServed)
     if (newDemand == 0) {
       releaseLatch()
@@ -245,7 +245,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def cancel(): Unit = {
     if (status.compareAndSet(Running, Cancelled)) {
-      DebugSupport.logTracker("Canceled")
+      DebugSupport.logTracker(s"Canceled $toString")
     }
   }
 
@@ -257,7 +257,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       //there is new demand make sure to reset the latch
       if (numberOfRecords > 0) {
         resetLatch()
-        DebugSupport.logTracker(s"Adding $numberOfRecords to demand")
+        DebugSupport.logTracker(s"Adding $numberOfRecords to demand in $toString")
         demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
           val newDemand = oldVal + newVal
           //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
@@ -272,9 +272,9 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def await(): Boolean = {
-    DebugSupport.logTracker(s"Awaiting latch $latch ....")
+    DebugSupport.logTracker(s"Awaiting latch $latch in $toString ....")
     latch.await()
-    DebugSupport.logTracker(s"Awaiting latch $latch done")
+    DebugSupport.logTracker(s"Awaiting latch $latch in $toString done")
     if (!errors.isEmpty) {
       throw allErrors()
     }
@@ -286,7 +286,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   private def releaseLatch(): Unit = this.synchronized {
-    DebugSupport.logTracker(s"Releasing latch $latch")
+    DebugSupport.logTracker(s"Releasing latch $latch in $toString")
     latch.countDown()
   }
 
@@ -294,7 +294,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     if (latch.getCount == 0) {
       val oldLatch = latch
       latch = new CountDownLatch(1)
-      DebugSupport.logTracker(s"Resetting latch $oldLatch. new: $latch")
+      DebugSupport.logTracker(s"Resetting latch in $toString. Old: $oldLatch. new: $latch")
     }
   }
 
