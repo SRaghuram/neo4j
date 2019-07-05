@@ -941,6 +941,200 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(4)
   }
 
+  test("should not be able read properties when denied match privilege for all labels and all properties") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    setupMultilabelData
+
+    val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+
+    val expected1 = List(
+      (1, 2), // :A
+      (3, 4), // :B
+      (5, 6), // :A:B
+      (7, 8) // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (*) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+  }
+
+  test("should read correct properties when denied match privilege for all labels and specific property") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    setupMultilabelData
+
+    val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+
+    val expected1 = List(
+      (1, 2), // :A
+      (3, 4), // :B
+      (5, 6), // :A:B
+      (7, 8) // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (foo) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (foo) ON GRAPH * NODES * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+  }
+
+  test("should read correct properties when denied match privilege for specific labels and all properties") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    setupMultilabelData
+
+    val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+
+    val expected1 = List(
+      (1, 2), // :A
+      (3, 4), // :B
+      (5, 6), // :A:B
+      (7, 8) // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (*) ON GRAPH * NODES A (*) TO custom")
+
+    val expected2 = List(
+      (3, 4), // :B
+      (7, 8), // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(2)
+  }
+
+  test("should read correct properties when denied match privilege for specific label and specific property") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+    setupMultilabelData
+
+    val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+
+    val expected1 = List(
+      (1, 2), // :A
+      (3, 4), // :B
+      (5, 6), // :A:B
+      (7, 8) // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
+      }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (foo) ON GRAPH * NODES A (*) TO custom")
+
+    val expected2 = List(
+      (3, 4), // :B
+      (7, 8), // no labels
+    )
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(2)
+  }
+
   // Tests for relationship privileges
 
   test("should find relationship when granted traversal privilege") {
@@ -1520,7 +1714,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   }
 
-
   test("should read correct properties when denied read privilege for specific reltype and specific property") {
 
     // GIVEN
@@ -1933,6 +2126,205 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected2(index))
     }) should be(3)
+  }
+
+  test("should not be able to read properties when denied match privilege for all reltypes and all properties") {
+
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      util.Map.of("id", 1L, "foo", 2L),
+      util.Map.of("id", 3L, "foo", 4L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+  }
+
+  test("should read correct properties when denied match privilege for all reltypes and specific property") {
+
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      util.Map.of("id", 1L, "foo", 2L),
+      util.Map.of("id", 3L, "foo", 4L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+  }
+
+  test("should read correct properties when denied match privilege for specific reltype and all properties") {
+
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      util.Map.of("id", 1L, "foo", 2L),
+      util.Map.of("id", 3L, "foo", 4L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
+    }) should be(1)
+
+  }
+
+  test("should read correct properties when denied match privilege for specific reltype and specific property") {
+
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      util.Map.of("id", 1L, "foo", 2L),
+      util.Map.of("id", 3L, "foo", 4L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
+    }) should be(1)
+
   }
 
   test("should give correct results with relationship fulltext index and denies") {
