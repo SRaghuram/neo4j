@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -109,23 +110,28 @@ class Worker(val workerId: Int,
   private def executeTask(executingQuery: ExecutingQuery,
                           task: PipelineTask): Unit = {
     var workUnitEvent: WorkUnitEvent = null
+    var preparedOutput: PreparedOutput = null
     try {
-      executingQuery.bindTransactionToThread()
+      try {
+        executingQuery.bindTransactionToThread()
 
-      DebugLog.log(f"[WORKER$workerId%2d] working on $task")
-      DebugSupport.logWorker(f"[WORKER$workerId%2d] working on $task of $executingQuery")
+        DebugLog.log(f"[WORKER$workerId%2d] working on $task")
+        DebugSupport.logWorker(f"[WORKER$workerId%2d] working on $task of $executingQuery")
 
-      sleeper.reportStartWorkUnit()
-      workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-      task
-        .executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
-        .produce()
-
-    } finally {
-      if (workUnitEvent != null) {
-        workUnitEvent.stop()
-        sleeper.reportStopWorkUnit()
+        sleeper.reportStartWorkUnit()
+        workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+        preparedOutput = task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
+      } finally {
+        if (workUnitEvent != null) {
+          workUnitEvent.stop()
+          sleeper.reportStopWorkUnit()
+        }
       }
+      // This just puts the output in a buffer, which is not part of the workUnit
+      if (preparedOutput != null) {
+        preparedOutput.produce()
+      }
+    } finally {
       executingQuery.unbindTransaction()
     }
   }
