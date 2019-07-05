@@ -115,6 +115,110 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
   }
 
+  test("read privilege for element should not imply traverse privilege") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name: 'n1'})-[:A {name:'r'}]->(:A {name: 'n2'})")
+    val query = "MATCH (n1)-[r]->(n2) RETURN n1.name, r.name, n2.name"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * ELEMENTS A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("n1", "r", "n2"))
+    }) should be(1)
+  }
+
+  test("should see correct things when granted element privileges") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {name: 'a1'})-[:A {name: 'ra1'}]->(:A {name: 'a2'})")
+    execute("CREATE (:A {name: 'a3'})-[:B {name: 'rb1'}]->(:A {name: 'a4'})")
+    execute("CREATE (:B {name: 'b1'})-[:A {name: 'ra2'}]->(:B {name: 'b2'})")
+    execute("CREATE (:B {name: 'b3'})-[:B {name: 'rb2'}]->(:B {name: 'b4'})")
+    val query = "MATCH (n1)-[r]->(n2) RETURN n1.name, r.name, n2.name ORDER BY n1.name, r.name"
+
+    an[AuthorizationViolationException] shouldBe thrownBy {
+      executeOnDefault("joe", "soap", query)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (name) ON GRAPH * ELEMENTS A, B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("a1", "ra1", "a2"))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH (name) ON GRAPH * ELEMENTS B TO custom")
+
+    // THEN
+    val expected1 = Seq(
+      ("a1", "ra1", "a2"),
+      ("a3", "rb1", "a4"),
+      ("b1", "ra2", "b2"),
+      ("b3", "rb2", "b4")
+    )
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected1(index))
+    }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE READ (name) ON GRAPH * ELEMENTS A FROM custom")
+
+    // THEN
+    val expected2 = Seq(
+      ("b1", null, "b2"),
+      ("b3", "rb2", "b4"),
+      (null, "rb1", null),
+      (null, null, null)
+    )
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected2(index))
+    }) should be(4)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE MATCH (name) ON GRAPH * ELEMENTS B FROM custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
+    }) should be(4) // TODO: should be 1 when revoking MATCH also revokes traverse
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS C TO custom") // unrelated privilege, just so we don't remove all access
+    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A, B FROM custom") // TODO: won't work when revoking MATCH also revokes traverse, need to re-add traverse B
+
+    // THEN
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
   test("should see properties and nodes depending on granted traverse and read privileges for role") {
     // GIVEN
     setupMultilabelData

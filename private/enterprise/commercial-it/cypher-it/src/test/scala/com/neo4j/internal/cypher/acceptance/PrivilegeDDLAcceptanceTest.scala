@@ -322,6 +322,131 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           }
 
       }
+
+      test(s"should grant $actionName privilege to custom role for all databases and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").node("*").map) ++
+            startExpected.map(_.role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to custom role for all databases but only a specific element (that does not need to exist)") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH * ELEMENTS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").node("A").map) ++
+            startExpected.map(_.role("custom").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to custom role for a specific database and a specific element") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("A").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to custom role for a specific database and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("*").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to custom role for a specific database and multiple elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("A").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("custom").database("foo").node("B").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to custom role for a specific database and multiple elements in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          startExpected.map(_.role("custom").database("foo").node("A").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("custom").database("foo").node("B").map) ++
+            startExpected.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege to multiple roles for a specific database and multiple elements in one grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO role1, role2")
+
+        // THEN
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role1").database("foo").node("A").map) ++
+            startExpected.map(_.role("role1").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("role1").database("foo").node("B").map) ++
+            startExpected.map(_.role("role1").database("foo").relationship("B").map)
+        )
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(
+          startExpected.map(_.role("role2").database("foo").node("A").map) ++
+            startExpected.map(_.role("role2").database("foo").relationship("A").map) ++
+            startExpected.map(_.role("role2").database("foo").node("B").map) ++
+            startExpected.map(_.role("role2").database("foo").relationship("B").map)
+        )
+      }
+
   }
 
   // Tests for granting privileges on properties
@@ -497,6 +622,169 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           }
 
       }
+
+      test(s"should grant $actionName privilege for specific property to custom role for all databases and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").node("*").map,
+            grantRead().role("custom").property("bar").relationship("*").map) ++
+            expectedTraverse.map(_.role("custom").node("*").map) ++
+            expectedTraverse.map(_.role("custom").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for specific property to custom role for all databases but only a specific element") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH * ELEMENTS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").property("bar").node("A").map,
+            grantRead().role("custom").property("bar").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").node("A").map) ++
+            expectedTraverse.map(_.role("custom").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for specific property to custom role for a specific database and a specific element") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").database("foo").property("bar").node("A").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for specific property to custom role for a specific database and all elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").database("foo").property("bar").node("*").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("*").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("*").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("*").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for specific property to custom role for a specific database and multiple elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").database("foo").property("bar").node("A").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("A").map,
+            grantRead().role("custom").database("foo").property("bar").node("B").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("B").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for multiple properties to custom role for a specific database and specific element") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"GRANT $actionCommand (baz) ON GRAPH foo ELEMENTS A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").database("foo").property("bar").node("A").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("A").map,
+            grantRead().role("custom").database("foo").property("baz").node("A").map,
+            grantRead().role("custom").database("foo").property("baz").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"GRANT $actionCommand (baz) ON GRAPH foo ELEMENTS B (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+          Set(grantRead().role("custom").database("foo").property("bar").node("A").map,
+            grantRead().role("custom").database("foo").property("bar").relationship("A").map,
+            grantRead().role("custom").database("foo").property("baz").node("B").map,
+            grantRead().role("custom").database("foo").property("baz").relationship("B").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+            expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+        )
+      }
+
+      test(s"should grant $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE role1")
+        execute("CREATE ROLE role2")
+        execute("CREATE ROLE role3")
+        execute("CREATE DATABASE foo")
+
+        // WHEN
+        execute(s"GRANT $actionCommand (a, b, c) ON GRAPH foo ELEMENTS A, B, C (*) TO role1, role2, role3")
+
+        // THEN
+        val expected = (for (l <- Seq("A", "B", "C")) yield {
+          (for (p <- Seq("a", "b", "c")) yield {
+            Seq(grantRead().database("foo").property(p).node(l),
+            grantRead().database("foo").property(p).relationship(l))
+          }).flatten ++ expectedTraverse.map(expected => expected.database("foo").node(l)) ++
+            expectedTraverse.map(expected => expected.database("foo").relationship(l))
+        }).flatten
+
+        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+        execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+      }
+
   }
 
 
@@ -590,6 +878,57 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantRead().database("foo").role("custom").property("bar").node("B").map,
       grantRead().database("foo").role("custom").property("bar").relationship("B").map
     ))
+  }
+
+  test("should revoke correct read privilege different element type qualifier") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS B, C (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").node("*").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("C").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("*").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").node("*").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("C").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("*").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("C").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should revoke correct read privilege different property") {
@@ -829,6 +1168,96 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct traverse elements privilege different type qualifier") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo ELEMENTS A, B, C (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map,
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").node("C").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("A").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantTraverse().database("foo").role("custom").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").node("C").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantTraverse().database("foo").role("custom").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").node("C").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantTraverse().database("foo").role("custom").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should revoke correct traverse element privilege different databases") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("GRANT TRAVERSE ON GRAPH bar ELEMENTS * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").node("*").database("foo").map,
+      grantTraverse().role("custom").node("*").database("bar").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantTraverse().role("custom").relationship("*").database("foo").map,
+      grantTraverse().role("custom").relationship("*").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").node("*").database("bar").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantTraverse().role("custom").relationship("*").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").database("bar").map,
+      grantTraverse().role("custom").relationship("*").database("bar").map
+    ))
+  }
+
   test("should revoke correct MATCH privilege different label qualifier") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -925,6 +1354,97 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct MATCH privilege different element type qualifier") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT MATCH (bar) ON GRAPH foo TO custom")
+    execute("GRANT MATCH (bar) ON GRAPH foo ELEMENTS A, B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map,
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("A").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("*").map,
+      grantRead().database("foo").role("custom").property("bar").node("A").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("*").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("A").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map,
+      grantTraverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("*").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("*").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map
+    ))
+
+    // WHEN
+    execute("GRANT MATCH (bar) ON GRAPH foo ELEMENTS C (*) TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").node("C").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantTraverse().database("foo").role("custom").relationship("C").map,
+      grantRead().database("foo").role("custom").property("bar").node("B").map,
+      grantRead().database("foo").role("custom").property("bar").node("C").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("B").map,
+      grantRead().database("foo").role("custom").property("bar").relationship("C").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      // TODO: this should be an empty set when revoking MATCH also revokes traverse
+      grantTraverse().database("foo").role("custom").node("*").map,
+      grantTraverse().database("foo").role("custom").node("A").map,
+      grantTraverse().database("foo").role("custom").node("B").map,
+      grantTraverse().database("foo").role("custom").node("C").map,
+      grantTraverse().database("foo").role("custom").relationship("*").map,
+      grantTraverse().database("foo").role("custom").relationship("A").map,
+      grantTraverse().database("foo").role("custom").relationship("B").map,
+      grantTraverse().database("foo").role("custom").relationship("C").map,
+    ))
+  }
+
   test("should revoke correct MATCH privilege different property") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -974,7 +1494,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      // TODO: this should be an empty set
+      // TODO: this should be an empty set when revoking MATCH also revokes traverse
       grantTraverse().database("foo").role("custom").node("*").map,
       grantTraverse().database("foo").role("custom").relationship("*").map
     ))
@@ -1148,6 +1668,80 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct traverse and read privileges from different MATCH privileges on elements") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT MATCH (foo,bar) ON GRAPH * ELEMENTS A,B (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").node("B").map,
+      grantTraverse().role("custom").relationship("A").map,
+      grantTraverse().role("custom").relationship("B").map,
+      grantRead().role("custom").node("A").property("foo").map,
+      grantRead().role("custom").node("B").property("foo").map,
+      grantRead().role("custom").node("A").property("bar").map,
+      grantRead().role("custom").node("B").property("bar").map,
+      grantRead().role("custom").relationship("A").property("foo").map,
+      grantRead().role("custom").relationship("B").property("foo").map,
+      grantRead().role("custom").relationship("A").property("bar").map,
+      grantRead().role("custom").relationship("B").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("B").map,
+      grantTraverse().role("custom").relationship("B").map,
+      grantRead().role("custom").node("A").property("foo").map,
+      grantRead().role("custom").node("B").property("foo").map,
+      grantRead().role("custom").node("A").property("bar").map,
+      grantRead().role("custom").node("B").property("bar").map,
+      grantRead().role("custom").relationship("A").property("foo").map,
+      grantRead().role("custom").relationship("B").property("foo").map,
+      grantRead().role("custom").relationship("A").property("bar").map,
+      grantRead().role("custom").relationship("B").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").node("A").property("foo").map,
+      grantRead().role("custom").node("B").property("foo").map,
+      grantRead().role("custom").node("A").property("bar").map,
+      grantRead().role("custom").node("B").property("bar").map,
+      grantRead().role("custom").relationship("A").property("foo").map,
+      grantRead().role("custom").relationship("B").property("foo").map,
+      grantRead().role("custom").relationship("A").property("bar").map,
+      grantRead().role("custom").relationship("B").property("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").node("A").property("foo").map,
+      grantRead().role("custom").node("A").property("bar").map,
+      grantRead().role("custom").relationship("A").property("foo").map,
+      grantRead().role("custom").relationship("A").property("bar").map,
+    ))
+
+    // WHEN
+    execute("REVOKE READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantRead().role("custom").node("A").property("bar").map,
+      grantRead().role("custom").relationship("A").property("bar").map,
+    ))
+  }
+
   test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1250,6 +1844,82 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
+  test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges on elements") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT MATCH (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT MATCH (a) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT READ  (b) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    execute("GRANT TRAVERSE  ON GRAPH * ELEMENTS A (*) TO custom")
+    execute("GRANT MATCH (a) ON GRAPH * ELEMENTS A (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map, // From both MATCH ELEMENTS *
+      grantTraverse().role("custom").relationship("*").map, // From both MATCH ELEMENTS *
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").node("*").property("a").map,
+      grantRead().role("custom").node("*").property("b").map,
+      grantRead().role("custom").relationship("*").map,
+      grantRead().role("custom").relationship("*").property("a").map,
+      grantRead().role("custom").relationship("*").property("b").map,
+
+      grantTraverse().role("custom").node("A").map, // From both MATCH and TRAVERSE
+      grantTraverse().role("custom").relationship("A").map, // From both MATCH and TRAVERSE
+      grantRead().role("custom").node("A").property("a").map,
+      grantRead().role("custom").relationship("A").property("a").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").node("*").property("a").map,
+      grantRead().role("custom").relationship("*").map,
+      grantRead().role("custom").relationship("*").property("a").map,
+
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").relationship("A").map,
+      grantRead().role("custom").node("A").property("a").map,
+      grantRead().role("custom").relationship("A").property("a").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").relationship("*").map,
+
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").relationship("A").map,
+      grantRead().role("custom").node("A").property("a").map,
+      grantRead().role("custom").relationship("A").property("a").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").relationship("*").map,
+
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").relationship("A").map,
+    ))
+  }
+
   test("should revoke correct elements privilege when granted as nodes + relationships") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1282,6 +1952,41 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       grantTraverse().role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
       grantRead().role("custom").node("A").map,
       grantRead().role("custom").relationship("A").map
+    ))
+  }
+
+  test("should revoke correct elements privilege when granted as specific nodes + relationships") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("A").map,
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("A").map,
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("A").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").relationship("A").map,
+      grantRead().role("custom").relationship("*").map
+    ))
+
+    // WHEN
+    execute("REVOKE MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantTraverse().role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").node("*").map,
+      grantTraverse().role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+      grantTraverse().role("custom").relationship("*").map,
+      grantRead().role("custom").node("*").map,
+      grantRead().role("custom").relationship("*").map
     ))
   }
 
