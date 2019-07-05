@@ -5,8 +5,6 @@
  */
 package com.neo4j.dbms;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +30,7 @@ public abstract class DbmsOperator
 
     final Map<DatabaseId,OperatorState> desired()
     {
-        return Collections.unmodifiableMap( desired0() );
+        return Map.copyOf( desired0() );
     }
 
     final Reconciliation trigger( boolean force )
