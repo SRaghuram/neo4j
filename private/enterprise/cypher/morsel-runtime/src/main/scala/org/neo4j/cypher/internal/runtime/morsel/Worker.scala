@@ -128,9 +128,7 @@ class Worker(val workerId: Int,
         }
       }
       // This just puts the output in a buffer, which is not part of the workUnit
-      if (preparedOutput != null) {
-        preparedOutput.produce()
-      }
+      preparedOutput.produce()
     } finally {
       executingQuery.unbindTransaction()
     }
