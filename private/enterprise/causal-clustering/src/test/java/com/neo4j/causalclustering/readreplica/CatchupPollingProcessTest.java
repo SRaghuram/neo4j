@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -65,7 +66,6 @@ class CatchupPollingProcessTest
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
-    private final ClusterInternalDbmsOperator internalOperator = mock( ClusterInternalDbmsOperator.class, Mockito.RETURNS_MOCKS );
     private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
@@ -92,13 +92,13 @@ class CatchupPollingProcessTest
         when( storeFiles.readStoreId( any() )).thenReturn( storeId );
 
         databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ),
-                internalOperator ) );
+                new ClusterInternalDbmsOperator() ) );
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
         when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
-        when( databaseContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
+        doReturn( storeCopyHandle ).when( databaseContext ).stopForStoreCopy();
         clearInvocations( databaseContext );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );

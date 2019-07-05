@@ -68,7 +68,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
      */
     public synchronized StoreCopyHandle stopForStoreCopy( DatabaseId databaseId )
     {
-        StoreCopyHandle storeCopyHandle = new StoreCopyHandle( databaseId );
+        StoreCopyHandle storeCopyHandle = new StoreCopyHandle( this, databaseId );
         storeCopying.add( storeCopyHandle );
 
         if ( !bootstrapping.contains( databaseId ) )
@@ -89,29 +89,31 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     public synchronized BootstrappingHandle bootstrap( DatabaseId databaseId )
     {
         bootstrapping.add( databaseId );
-        return new BootstrappingHandle( databaseId );
+        return new BootstrappingHandle( this, databaseId );
     }
 
-    public class StoreCopyHandle
+    public static class StoreCopyHandle
     {
+        private final ClusterInternalDbmsOperator operator;
         private final DatabaseId databaseId;
 
-        private StoreCopyHandle( DatabaseId databaseId )
+        private StoreCopyHandle( ClusterInternalDbmsOperator operator, DatabaseId databaseId )
         {
+            this.operator = operator;
             this.databaseId = databaseId;
         }
 
         public void restart()
         {
-            boolean exists = storeCopying.remove( this );
+            boolean exists = operator.storeCopying.remove( this );
             if ( !exists )
             {
                 throw new IllegalStateException( "Restart was already called for " + databaseId );
             }
 
-            if ( !bootstrapping.contains( databaseId ) )
+            if ( !operator.bootstrapping.contains( databaseId ) )
             {
-                trigger( false ).await( databaseId );
+                operator.trigger( false ).await( databaseId );
             }
         }
 
@@ -142,18 +144,20 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
         }
     }
 
-    public class BootstrappingHandle
+    public static class BootstrappingHandle
     {
+        private final ClusterInternalDbmsOperator operator;
         private final DatabaseId databaseId;
 
-        private BootstrappingHandle( DatabaseId databaseId )
+        private BootstrappingHandle( ClusterInternalDbmsOperator operator, DatabaseId databaseId )
         {
+            this.operator = operator;
             this.databaseId = databaseId;
         }
 
         public void bootstrapped()
         {
-            if ( !bootstrapping.remove( databaseId ) )
+            if ( !operator.bootstrapping.remove( databaseId ) )
             {
                 throw new IllegalStateException( "Bootstrapped was already called for " + databaseId );
             }

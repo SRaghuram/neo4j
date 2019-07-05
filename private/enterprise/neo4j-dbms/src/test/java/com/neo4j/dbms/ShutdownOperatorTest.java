@@ -75,6 +75,6 @@ class ShutdownOperatorTest
         var finalTrigger = triggerCalls.get( triggerCalls.size() - 1 );
         assertTrue( finalTrigger.first().keySet().containsAll( databases ) );
         var expected = databases.stream().collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
-        assertEquals( finalTrigger.first(), expected );
+        assertEquals( expected, finalTrigger.first() );
     }
 }
