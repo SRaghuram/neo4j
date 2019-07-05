@@ -21,6 +21,7 @@ import org.neo4j.internal.id.IdType;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class RaftIdReuseIT
@@ -77,13 +78,14 @@ public class RaftIdReuseIT
     }
 
     @Test
-    public void newLeaderShouldNotReuseIds() throws Exception
+    public void newLeaderShouldReuseIdsFreedOnPreviousLeader() throws Exception
     {
         cluster = clusterRule.startCluster();
 
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
+        // Create three, delete two nodes on the leader. The leader should report two defragged ids
         CoreClusterMember creationLeader = createThreeNodes( cluster, first, second );
         CoreClusterMember deletionLeader = removeTwoNodes( cluster, first, second );
 
@@ -103,14 +105,17 @@ public class RaftIdReuseIT
         assertNotSame( creationLeader.serverId(), newLeader.serverId() );
         idMaintenanceOnLeader( newLeader );
 
+        // The new leader should still have 2 defragged ids
         IdGeneratorFactory newLeaderIdGeneratorFactory = resolveDependency( newLeader, IdGeneratorFactory.class );
         final IdGenerator idGenerator = newLeaderIdGeneratorFactory.get( IdType.NODE );
-        assertEquals( 0, idGenerator.getDefragCount() );
+        assertEquals( 2, idGenerator.getDefragCount() );
 
+        // The ids available should be actually reused, so check that a new node gets one of the above deleted ids
         CoreClusterMember newCreationLeader = cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode();
-            assertEquals( idGenerator.getHighestPossibleIdInUse(), node.getId() );
+            assertTrue( String.format("Created node had id %d, should be %d or %d", node.getId(), first.getValue(), second.getValue() ),
+                    node.getId() == first.getValue() || node.getId() == second.getValue());
 
             tx.success();
         } );

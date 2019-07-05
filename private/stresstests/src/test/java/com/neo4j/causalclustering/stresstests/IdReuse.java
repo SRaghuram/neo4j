@@ -5,17 +5,16 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.helper.Workload;
-
-import java.io.File;
-import java.security.SecureRandom;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
@@ -23,9 +22,9 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.internal.id.IdContainer;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.stresstests.TxHelp.isInterrupted;
@@ -59,55 +58,22 @@ class IdReuse
         protected void validate()
         {
             Iterable<ClusterMember> members = Iterables.concat( cluster.coreMembers(), cluster.readReplicas() );
-            Set<Long> unusedIds = new HashSet<>();
-            Set<Long> nonUniqueIds = new HashSet<>();
+            Map<MemberId, Long> usedIdsPerMember = new HashMap<>();
 
-            for ( ClusterMember member : members )
+            for ( ClusterMember member: members )
             {
-                visitAllIds( member, id ->
-                {
-                    if ( !unusedIds.add( id ) )
-                    {
-                        nonUniqueIds.add( id );
-                    }
-                } );
+                usedIdsPerMember.put( member.id(),
+                        member.defaultDatabase().getDependencyResolver().resolveDependency(
+                                        IdGeneratorFactory.class ).get( IdType.NODE ).getNumberOfIdsInUse() );
             }
 
-            if ( nonUniqueIds.size() != 0 )
+            if ( usedIdsPerMember.values().stream().distinct().count() != 1 )
             {
-                for ( ClusterMember member : members )
-                {
-                    visitAllIds( member, id ->
-                    {
-                        if ( nonUniqueIds.contains( id ) )
-                        {
-                            log.error( member + " has non-unique free ID: " + id );
-                        }
-                    } );
-                }
-
-                throw new IllegalStateException( "Non-unique IDs found: " + nonUniqueIds );
+                log.error( "Mismatching used id count found in cluster members: %s", usedIdsPerMember );
+                throw new IllegalStateException( "Members don't have the same used id count" );
             }
 
-            log.info( "Total of " + unusedIds.size() + " reusable ids found" );
-        }
-
-        void visitAllIds( ClusterMember member, Consumer<Long> idConsumer )
-        {
-            DatabaseLayout databaseLayout = member.databaseLayout();
-            File idFile = databaseLayout.idNodeStore();
-            IdContainer idContainer = new IdContainer( fs, idFile, 1024, true );
-            idContainer.init();
-            log.info( idFile.getAbsolutePath() + " has " + idContainer.getFreeIdCount() + " free ids" );
-
-            long id = idContainer.getReusableId();
-            while ( id != IdContainer.NO_RESULT )
-            {
-                idConsumer.accept( id );
-                id = idContainer.getReusableId();
-            }
-
-            idContainer.close( 0 );
+            log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " used ids found" );
         }
     }
 
