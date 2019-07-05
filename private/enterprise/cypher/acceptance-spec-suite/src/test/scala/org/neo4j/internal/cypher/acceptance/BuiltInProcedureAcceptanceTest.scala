@@ -425,13 +425,13 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     listResult.toList should equal(
       List(Map("description" -> "INDEX ON :Person(name)",
-        "indexName" -> index.getName,
+        "indexName" -> "index_3",
         "tokenNames" -> List("Person"),
         "properties" -> List("name"),
         "state" -> "ONLINE",
         "progress" -> 100D,
         "type" -> "node_label_property",
-        "id" -> 1,
+        "id" -> 3,
         "provider" -> Map(
           "version" -> "3.0",
           "key" -> "lucene+native"),
