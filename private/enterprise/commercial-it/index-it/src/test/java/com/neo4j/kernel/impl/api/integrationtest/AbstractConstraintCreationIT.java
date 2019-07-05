@@ -181,7 +181,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // when
         commit();
 
-       transaction = newTransaction();
+        transaction = newTransaction();
 
         // then
         assertFalse( transaction.schemaRead().constraintsGetAll().hasNext(), "should not have any constraints" );

@@ -51,7 +51,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
@@ -120,14 +119,6 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         assertNotEquals( TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ), "property token should exist" );
     }
 
-    private void init( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
-    {
-        this.existenceConstraint = existenceConstraint;
-        this.uniquenessConstraint = uniquenessConstraint;
-        this.indexProcedureName = indexProcedureName;
-        this.expectedSuccessfulCreationStatus = expectedSuccessfulCreationStatus;
-    }
-
     @ParameterizedTest
     @MethodSource( "parameters" )
     void throwIfNullProvider( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
@@ -165,21 +156,13 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( "Person", "name" );
-        try
-        {
-            callIndexProcedure( pattern, "non+existing-1.0" );
-            fail( "Expected to fail" );
-        }
-        catch ( ProcedureException e )
-        {
-            // then
-            assertThat( e.getMessage(), allOf(
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, "non+existing-1.0" ) );
+        assertThat( e.getMessage(), allOf(
                 containsString( "Failed to invoke procedure" ),
                 containsString( "Tried to get index provider" ),
                 containsString( "available providers in this session being" ),
                 containsString( "default being" )
             ) );
-        }
     }
 
     @ParameterizedTest
@@ -201,16 +184,16 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, propertyKey );
-        try
-        {
-            callIndexProcedure( pattern, nonDefaultSchemaIndex.providerName() );
-            fail( "Should have failed" );
-        }
-        catch ( ProcedureException e )
-        {
-            // then
-            assertThat( e.getMessage(), containsString( "There already exists an index " ) );
-        }
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, nonDefaultSchemaIndex.providerName() ) );
+        assertThat( e.getMessage(), containsString( "There already exists an index " ) );
+    }
+
+    private void init( boolean existenceConstraint, boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
+    {
+        this.existenceConstraint = existenceConstraint;
+        this.uniquenessConstraint = uniquenessConstraint;
+        this.indexProcedureName = indexProcedureName;
+        this.expectedSuccessfulCreationStatus = expectedSuccessfulCreationStatus;
     }
 
     private static int[] createProperties( Transaction transaction, String... properties ) throws KernelException
@@ -364,17 +347,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         commit();
 
         // when
-        try
-        {
-            createConstraint( label, properties );
-            fail( "Should have failed" );
-        }
-        catch ( ProcedureException e )
-        {
-            // then
-            // good
-            assertThat( rootCause( e ), instanceOf( IndexEntryConflictException.class ) );
-        }
+        var e = assertThrows( ProcedureException.class, () -> createConstraint( label, properties ) );
+        assertThat( rootCause( e ), instanceOf( IndexEntryConflictException.class ) );
     }
 
     @ParameterizedTest
@@ -391,20 +365,14 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         createConstraint( label, prop );
 
         // when
-        try
+        assertThrows( ConstraintViolationException.class, () ->
         {
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
                 db.createNode( Label.label( label ) );
                 tx.success();
             }
-            fail( "Should have failed" );
-        }
-        catch ( ConstraintViolationException e )
-        {
-            // then
-            // good
-        }
+        } );
     }
 
     @SuppressWarnings( "SameParameterValue" )
@@ -423,17 +391,11 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         createConstraint( label, properties );
 
         // when
-        try
+        assertThrows( UniquePropertyValueValidationException.class, () ->
         {
-            transaction = newTransaction( AnonymousContext.write() );
-            createNodeWithPropertiesAndLabel( transaction, labelId, propertyKeyIds, value );
-            fail( "Should have failed" );
-        }
-        catch ( UniquePropertyValueValidationException e )
-        {
-            // then
-            // ok
-        }
+            var tx = newTransaction( AnonymousContext.write() );
+            createNodeWithPropertiesAndLabel( tx, labelId, propertyKeyIds, value );
+        } );
     }
 
     private void createConstraint( String label, String... properties ) throws TransactionFailureException, ProcedureException

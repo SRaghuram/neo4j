@@ -23,7 +23,7 @@ import org.neo4j.values.storable.Values;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelIntegrationTest
 {
@@ -62,17 +62,9 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
 
         // when
         createEntity( transaction, "Type1" );
-        try
-        {
-            commit();
-            fail( "should have thrown exception" );
-        }
-        // then
-        catch ( ConstraintViolationTransactionFailureException e )
-        {
-            Status expected = Status.Schema.ConstraintValidationFailed;
-            assertThat( e.status(), is( expected ) );
-        }
+        var e = assertThrows( ConstraintViolationTransactionFailureException.class, this::commit );
+        Status expected = Status.Schema.ConstraintValidationFailed;
+        assertThat( e.status(), is( expected ) );
     }
 
     @Test
@@ -85,17 +77,10 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         // when
         int key = transaction.tokenWrite().propertyKeyGetOrCreateForName( "key1" );
         removeProperty( transaction.dataWrite(), entity, key );
-        try
-        {
-            commit();
-            fail( "should have thrown exception" );
-        }
-        // then
-        catch ( ConstraintViolationTransactionFailureException e )
-        {
-            Status expected = Status.Schema.ConstraintValidationFailed;
-            assertThat( e.status(), is( expected ) );
-        }
+
+        var e = assertThrows( ConstraintViolationTransactionFailureException.class, this::commit );
+        Status expected = Status.Schema.ConstraintValidationFailed;
+        assertThat( e.status(), is( expected ) );
     }
 
     @Test
