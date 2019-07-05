@@ -133,6 +133,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
         private final IntObjectMap<IntSet> whitelistedRelTypesForProperty;
 
+        private final boolean disallowsReadAllPropertiesAllLabels;
+        private final boolean disallowsReadAllPropertiesAllRelTypes;
+        private final IntSet blacklistedNodeProperties;
+        private final IntSet blacklistedRelationshipProperties;
+        private final IntSet blacklistedLabelsForAllProperties;
+        private final IntSet blacklistedRelTypesForAllProperties;
+        private final IntObjectMap<IntSet> blacklistedLabelsForProperty;
+        private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
+
         StandardAccessMode(
                 boolean allowsReads,
                 boolean allowsWrites,
@@ -160,7 +169,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 IntSet whitelistedNodeProperties,
                 IntSet whitelistedRelationshipProperties,
                 IntObjectMap<IntSet> whitelistedLabelsForProperty,
-                IntObjectMap<IntSet> whitelistedRelTypesForProperty
+                IntObjectMap<IntSet> whitelistedRelTypesForProperty,
+
+                boolean disallowsReadAllPropertiesAllLabels,
+                boolean disallowsReadAllPropertiesAllRelTypes,
+                IntSet blacklistedLabelsForAllProperties,
+                IntSet blacklistedRelTypesForAllProperties,
+                IntSet blacklistedNodeProperties,
+                IntSet blacklistedRelationshipProperties,
+                IntObjectMap<IntSet> blacklistedLabelsForProperty,
+                IntObjectMap<IntSet> blacklistedRelTypesForProperty
         )
         {
             this.allowsReads = allowsReads;
@@ -190,6 +208,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
             this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
             this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
+
+            this.disallowsReadAllPropertiesAllLabels = disallowsReadAllPropertiesAllLabels;
+            this.disallowsReadAllPropertiesAllRelTypes = disallowsReadAllPropertiesAllRelTypes;
+            this.blacklistedLabelsForAllProperties = blacklistedLabelsForAllProperties;
+            this.blacklistedRelTypesForAllProperties = blacklistedRelTypesForAllProperties;
+            this.blacklistedNodeProperties = blacklistedNodeProperties;
+            this.blacklistedRelationshipProperties = blacklistedRelationshipProperties;
+            this.blacklistedLabelsForProperty = blacklistedLabelsForProperty;
+            this.blacklistedRelTypesForProperty = blacklistedRelTypesForProperty;
         }
 
         @Override
@@ -282,7 +309,18 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsReadPropertyAllLabels( int propertyKey )
         {
-            return allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey );
+            return (allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey )) && !disallowsReadPropertyForSomeLabel( propertyKey );
+        }
+
+        private boolean disallowsReadPropertyForSomeLabel( int propertyKey )
+        {
+            return disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) || !blacklistedLabelsForAllProperties.isEmpty() ||
+                    blacklistedLabelsForProperty.get( propertyKey ) != null;
+        }
+
+        private boolean disallowsReadPropertyForAllLabels( int propertyKey )
+        {
+            return disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey );
         }
 
         @Override
@@ -293,27 +331,56 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 return true;
             }
 
+            if ( disallowsReadPropertyForAllLabels( propertyKey ) )
+            {
+                return false;
+            }
+
             LabelSet labelSet = labelSupplier.get();
             IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
+            IntSet blackListed = blacklistedLabelsForProperty.get( propertyKey );
+
+            boolean allowed = false;
+
             for ( long labelAsLong : labelSet.all() )
             {
                 int label = (int) labelAsLong;
                 if ( whiteListed != null && whiteListed.contains( label ) )
                 {
-                    return true;
+                    allowed = true;
+                }
+                if ( blackListed != null && blackListed.contains( label ) )
+                {
+                    return false;
                 }
                 if ( whitelistedLabelsForAllProperties.contains( label ) )
                 {
-                    return true;
+                    allowed = true;
+                }
+                if ( blacklistedLabelsForAllProperties.contains( label ) )
+                {
+                    return false;
                 }
             }
-            return false;
+            return allowed || allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey );
         }
 
         @Override
         public boolean allowsReadPropertyAllRelTypes( int propertyKey )
         {
-            return allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey );
+            return (allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey )) &&
+                    !disallowsReadPropertyForSomeRelType( propertyKey );
+        }
+
+        private boolean disallowsReadPropertyForSomeRelType( int propertyKey )
+        {
+            return disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey ) ||
+                    !blacklistedRelTypesForAllProperties.isEmpty() || blacklistedRelTypesForProperty.get( propertyKey ) != null;
+        }
+
+        private boolean disallowsReadPropertyForAllRelTypes( int propertyKey )
+        {
+            return disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey );
         }
 
         @Override
@@ -323,8 +390,24 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 return true;
             }
+
+            if ( disallowsReadPropertyForAllRelTypes( propertyKey ) )
+            {
+                return false;
+            }
+
             IntSet whitelisted = whitelistedRelTypesForProperty.get( propertyKey );
-            return whitelisted != null && whitelisted.contains( relType.getAsInt() ) || whitelistedRelTypesForAllProperties.contains( relType.getAsInt() );
+            IntSet blacklisted = blacklistedRelTypesForProperty.get( propertyKey );
+
+            boolean allowed =
+                    (whitelisted != null && whitelisted.contains( relType.getAsInt() ) ) ||
+                            whitelistedRelTypesForAllProperties.contains( relType.getAsInt() ) ||
+                            allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey );
+
+            boolean disallowedRelType =
+                    (blacklisted != null && blacklisted.contains( relType.getAsInt() )) || blacklistedRelTypesForAllProperties.contains( relType.getAsInt() );
+
+            return allowed && !disallowedRelType;
         }
 
         @Override
@@ -394,7 +477,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean disallowsTraverseAllLabels;
             private boolean disallowsTraverseAllRelTypes;
             private MutableIntSet blacklistTraverseLabels = IntSets.mutable.empty();
-            private MutableIntSet blackListTraverseRelTypes = IntSets.mutable.empty();
+            private MutableIntSet blacklistTraverseRelTypes = IntSets.mutable.empty();
 
             private boolean allowReadAllPropertiesAllLabels;
             private boolean allowReadAllPropertiesAllRelTypes;
@@ -404,6 +487,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
             private MutableIntObjectMap<IntSet> allowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
             private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
+
+            private boolean disallowReadAllPropertiesAllLabels;
+            private boolean disallowReadAllPropertiesAllRelTypes;
+            private MutableIntSet disallowedNodeSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntSet disallowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
+            private MutableIntSet blacklistNodeProperties = IntSets.mutable.empty();
+            private MutableIntSet blacklistRelationshipProperties = IntSets.mutable.empty();
+            private MutableIntObjectMap<IntSet> disallowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
+            private MutableIntObjectMap<IntSet> disallowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -430,14 +522,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         passwordChangeRequired,
                         roles,
                         propertyPermissions,
+
                         allowsTraverseAllLabels,
                         allowsTraverseAllRelTypes,
                         whitelistTraverseLabels,
                         whitelistTraverseRelTypes,
+
                         disallowsTraverseAllLabels,
                         disallowsTraverseAllRelTypes,
-                        blacklistTraverseLabels,
-                        blackListTraverseRelTypes,
+                        blacklistTraverseLabels, blacklistTraverseRelTypes,
+
                         allowReadAllPropertiesAllLabels,
                         allowReadAllPropertiesAllRelTypes,
                         allowedNodeSegmentForAllProperties,
@@ -445,7 +539,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         whitelistNodeProperties,
                         whitelistRelationshipProperties,
                         allowedNodeSegmentForProperty,
-                        allowedRelationshipSegmentForProperty );
+                        allowedRelationshipSegmentForProperty,
+
+                        disallowReadAllPropertiesAllLabels,
+                        disallowReadAllPropertiesAllRelTypes,
+                        disallowedNodeSegmentForAllProperties,
+                        disallowedRelationshipSegmentForAllProperties,
+                        blacklistNodeProperties,
+                        blacklistRelationshipProperties,
+                        disallowedNodeSegmentForProperty,
+                        disallowedRelationshipSegmentForProperty );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
@@ -457,7 +560,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 switch ( privilege.getAction() )
                 {
                 case FIND:
-                    read = true;
+                    if ( allowed )
+                    {
+                        read = true;
+                    }
                     if ( segment instanceof LabelSegment )
                     {
                         if ( segment.equals( LabelSegment.ALL ) )
@@ -473,15 +579,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         else
                         {
-                            int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                            if ( allowed )
-                            {
-                                whitelistTraverseLabels.add( labelId );
-                            }
-                            else
-                            {
-                                blacklistTraverseLabels.add( labelId );
-                            }
+                            addLabel( whitelistTraverseLabels, blacklistTraverseLabels, segment, allowed );
                         }
                     }
                     else if ( segment instanceof RelTypeSegment )
@@ -499,15 +597,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         else
                         {
-                            int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                            if ( allowed )
-                            {
-                                whitelistTraverseRelTypes.add( relTypeId );
-                            }
-                            else
-                            {
-                                blackListTraverseRelTypes.add( relTypeId );
-                            }
+                            addRelType( whitelistTraverseRelTypes, blacklistTraverseRelTypes, segment, allowed );
                         }
                     }
                     else
@@ -517,42 +607,80 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
 
                     break;
                 case READ:
+
+                    if ( allowed )
+                    {
+                        read = true;
+                    }
+
                     switch ( resource.type() )
                     {
                     case GRAPH:
-                        allowReadAllPropertiesAllLabels = true;
-                        allowReadAllPropertiesAllRelTypes = true;
-                        read = true;
+                        if ( allowed )
+                        {
+                            allowReadAllPropertiesAllLabels = true;
+                            allowReadAllPropertiesAllRelTypes = true;
+                        }
+                        else
+                        {
+                            disallowReadAllPropertiesAllLabels = true;
+                            disallowReadAllPropertiesAllRelTypes = true;
+                        }
                         break;
                     case PROPERTY:
-                        read = true;
                         int propertyId = resolvePropertyId( resource.getArg1() );
                         if ( segment instanceof LabelSegment )
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                whitelistNodeProperties.add( propertyId );
+                                if ( allowed )
+                                {
+                                    whitelistNodeProperties.add( propertyId );
+                                }
+                                else
+                                {
+                                    blacklistNodeProperties.add( propertyId );
+                                }
                             }
                             else
                             {
-                                MutableIntSet allowedNodesWithLabels = (MutableIntSet) allowedNodeSegmentForProperty
-                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                                allowedNodesWithLabels.add( labelId );
+
+                                if ( allowed )
+                                {
+                                    addLabelPropertyCombination( allowedNodeSegmentForProperty, labelId, propertyId );
+                                }
+                                else
+                                {
+                                    addLabelPropertyCombination( disallowedNodeSegmentForProperty, labelId, propertyId );
+                                }
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
                         {
                             if ( segment.equals( RelTypeSegment.ALL ) )
                             {
-                                whitelistRelationshipProperties.add( propertyId );
+                                if ( allowed )
+                                {
+                                    whitelistRelationshipProperties.add( propertyId );
+                                }
+                                else
+                                {
+                                    blacklistRelationshipProperties.add( propertyId );
+                                }
                             }
                             else
                             {
-                                MutableIntSet allowedWithRelType = (MutableIntSet) allowedRelationshipSegmentForProperty
-                                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
                                 int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                                allowedWithRelType.add( relTypeId );
+
+                                if ( allowed )
+                                {
+                                    addLabelPropertyCombination( allowedRelationshipSegmentForProperty, relTypeId, propertyId );
+                                }
+                                else
+                                {
+                                    addLabelPropertyCombination( disallowedRelationshipSegmentForProperty, relTypeId, propertyId );
+                                }
                             }
                         }
                         else
@@ -561,29 +689,40 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         break;
                     case ALL_PROPERTIES:
-                        read = true;
                         if ( segment instanceof LabelSegment )
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                allowReadAllPropertiesAllLabels = true;
+                                if ( allowed )
+                                {
+                                    allowReadAllPropertiesAllLabels = true;
+                                }
+                                else
+                                {
+                                    disallowReadAllPropertiesAllLabels = true;
+                                }
                             }
                             else
                             {
-                                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                                allowedNodeSegmentForAllProperties.add( labelId );
+                                addLabel( allowedNodeSegmentForAllProperties, disallowedNodeSegmentForAllProperties, segment, allowed );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
                         {
                             if ( segment.equals( RelTypeSegment.ALL ) )
                             {
-                                allowReadAllPropertiesAllRelTypes = true;
+                                if ( allowed )
+                                {
+                                    allowReadAllPropertiesAllRelTypes = true;
+                                }
+                                else
+                                {
+                                    disallowReadAllPropertiesAllRelTypes = true;
+                                }
                             }
                             else
                             {
-                                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                                allowedRelationshipSegmentForAllProperties.add( relTypeId );
+                                addRelType( allowedRelationshipSegmentForAllProperties, disallowedRelationshipSegmentForAllProperties, segment, allowed );
                             }
                         }
                         else
@@ -650,6 +789,41 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 assert !property.isEmpty();
                 return resolver.getOrCreatePropertyKeyId( property );
+            }
+
+            private void addLabel( MutableIntSet whitelist, MutableIntSet blacklist, Segment segment, boolean allowed ) throws KernelException
+            {
+                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
+
+                if ( allowed )
+                {
+                    whitelist.add( labelId );
+                }
+                else
+                {
+                    blacklist.add( labelId );
+                }
+            }
+
+            private void addRelType( MutableIntSet whitelist, MutableIntSet blacklist, Segment segment, boolean allowed ) throws KernelException
+            {
+                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
+
+                if ( allowed )
+                {
+                    whitelist.add( relTypeId );
+                }
+                else
+                {
+                    blacklist.add( relTypeId );
+                }
+            }
+
+            private void addLabelPropertyCombination( MutableIntObjectMap<IntSet> map, int labelId, int propertyId )
+            {
+                MutableIntSet setForProperty = (MutableIntSet) map
+                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                setForProperty.add( labelId );
             }
         }
     }
