@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
@@ -120,8 +120,8 @@ class DumpCountsStoreTest
     private SchemaRuleAccess createRuleAccess()
     {
         SchemaRuleAccess schemaRuleAccess = mock( SchemaRuleAccess.class );
-        IndexDescriptor2 rule = prototype.materialise( indexId );
-        ArrayList<IndexDescriptor2> rules = new ArrayList<>();
+        IndexDescriptor rule = prototype.materialise( indexId );
+        ArrayList<IndexDescriptor> rules = new ArrayList<>();
         rules.add( rule );
 
         when( schemaRuleAccess.indexesGetAll() ).thenReturn( rules.iterator() );

@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.internal.schema.IndexDescriptor2
+import org.neo4j.internal.schema.IndexDescriptor
 
 class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -132,9 +132,9 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     lockingIndexSearchCalled = false
 
     val assertReadOnlyMonitorListener = new IndexSearchMonitor {
-      override def indexSeek(index: IndexDescriptor2, value: Seq[Any]): Unit = {}
+      override def indexSeek(index: IndexDescriptor, value: Seq[Any]): Unit = {}
 
-      override def lockingUniqueIndexSeek(index: IndexDescriptor2, values: Seq[Any]): Unit = {
+      override def lockingUniqueIndexSeek(index: IndexDescriptor, values: Seq[Any]): Unit = {
         lockingIndexSearchCalled = true
       }
     }

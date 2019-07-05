@@ -31,7 +31,7 @@ import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
@@ -273,13 +273,13 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // and then
         transaction = newTransaction( AnonymousContext.read() );
         SchemaRead schemaRead = transaction.schemaRead();
-        IndexDescriptor2 index = schemaRead.index( labelId, propertyKeyIds );
+        IndexDescriptor index = schemaRead.index( labelId, propertyKeyIds );
         assertCorrectIndex( labelId, propertyKeyIds, uniquenessConstraint, index );
         assertIndexData( transaction, propertyKeyIds, value, node, index );
         commit();
     }
 
-    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor2 index )
+    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor index )
             throws KernelException
     {
         try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor() )
@@ -297,7 +297,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexDescriptor2 index )
+    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexDescriptor index )
     {
         assertEquals( nonDefaultSchemaIndex.providerKey(), index.getIndexProvider().getKey(), "provider key" );
         assertEquals( nonDefaultSchemaIndex.providerVersion(), index.getIndexProvider().getVersion(), "provider version" );

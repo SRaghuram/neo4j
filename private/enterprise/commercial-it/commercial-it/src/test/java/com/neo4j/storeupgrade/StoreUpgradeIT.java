@@ -43,7 +43,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.InwardKernel;
@@ -463,11 +463,11 @@ public class StoreUpgradeIT
               Statement ignore = tx.acquireStatement() )
         {
             SchemaRead schemaRead = tx.schemaRead();
-            Iterator<IndexDescriptor2> indexes = IndexDescriptor2.sortByType( getAllIndexes( schemaRead ) );
+            Iterator<IndexDescriptor> indexes = IndexDescriptor.sortByType( getAllIndexes( schemaRead ) );
             DoubleLongRegister register = Registers.newDoubleLongRegister();
             for ( int i = 0; indexes.hasNext(); i++ )
             {
-                IndexDescriptor2 reference = indexes.next();
+                IndexDescriptor reference = indexes.next();
 
                 // wait index to be online since sometimes we need to rebuild the indexes on migration
                 awaitOnline( schemaRead, reference );
@@ -482,7 +482,7 @@ public class StoreUpgradeIT
         }
     }
 
-    private static Iterator<IndexDescriptor2> getAllIndexes( SchemaRead schemaRead )
+    private static Iterator<IndexDescriptor> getAllIndexes( SchemaRead schemaRead )
     {
         return schemaRead.indexesGetAll();
     }
@@ -587,7 +587,7 @@ public class StoreUpgradeIT
         return new long[]{upgrade, size, unique, sampleSize};
     }
 
-    private static void awaitOnline( SchemaRead schemRead, IndexDescriptor2 index )
+    private static void awaitOnline( SchemaRead schemRead, IndexDescriptor index )
             throws KernelException
     {
         long start = System.currentTimeMillis();

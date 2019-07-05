@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
@@ -62,7 +62,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 {
     private static final String DUPLICATED_VALUE = "apa";
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-    private IndexDescriptor2 uniqueIndex;
+    private IndexDescriptor uniqueIndex;
 
     @Override
     protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
@@ -245,7 +245,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
-        IndexDescriptor2 indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
+        IndexDescriptor indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );

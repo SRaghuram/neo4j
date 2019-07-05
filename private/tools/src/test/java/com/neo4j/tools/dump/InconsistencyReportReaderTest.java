@@ -17,9 +17,8 @@ import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
 import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.internal.index.label.NodeLabelRange;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
-import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -100,7 +99,7 @@ class InconsistencyReportReaderTest
         assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 4242 ) );
     }
 
-    private IndexDescriptor2 someIndexDescriptor()
+    private IndexDescriptor someIndexDescriptor()
     {
         return IndexPrototype.forSchema( SchemaDescriptor.forLabel( 1, 1 ) ).materialise( 1L );
     }

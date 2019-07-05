@@ -31,7 +31,7 @@ import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.values.storable.Value;
 
@@ -131,7 +131,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     public static class TxState extends AbstractKernelBenchmark.TxState
     {
         int propertyKey;
-        IndexDescriptor2 index;
+        IndexDescriptor index;
         IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;

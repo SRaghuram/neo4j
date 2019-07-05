@@ -27,7 +27,7 @@ import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
@@ -116,7 +116,7 @@ public class Fulltext extends AbstractKernelBenchmark
         int lowSelectivityMin;
         int lowSelectivityMax;
 
-        IndexDescriptor2 index;
+        IndexDescriptor index;
         IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;

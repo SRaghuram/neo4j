@@ -32,7 +32,7 @@ import org.neo4j.cypher.internal.v4_0.util.{ParameterNotFoundException, symbols}
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
-import org.neo4j.internal.schema.IndexDescriptor2
+import org.neo4j.internal.schema.IndexDescriptor
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
@@ -1488,9 +1488,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def newIndexReference(referenceVar: String, labelVar: String, propKeyVar: String) = {
     val propertyIdsExpr = Expression.newInitializedArray(typeRef[Int], generator.load(propKeyVar))
 
-    generator.assign(typeRef[IndexDescriptor2], referenceVar,
+    generator.assign(typeRef[IndexDescriptor], referenceVar,
                      invoke(schemaRead,
-                           method[SchemaRead, IndexDescriptor2]("index", typeRef[Int], typeRef[Array[Int]]),
+                           method[SchemaRead, IndexDescriptor]("index", typeRef[Int], typeRef[Array[Int]]),
                             generator.load(labelVar), propertyIdsExpr)
     )
   }
@@ -1505,7 +1505,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       body.assign(local,
                   invoke(
                     methodReference(typeRef[CompiledIndexUtils], typeRef[NodeValueIndexCursor], "indexSeek",
-                                    typeRef[Read], typeRef[CursorFactory], typeRef[IndexDescriptor2], typeRef[AnyRef]),
+                                    typeRef[Read], typeRef[CursorFactory], typeRef[IndexDescriptor], typeRef[AnyRef]),
                     dataRead, cursors, index, boxedValue)
       )
       body.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))

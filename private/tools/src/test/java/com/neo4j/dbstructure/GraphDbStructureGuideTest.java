@@ -16,7 +16,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.IndexDescriptor2;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -121,7 +121,7 @@ class GraphDbStructureGuideTest
 
         commitAndReOpen();
 
-        IndexDescriptor2 reference = createSchemaIndex( labelId, pkId );
+        IndexDescriptor reference = createSchemaIndex( labelId, pkId );
 
         // WHEN
         accept( visitor );
@@ -140,7 +140,7 @@ class GraphDbStructureGuideTest
         commitAndReOpen();
 
         ConstraintDescriptor constraint = createUniqueConstraint( labelId, pkId );
-        IndexDescriptor2 descriptor = TestIndexDescriptorFactory.uniqueForLabel( labelId, pkId );
+        IndexDescriptor descriptor = TestIndexDescriptorFactory.uniqueForLabel( labelId, pkId );
 
         // WHEN
         accept( visitor );
@@ -222,7 +222,7 @@ class GraphDbStructureGuideTest
         ktx.dataWrite().relationshipCreate( startId, relTypeId, endId );
 }
 
-    private IndexDescriptor2 createSchemaIndex( int labelId, int pkId ) throws Exception
+    private IndexDescriptor createSchemaIndex( int labelId, int pkId ) throws Exception
     {
         KernelTransaction ktx = ktx();
 
