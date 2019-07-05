@@ -64,7 +64,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         if (indexSeekMode == LockingUniqueIndexSeek) {
-          throw new CantCompileQueryException("NodeUniqueIndexSeek(Locking) is not supported in runtime=morsel/parallel.")
+          throw new CantCompileQueryException("Morsel does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
         }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),

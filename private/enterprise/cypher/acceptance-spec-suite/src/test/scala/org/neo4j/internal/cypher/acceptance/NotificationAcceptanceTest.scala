@@ -118,7 +118,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications.toList should equal(List(
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
       CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(32, 1, 33), cartesianProduct(Set("c", "d").asJava)),
-      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty)))
+      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty, NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported"))))
   }
 
   test("Warn unsupported runtime with explain and runtime=compiled") {
@@ -128,7 +128,9 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     result.notifications.toList should equal(List(
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
-      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty)))
+      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
+        NotificationDetail.Factory.message("Runtime unsupported",
+          "Expression of ReduceExpression(ReduceScope(Variable(y),Variable(x),Variable(x)),Parameter(  AUTOINT0,Integer),Parameter(  AUTOLIST1,List<Any>)) not yet supported"))))
   }
 
   test("Warn for cartesian product with runtime=interpreted") {
@@ -182,7 +184,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   test("warn when requesting runtime=compiled on an unsupported query") {
     val result = executeSingle("EXPLAIN CYPHER runtime=compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
-    result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty))
+    result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
+      NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported")))
   }
 
   test("warn once when a single index hint cannot be fulfilled") {

@@ -143,7 +143,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
   override def genExpressions: Seq[IntermediateExpression] = Seq(relId)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    relId = codeGen.intermediateCompileExpression(relIdExpr).getOrElse(throw new CantCompileQueryException())
+    relId = codeGen.intermediateCompileExpression(relIdExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
 
     /**
       * {{{
@@ -239,7 +239,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq(relIds)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    relIds = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException())
+    relIds = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
 
     /**
       * {{{

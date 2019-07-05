@@ -309,9 +309,6 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         } else {
           throw new UnsupportedOperationException("not implemented")
         }
-
-      case _ =>
-        throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
   }
 

@@ -44,7 +44,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
           generateQuery(plan, semanticTable, res.columns, conf, cardinalities)
         } catch {
           case e: CantCompileQueryException => throw e
-          case e: Exception => throw new CantCompileQueryException(cause = e)
+          case e: Exception => throw new CantCompileQueryException(e.getMessage, e)
         }
 
         val builder = new RunnablePlan {

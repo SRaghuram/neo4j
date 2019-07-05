@@ -26,7 +26,7 @@ object MorselBlacklist {
           _ + (f.functionName.name+"()")
       }
     if (unsupport.nonEmpty) {
-      throw new CantCompileQueryException("The constructs "+unsupport.mkString("[",",","]")+" are not yet supported by the morsel runtime")
+      throw new CantCompileQueryException(s"Morsel does not yet support ${unsupport.mkString("[",",","]")}, use another runtime.")
     }
   }
 }

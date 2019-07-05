@@ -29,7 +29,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case c: FunctionInvocation =>
         c.function match {
           case _: AggregatingFunction if c.distinct =>
-            throw new CantCompileQueryException("Distinct aggregating functions are not yet supported by the parallel runtime")
+            throw new CantCompileQueryException("Morsel does not yet support Distinct aggregating functions, use another runtime.")
 
           case functions.Count =>
             (CountAggregator, c.arguments.head)
@@ -50,12 +50,12 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
             (CollectAggregator, c.arguments.head)
 
           case _: AggregatingFunction =>
-            throw new CantCompileQueryException(s"Aggregating function ${c.name} is not yet supported by the parallel runtime")
+            throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function ${c.name} , use another runtime.")
 
           case _ =>
-            throw new CantCompileQueryException(s"Unexpected function in aggregating function position: ${c.name}")
+            throw new SyntaxException(s"Unexpected function in aggregating function position: ${c.name}")
         }
       case unsupported =>
-        throw new CantCompileQueryException(s"Unexpected expression in aggregating function position: $unsupported")
+        throw new SyntaxException(s"Unexpected expression in aggregating function position: $unsupported")
     }
 }

@@ -55,7 +55,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val namer = new VariableNamer
     val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots is the same within an entire pipeline
     def compile(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileExpression(astExpression).getOrElse(throw new CantCompileQueryException)
+      () => expressionCompiler.intermediateCompileExpression(astExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
     generateSlotAccessorFunctions(slots)
 
     // Fold plans in reverse to build-up code generation templates with inner templates
