@@ -799,9 +799,9 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     val expected2 = List(
+      "this string contains words",
       "string with words in it",
-      "another string with words in it",
-      "this string contains words"
+      "another string with words in it"
     )
 
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
