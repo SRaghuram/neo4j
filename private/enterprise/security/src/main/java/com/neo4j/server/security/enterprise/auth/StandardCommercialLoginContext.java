@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -68,7 +67,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             }
         }
 
-        accessModeBuilder.addPropertyPermissions( queryForPropertyPermissions( resolver ) );
+        accessModeBuilder.addPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
         return accessModeBuilder.build();
     }
 
@@ -98,11 +97,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 .collect( Collectors.toSet() );
     }
 
-    private IntPredicate queryForPropertyPermissions( IdLookup resolver ) throws KernelException
-    {
-        return authManager.getPropertyPermissions( roles(), resolver );
-    }
-
     private static class StandardAccessMode implements AccessMode
     {
         private final boolean allowsReads;
@@ -112,7 +106,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         private final boolean isAdmin;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
-        private final IntPredicate propertyPermissions;
 
         private final boolean allowsTraverseAllLabels;
         private final boolean allowsTraverseAllRelTypes;
@@ -150,7 +143,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 boolean isAdmin,
                 boolean passwordChangeRequired,
                 Set<String> roles,
-                IntPredicate propertyPermissions,
 
                 boolean allowsTraverseAllLabels,
                 boolean allowsTraverseAllRelTypes,
@@ -188,7 +180,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.isAdmin = isAdmin;
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
-            this.propertyPermissions = propertyPermissions;
 
             this.allowsTraverseAllLabels = allowsTraverseAllLabels;
             this.allowsTraverseAllRelTypes = allowsTraverseAllRelTypes;
@@ -413,7 +404,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsPropertyReads( int propertyKey )
         {
-            return propertyPermissions.test( propertyKey );
+            return !(blacklistedNodeProperties.contains( propertyKey ) && blacklistedRelationshipProperties.contains( propertyKey ));
         }
 
         @Override
@@ -467,7 +458,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean token;
             private boolean schema;
             private boolean admin;
-            private IntPredicate propertyPermissions;
 
             private boolean allowsTraverseAllLabels;
             private boolean allowsTraverseAllRelTypes;
@@ -505,10 +495,13 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 this.resolver = resolver;
             }
 
-            void addPropertyPermissions( IntPredicate propertyPermissions )
+            void addPropertyPermissions( MutableIntSet propertyPermissions )
             {
-
-                this.propertyPermissions = propertyPermissions;
+                for ( int property : propertyPermissions.toArray() )
+                {
+                    blacklistNodeProperties.add( property );
+                    blacklistRelationshipProperties.add( property );
+                }
             }
 
             StandardAccessMode build()
@@ -521,7 +514,6 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         isAuthenticated && admin,
                         passwordChangeRequired,
                         roles,
-                        propertyPermissions,
 
                         allowsTraverseAllLabels,
                         allowsTraverseAllRelTypes,

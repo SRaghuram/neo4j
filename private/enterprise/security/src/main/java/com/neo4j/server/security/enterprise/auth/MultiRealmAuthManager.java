@@ -375,11 +375,11 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         return userManager.getPrivilegesForRoles( roles );
     }
 
-    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup ) throws KernelException
+    MutableIntSet getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup ) throws KernelException
     {
+        final MutableIntSet blackListed = new IntHashSet();
         if ( propertyAuthorization )
         {
-            final MutableIntSet blackListed = new IntHashSet();
             for ( String role : roles )
             {
                 if ( roleToPropertyBlacklist.containsKey( role ) )
@@ -391,11 +391,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                     }
                 }
             }
-            return property -> !blackListed.contains( property );
         }
-        else
-        {
-            return property -> true;
-        }
+        return blackListed;
     }
 }
