@@ -1,6 +1,6 @@
 # how to test artifacts deployment
 
-You have to test it in isolation, to make sure you, you are not using cached artifacts. 
+You have to test it in isolation, to make sure you are not using cached artifacts.. 
 So the best way to do it is to run it under docker.
 
 First you have to set `neo4j.version` property, to a version you are going to test:
