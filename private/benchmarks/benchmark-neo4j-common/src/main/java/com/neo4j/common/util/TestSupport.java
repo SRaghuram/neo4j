@@ -5,8 +5,8 @@
  */
 package com.neo4j.common.util;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.nio.file.Path;
 

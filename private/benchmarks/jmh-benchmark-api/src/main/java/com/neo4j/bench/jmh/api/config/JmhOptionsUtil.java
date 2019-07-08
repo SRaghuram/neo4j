@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.util.Jvm;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Threads;

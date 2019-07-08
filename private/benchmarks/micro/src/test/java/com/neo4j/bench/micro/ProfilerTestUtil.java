@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.client.profiling.RecordingType;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

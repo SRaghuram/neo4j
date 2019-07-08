@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.macro.cli;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
 import io.airlift.airline.Command;

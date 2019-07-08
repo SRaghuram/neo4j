@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.Units;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.util.Units;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;

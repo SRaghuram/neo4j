@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
@@ -20,13 +20,6 @@ import java.util.concurrent.TimeUnit;
 
 public class Options
 {
-    public enum ExecutionMode
-    {
-        EXECUTE,
-        PLAN,
-        PROFILE
-    }
-
     private final Neo4jDeployment neo4jDeployment;
     private final Query query;
     private final List<ProfilerType> profilers;

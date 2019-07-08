@@ -5,22 +5,21 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.Units;
+import com.neo4j.bench.common.util.Units;
 import org.junit.Test;
 
 import java.util.stream.IntStream;
 
-import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.procedures.detection.TestSequences.gaussian;
 import static com.neo4j.bench.procedures.detection.TestSequences.literal;
 import static com.neo4j.bench.procedures.detection.TestSequences.uniform;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class VarianceTest
 {
@@ -60,26 +59,22 @@ public class VarianceTest
         double conversionFactor10 = Units.conversionFactor( variance10.unit(), MILLISECONDS, LATENCY );
 
         assertThat( varianceNeg1.mean() * conversionFactorNeg1,
-                allOf( greaterThanOrEqualTo( -1.001D ), lessThanOrEqualTo( -0.999D ) ) );
+                    allOf( greaterThanOrEqualTo( -1.001D ), lessThanOrEqualTo( -0.999D ) ) );
         assertThat( variance1.mean() * conversionFactor1,
-                allOf( greaterThanOrEqualTo( 0.999D ), lessThanOrEqualTo( 1.001D ) ) );
+                    allOf( greaterThanOrEqualTo( 0.999D ), lessThanOrEqualTo( 1.001D ) ) );
         assertThat( varianceNeg10.mean() * conversionFactorNeg10,
-                allOf( greaterThanOrEqualTo( -10.001D ), lessThanOrEqualTo( -9.999D ) ) );
+                    allOf( greaterThanOrEqualTo( -10.001D ), lessThanOrEqualTo( -9.999D ) ) );
         assertThat( variance10.mean() * conversionFactor10,
-                allOf( greaterThanOrEqualTo( 9.999D ), lessThanOrEqualTo( 10.001D ) ) );
+                    allOf( greaterThanOrEqualTo( 9.999D ), lessThanOrEqualTo( 10.001D ) ) );
 
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( variance1.diffAtPercentile( i ),
-                        lessThanOrEqualTo( variance1.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( varianceNeg1.diffAtPercentile( i ),
-                        lessThanOrEqualTo( varianceNeg1.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( varianceNeg10.diffAtPercentile( i ),
-                        lessThanOrEqualTo( varianceNeg10.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( variance10.diffAtPercentile( i ),
-                        lessThanOrEqualTo( variance10.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( variance1.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( variance1.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( varianceNeg1.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( varianceNeg1.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( varianceNeg10.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( varianceNeg10.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( variance10.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( variance10.diffAtPercentile( i + 1 ) ) ) );
     }
 
     @Test
@@ -100,26 +95,22 @@ public class VarianceTest
         double conversionFactor10 = Units.conversionFactor( variance10.unit(), MILLISECONDS, LATENCY );
 
         assertThat( varianceNeg1.mean() * conversionFactorNeg1,
-                allOf( greaterThanOrEqualTo( -1.001D ), lessThanOrEqualTo( -0.999D ) ) );
+                    allOf( greaterThanOrEqualTo( -1.001D ), lessThanOrEqualTo( -0.999D ) ) );
         assertThat( variance1.mean() * conversionFactor1,
-                allOf( greaterThanOrEqualTo( 0.999D ), lessThanOrEqualTo( 1.001D ) ) );
+                    allOf( greaterThanOrEqualTo( 0.999D ), lessThanOrEqualTo( 1.001D ) ) );
         assertThat( varianceNeg10.mean() * conversionFactorNeg10,
-                allOf( greaterThanOrEqualTo( -10.001D ), lessThanOrEqualTo( -9.999D ) ) );
+                    allOf( greaterThanOrEqualTo( -10.001D ), lessThanOrEqualTo( -9.999D ) ) );
         assertThat( variance10.mean() * conversionFactor10,
-                allOf( greaterThanOrEqualTo( 9.999D ), lessThanOrEqualTo( 10.001D ) ) );
+                    allOf( greaterThanOrEqualTo( 9.999D ), lessThanOrEqualTo( 10.001D ) ) );
 
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( variance1.diffAtPercentile( i ),
-                        lessThanOrEqualTo( variance1.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( varianceNeg1.diffAtPercentile( i ),
-                        lessThanOrEqualTo( varianceNeg1.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( varianceNeg10.diffAtPercentile( i ),
-                        lessThanOrEqualTo( varianceNeg10.diffAtPercentile( i + 1 ) ) ) );
-        IntStream.range( 0, 100 ).forEach( i ->
-                assertThat( variance10.diffAtPercentile( i ),
-                        lessThanOrEqualTo( variance10.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( variance1.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( variance1.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( varianceNeg1.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( varianceNeg1.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( varianceNeg10.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( varianceNeg10.diffAtPercentile( i + 1 ) ) ) );
+        IntStream.range( 0, 100 ).forEach( i -> assertThat( variance10.diffAtPercentile( i ),
+                                                            lessThanOrEqualTo( variance10.diffAtPercentile( i + 1 ) ) ) );
     }
 
     @Test( expected = Exception.class )

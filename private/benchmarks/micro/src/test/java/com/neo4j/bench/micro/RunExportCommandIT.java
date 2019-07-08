@@ -7,18 +7,17 @@ package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Project;
-import com.neo4j.bench.client.model.Repository;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.profiling.RecordingType;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.Project;
+import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Rule;
@@ -35,7 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -148,10 +147,10 @@ public class RunExportCommandIT
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
 
         int expectedConfigSize = Neo4jConfigBuilder.withDefaults()
-                                            .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
-                                            .build()
-                                            .toMap()
-                                            .size();
+                                                   .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                   .build()
+                                                   .toMap()
+                                                   .size();
 
         assertThat( BenchmarkUtil.prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
         assertThat( report.java().jvmArgs(), equalTo(

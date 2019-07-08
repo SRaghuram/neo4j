@@ -6,11 +6,11 @@
 package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.client.model.ProfileLoader;
-import com.neo4j.bench.client.model.ProfilerRecordings;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.common.model.ProfileLoader;
+import com.neo4j.bench.common.model.ProfilerRecordings;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.util.JsonUtil;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;

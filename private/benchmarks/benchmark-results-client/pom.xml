@@ -35,6 +35,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${commons.io.version}</version>
@@ -98,6 +103,12 @@
           <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.neo4j.test</groupId>
+            <artifactId>neo4j-harness-enterprise</artifactId>
+            <version>${neo4j.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

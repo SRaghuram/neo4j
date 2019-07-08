@@ -8,7 +8,7 @@ package com.neo4j.bench.ldbc.interactive;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery5MessageCreator;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery5MessageCreatorResult;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.Neo4jQuery;
 
 public abstract class Neo4jShortQuery5<CONNECTION extends DbConnectionState>

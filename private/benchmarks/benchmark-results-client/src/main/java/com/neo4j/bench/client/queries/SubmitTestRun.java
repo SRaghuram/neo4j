@@ -5,13 +5,15 @@
  */
 package com.neo4j.bench.client.queries;
 
-import com.neo4j.bench.client.model.Project;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.BenchmarkMetrics;
+import com.neo4j.bench.common.model.Project;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.util.Resources;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -21,10 +23,10 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 
-import static com.neo4j.bench.client.ClientUtil.prettyPrint;
-import static com.neo4j.bench.client.model.BenchmarkMetrics.extractBenchmarkMetricsList;
+import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.neo4j.driver.v1.AccessMode.WRITE;
 
 public class SubmitTestRun implements Query<SubmitTestRunResult>
@@ -65,8 +67,8 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                 }
 
                 SubmitTestRunResult result = new SubmitTestRunResult(
-                        new TestRun( record.get( "test_run" ) ),
-                        extractBenchmarkMetricsList( record.get( "benchmark_metrics" ) ) );
+                        new TestRun( record.get( "test_run" ).asMap() ),
+                        extractBenchmarkMetricsList( record.get( "benchmark_metrics" ).asList() ) );
 
                 maybeSetNonFatalError( result.benchmarkMetricsList().size() );
 
@@ -83,6 +85,15 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                 return null;
             }
         }
+    }
+
+    // [[benchmark,metrics,params]]
+    private static List<BenchmarkMetrics> extractBenchmarkMetricsList( List<Object> benchmarkMetricsList )
+    {
+        return benchmarkMetricsList.stream()
+                                   .map( o -> (List<Object>) o )
+                                   .map( BenchmarkMetrics::extractBenchmarkMetrics )
+                                   .collect( toList() );
     }
 
     private void maybeSetNonFatalError( int actualResultSize )
@@ -128,7 +139,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     public String toString()
     {
         return "Params:\n" +
-               prettyPrint( params(), "\t" ) +
+               prettyPrint( params() ) +
                SUBMIT_TEST_RUN;
     }
 }

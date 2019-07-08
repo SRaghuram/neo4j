@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.client.model.Parameters;
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.profiling.InternalProfiler;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.workload.Query;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static com.neo4j.bench.macro.execution.Options.ExecutionMode.EXECUTE;
+import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.single;
 
 public class CypherExecutingRunner extends QueryRunner
