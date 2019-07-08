@@ -6,57 +6,71 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.id.IdContainer;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class IdFilesSanityCheckIT
+@ClusterExtension
+class IdFilesSanityCheckIT
 {
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule()
-                    .withNumberOfCoreMembers( 3 )
-                    .withNumberOfReadReplicas( 0 )
-                    .withTimeout( 1000, SECONDS );
+    @Inject
+    private static ClusterFactory clusterFactory;
 
-    private Cluster cluster;
-    private FileSystemAbstraction fs = clusterRule.testDirectory().getFileSystem();
+    private static Cluster cluster;
 
-    @Before
-    public void setup() throws Exception
+    private final FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+
+    @BeforeAll
+    static void beforeAll() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withTimeout( 1000, SECONDS );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
+
+    @AfterEach
+    void afterEach() throws Exception
+    {
+        fs.close();
     }
 
     @Test
-    public void shouldRemoveIdFilesFromUnboundInstance() throws Exception
+    void shouldRemoveIdFilesFromUnboundInstance() throws Exception
     {
         // given
-        int nodeCount = 100;
+        var nodeCount = 100;
 
-        ArrayList<Node> nodes = new ArrayList<>( nodeCount );
+        var nodes = new ArrayList<Node>( nodeCount );
 
         cluster.coreTx( ( db, tx ) ->
         {
-            for ( int i = 0; i < nodeCount; i++ )
+            for ( var i = 0; i < nodeCount; i++ )
             {
                 nodes.add( db.createNode() );
                 tx.success();
             }
         } );
 
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        var leader = cluster.coreTx( ( db, tx ) ->
         {
             nodes.forEach( Node::delete );
             tx.success();
@@ -69,13 +83,13 @@ public class IdFilesSanityCheckIT
 
         // then
         leader.shutdown(); // we need to shutdown to access the ID-files "raw"
-        long freeIdCount = getFreeIdCount( leader.databaseLayout().idNodeStore() );
+        var freeIdCount = getFreeIdCount( leader.databaseLayout().idNodeStore() );
         assertEquals( 0, freeIdCount );
     }
 
     private long getFreeIdCount( File idFile )
     {
-        IdContainer idContainer = new IdContainer( fs, idFile, 1024, true );
+        var idContainer = new IdContainer( fs, idFile, 1024, true );
         idContainer.init();
         try
         {

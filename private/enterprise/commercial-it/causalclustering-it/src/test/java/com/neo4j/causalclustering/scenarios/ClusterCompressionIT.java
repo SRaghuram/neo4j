@@ -5,66 +5,60 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocol;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
+import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.compression_implementations;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 
-@RunWith( Parameterized.class )
-public class ClusterCompressionIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ClusterCompressionIT
 {
-    @Parameterized.Parameter
-    public ModifierProtocol modifierProtocol;
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<ModifierProtocol> params()
-    {
-        return Arrays.asList( ModifierProtocols.values() );
-    }
-
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule()
-                    .withNumberOfCoreMembers( 3 )
-                    .withNumberOfReadReplicas( 3 )
-                    .withTimeout( 1000, SECONDS );
-
-    @Test
-    public void shouldReplicateWithCompression() throws Exception
+    @ParameterizedTest
+    @EnumSource( ModifierProtocols.class )
+    void shouldReplicateWithCompression( ModifierProtocol modifierProtocol ) throws Exception
     {
         // given
-        clusterRule
-                .withSharedCoreParam( compression_implementations, modifierProtocol.implementation() )
-                .withSharedReadReplicaParam( compression_implementations, modifierProtocol.implementation() );
-
-        Cluster cluster = clusterRule.startCluster();
+        var cluster = clusterFactory.createCluster( newClusterConfig( modifierProtocol ) );
+        cluster.start();
 
          // when
-        int numberOfNodes = 10;
-        CoreClusterMember leader = DataCreator.createLabelledNodesWithProperty( cluster, numberOfNodes, label( "Foo" ),
+        var numberOfNodes = 10;
+        var leader = DataCreator.createLabelledNodesWithProperty( cluster, numberOfNodes, label( "Foo" ),
                 () -> Pair.of( "foobar", format( "baz_bat%s", UUID.randomUUID() ) ) );
 
         // then
         assertEquals( numberOfNodes, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
+    }
+
+    private ClusterConfig newClusterConfig( ModifierProtocol modifierProtocol )
+    {
+        return clusterConfig()
+                .withNumberOfCoreMembers( 2 )
+                .withNumberOfReadReplicas( 1 )
+                .withSharedCoreParam( compression_implementations, modifierProtocol.implementation() )
+                .withSharedReadReplicaParam( compression_implementations, modifierProtocol.implementation() );
     }
 }

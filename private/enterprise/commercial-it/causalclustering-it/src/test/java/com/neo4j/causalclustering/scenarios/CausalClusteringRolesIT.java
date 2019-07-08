@@ -6,39 +6,47 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
+import org.neo4j.test.extension.Inject;
 
-public class CausalClusteringRolesIT
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@ClusterExtension
+class CausalClusteringRolesIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 1 );
+    @Inject
+    private static ClusterFactory clusterFactory;
 
-    @Rule
-    public ExpectedException exceptionMatcher = ExpectedException.none();
+    private static Cluster cluster;
+
+    @BeforeAll
+    static void beforeAll() throws Exception
+    {
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 1 );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
 
     @Test
-    public void readReplicasShouldRefuseWrites() throws Exception
+    void readReplicasShouldRefuseWrites()
     {
-        // given
-        Cluster cluster = clusterRule.startCluster();
-        GraphDatabaseService db = cluster.findAnyReadReplica().defaultDatabase();
-        Transaction tx = db.beginTx();
+        var db = cluster.findAnyReadReplica().defaultDatabase();
+        var tx = db.beginTx();
 
-        // then
-        exceptionMatcher.expect( WriteOperationsNotAllowedException.class );
-
-        // when
-        db.createNode();
-        tx.success();
-        tx.close();
+        assertThrows( WriteOperationsNotAllowedException.class, () ->
+        {
+            db.createNode();
+            tx.success();
+            tx.close();
+        } );
     }
 }

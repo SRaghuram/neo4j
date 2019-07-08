@@ -5,54 +5,57 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+import org.neo4j.test.extension.Inject;
+
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class ConsensusGroupSettingsIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ConsensusGroupSettingsIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 5 )
-            .withNumberOfReadReplicas( 0 )
-            .withInstanceCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, value -> "5" )
-            .withInstanceCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime,value -> "3" )
-            .withInstanceCoreParam( CausalClusteringSettings.leader_election_timeout, value -> "1s" )
-            .withTimeout( 1000, SECONDS );
-
-    private Cluster cluster;
-
-    @Before
-    public void setup() throws Exception
-    {
-        cluster = clusterRule.startCluster();
-    }
+    @Inject
+    private ClusterFactory clusterFactory;
 
     @Test
-    public void shouldNotAllowTheConsensusGroupToDropBelowMinimumConsensusGroupSize() throws Exception
+    void shouldNotAllowTheConsensusGroupToDropBelowMinimumConsensusGroupSize() throws Exception
     {
         // given
-        int numberOfCoreSeversToRemove = 3;
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 5 )
+                .withNumberOfReadReplicas( 0 )
+                .withInstanceCoreParam( minimum_core_cluster_size_at_formation, value -> "5" )
+                .withInstanceCoreParam( minimum_core_cluster_size_at_runtime, value -> "3" )
+                .withInstanceCoreParam( leader_election_timeout, value -> "1s" )
+                .withTimeout( 1000, SECONDS );
+
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+
+        var numberOfCoreSeversToRemove = 3;
 
         // when
-        for ( int i = 0; i < numberOfCoreSeversToRemove; i++ )
+        for ( var i = 0; i < numberOfCoreSeversToRemove; i++ )
         {
-            CoreClusterMember leader = cluster.awaitLeader();
+            var leader = cluster.awaitLeader();
             cluster.removeCoreMember( leader );
         }
 
         // then
-        CoreClusterMember core = cluster.coreMembers().iterator().next();
-        RaftMachine raft = core.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
+        var core = cluster.coreMembers().iterator().next();
+        var raft = core.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
         assertEquals( 3, raft.replicationMembers().size() );
     }
 }
