@@ -300,43 +300,43 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
-    // GRANT/REVOKE/DENY TRAVERSE ON GRAPH foo NODES A (*) TO role
+    // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
-
-    case RevokeTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
-    // GRANT/REVOKE/DENY READ (prop) ON GRAPH foo NODES A (*) TO role
-    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+    case RevokeTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
-    case RevokeRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+    // GRANT/DENY/REVOKE READ (prop) ON GRAPH foo NODES A (*) TO role
+    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
-    // GRANT/REVOKE/DENY WRITE (*) ON GRAPH foo NODES * (*) TO role
+    case RevokeRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+
+    // GRANT/DENY/REVOKE WRITE (*) ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
-    case RevokeWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
-
     case DenyWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
+
+    case RevokeWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES

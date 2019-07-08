@@ -279,6 +279,65 @@ class SecurityDDLLoggingIT
     }
 
     @Test
+    void shouldLogDenyTraverse() throws IOException
+    {
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+
+        // WHEN
+        execute( adminContext, "DENY TRAVERSE ON GRAPH * TO foo" );
+        execute( adminContext, "DENY TRAVERSE ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 4 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+    }
+
+    @Test
+    void shouldLogDenyReadMatch() throws IOException
+    {
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+
+        // WHEN
+        execute( adminContext, "DENY MATCH (*) ON GRAPH * TO foo" );
+        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
+        execute( adminContext, "DENY READ (*) ON GRAPH * TO foo" );
+        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 7 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+    }
+
+    @Test
+    void shouldLogDenyWrite() throws IOException
+    {
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+
+        // WHEN
+        execute( adminContext, "DENY WRITE (*) ON GRAPH * TO foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 2 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+    }
+
+    @Test
     void shouldLogRevokeTraverse() throws IOException
     {
         // GIVEN
@@ -349,65 +408,6 @@ class SecurityDDLLoggingIT
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 3 ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
-    }
-
-    @Test
-    void shouldLogDenyTraverse() throws IOException
-    {
-        // GIVEN
-        execute( adminContext, "CREATE ROLE foo" );
-
-        // WHEN
-        execute( adminContext, "DENY TRAVERSE ON GRAPH * TO foo" );
-        execute( adminContext, "DENY TRAVERSE ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
-
-        // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 4 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-    }
-
-    @Test
-    void shouldLogDenyReadMatch() throws IOException
-    {
-        // GIVEN
-        execute( adminContext, "CREATE ROLE foo" );
-
-        // WHEN
-        execute( adminContext, "DENY MATCH (*) ON GRAPH * TO foo" );
-        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
-        execute( adminContext, "DENY READ (*) ON GRAPH * TO foo" );
-        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
-
-        // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-    }
-
-    @Test
-    void shouldLogDenyWrite() throws IOException
-    {
-        // GIVEN
-        execute( adminContext, "CREATE ROLE foo" );
-
-        // WHEN
-        execute( adminContext, "DENY WRITE (*) ON GRAPH * TO foo" );
-
-        // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
     }
 
     private List<String> readAllLines( File logFilename ) throws IOException
