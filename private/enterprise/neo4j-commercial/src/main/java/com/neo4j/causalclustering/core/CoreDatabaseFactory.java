@@ -326,8 +326,8 @@ class CoreDatabaseFactory
         CoreDatabaseLife coreDatabaseLife = new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess,
                 messageHandler, snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService );
 
-        panicService.addPanicEventHandler( commandApplicationProcess );
-        panicService.addPanicEventHandler( raftGroup.raftMachine() );
+        coreDatabaseLife.add( panicService.addPanicEventHandler( commandApplicationProcess ) );
+        coreDatabaseLife.add( panicService.addPanicEventHandler( raftGroup.raftMachine() ) );
 
         return coreDatabaseLife;
     }

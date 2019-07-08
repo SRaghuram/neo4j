@@ -15,8 +15,11 @@ import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -27,9 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( {SuppressOutputExtension.class }  )
 class PanicServiceTest
 {
+
     @Test
     void shouldPanicOnlyOnce() throws Exception
     {
@@ -53,6 +57,27 @@ class PanicServiceTest
         // then
         assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler.isComplete, equalTo( true ), 1, TimeUnit.SECONDS );
         assertEquals( 1, lockedEventHandler.atomicInteger.get() );
+    }
+
+    @Test
+    void shouldCleanupPanicHandlersOnShutdown()
+    {
+        // given
+        LifeSupport life = new LifeSupport();
+        life.start();
+        var panicService = new PanicService( NullLogProvider.getInstance() );
+        ReportingEventHandler lifecycled = new ReportingEventHandler( new AtomicInteger() );
+        ReportingEventHandler notLifecycled = new ReportingEventHandler( new AtomicInteger() );
+        life.add( panicService.addPanicEventHandler( lifecycled ) );
+        panicService.addPanicEventHandler( notLifecycled );
+
+        // when
+        life.stop();
+        panicService.panic( new Throwable( "cause" ) );
+
+        // then
+        assertEquals( 0, lifecycled.atomicInteger.get() );
+        assertEquals( 1, notLifecycled.atomicInteger.get() );
     }
 
     @Test
