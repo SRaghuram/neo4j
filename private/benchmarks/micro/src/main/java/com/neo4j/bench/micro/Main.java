@@ -6,10 +6,10 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
@@ -24,7 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
+import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 
 public class Main
 {

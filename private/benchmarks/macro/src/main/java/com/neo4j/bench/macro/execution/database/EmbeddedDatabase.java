@@ -6,11 +6,11 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.process.HasPid;
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import picocli.CommandLine;
@@ -78,7 +78,7 @@ public class EmbeddedDatabase implements Database
         PrintStream out = new PrintStream( baos );
 
         StoreInfoCommand storeInfoCommand = new StoreInfoCommand( new ExecutionContext( Path.of( "" ), Path.of( "" ), out, System.err,
-                new DefaultFileSystemAbstraction() ) );
+                                                                                        new DefaultFileSystemAbstraction() ) );
         CommandLine.populateCommand( storeInfoCommand, store.graphDbDirectory().toAbsolutePath().toString() );
         storeInfoCommand.execute();
         out.flush();

@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.micro;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
@@ -26,7 +26,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
+import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
 import static java.time.temporal.ChronoUnit.MILLIS;
 

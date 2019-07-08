@@ -7,35 +7,35 @@ package com.neo4j.bench.macro.cli;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.ClientUtil;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.client.model.BenchmarkPlan;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Plan;
-import com.neo4j.bench.client.model.Repository;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
-import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.BenchmarkPlan;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.BranchAndVersion;
+import com.neo4j.bench.common.model.Environment;
+import com.neo4j.bench.common.model.Java;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.model.Plan;
+import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.measurement.Results;
@@ -59,8 +59,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
-import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
-import static com.neo4j.bench.macro.execution.Options.ExecutionMode;
+import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
@@ -70,261 +69,261 @@ public class RunWorkloadCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKLOAD},
-            description = "Name of workload to run",
-            title = "Workload",
-            required = true )
+             name = {CMD_WORKLOAD},
+             description = "Name of workload to run",
+             title = "Workload",
+             required = true )
     private String workloadName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory",
-            required = true )
+             name = {CMD_DB},
+             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+             title = "Store directory",
+             required = true )
     private File storeDir;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_EDITION},
-            description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-            title = "Neo4j edition",
-            required = false )
+             name = {CMD_EDITION},
+             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
+             title = "Neo4j edition",
+             required = false )
     private Edition neo4jEdition = Edition.ENTERPRISE;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_PATH},
-            description = "Path to JVM -- will also be used when launching fork processes",
-            title = "Path to JVM",
-            required = true )
+             name = {CMD_JVM_PATH},
+             description = "Path to JVM -- will also be used when launching fork processes",
+             title = "Path to JVM",
+             required = true )
     private File jvmFile;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_CONFIG},
-            description = "Neo4j configuration file",
-            title = "Neo4j configuration file",
-            required = false )
+             name = {CMD_NEO4J_CONFIG},
+             description = "Neo4j configuration file",
+             title = "Neo4j configuration file",
+             required = false )
     private File neo4jConfigFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORK_DIR},
-            description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
-            title = "Work directory",
-            required = false )
+             name = {CMD_WORK_DIR},
+             description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
+             title = "Work directory",
+             required = false )
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
     private static final String CMD_PROFILERS = "--profilers";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILERS},
-            description = "Comma separated list of profilers to run with",
-            title = "Profilers",
-            required = false )
+             name = {CMD_PROFILERS},
+             description = "Comma separated list of profilers to run with",
+             title = "Profilers",
+             required = false )
     private String profilerNames = "";
 
     private static final String CMD_WARMUP = "--warmup-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WARMUP},
-            title = "Warmup execution count",
-            required = true )
+             name = {CMD_WARMUP},
+             title = "Warmup execution count",
+             required = true )
     private int warmupCount;
 
     private static final String CMD_MEASUREMENT = "--measurement-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MEASUREMENT},
-            title = "Measurement execution count",
-            required = true )
+             name = {CMD_MEASUREMENT},
+             title = "Measurement execution count",
+             required = true )
     private int measurementCount;
 
     private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MIN_MEASUREMENT_SECONDS},
-            title = "Min measurement execution duration, in seconds",
-            required = false )
+             name = {CMD_MIN_MEASUREMENT_SECONDS},
+             title = "Min measurement execution duration, in seconds",
+             required = false )
     private int minMeasurementSeconds = 30; // 30 seconds
 
     private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MAX_MEASUREMENT_SECONDS},
-            title = "Max measurement execution duration, in seconds",
-            required = false )
+             name = {CMD_MAX_MEASUREMENT_SECONDS},
+             title = "Max measurement execution duration, in seconds",
+             required = false )
     private int maxMeasurementSeconds = 10 * 60; // 10 minutes
 
     private static final String CMD_FORKS = "--forks";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_FORKS},
-            title = "Fork count",
-            required = false )
+             name = {CMD_FORKS},
+             title = "Fork count",
+             required = false )
     private int measurementForkCount = 1;
 
     private static final String CMD_RESULTS_JSON = "--results";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_JSON},
-            description = "Path to where the results file will be written",
-            title = "Results path",
-            required = false )
+             name = {CMD_RESULTS_JSON},
+             description = "Path to where the results file will be written",
+             title = "Results path",
+             required = false )
     private File resultsPath = new File( workDir, "results.json" );
 
     private static final String CMD_TIME_UNIT = "--time-unit";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TIME_UNIT},
-            description = "Time unit to report results in",
-            title = "Time unit",
-            required = false )
+             name = {CMD_TIME_UNIT},
+             description = "Time unit to report results in",
+             title = "Time unit",
+             required = false )
     private TimeUnit unit = TimeUnit.MICROSECONDS;
 
     private static final String CMD_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RUNTIME},
-            description = "Cypher runtime",
-            title = "Cypher runtime",
-            required = false )
+             name = {CMD_RUNTIME},
+             description = "Cypher runtime",
+             title = "Cypher runtime",
+             required = false )
     private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PLANNER},
-            description = "Cypher planner",
-            title = "Cypher planner",
-            required = false )
+             name = {CMD_PLANNER},
+             description = "Cypher planner",
+             title = "Cypher planner",
+             required = false )
     private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_EXECUTION_MODE = "--execution-mode";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_EXECUTION_MODE},
-            description = "How to execute: run VS plan",
-            title = "Run vs Plan",
-            required = false )
+             name = {CMD_EXECUTION_MODE},
+             description = "How to execute: run VS plan",
+             title = "Run vs Plan",
+             required = false )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
     private static final String CMD_ERROR_POLICY = "--error-policy";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_ERROR_POLICY},
-            description = "Specify if execution should terminate on error, or skip and continue",
-            title = "Error handling policy",
-            required = false )
+             name = {CMD_ERROR_POLICY},
+             description = "Specify if execution should terminate on error, or skip and continue",
+             title = "Error handling policy",
+             required = false )
     private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
 
     private static final String CMD_NEO4J_COMMIT = "--neo4j-commit";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_COMMIT},
-            description = "Commit of Neo4j that benchmark is run against",
-            title = "Neo4j Commit",
-            required = true )
+             name = {CMD_NEO4J_COMMIT},
+             description = "Commit of Neo4j that benchmark is run against",
+             title = "Neo4j Commit",
+             required = true )
     private String neo4jCommit;
 
     private static final String CMD_NEO4J_VERSION = "--neo4j-version";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_VERSION},
-            description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-            title = "Neo4j Version",
-            required = true )
+             name = {CMD_NEO4J_VERSION},
+             description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
+             title = "Neo4j Version",
+             required = true )
     private String neo4jVersion;
 
     private static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_BRANCH},
-            description = "Neo4j branch name",
-            title = "Neo4j Branch",
-            required = true )
+             name = {CMD_NEO4J_BRANCH},
+             description = "Neo4j branch name",
+             title = "Neo4j Branch",
+             required = true )
     private String neo4jBranch;
 
     private static final String CMD_NEO4J_OWNER = "--neo4j-branch-owner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_OWNER},
-            description = "Owner of repository containing Neo4j branch",
-            title = "Branch Owner",
-            required = true )
+             name = {CMD_NEO4J_OWNER},
+             description = "Owner of repository containing Neo4j branch",
+             title = "Branch Owner",
+             required = true )
     private String neo4jBranchOwner;
 
     private static final String CMD_TOOL_COMMIT = "--tool-commit";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_COMMIT},
-            description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit",
-            required = true )
+             name = {CMD_TOOL_COMMIT},
+             description = "Commit of benchmarking tool used to run benchmark",
+             title = "Benchmark Tool Commit",
+             required = true )
     private String toolCommit;
 
     private static final String CMD_TOOL_OWNER = "--tool-branch-owner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_OWNER},
-            description = "Owner of repository containing the benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Owner",
-            required = true )
+             name = {CMD_TOOL_OWNER},
+             description = "Owner of repository containing the benchmarking tool used to run benchmark",
+             title = "Benchmark Tool Owner",
+             required = true )
     private String toolOwner = "neo-technology";
 
     private static final String CMD_TOOL_BRANCH = "--tool-branch";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH},
-            description = "Branch of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Branch",
-            required = true )
+             name = {CMD_TOOL_BRANCH},
+             description = "Branch of benchmarking tool used to run benchmark",
+             title = "Benchmark Tool Branch",
+             required = true )
     private String toolBranch;
 
     private static final String CMD_TEAMCITY_BUILD = "--teamcity-build";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TEAMCITY_BUILD},
-            description = "Build number of the TeamCity build that ran the benchmarks",
-            title = "TeamCity Build Number",
-            required = true )
+             name = {CMD_TEAMCITY_BUILD},
+             description = "Build number of the TeamCity build that ran the benchmarks",
+             title = "TeamCity Build Number",
+             required = true )
     private Long teamcityBuild;
 
     private static final String CMD_PARENT_TEAMCITY_BUILD = "--parent-teamcity-build";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PARENT_TEAMCITY_BUILD},
-            description = "Build number of the TeamCity parent build, e.g., Packaging",
-            title = "Parent TeamCity Build Number",
-            required = true )
+             name = {CMD_PARENT_TEAMCITY_BUILD},
+             description = "Build number of the TeamCity parent build, e.g., Packaging",
+             title = "Parent TeamCity Build Number",
+             required = true )
     private Long parentBuild;
 
     private static final String CMD_JVM_ARGS = "--jvm-args";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_ARGS},
-            description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
-            title = "JVM Args",
-            required = false )
+             name = {CMD_JVM_ARGS},
+             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
+             title = "JVM Args",
+             required = false )
     private String jvmArgs = "";
 
     private static final String CMD_RECREATE_SCHEMA = "--recreate-schema";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RECREATE_SCHEMA},
-            description = "Drop indexes and constraints, delete index directories (and transaction logs), then recreate indexes and constraints",
-            title = "Recreate Schema",
-            required = false )
+             name = {CMD_RECREATE_SCHEMA},
+             description = "Drop indexes and constraints, delete index directories (and transaction logs), then recreate indexes and constraints",
+             title = "Recreate Schema",
+             required = false )
     private boolean recreateSchema;
 
     private static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILER_RECORDINGS_DIR},
-            description = "Where to collect profiler recordings for executed benchmarks",
-            title = "Profile recordings output directory",
-            required = false )
+             name = {CMD_PROFILER_RECORDINGS_DIR},
+             description = "Where to collect profiler recordings for executed benchmarks",
+             title = "Profile recordings output directory",
+             required = false )
     private File profilerRecordingsOutput = workDir.toPath().resolve( "profiler_recordings" ).toFile();
 
     private static final String CMD_SKIP_FLAMEGRAPHS = "--skip-flamegraphs";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_SKIP_FLAMEGRAPHS},
-            description = "Skip FlameGraph generation",
-            title = "Skip FlameGraph generation",
-            required = false )
+             name = {CMD_SKIP_FLAMEGRAPHS},
+             description = "Skip FlameGraph generation",
+             title = "Skip FlameGraph generation",
+             required = false )
     private boolean skipFlameGraphs;
 
     private static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TRIGGERED_BY},
-            description = "Specifies user that triggered this build",
-            title = "Specifies user that triggered this build",
-            required = true )
+             name = {CMD_TRIGGERED_BY},
+             description = "Specifies user that triggered this build",
+             title = "Specifies user that triggered this build",
+             required = true )
     private String triggeredBy;
 
     private static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_DEPLOYMENT},
-            description = "Valid values: 'embedded' or 'server:<path_to_neo4j_server>'",
-            title = "Deployment mode",
-            required = true )
+             name = {CMD_NEO4J_DEPLOYMENT},
+             description = "Valid values: 'embedded' or 'server:<path_to_neo4j_server>'",
+             title = "Deployment mode",
+             required = true )
     private String deploymentMode;
 
     @Override
@@ -354,9 +353,9 @@ public class RunWorkloadCommand implements Runnable
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigPath );
             }
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
-                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
-                                                 .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
-                                                 .removeSetting( load_csv_file_url_root );
+                                                                      .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
+                                                                      .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
+                                                                      .removeSetting( load_csv_file_url_root );
             if ( executionMode.equals( ExecutionMode.PLAN ) )
             {
                 neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
@@ -442,7 +441,7 @@ public class RunWorkloadCommand implements Runnable
                 }
             }
             Instant finish = Instant.now();
-            String testRunId = ClientUtil.generateUniqueId();
+            String testRunId = BenchmarkUtil.generateUniqueId();
 
             TestRun testRun = new TestRun(
                     testRunId,

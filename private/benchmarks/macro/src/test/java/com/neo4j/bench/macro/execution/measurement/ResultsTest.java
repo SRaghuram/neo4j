@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +30,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @ExtendWith( TestDirectoryExtension.class )
 public class ResultsTest
@@ -135,7 +134,7 @@ public class ResultsTest
     @Test
     public void shouldCalculateAggregate()
     {
-        long[] measurements = new long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L };
+        long[] measurements = new long[]{1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L};
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );
@@ -159,7 +158,7 @@ public class ResultsTest
     @Test
     public void shouldCalculateSingleResultAggregate()
     {
-        long[] measurements = new long[] { 1L };
+        long[] measurements = new long[]{1L};
         AggregateMeasurement aggregate = AggregateMeasurement.calculateFrom( measurements );
 
         assertThat( aggregate.percentile( 0.0D ), equalTo( 1L ) );

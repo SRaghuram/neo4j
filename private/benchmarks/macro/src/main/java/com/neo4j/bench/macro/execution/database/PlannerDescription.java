@@ -6,10 +6,10 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.model.Plan;
-import com.neo4j.bench.client.model.PlanCompilationMetrics;
-import com.neo4j.bench.client.model.PlanOperator;
-import com.neo4j.bench.client.model.PlanTree;
+import com.neo4j.bench.common.model.Plan;
+import com.neo4j.bench.common.model.PlanCompilationMetrics;
+import com.neo4j.bench.common.model.PlanOperator;
+import com.neo4j.bench.common.model.PlanTree;
 
 import java.util.List;
 import java.util.Map;

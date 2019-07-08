@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.Units;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.common.util.Units;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,10 +29,8 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static com.neo4j.bench.client.Units.toTimeUnit;
-
+import static com.neo4j.bench.common.util.Units.toTimeUnit;
 import static java.util.stream.Collectors.toList;
-
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
@@ -73,7 +71,7 @@ public class VarianceProcedure
                  .forEach( i -> diffsHist.put(
                          Integer.toString( i ),
                          benchmarkVariance.variance().diffAtPercentile( i )
-                                             ) );
+                 ) );
         return diffsHist;
     }
 
@@ -142,7 +140,7 @@ public class VarianceProcedure
                      .forEach( i -> this.diffsHist.put(
                              Integer.toString( i ),
                              benchmarkVariance.variance().diffAtPercentile( i )
-                                                      ) );
+                     ) );
             this.diffs = Arrays.stream( benchmarkVariance.variance().diffs() ).boxed().collect( toList() );
         }
     }
@@ -169,8 +167,8 @@ public class VarianceProcedure
                                                          ((Number) rowMap.get( "date" )).longValue(),
                                                          ((Number) rowMap.get( "mean" )).doubleValue(),
                                                          toTimeUnit( (String) rowMap.get( "unit" ) ),
-                                                         new Neo4j( ((Node) rowMap.get( "neo4j" )).getAllProperties() ) )
-                                       )
+                                                         Neo4j.fromCypherMap( ((Node) rowMap.get( "neo4j" )).getAllProperties() ) )
+                                   )
                                    .collect( toList() );
 
             Series series = new Series( neo4jSeries, points, benchmark.mode() );
@@ -199,7 +197,7 @@ public class VarianceProcedure
                                                        (String) ((Node) rowMap.get( "b" )).getProperty( Benchmark.NAME ),
                                                        Benchmark.Mode.valueOf( (String) ((Node) rowMap.get( "b" )).getProperty( Benchmark.MODE ) ),
                                                        toMap( (Node) rowMap.get( "bp" ) ) )
-                     )
+                 )
                  .collect( toList() );
     }
 

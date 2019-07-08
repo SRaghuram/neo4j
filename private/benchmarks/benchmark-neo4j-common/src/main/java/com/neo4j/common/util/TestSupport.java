@@ -5,7 +5,7 @@
  */
 package com.neo4j.common.util;
 
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;

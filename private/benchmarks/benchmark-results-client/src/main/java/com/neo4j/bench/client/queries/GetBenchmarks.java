@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.client.queries;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.Benchmark.Mode;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.util.Resources;
 
 import java.util.HashMap;
 import java.util.List;

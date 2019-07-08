@@ -8,7 +8,7 @@ package com.neo4j.bench.ldbc.business_intelligence.queries;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery19StrangerInteraction;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery19StrangerInteractionResult;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.Neo4jQuery;
 
 import java.util.List;

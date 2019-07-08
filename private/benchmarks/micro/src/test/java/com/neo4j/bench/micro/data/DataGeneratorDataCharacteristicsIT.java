@@ -5,9 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
@@ -651,10 +649,10 @@ class DataGeneratorDataCharacteristicsIT
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships(
                         IntStream.range( 1, 26 ).boxed()
-                                .map( i -> "TYPE_" + i )
-                                .map( RelationshipType::withName )
-                                .map( r -> new RelationshipDefinition( r, 1 ) )
-                                .toArray( RelationshipDefinition[]::new ) )
+                                 .map( i -> "TYPE_" + i )
+                                 .map( RelationshipType::withName )
+                                 .map( r -> new RelationshipDefinition( r, 1 ) )
+                                 .toArray( RelationshipDefinition[]::new ) )
                 .withRelationshipOrder( Order.SHUFFLED )
                 .withRelationshipLocality( RelationshipLocality.SCATTERED_BY_START_NODE );
 
@@ -686,10 +684,10 @@ class DataGeneratorDataCharacteristicsIT
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships(
                         IntStream.range( 1, 26 ).boxed()
-                                .map( i -> "TYPE_" + i )
-                                .map( RelationshipType::withName )
-                                .map( r -> new RelationshipDefinition( r, 1 ) )
-                                .toArray( RelationshipDefinition[]::new ) )
+                                 .map( i -> "TYPE_" + i )
+                                 .map( RelationshipType::withName )
+                                 .map( r -> new RelationshipDefinition( r, 1 ) )
+                                 .toArray( RelationshipDefinition[]::new ) )
                 .withRelationshipOrder( Order.ORDERED )
                 .withRelationshipLocality( RelationshipLocality.SCATTERED_BY_START_NODE );
 

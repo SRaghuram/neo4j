@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.gbptree;
 
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.index.internal.gbptree.Writer;

@@ -6,8 +6,8 @@
 package com.neo4j.bench.common;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,11 +23,10 @@ import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import static java.util.Arrays.asList;
 
 public class Neo4jConfigBuilderTest
 {
@@ -98,8 +97,8 @@ public class Neo4jConfigBuilderTest
     {
         Path neo4jConfigFile = temporaryFolder.newFile().toPath();
         Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile )
-        .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
-        .writeToFile( neo4jConfigFile );
+                          .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
+                          .writeToFile( neo4jConfigFile );
 
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
         assertEquals( "false", neo4jConfig.toMap().get( GraphDatabaseSettings.auth_enabled.name() ) );

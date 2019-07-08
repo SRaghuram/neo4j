@@ -5,15 +5,14 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.BenchmarkGroup;
 
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
-import static com.neo4j.bench.client.Units.toAbbreviation;
-
+import static com.neo4j.bench.common.util.Units.toAbbreviation;
 import static java.lang.String.format;
 
 public class BenchmarkVariance

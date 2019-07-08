@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.macro;
 
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;

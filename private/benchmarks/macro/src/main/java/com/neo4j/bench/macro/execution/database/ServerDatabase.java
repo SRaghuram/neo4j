@@ -5,11 +5,10 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Neo4jServerWrapper.Neo4jServerConnection;
 
 import java.net.URI;
@@ -42,13 +41,13 @@ public class ServerDatabase implements Database
                                               Path copyLogsToOnClose )
     {
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                   .setBoltUri( generateBoltUriString() )
-                   .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
-                   .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
-                   .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() )
-                   .withSetting( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() )
-                   .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
-                   .writeToFile( neo4jConfigFile );
+                          .setBoltUri( generateBoltUriString() )
+                          .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
+                          .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
+                          .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() )
+                          .withSetting( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() )
+                          .withSetting( GraphDatabaseSettings.databases_root_path, store.topLevelDirectory().toString() )
+                          .writeToFile( neo4jConfigFile );
 
         Neo4jServerWrapper neo4jServer = new Neo4jServerWrapper( neo4jDir );
         neo4jServer.clearLogs();

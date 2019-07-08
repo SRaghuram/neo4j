@@ -66,6 +66,7 @@
     </dependencyManagement>
 
     <modules>
+        <module>benchmark-common</module>
         <module>benchmark-results-client</module>
         <module>jmh-benchmark-api</module>
         <module>jmh-benchmark-api-test-suite</module>

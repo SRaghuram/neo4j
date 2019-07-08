@@ -5,8 +5,10 @@
  */
 package com.neo4j.bench.client.queries;
 
-import com.neo4j.bench.client.ClientUtil;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import org.neo4j.driver.v1.Driver;
@@ -27,10 +29,10 @@ public class VerifyStoreSchema implements Query<Void>
     public Void execute( Driver driver )
     {
         System.out.println( "Verifying store schema..." );
-        long start = System.currentTimeMillis();
+        Instant start = Instant.now();
         verifyStoreSchema( driver );
-        long duration = System.currentTimeMillis() - start;
-        System.out.println( format( "Verified in %s", ClientUtil.durationToString( duration ) ) );
+        Duration duration = Duration.between( start, Instant.now() );
+        System.out.println( format( "Verified in %s", BenchmarkUtil.durationToString( duration ) ) );
         return null;
     }
 

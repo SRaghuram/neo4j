@@ -6,11 +6,11 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.profiling.RecordingType;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;

@@ -5,14 +5,14 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Plan;
-import com.neo4j.bench.client.model.PlanCompilationMetrics;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Plan;
+import com.neo4j.bench.common.model.PlanCompilationMetrics;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;
@@ -26,8 +26,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
-import static com.neo4j.bench.macro.execution.Options.ExecutionMode.PLAN;
-import static com.neo4j.bench.macro.execution.Options.ExecutionMode.PROFILE;
+import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
+import static com.neo4j.bench.common.tool.macro.ExecutionMode.PROFILE;
 
 public class PlanCreator
 {

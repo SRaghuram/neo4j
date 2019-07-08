@@ -6,14 +6,13 @@
 package com.neo4j.bench.procedures.detection;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.Benchmark.Mode;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.neo4j.bench.client.Units.conversionFactor;
-
+import static com.neo4j.bench.common.util.Units.conversionFactor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;

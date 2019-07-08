@@ -5,18 +5,18 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.PlanCreator;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
@@ -26,13 +26,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 public class ForkRunner
 {
-    private static final com.neo4j.bench.client.model.Neo4jConfig NO_NEO4J_CONFIG = com.neo4j.bench.client.model.Neo4jConfig.empty();
+    private static final Neo4jConfig NO_NEO4J_CONFIG = Neo4jConfig.empty();
 
     public static BenchmarkDirectory runForksFor( DatabaseLauncher<?> launcher,
                                                   BenchmarkGroupDirectory groupDir,

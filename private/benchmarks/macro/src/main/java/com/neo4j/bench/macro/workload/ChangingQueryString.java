@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 
 import java.util.function.Supplier;
 
@@ -20,7 +20,7 @@ public class ChangingQueryString extends QueryString
 
     static ChangingQueryString atDefaults( ValueSupplier values )
     {
-        return new ChangingQueryString( Planner.DEFAULT, Runtime.DEFAULT, Options.ExecutionMode.EXECUTE, values, false );
+        return new ChangingQueryString( Planner.DEFAULT, Runtime.DEFAULT, ExecutionMode.EXECUTE, values, false );
     }
 
     private final ValueSupplier values;
@@ -30,7 +30,7 @@ public class ChangingQueryString extends QueryString
     private ChangingQueryString(
             Planner planner,
             Runtime runtime,
-            Options.ExecutionMode executionMode,
+            ExecutionMode executionMode,
             ValueSupplier values,
             boolean isPeriodicCommit )
     {
@@ -64,7 +64,7 @@ public class ChangingQueryString extends QueryString
     }
 
     @Override
-    public QueryString copyWith( Options.ExecutionMode newExecutionMode )
+    public QueryString copyWith( ExecutionMode newExecutionMode )
     {
         return new ChangingQueryString( this.planner(), this.runtime(), newExecutionMode, values, isPeriodicCommit );
     }

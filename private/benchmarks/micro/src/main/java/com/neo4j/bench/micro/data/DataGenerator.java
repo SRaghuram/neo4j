@@ -5,22 +5,21 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SplittableRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -37,9 +36,8 @@ import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 
-import static com.neo4j.bench.client.ClientUtil.durationToString;
+import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static java.lang.String.format;
-import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
 
@@ -226,7 +224,7 @@ public class DataGenerator
 
     void generate( Store store, Path neo4jConfig )
     {
-        long startTime = System.currentTimeMillis();
+        Instant startTime = Instant.now();
         switch ( graphWriter )
         {
         case TRANSACTIONAL:
@@ -238,8 +236,8 @@ public class DataGenerator
         default:
             throw new RuntimeException( "Unrecognized graph writer: " + graphWriter );
         }
-        long finishTime = System.currentTimeMillis();
-        System.out.println( "Generated store in: " + durationToString( finishTime - startTime ) );
+        Instant finishTime = Instant.now();
+        System.out.println( "Generated store in: " + durationToString( Duration.between( startTime, finishTime ) ) );
     }
 
     private long[] innerBatchFirstPhase( Store store, Path neo4jConfig )
@@ -247,7 +245,7 @@ public class DataGenerator
         BatchInserter inserter = null;
         try
         {
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
 
             Map<String,String> neo4jConfigMap = Neo4jConfigBuilder.fromFile( neo4jConfig ).build().toMap();
             inserter = BatchInserters.inserter( DatabaseLayout.of( store.graphDbDirectory().toFile() ), neo4jConfigMap );
@@ -255,9 +253,9 @@ public class DataGenerator
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesBatch( inserter );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles() )
@@ -265,36 +263,36 @@ public class DataGenerator
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsBatch( inserter, nodeIds, relationshipTypeIndexes );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodePropertiesBatch( inserter, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Relationship Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Relationship Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createRelationshipPropertiesBatch( inserter, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -318,16 +316,16 @@ public class DataGenerator
         GraphDatabaseService db = null;
         try
         {
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
 
             db = ManagedStore.newDb( store, neo4jConfig );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesTx( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles() )
@@ -335,36 +333,36 @@ public class DataGenerator
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsTx( db, nodeIds, relationshipTypeIndexes );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodePropertiesTx( db, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Relationship Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Relationship Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createRelationshipPropertiesTx( db, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -391,43 +389,43 @@ public class DataGenerator
             db = ManagedStore.newDb( store, neo4jConfig );
 
             System.out.printf( "Creating Temporary Node Label Files... " );
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
             IntFileReader[] nodeLabelIndexes = Stream
                     .of( createNodeLabelIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Labels... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodeLabels( db, nodeIds, nodeLabelIndexes );
             deleteIntFileReaderFiles( nodeLabelIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Mandatory Node Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createMandatoryNodeConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Mandatory Relationship Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createMandatoryRelationshipConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Uniqueness Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createUniquenessConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Schema Indexes... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createSchemaIndexes( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Waiting For Indexes... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             waitForSchemaIndexes( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
         }
         catch ( Exception e )
         {
@@ -1189,9 +1187,9 @@ public class DataGenerator
         Stream.of( schemaIndexes )
               .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
         Stream.of( fulltextNodeSchemaIndexes )
-                .forEach( def -> createFulltextNodeIndex( db, def.label(), def.keys() ) );
+              .forEach( def -> createFulltextNodeIndex( db, def.label(), def.keys() ) );
         Stream.of( fulltextRelationshipSchemaIndexes )
-                .forEach( def -> createFulltextRelationshipIndex( db, def.type(), def.key() ) );
+              .forEach( def -> createFulltextRelationshipIndex( db, def.type(), def.key() ) );
     }
 
     public static void createMandatoryNodeConstraint( GraphDatabaseService db, Label label, String key )

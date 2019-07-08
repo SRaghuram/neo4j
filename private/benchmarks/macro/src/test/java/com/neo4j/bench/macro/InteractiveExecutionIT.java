@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.macro;
 
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.OptionsBuilder;
@@ -16,9 +16,9 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import com.neo4j.common.util.TestSupport;
 
 import java.io.IOException;
 import java.nio.file.Path;

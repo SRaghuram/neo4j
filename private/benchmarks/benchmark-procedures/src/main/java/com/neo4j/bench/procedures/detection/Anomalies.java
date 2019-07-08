@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.Benchmark.Mode;
 
 import java.util.Comparator;
 import java.util.Date;
@@ -19,7 +19,6 @@ import static com.neo4j.bench.procedures.detection.Anomaly.AnomalyType.IMPROVEME
 import static com.neo4j.bench.procedures.detection.Anomaly.AnomalyType.REGRESSION;
 import static com.neo4j.bench.procedures.detection.Point.BY_DATE;
 import static com.neo4j.bench.procedures.detection.Point.convertTo;
-
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 
 public abstract class Augmenterizer
@@ -37,7 +37,7 @@ public abstract class Augmenterizer
         public static final String AUGMENT_KEY = "NONE";
 
         @Override
-        public void augment( int threads,  StoreAndConfig storeAndConfig )
+        public void augment( int threads, StoreAndConfig storeAndConfig )
         {
             // do nothing
         }

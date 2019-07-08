@@ -5,23 +5,22 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import com.neo4j.bench.client.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4j;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
-import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
+import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.common.model.Benchmark.Mode.THROUGHPUT;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.procedures.detection.Series.saneUnitFor;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class SeriesTest
 {

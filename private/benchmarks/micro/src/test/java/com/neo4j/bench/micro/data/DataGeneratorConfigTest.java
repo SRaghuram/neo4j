@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
@@ -767,7 +767,7 @@ public class DataGeneratorConfigTest
     {
         // equal to begin with
         assertThat( format( "%s\n%s", config1, config2 ),
-                config1.equals( config2 ), equalTo( value ) );
+                    config1.equals( config2 ), equalTo( value ) );
 
         File config1File = createTempFile( temporaryFolder.absolutePath() );
         config1.serialize( config1File.toPath() );
@@ -784,6 +784,6 @@ public class DataGeneratorConfigTest
 
         // configs after serialize and marshall are equal to each other
         assertThat( format( "%s\n%s", config1After, config2After ),
-                config1After.equals( config2After ), equalTo( value ) );
+                    config1After.equals( config2After ), equalTo( value ) );
     }
 }

@@ -5,19 +5,19 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueryStringTest
@@ -89,7 +89,7 @@ public class QueryStringTest
     public void shouldFormatRawValueWithExecutionMode()
     {
         QueryString qs = StaticQueryString.atDefaults( rawQueryString )
-                                          .copyWith( Options.ExecutionMode.PROFILE );
+                                          .copyWith( ExecutionMode.PROFILE );
         assertEquals( "CYPHER PROFILE " + rawQueryString, qs.value() );
     }
 
@@ -99,7 +99,7 @@ public class QueryStringTest
         QueryString qs = StaticQueryString.atDefaults( rawQueryString )
                                           .copyWith( Planner.COST )
                                           .copyWith( Runtime.SLOTTED )
-                                          .copyWith( Options.ExecutionMode.PROFILE );
+                                          .copyWith( ExecutionMode.PROFILE );
         assertThat( qs.value(), anyOf( equalTo( "CYPHER runtime=slotted planner=cost PROFILE " + rawQueryString ),
                                        equalTo( "CYPHER planner=cost runtime=slotted PROFILE " + rawQueryString ) ) );
     }

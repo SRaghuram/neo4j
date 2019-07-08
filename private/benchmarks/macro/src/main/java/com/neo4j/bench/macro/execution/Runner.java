@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Parameters;
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.profiling.InternalProfiler;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.execution.measurement.Results;

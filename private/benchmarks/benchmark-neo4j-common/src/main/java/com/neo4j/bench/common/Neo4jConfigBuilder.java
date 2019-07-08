@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.common;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
@@ -21,6 +21,8 @@ import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
 
 public class Neo4jConfigBuilder
 {
@@ -116,7 +118,7 @@ public class Neo4jConfigBuilder
                                     // dense node threshold set to max --> no nodes are dense
                                     : Integer.toString( Integer.MAX_VALUE );
 
-        return withSetting( GraphDatabaseSettings.dense_node_threshold, denseNodeThreshold );
+        return withSetting( dense_node_threshold, denseNodeThreshold );
     }
 
     public Neo4jConfigBuilder setTransactionMemory( String setting )
@@ -124,7 +126,7 @@ public class Neo4jConfigBuilder
         String translatedValue = setting.equals( "on_heap" )
                                  ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
                                  : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
-        return withSetting( GraphDatabaseSettings.tx_state_memory_allocation, translatedValue );
+        return withSetting( tx_state_memory_allocation, translatedValue );
     }
 
     public Neo4jConfigBuilder setBoltUri( String boltUri )
@@ -154,5 +156,4 @@ public class Neo4jConfigBuilder
     {
         writeToFile( neo4jConfig, neo4jConfigPath );
     }
-
 }

@@ -6,12 +6,12 @@
 package com.neo4j.bench.macro.workload;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
-import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,8 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.fileToString;
-import static com.neo4j.bench.client.util.BenchmarkUtil.sanitize;
+import static com.neo4j.bench.common.util.BenchmarkUtil.fileToString;
+import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 

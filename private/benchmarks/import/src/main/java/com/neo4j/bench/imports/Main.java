@@ -5,30 +5,30 @@
  */
 package com.neo4j.bench.imports;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Metrics;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.queries.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.BranchAndVersion;
+import com.neo4j.bench.common.model.Environment;
+import com.neo4j.bench.common.model.Java;
+import com.neo4j.bench.common.model.Metrics;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Edition;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 import io.airlift.airline.SingleCommand;
-import org.apache.commons.compress.utils.Lists;
-import org.apache.commons.compress.utils.Sets;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,8 +47,8 @@ import java.util.stream.Stream;
 import org.neo4j.cli.AdminTool;
 import org.neo4j.test.proc.ProcessUtil;
 
-import static com.neo4j.bench.client.model.Repository.IMPORT_BENCH;
-import static com.neo4j.bench.client.model.Repository.NEO4J;
+import static com.neo4j.bench.common.model.Repository.IMPORT_BENCH;
+import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static java.util.stream.Collectors.joining;
 
 @Command( name = "import-benchmarks", description = "benchamrks for import performance" )
@@ -64,9 +64,9 @@ public class Main
     private static final String CSV_LOCATION = "/mnt/ssds/csv/";
 
     @Option( type = OptionType.COMMAND,
-            name = {"--csv_location"},
-            description = "Location for csv files",
-            title = "Csv location" )
+             name = {"--csv_location"},
+             description = "Location for csv files",
+             title = "Csv location" )
     private String csvLocation = CSV_LOCATION;
     @Option( type = OptionType.COMMAND,
              name = {"--results_store_user"},
@@ -177,12 +177,11 @@ public class Main
             }
             report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
         }
-
     }
 
     // nodes.csv header - :ID,:LABEL,name:string,nr:int,date:long,rank:string,other:int
     private int createIndexes( String size, String storeDir, String databaseName, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group,
-            Neo4jConfig neo4jConfig )
+                               Neo4jConfig neo4jConfig )
             throws IOException, InterruptedException
     {
         String name = "indexCreate" + size;
@@ -207,7 +206,7 @@ public class Main
     }
 
     private int runImport( String size, String storeDir, String databaseName, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group,
-            Neo4jConfig neo4jConfig ) throws IOException, InterruptedException
+                           Neo4jConfig neo4jConfig ) throws IOException, InterruptedException
     {
         Benchmark benchmark = Benchmark.benchmarkFor( "import benchmark", size, size + "import", Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
         String[] importArgs = {
@@ -225,7 +224,7 @@ public class Main
     }
 
     private int runProcess( BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig, Benchmark benchmark, String[] programArgs,
-            String[] jvmArgs, Map<String,String> environmentVariables, Class<?> targetClass ) throws IOException, InterruptedException
+                            String[] jvmArgs, Map<String,String> environmentVariables, Class<?> targetClass ) throws IOException, InterruptedException
     {
         long startTime = System.currentTimeMillis();
         String[] pbArgs = processBuilderArguments( targetClass, programArgs, jvmArgs );
@@ -274,7 +273,7 @@ public class Main
             TestRun testRun = new TestRun( id, time, start, build, parentBuild, "import-benchmark" );
             TestRunReport report =
                     new TestRunReport( testRun, new BenchmarkConfig(), Sets.newHashSet( neo4j ), neo4jConfig, Environment.current(), metrics, tool, java,
-                            Lists.newArrayList() );
+                                       Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
             System.out.println( "Test run reported: " + report );
 

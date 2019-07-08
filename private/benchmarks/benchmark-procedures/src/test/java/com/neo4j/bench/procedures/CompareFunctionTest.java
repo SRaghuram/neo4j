@@ -38,7 +38,7 @@ import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;

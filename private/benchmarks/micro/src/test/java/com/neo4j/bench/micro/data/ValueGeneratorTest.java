@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.TestDirectorySupport;
+import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
@@ -89,9 +89,9 @@ public class ValueGeneratorTest
     public void stringGeneratorsShouldDoEqualityCorrectly() throws IOException
     {
         assertThat( intString( ascInt( 0 ), BIG_STRING_LENGTH ),
-                equalTo( intString( ascInt( 0 ), BIG_STRING_LENGTH ) ) );
+                    equalTo( intString( ascInt( 0 ), BIG_STRING_LENGTH ) ) );
         assertThat( intString( randInt( 0, Integer.MAX_VALUE ), BIG_STRING_LENGTH ),
-                equalTo( intString( randInt( 0, Integer.MAX_VALUE ), BIG_STRING_LENGTH ) ) );
+                    equalTo( intString( randInt( 0, Integer.MAX_VALUE ), BIG_STRING_LENGTH ) ) );
         assertThat( randShortNumerical(), equalTo( randShortNumerical() ) );
         assertThat( randShortDate(), equalTo( randShortDate() ) );
         assertThat( randShortHex(), equalTo( randShortHex() ) );
@@ -170,9 +170,9 @@ public class ValueGeneratorTest
         assertThat( randFloat( 0, Float.MAX_VALUE ), equalTo( randFloat( 0, Float.MAX_VALUE ) ) );
         assertThat( randDouble( 0, Double.MAX_VALUE ), equalTo( randDouble( 0, Double.MAX_VALUE ) ) );
         assertThat( toFloat( randInt( 0, Integer.MAX_VALUE ) ),
-                equalTo( toFloat( randInt( 0, Integer.MAX_VALUE ) ) ) );
+                    equalTo( toFloat( randInt( 0, Integer.MAX_VALUE ) ) ) );
         assertThat( toDouble( randLong( 0, Long.MAX_VALUE ) ),
-                equalTo( toDouble( randLong( 0, Long.MAX_VALUE ) ) ) );
+                    equalTo( toDouble( randLong( 0, Long.MAX_VALUE ) ) ) );
         assertThat( ascInt( 0 ), equalTo( ascInt( 0 ) ) );
         assertThat( ascLong( 0 ), equalTo( ascLong( 0 ) ) );
         assertThat( ascFloat( 0 ), equalTo( ascFloat( 0 ) ) );
@@ -184,17 +184,17 @@ public class ValueGeneratorTest
         int offset = 7;
         boolean sliding = true;
         assertThat( stridingInt( stride, max, offset, sliding ),
-                equalTo( stridingInt( stride, max, offset, sliding ) ) );
+                    equalTo( stridingInt( stride, max, offset, sliding ) ) );
         assertThat( stridingLong( stride, max, offset, sliding ),
-                equalTo( stridingLong( stride, max, offset, sliding ) ) );
+                    equalTo( stridingLong( stride, max, offset, sliding ) ) );
         assertThat( stridingFloat( stride, max, offset, sliding ),
-                equalTo( stridingFloat( stride, max, offset, sliding ) ) );
+                    equalTo( stridingFloat( stride, max, offset, sliding ) ) );
         assertThat( stridingDouble( stride, max, offset, sliding ),
-                equalTo( stridingDouble( stride, max, offset, sliding ) ) );
+                    equalTo( stridingDouble( stride, max, offset, sliding ) ) );
         assertThat( toFloat( stridingInt( stride, max, offset, sliding ) ),
-                equalTo( toFloat( stridingInt( stride, max, offset, sliding ) ) ) );
+                    equalTo( toFloat( stridingInt( stride, max, offset, sliding ) ) ) );
         assertThat( toDouble( stridingLong( stride, max, offset, sliding ) ),
-                equalTo( toDouble( stridingLong( stride, max, offset, sliding ) ) ) );
+                    equalTo( toDouble( stridingLong( stride, max, offset, sliding ) ) ) );
     }
 
     @Test
@@ -245,17 +245,17 @@ public class ValueGeneratorTest
     public void arrayGeneratorsShouldDoEqualityCorrectly() throws IOException
     {
         assertThat( stringArray( intString( ascInt( 0 ), SMALL_STRING_LENGTH ), DEFAULT_SIZE ),
-                equalTo( stringArray( intString( ascInt( 0 ), SMALL_STRING_LENGTH ), DEFAULT_SIZE ) ) );
+                    equalTo( stringArray( intString( ascInt( 0 ), SMALL_STRING_LENGTH ), DEFAULT_SIZE ) ) );
         assertThat( stringArray( randUtf8( SMALL_STRING_LENGTH ), DEFAULT_SIZE ),
-                equalTo( stringArray( randUtf8( SMALL_STRING_LENGTH ), DEFAULT_SIZE ) ) );
+                    equalTo( stringArray( randUtf8( SMALL_STRING_LENGTH ), DEFAULT_SIZE ) ) );
         assertThat( intArray( ascInt( 0 ), DEFAULT_SIZE ),
-                equalTo( intArray( ascInt( 0 ), DEFAULT_SIZE ) ) );
+                    equalTo( intArray( ascInt( 0 ), DEFAULT_SIZE ) ) );
         assertThat( longArray( ascLong( 0 ), DEFAULT_SIZE ),
-                equalTo( longArray( ascLong( 0 ), DEFAULT_SIZE ) ) );
+                    equalTo( longArray( ascLong( 0 ), DEFAULT_SIZE ) ) );
         assertThat( floatArray( ascFloat( 0 ), DEFAULT_SIZE ),
-                equalTo( floatArray( ascFloat( 0 ), DEFAULT_SIZE ) ) );
+                    equalTo( floatArray( ascFloat( 0 ), DEFAULT_SIZE ) ) );
         assertThat( doubleArray( ascDouble( 0 ), DEFAULT_SIZE ),
-                equalTo( doubleArray( ascDouble( 0 ), DEFAULT_SIZE ) ) );
+                    equalTo( doubleArray( ascDouble( 0 ), DEFAULT_SIZE ) ) );
     }
 
     @Test
@@ -263,22 +263,22 @@ public class ValueGeneratorTest
     {
         // generators are of same type but arrays are of different length
         assertThat( stringArray( intString( ascInt( 0 ), 2 ), 5 ),
-                not( equalTo( stringArray( intString( ascInt( 0 ), 2 ), 6 ) ) ) );
+                    not( equalTo( stringArray( intString( ascInt( 0 ), 2 ), 6 ) ) ) );
 
         // generators are of same type but inner generator has different parameters
         assertThat( stringArray( intString( ascInt( 0 ), 2 ), 5 ),
-                not( equalTo( stringArray( intString( ascInt( 0 ), 3 ), 5 ) ) ) );
+                    not( equalTo( stringArray( intString( ascInt( 0 ), 3 ), 5 ) ) ) );
 
         // generators are of same type but deepest level inner generator has different parameters
         assertThat( stringArray( intString( ascInt( 0 ), 2 ), 5 ),
-                not( equalTo( stringArray( intString( ascInt( 1 ), 2 ), 5 ) ) ) );
+                    not( equalTo( stringArray( intString( ascInt( 1 ), 2 ), 5 ) ) ) );
         assertThat( intArray( ascInt( 0 ), 5 ), not( equalTo( longArray( ascLong( 0 ), 5 ) ) ) );
         assertThat( intArray( ascInt( 0 ), 5 ), not( equalTo( floatArray( ascFloat( 0 ), 5 ) ) ) );
         assertThat( intArray( ascInt( 0 ), 5 ), not( equalTo( doubleArray( ascDouble( 0 ), 5 ) ) ) );
 
         // generators are of same type with exception of deepest level inner array
         assertThat( stringArray( intString( ascInt( 0 ), 2 ), 5 ),
-                not( equalTo( stringArray( intString( randInt( 0, 10 ), 2 ), 5 ) ) ) );
+                    not( equalTo( stringArray( intString( randInt( 0, 10 ), 2 ), 5 ) ) ) );
     }
 
     @Test

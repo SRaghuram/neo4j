@@ -7,8 +7,8 @@ package com.neo4j.bench.procedures.detection;
 
 import org.junit.jupiter.api.Test;
 
-import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
-import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
+import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.common.model.Benchmark.Mode.THROUGHPUT;
 import static com.neo4j.bench.procedures.detection.CompareFunction.CompareCalculator;
 import static com.neo4j.bench.procedures.detection.CompareResult.IMPROVEMENT;
 import static com.neo4j.bench.procedures.detection.CompareResult.LIKELY_IMPROVEMENT;
@@ -28,8 +28,9 @@ public class CompareTest
         double compareMetrics = 434.56510883826394;
         double compareVariance = 513.1210937497672;
         CompareCalculator throughput = new CompareCalculator( baseMetrics, baseVariance, compareMetrics, compareVariance, THROUGHPUT.name() );
-        System.out.println(throughput);
+        System.out.println( throughput );
     }
+
     @Test
     public void shouldDetectDefiniteImprovement() throws Exception
     {

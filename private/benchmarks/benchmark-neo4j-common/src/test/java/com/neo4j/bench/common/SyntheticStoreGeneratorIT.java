@@ -12,12 +12,12 @@ import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
+import com.neo4j.common.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import com.neo4j.common.util.SyntheticStoreGenerator;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -38,10 +38,10 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_PASSWORD;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_URI;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_USER;
-import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
-import static com.neo4j.bench.client.model.Repository.CAPS;
-import static com.neo4j.bench.client.model.Repository.NEO4J;
+import static com.neo4j.bench.common.model.Repository.CAPS;
+import static com.neo4j.bench.common.model.Repository.NEO4J;
+import static com.neo4j.bench.common.options.Edition.COMMUNITY;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.allOf;
@@ -57,8 +57,8 @@ public class SyntheticStoreGeneratorIT
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
-            .build();
+                                                                   .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+                                                                   .build();
 
     private static final int CLIENT_RETRY_COUNT = 0;
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier();
@@ -72,7 +72,7 @@ public class SyntheticStoreGeneratorIT
     public void setUp( GraphDatabaseService databaseService )
     {
         HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
-                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+                                                                   .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
         boltUri = URI.create( "bolt://" + address.toString() );
     }
 

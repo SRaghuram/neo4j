@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.test;
 
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.Kaboom;

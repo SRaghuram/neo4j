@@ -5,15 +5,15 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 
 public class StaticQueryString extends QueryString
 {
     static StaticQueryString atDefaults( String value )
     {
-        return new StaticQueryString( Planner.DEFAULT, Runtime.DEFAULT, Options.ExecutionMode.EXECUTE, value );
+        return new StaticQueryString( Planner.DEFAULT, Runtime.DEFAULT, ExecutionMode.EXECUTE, value );
     }
 
     private final String value;
@@ -21,7 +21,7 @@ public class StaticQueryString extends QueryString
     private StaticQueryString(
             Planner planner,
             Runtime runtime,
-            Options.ExecutionMode executionMode,
+            ExecutionMode executionMode,
             String value )
     {
         super( planner, runtime, executionMode );
@@ -53,7 +53,7 @@ public class StaticQueryString extends QueryString
     }
 
     @Override
-    public QueryString copyWith( Options.ExecutionMode newExecutionMode )
+    public QueryString copyWith( ExecutionMode newExecutionMode )
     {
         return new StaticQueryString( this.planner(), this.runtime(), newExecutionMode, value );
     }

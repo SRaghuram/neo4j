@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,8 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.propertiesPathToMap;
-import static com.neo4j.bench.client.util.BenchmarkUtil.splitAndTrimCommaSeparatedString;
+import static com.neo4j.bench.common.util.BenchmarkUtil.propertiesPathToMap;
+import static com.neo4j.bench.common.util.BenchmarkUtil.splitAndTrimCommaSeparatedString;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -111,10 +111,10 @@ public class BenchmarkConfigFile
     private static Map<String,BenchmarkConfigFileEntry> benchmarks( Map<String,String> confMap, BenchmarksFinder benchmarksFinder )
     {
         return confMap.keySet().stream()
-                .filter( benchmarksFinder::hasBenchmark )
-                .collect( toMap(
-                        identity(),
-                        name -> new BenchmarkConfigFileEntry( name, Boolean.valueOf( confMap.get( name ) ) ) ) );
+                      .filter( benchmarksFinder::hasBenchmark )
+                      .collect( toMap(
+                              identity(),
+                              name -> new BenchmarkConfigFileEntry( name, Boolean.valueOf( confMap.get( name ) ) ) ) );
     }
 
     public static void write(

@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
@@ -48,8 +48,8 @@ class QueryTest
     @Test
     void copyWithExecutionModeShouldChangePlanner()
     {
-        Query copiedQuery = baseQuery.copyWith( Options.ExecutionMode.EXECUTE );
-        assertEquals( Options.ExecutionMode.EXECUTE, copiedQuery.queryString().executionMode() );
-        assertEquals( Options.ExecutionMode.EXECUTE, copiedQuery.warmupQueryString().executionMode() );
+        Query copiedQuery = baseQuery.copyWith( ExecutionMode.EXECUTE );
+        assertEquals( ExecutionMode.EXECUTE, copiedQuery.queryString().executionMode() );
+        assertEquals( ExecutionMode.EXECUTE, copiedQuery.warmupQueryString().executionMode() );
     }
 }
