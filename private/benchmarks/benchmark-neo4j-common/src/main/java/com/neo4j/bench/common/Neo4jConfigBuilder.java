@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.common;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
 import java.io.File;
@@ -158,5 +158,4 @@ public class Neo4jConfigBuilder
     {
         writeToFile( neo4jConfig, neo4jConfigPath );
     }
-
 }

@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.client.queries;
 
-import com.neo4j.bench.client.model.BenchmarkPlan;
-import com.neo4j.bench.client.model.Plan;
-import com.neo4j.bench.client.model.PlanOperator;
-import com.neo4j.bench.client.model.PlanTree;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.BenchmarkPlan;
+import com.neo4j.bench.common.model.Plan;
+import com.neo4j.bench.common.model.PlanOperator;
+import com.neo4j.bench.common.model.PlanTree;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.util.Resources;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,8 +24,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 
-import static com.neo4j.bench.client.model.PlanTree.PLAN_DESCRIPTION;
-
+import static com.neo4j.bench.common.model.PlanTree.PLAN_DESCRIPTION;
 import static java.lang.String.format;
 
 public class PlanTreeSubmitter

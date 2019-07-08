@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.assertFileExists;
+import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileExists;
 import static java.util.stream.Collectors.toSet;
 
 public abstract class Parameters

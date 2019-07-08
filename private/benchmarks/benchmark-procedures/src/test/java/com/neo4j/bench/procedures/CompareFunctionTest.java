@@ -31,7 +31,7 @@ import org.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;

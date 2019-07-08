@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.process.ProcessWrapper;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.process.ProcessWrapper;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.Jvm;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.forceRecreateFile;
-import static com.neo4j.bench.client.util.BenchmarkUtil.inputStreamToString;
+import static com.neo4j.bench.common.util.BenchmarkUtil.forceRecreateFile;
+import static com.neo4j.bench.common.util.BenchmarkUtil.inputStreamToString;
 import static java.lang.ProcessBuilder.Redirect;
 import static java.lang.ProcessBuilder.Redirect.INHERIT;
 import static java.lang.String.format;

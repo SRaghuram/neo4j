@@ -8,12 +8,11 @@ package com.neo4j.bench.procedures.detection;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
+import static com.neo4j.bench.common.model.Benchmark.Mode.THROUGHPUT;
 import static com.neo4j.bench.procedures.detection.TestSequences.gradualDegradation;
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-
-import static java.util.stream.Collectors.joining;
 
 public class AnomaliesTest
 {

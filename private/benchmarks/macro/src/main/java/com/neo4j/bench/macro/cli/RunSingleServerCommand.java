@@ -6,15 +6,15 @@
 package com.neo4j.bench.macro.cli;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Parameters;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.process.HasPid;
-import com.neo4j.bench.client.process.Pid;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.macro.execution.Options.ExecutionMode;
+import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;

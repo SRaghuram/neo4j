@@ -8,7 +8,7 @@ package com.neo4j.bench.ldbc.interactive;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery5;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery5Result;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.Neo4jQuery;
 
 import java.util.List;

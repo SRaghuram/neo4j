@@ -10,10 +10,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import static com.neo4j.bench.client.Units.toAbbreviation;
+import static com.neo4j.bench.common.util.Units.toAbbreviation;
 import static com.neo4j.bench.procedures.detection.Point.BY_DATE;
 import static com.neo4j.bench.procedures.detection.Series.saneUnitFor;
-
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 

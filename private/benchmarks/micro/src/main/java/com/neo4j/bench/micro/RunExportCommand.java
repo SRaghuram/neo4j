@@ -7,25 +7,25 @@ package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.ClientUtil;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Repository;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.BranchAndVersion;
+import com.neo4j.bench.common.model.Environment;
+import com.neo4j.bench.common.model.Java;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -47,10 +47,10 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
-import static com.neo4j.bench.client.util.Args.concatArgs;
-import static com.neo4j.bench.client.util.Args.splitArgs;
-import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.common.util.Args.concatArgs;
+import static com.neo4j.bench.common.util.Args.splitArgs;
+import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunExportCommand implements Runnable
@@ -241,11 +241,11 @@ public class RunExportCommand implements Runnable
         neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
 
         Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
-                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
-                                                 .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-                                                 .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                 .withSetting( new HttpConnector( "https" ).enabled, "false" )
-                                                 .build();
+                                                        .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                        .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                                                        .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                                                        .withSetting( new HttpConnector( "https" ).enabled, "false" )
+                                                        .build();
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );
@@ -289,7 +289,7 @@ public class RunExportCommand implements Runnable
             throw new UncheckedIOException( "Failed to to delete stores directory", e );
         }
 
-        String testRunId = ClientUtil.generateUniqueId();
+        String testRunId = BenchmarkUtil.generateUniqueId();
         TestRun testRun = new TestRun(
                 testRunId,
                 Duration.between( start, finish ).toMillis(),

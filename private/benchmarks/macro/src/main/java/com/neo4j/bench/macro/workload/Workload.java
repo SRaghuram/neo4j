@@ -8,8 +8,8 @@ package com.neo4j.bench.macro.workload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import com.neo4j.bench.macro.execution.database.Schema;
 

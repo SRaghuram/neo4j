@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
@@ -213,8 +213,8 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
             Redirect outputRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-out.log" ).toFile() );
             Redirect errorRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-error.log" ).toFile() );
             Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                       .addJvmArgs( additionalJvmArgs )
-                       .writeToFile( neo4jConfigFile );
+                              .addJvmArgs( additionalJvmArgs )
+                              .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );
             return ServerDatabase.startServer( jvm, neo4jDir, store, neo4jConfigFile, outputRedirect, errorRedirect, copyLogsToOnClose );
         }

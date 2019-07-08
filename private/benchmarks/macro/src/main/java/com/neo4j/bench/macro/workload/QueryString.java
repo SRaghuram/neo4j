@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.macro.workload;
 
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 
 import java.util.Arrays;
 
@@ -23,15 +23,15 @@ public abstract class QueryString
 
     public abstract QueryString copyWith( Planner newPlanner );
 
-    public abstract QueryString copyWith( Options.ExecutionMode newExecutionMode );
+    public abstract QueryString copyWith( ExecutionMode newExecutionMode );
 
     public abstract boolean isPeriodicCommit();
 
     private final Planner planner;
     private final Runtime runtime;
-    private final Options.ExecutionMode executionMode;
+    private final ExecutionMode executionMode;
 
-    QueryString( Planner planner, Runtime runtime, Options.ExecutionMode executionMode )
+    QueryString( Planner planner, Runtime runtime, ExecutionMode executionMode )
     {
         this.planner = planner;
         this.runtime = runtime;
@@ -64,7 +64,7 @@ public abstract class QueryString
         return runtime;
     }
 
-    public Options.ExecutionMode executionMode()
+    public ExecutionMode executionMode()
     {
         return executionMode;
     }

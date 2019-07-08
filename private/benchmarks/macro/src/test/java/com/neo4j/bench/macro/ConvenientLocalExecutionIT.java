@@ -6,21 +6,21 @@
 package com.neo4j.bench.macro;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
-import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
-import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
+import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
 
 public class ConvenientLocalExecutionIT
@@ -56,7 +56,7 @@ public class ConvenientLocalExecutionIT
     private static final int WARMUP_COUNT = 1;
     private static final int MEASUREMENT_COUNT = 1;
     private static final List<ProfilerType> PROFILERS = Lists.newArrayList( ProfilerType.JFR );
-    private static final Options.ExecutionMode EXECUTION_MODE = Options.ExecutionMode.EXECUTE;
+    private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
     private static final String JVM_ARGS = "-Xms4g -Xmx4g";
     private static final boolean RECREATE_SCHEMA = false;
     private static final Edition EDITION = Edition.ENTERPRISE;
@@ -176,8 +176,8 @@ public class ConvenientLocalExecutionIT
     {
         // Unless NEO4J_CONFIG points to a real file, this is equivalent to Neo4jConfig.empty()
         return Neo4jConfigBuilder.fromFile( NEO4J_CONFIG )
-                          // Additional settings you wish to run with
-                          .withSetting( GraphDatabaseSettings.allow_upgrade, "false" )
-                          .build();
+                                 // Additional settings you wish to run with
+                                 .withSetting( GraphDatabaseSettings.allow_upgrade, "false" )
+                                 .build();
     }
 }

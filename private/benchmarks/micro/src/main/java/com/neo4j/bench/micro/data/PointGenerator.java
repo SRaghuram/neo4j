@@ -5,19 +5,19 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.common.util.RichRandom;
+import com.neo4j.bench.common.util.RichRandom.GaussianState;
+import com.neo4j.bench.micro.benchmarks.Kaboom;
+
 import java.util.Objects;
 import java.util.SplittableRandom;
 
-import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.bench.client.util.RichRandom;
-import com.neo4j.bench.client.util.RichRandom.GaussianState;
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
-
 import static java.lang.Math.cos;
 import static java.lang.Math.floor;
 import static java.lang.Math.min;
@@ -25,7 +25,6 @@ import static java.lang.Math.round;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 import static java.lang.String.format;
-
 import static org.neo4j.values.storable.Values.pointValue;
 
 public abstract class PointGenerator

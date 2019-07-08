@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.procedures.queries;
 
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.procedures.detection.BenchmarkVariance;
 import com.neo4j.bench.procedures.detection.Point;
 import com.neo4j.bench.procedures.detection.Series;
@@ -23,8 +23,7 @@ import java.util.Optional;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Session;
 
-import static com.neo4j.bench.client.Units.toTimeUnit;
-
+import static com.neo4j.bench.common.util.Units.toTimeUnit;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -60,7 +59,7 @@ public class GetBenchmarkVariances implements Query<List<BenchmarkVariance>>
                                                                   r.get( "date" ).asLong(),
                                                                   r.get( "mean" ).asDouble(),
                                                                   toTimeUnit( r.get( "unit" ).asString() ),
-                                                                  new Neo4j( r.get( "neo4j" ) ) )
+                                                                  Neo4j.fromCypherMap( r.get( "neo4j" ).asMap() ) )
                                             )
                                             .collect( toList() );
                 Series series = new Series( neo4jSeries, points, benchmark.benchmark().mode() );

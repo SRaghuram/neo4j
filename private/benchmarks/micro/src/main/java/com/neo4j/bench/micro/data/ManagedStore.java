@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 
 import java.io.IOException;
@@ -19,9 +19,8 @@ import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
 
-import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
-import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
-
+import static com.neo4j.bench.common.util.BenchmarkUtil.bytes;
+import static com.neo4j.bench.common.util.BenchmarkUtil.bytesToString;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 

@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;
 
 import java.nio.file.Path;

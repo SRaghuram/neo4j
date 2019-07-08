@@ -5,17 +5,17 @@
  */
 package com.neo4j.bench.jmh.api.profile;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Parameters;
-import com.neo4j.bench.client.process.HasPid;
-import com.neo4j.bench.client.profiling.Profiler;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.JvmVersion;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
@@ -96,7 +96,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
             Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
-            return ((com.neo4j.bench.client.profiling.ExternalProfiler) innerProfiler).invokeArgs( forkDir,
+            return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).invokeArgs( forkDir,
                                                                                                    benchmarkGroup,
                                                                                                    benchmark,
                                                                                                    Parameters.NONE );
@@ -117,7 +117,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
             JvmVersion jvmVersion = jvm.version();
-            return ((com.neo4j.bench.client.profiling.ExternalProfiler) innerProfiler).jvmArgs( jvmVersion,
+            return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).jvmArgs( jvmVersion,
                                                                                                 forkDir,
                                                                                                 benchmarkGroup,
                                                                                                 benchmark,
@@ -137,7 +137,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
             Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
-            ((com.neo4j.bench.client.profiling.ExternalProfiler) innerProfiler).beforeProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
+            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).beforeProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
         }
     }
 
@@ -150,7 +150,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
             Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
-            ((com.neo4j.bench.client.profiling.ExternalProfiler) innerProfiler).afterProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
+            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).afterProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
             forkDir.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
         }
         return Collections.emptyList();
@@ -184,7 +184,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
-            ((com.neo4j.bench.client.profiling.InternalProfiler) innerProfiler).onMeasurementBegin( jvm,
+            ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementBegin( jvm,
                                                                                                     forkDir,
                                                                                                     HasPid.getPid(),
                                                                                                     benchmarkGroup,
@@ -203,7 +203,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
-            ((com.neo4j.bench.client.profiling.InternalProfiler) innerProfiler).onMeasurementFinished( jvm,
+            ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementFinished( jvm,
                                                                                                        forkDir,
                                                                                                        HasPid.getPid(),
                                                                                                        benchmarkGroup,

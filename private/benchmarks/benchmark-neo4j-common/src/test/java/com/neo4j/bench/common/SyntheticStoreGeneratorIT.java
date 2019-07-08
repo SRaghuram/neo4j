@@ -33,10 +33,12 @@ import org.neo4j.kernel.configuration.Settings;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_PASSWORD;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_URI;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_USER;
-import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
-import static com.neo4j.bench.client.model.Repository.CAPS;
-import static com.neo4j.bench.client.model.Repository.NEO4J;
+import static com.neo4j.bench.common.model.Repository.CAPS;
+import static com.neo4j.bench.common.model.Repository.NEO4J;
+import static com.neo4j.bench.common.options.Edition.COMMUNITY;
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static java.util.Collections.singletonMap;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,9 +46,6 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.AnyOf.anyOf;
 import static org.junit.Assert.assertEquals;
-
-import static java.util.Collections.singletonMap;
-import static java.util.stream.Collectors.toList;
 
 public class SyntheticStoreGeneratorIT
 {
