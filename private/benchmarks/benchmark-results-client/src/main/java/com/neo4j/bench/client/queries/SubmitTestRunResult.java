@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.client.queries;
 
-import com.neo4j.bench.client.model.BenchmarkMetrics;
-import com.neo4j.bench.client.model.TestRun;
+import com.neo4j.bench.common.model.BenchmarkMetrics;
+import com.neo4j.bench.common.model.TestRun;
 
 import java.util.List;
 import java.util.Objects;

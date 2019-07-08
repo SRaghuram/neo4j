@@ -6,7 +6,7 @@
 package com.neo4j.bench.procedures.detection;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4j;
 
 import java.util.List;
 import java.util.Random;
@@ -15,8 +15,7 @@ import java.util.function.Supplier;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
-import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
-
+import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
@@ -27,13 +26,13 @@ class TestSequences
     static List<Point> literal( TimeUnit unit, double... values )
     {
         return DoubleStream.of( values )
-                .mapToObj( d -> new Point(
-                        new Double( d ).longValue(),
-                        new Double( d ).longValue(),
-                        d,
-                        unit,
-                        NEO4J ) )
-                .collect( toList() );
+                           .mapToObj( d -> new Point(
+                                   new Double( d ).longValue(),
+                                   new Double( d ).longValue(),
+                                   d,
+                                   unit,
+                                   NEO4J ) )
+                           .collect( toList() );
     }
 
     // TODO use when auto regression detection is implemented for realz
@@ -169,7 +168,7 @@ class TestSequences
     private static List<Point> points( Supplier<Double> diffFun, int count )
     {
         return IntStream.range( 0, count )
-                .mapToObj( i -> new Point( i, i, diffFun.get(), MILLISECONDS, NEO4J ) )
-                .collect( toList() );
+                        .mapToObj( i -> new Point( i, i, diffFun.get(), MILLISECONDS, NEO4J ) )
+                        .collect( toList() );
     }
 }

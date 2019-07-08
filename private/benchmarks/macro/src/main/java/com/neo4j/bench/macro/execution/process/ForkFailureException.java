@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.client.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.macro.workload.Query;
 
 public class ForkFailureException extends Exception

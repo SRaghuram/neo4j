@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.jmh.api.profile;
 
-import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ProfilerType;
 
 public class GcProfiler extends AbstractMicroProfiler
 {

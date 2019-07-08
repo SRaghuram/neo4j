@@ -6,37 +6,39 @@
 package com.neo4j.common.util;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.ClientUtil;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.model.Annotation;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.Benchmark.Mode;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkPlan;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Metrics;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Project;
-import com.neo4j.bench.client.model.Repository;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunError;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.options.Planner;
+import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
+import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.SubmitTestRun;
 import com.neo4j.bench.client.queries.SubmitTestRunResult;
-import com.neo4j.bench.client.util.RichRandom;
-import com.neo4j.bench.common.queries.AttachMetricsAnnotation;
-import com.neo4j.bench.common.queries.AttachTestRunAnnotation;
+import com.neo4j.bench.common.model.Annotation;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.Benchmark.Mode;
+import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.BenchmarkPlan;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.BranchAndVersion;
+import com.neo4j.bench.common.model.Environment;
+import com.neo4j.bench.common.model.Java;
+import com.neo4j.bench.common.model.Metrics;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.model.Project;
+import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.RichRandom;
 
 import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -50,14 +52,14 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
-import static com.neo4j.bench.client.model.Benchmark.Mode.SINGLE_SHOT;
-import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
-import static com.neo4j.bench.client.model.Repository.CAPS;
-import static com.neo4j.bench.client.model.Repository.CAPS_BENCH;
-import static com.neo4j.bench.client.model.Repository.LDBC_BENCH;
-import static com.neo4j.bench.client.model.Repository.MICRO_BENCH;
-import static com.neo4j.bench.client.model.Repository.NEO4J;
+import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.common.model.Benchmark.Mode.SINGLE_SHOT;
+import static com.neo4j.bench.common.model.Benchmark.Mode.THROUGHPUT;
+import static com.neo4j.bench.common.model.Repository.CAPS;
+import static com.neo4j.bench.common.model.Repository.CAPS_BENCH;
+import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
+import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
+import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -574,11 +576,11 @@ public class SyntheticStoreGenerator
         }
         if ( withPrintout )
         {
-            long duration = System.currentTimeMillis() - startClock;
-            double opsPerMs = resultCount() / (double) duration;
+            long durationMs = System.currentTimeMillis() - startClock;
+            double opsPerMs = resultCount() / (double) durationMs;
             System.out.println( format( "------\nSubmitted: %s results\nDuration: %s\nThroughput: %s result/s\n------",
                                         resultCount(),
-                                        ClientUtil.durationToString( duration ),
+                                        BenchmarkUtil.durationToString( Duration.of( durationMs, ChronoUnit.MILLIS ) ),
                                         THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
         }
     }

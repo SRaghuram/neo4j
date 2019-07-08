@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.macro;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.OptionsBuilder;

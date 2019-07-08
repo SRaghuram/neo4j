@@ -5,14 +5,14 @@
  */
 package com.neo4j.bench.micro.benchmarks.gbptree;
 
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
+import com.neo4j.bench.micro.data.Augmenterizer;
+import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-
-import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
-import com.neo4j.bench.micro.data.Augmenterizer;
-import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;

@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
@@ -78,12 +78,12 @@ public class DataGeneratorConfig
     {
         this.nodeCount = nodeCount;
         this.relationshipTypeNames = Stream.of( outRelationships )
-                .map( RelationshipDefinition::type )
-                .map( RelationshipType::name )
-                .toArray( String[]::new );
+                                           .map( RelationshipDefinition::type )
+                                           .map( RelationshipType::name )
+                                           .toArray( String[]::new );
         this.relationshipTypeCounts = Stream.of( outRelationships )
-                .mapToInt( RelationshipDefinition::count )
-                .toArray();
+                                            .mapToInt( RelationshipDefinition::count )
+                                            .toArray();
         this.relationshipOrder = relationshipOrder;
         this.relationshipLocality = relationshipLocality;
         this.graphWriter = graphWriter;
@@ -137,10 +137,10 @@ public class DataGeneratorConfig
     public RelationshipDefinition[] outRelationships()
     {
         return IntStream.range( 0, relationshipTypeNames.length ).boxed()
-                .map( i -> new RelationshipDefinition(
-                        RelationshipType.withName( relationshipTypeNames[i] ),
-                        relationshipTypeCounts[i] ) )
-                .toArray( RelationshipDefinition[]::new );
+                        .map( i -> new RelationshipDefinition(
+                                RelationshipType.withName( relationshipTypeNames[i] ),
+                                relationshipTypeCounts[i] ) )
+                        .toArray( RelationshipDefinition[]::new );
     }
 
     public Order relationshipOrder()
@@ -288,11 +288,11 @@ public class DataGeneratorConfig
     {
         return Objects
                 .hash( nodeCount, relationshipTypeNames, relationshipTypeCounts, relationshipOrder,
-                        relationshipLocality,
-                        graphWriter, nodeProperties, relationshipProperties, propertyLocality, propertyOrder,
-                        labelNames,
-                        labelOrder, labelLocality, schemaIndexes, uniqueConstraints, mandatoryNodeConstraints,
-                        mandatoryRelationshipConstraints, neo4jConfig, isReusable, augmentedBy, rngSeed );
+                       relationshipLocality,
+                       graphWriter, nodeProperties, relationshipProperties, propertyLocality, propertyOrder,
+                       labelNames,
+                       labelOrder, labelLocality, schemaIndexes, uniqueConstraints, mandatoryNodeConstraints,
+                       mandatoryRelationshipConstraints, neo4jConfig, isReusable, augmentedBy, rngSeed );
     }
 
     @Override
@@ -350,14 +350,14 @@ public class DataGeneratorConfig
     private String[] propertyTypeStrings( PropertyDefinition[] properties )
     {
         return Stream.of( properties )
-                .map( PropertyDefinition::toString )
-                .toArray( String[]::new );
+                     .map( PropertyDefinition::toString )
+                     .toArray( String[]::new );
     }
 
     private String[] relationshipTypeStrings()
     {
         return Stream.of( outRelationships() )
-                .map( RelationshipDefinition::toString )
-                .toArray( String[]::new );
+                     .map( RelationshipDefinition::toString )
+                     .toArray( String[]::new );
     }
 }

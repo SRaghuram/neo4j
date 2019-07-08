@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.client;
 
-import com.neo4j.bench.client.model.TestRunError;
-import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.queries.SubmitTestRun;
-import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.util.JsonUtil;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;

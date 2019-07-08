@@ -6,7 +6,7 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.database.Schema.IndexSchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.NodeExistsSchemaEntry;
 import com.neo4j.bench.macro.execution.database.Schema.NodeKeySchemaEntry;

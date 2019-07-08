@@ -5,15 +5,15 @@
  */
 package com.neo4j.bench.macro.execution.process;
 
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.Parameters;
-import com.neo4j.bench.client.process.JvmArgs;
-import com.neo4j.bench.client.profiling.ExternalProfiler;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
-import com.neo4j.bench.macro.execution.Options;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.common.profiling.ExternalProfiler;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.neo4j.bench.client.util.Args.concatArgs;
+import static com.neo4j.bench.common.util.Args.concatArgs;
 
 public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable>
 {
@@ -61,7 +61,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
 
     public final Results run()
     {
-        boolean isPlanningMode = query.queryString().executionMode().equals( Options.ExecutionMode.PLAN );
+        boolean isPlanningMode = query.queryString().executionMode().equals( ExecutionMode.PLAN );
         try ( Store store = (query.isMutating() && !isPlanningMode)
                             ? originalStore.makeTemporaryCopy()
                             : originalStore )

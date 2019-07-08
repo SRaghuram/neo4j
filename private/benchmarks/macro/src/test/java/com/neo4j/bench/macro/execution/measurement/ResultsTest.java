@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,10 +25,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class ResultsTest
 {

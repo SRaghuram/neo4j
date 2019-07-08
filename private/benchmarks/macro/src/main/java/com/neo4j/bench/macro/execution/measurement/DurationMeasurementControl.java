@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.time.Duration;
 

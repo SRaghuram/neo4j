@@ -5,14 +5,15 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,8 +37,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
-import static com.neo4j.bench.client.ClientUtil.durationToString;
-
+import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
@@ -175,19 +175,19 @@ public class DataGenerator
         this.relationshipLocality = config.relationshipLocality();
         this.graphWriter = config.graphWriter();
         this.nodePropertyKeys = Stream.of( config.nodeProperties() )
-                .map( PropertyDefinition::key )
-                .toArray( String[]::new );
+                                      .map( PropertyDefinition::key )
+                                      .toArray( String[]::new );
         this.nodePropertyValues = Stream.of( config.nodeProperties() )
-                .map( PropertyDefinition::value )
-                .map( ValueGeneratorFactory::create )
-                .toArray( ValueGeneratorFun[]::new );
+                                        .map( PropertyDefinition::value )
+                                        .map( ValueGeneratorFactory::create )
+                                        .toArray( ValueGeneratorFun[]::new );
         this.relationshipPropertyKeys = Stream.of( config.relationshipProperties() )
-                .map( PropertyDefinition::key )
-                .toArray( String[]::new );
+                                              .map( PropertyDefinition::key )
+                                              .toArray( String[]::new );
         this.relationshipPropertyValues = Stream.of( config.relationshipProperties() )
-                .map( PropertyDefinition::value )
-                .map( ValueGeneratorFactory::create )
-                .toArray( ValueGeneratorFun[]::new );
+                                                .map( PropertyDefinition::value )
+                                                .map( ValueGeneratorFactory::create )
+                                                .toArray( ValueGeneratorFun[]::new );
         this.propertyLocality = config.propertyLocality();
         this.propertyOrder = config.propertyOrder();
         this.labels = config.labels();
@@ -221,7 +221,7 @@ public class DataGenerator
 
     void generate( Path storeDir, Path neo4jConfig )
     {
-        long startTime = System.currentTimeMillis();
+        Instant startTime = Instant.now();
         switch ( graphWriter )
         {
         case TRANSACTIONAL:
@@ -233,8 +233,8 @@ public class DataGenerator
         default:
             throw new RuntimeException( "Unrecognized graph writer: " + graphWriter );
         }
-        long finishTime = System.currentTimeMillis();
-        System.out.println( "Generated store in: " + durationToString( finishTime - startTime ) );
+        Instant finishTime = Instant.now();
+        System.out.println( "Generated store in: " + durationToString( Duration.between( startTime, finishTime ) ) );
     }
 
     private long[] innerBatchFirstPhase( Path storeDir, Path neo4jConfig )
@@ -242,7 +242,7 @@ public class DataGenerator
         BatchInserter inserter = null;
         try
         {
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
 
             Map<String,String> neo4jConfigMap = Neo4jConfigBuilder.fromFile( neo4jConfig ).build().toMap();
             inserter = BatchInserters.inserter( storeDir.toFile(), neo4jConfigMap );
@@ -250,9 +250,9 @@ public class DataGenerator
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesBatch( inserter );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles() )
@@ -260,36 +260,36 @@ public class DataGenerator
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsBatch( inserter, nodeIds, relationshipTypeIndexes );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodePropertiesBatch( inserter, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Relationship Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Relationship Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createRelationshipPropertiesBatch( inserter, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -313,7 +313,7 @@ public class DataGenerator
         GraphDatabaseService db = null;
         try
         {
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
 
             db = new EnterpriseGraphDatabaseFactory()
                     .newEmbeddedDatabaseBuilder( storeDir.toFile() )
@@ -323,9 +323,9 @@ public class DataGenerator
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
             long[] nodeIds = createNodesTx( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
                     .of( createRelationshipTypeIndexFiles() )
@@ -333,36 +333,36 @@ public class DataGenerator
                     .toArray( IntFileReader[]::new );
             IntFileReader relationshipIds = createRelationshipsTx( db, nodeIds, relationshipTypeIndexes );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
                     .of( createNodePropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodePropertiesTx( db, nodeIds, nodePropertyIndexes );
             deleteIntFileReaderFiles( nodePropertyIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Relationship Property Files... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
                     .of( createRelationshipPropertyIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Relationship Properties... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createRelationshipPropertiesTx( db, relationshipIds, relationshipPropertyIndexes );
             deleteIntFileReaderFiles( relationshipPropertyIndexes );
             deleteIntFileReaderFile( relationshipIds );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             return nodeIds;
         }
@@ -392,43 +392,43 @@ public class DataGenerator
                     .newGraphDatabase();
 
             System.out.printf( "Creating Temporary Node Label Files... " );
-            long startTime = System.currentTimeMillis();
+            Instant startTime = Instant.now();
             IntFileReader[] nodeLabelIndexes = Stream
                     .of( createNodeLabelIndexFiles() )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Node Labels... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createNodeLabels( db, nodeIds, nodeLabelIndexes );
             deleteIntFileReaderFiles( nodeLabelIndexes );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Mandatory Node Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createMandatoryNodeConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Mandatory Relationship Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createMandatoryRelationshipConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Uniqueness Constraints... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createUniquenessConstraints( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Schema Indexes... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             createSchemaIndexes( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Waiting For Indexes... " );
-            startTime = System.currentTimeMillis();
+            startTime = Instant.now();
             waitForSchemaIndexes( db );
-            System.out.println( durationToString( System.currentTimeMillis() - startTime ) );
+            System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
         }
         catch ( Exception e )
         {
@@ -512,8 +512,8 @@ public class DataGenerator
             return createRelationshipsCollocatedByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
-                    relationshipLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        relationshipLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -530,8 +530,8 @@ public class DataGenerator
             return createRelationshipsCollocatedByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
-                    relationshipLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        relationshipLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -776,8 +776,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -796,8 +796,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -930,8 +930,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -950,8 +950,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -1084,8 +1084,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected label locality: %s\nExpected one of: %s",
-                    labelLocality.name(),
-                    Arrays.toString( LabelLocality.values() ) ) );
+                                                        labelLocality.name(),
+                                                        Arrays.toString( LabelLocality.values() ) ) );
         }
     }
 
@@ -1162,33 +1162,33 @@ public class DataGenerator
     private void createMandatoryNodeConstraints( GraphDatabaseService db )
     {
         Stream.of( mandatoryNodeConstraints )
-                .forEach( def ->
-                {
-                    assertIsNonComposite( def );
-                    createMandatoryNodeConstraint( db, def.label(), def.keys()[0] );
-                } );
+              .forEach( def ->
+                        {
+                            assertIsNonComposite( def );
+                            createMandatoryNodeConstraint( db, def.label(), def.keys()[0] );
+                        } );
     }
 
     private void createMandatoryRelationshipConstraints( GraphDatabaseService db )
     {
         Stream.of( mandatoryRelationshipConstraints )
-                .forEach( def -> createMandatoryRelationshipConstraint( db, def.type(), def.key() ) );
+              .forEach( def -> createMandatoryRelationshipConstraint( db, def.type(), def.key() ) );
     }
 
     private void createUniquenessConstraints( GraphDatabaseService db )
     {
         Stream.of( uniqueConstraints )
-                .forEach( def ->
-                {
-                    assertIsNonComposite( def );
-                    createUniquenessConstraint( db, def.label(), def.keys()[0] );
-                } );
+              .forEach( def ->
+                        {
+                            assertIsNonComposite( def );
+                            createUniquenessConstraint( db, def.label(), def.keys()[0] );
+                        } );
     }
 
     private void createSchemaIndexes( GraphDatabaseService db )
     {
         Stream.of( schemaIndexes )
-                .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
+              .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
     }
 
     private void waitForSchemaIndexes( GraphDatabaseService db )
@@ -1223,7 +1223,7 @@ public class DataGenerator
     }
 
     public static void createMandatoryRelationshipConstraint( GraphDatabaseService db, RelationshipType type,
-            String key )
+                                                              String key )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -1260,7 +1260,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1274,7 +1274,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite key on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1329,7 +1329,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1343,7 +1343,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite key on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 

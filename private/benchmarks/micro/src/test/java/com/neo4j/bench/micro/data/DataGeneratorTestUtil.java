@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +38,7 @@ import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.BATCH;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
@@ -46,8 +47,6 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.number.IsCloseTo.closeTo;
-
-import static java.lang.String.format;
 
 public class DataGeneratorTestUtil
 {
@@ -170,7 +169,6 @@ public class DataGeneratorTestUtil
             {
                 db.shutdown();
             }
-
         }
     }
 

@@ -7,35 +7,35 @@ package com.neo4j.bench.macro.cli;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.ClientUtil;
-import com.neo4j.bench.client.database.Store;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.client.model.BenchmarkPlan;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.Plan;
-import com.neo4j.bench.client.model.Repository;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
+import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.BenchmarkConfig;
+import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.common.model.BenchmarkPlan;
+import com.neo4j.bench.common.model.BenchmarkTool;
+import com.neo4j.bench.common.model.BranchAndVersion;
+import com.neo4j.bench.common.model.Environment;
+import com.neo4j.bench.common.model.Java;
+import com.neo4j.bench.common.model.Neo4j;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.model.Plan;
+import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.common.model.TestRun;
+import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.measurement.Results;
@@ -59,8 +59,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
-import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
-import static com.neo4j.bench.macro.execution.Options.ExecutionMode;
+import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.load_csv_file_url_root;
@@ -354,9 +353,9 @@ public class RunWorkloadCommand implements Runnable
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigPath );
             }
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
-                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
-                                                 .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
-                                                 .removeSetting( load_csv_file_url_root );
+                                                                      .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
+                                                                      .withSetting( GraphDatabaseSettings.cypher_hints_error, "true" )
+                                                                      .removeSetting( load_csv_file_url_root );
             if ( executionMode.equals( ExecutionMode.PLAN ) )
             {
                 neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
@@ -442,7 +441,7 @@ public class RunWorkloadCommand implements Runnable
                 }
             }
             Instant finish = Instant.now();
-            String testRunId = ClientUtil.generateUniqueId();
+            String testRunId = BenchmarkUtil.generateUniqueId();
 
             TestRun testRun = new TestRun(
                     testRunId,

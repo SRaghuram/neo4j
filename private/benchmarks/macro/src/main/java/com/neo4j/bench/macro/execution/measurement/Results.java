@@ -6,10 +6,10 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.Units;
-import com.neo4j.bench.client.model.Metrics;
-import com.neo4j.bench.client.results.BenchmarkDirectory;
-import com.neo4j.bench.client.results.ForkDirectory;
+import com.neo4j.bench.common.model.Metrics;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Units;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -24,8 +24,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static com.neo4j.bench.client.Units.toAbbreviation;
-
+import static com.neo4j.bench.common.util.Units.toAbbreviation;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -46,7 +45,6 @@ public class Results
         Phase( String filename )
         {
             this.filename = filename;
-
         }
     }
 
@@ -85,8 +83,8 @@ public class Results
         List<Long> durations = new ArrayList<>();
         List<Long> rows = new ArrayList<>();
         benchmarkDirectory.measurementForks()
-            .stream()
-            .forEach( f -> visitResults( f, Results.Phase.MEASUREMENT, aggregateMeasurements( durations, rows ) ) );
+                          .stream()
+                          .forEach( f -> visitResults( f, Results.Phase.MEASUREMENT, aggregateMeasurements( durations, rows ) ) );
         return new Results(
                 AggregateMeasurement.calculateFrom( durations.stream().mapToLong( Long::longValue ).toArray() ),
                 AggregateMeasurement.calculateFrom( rows.stream().mapToLong( Long::longValue ).toArray() ),
@@ -119,10 +117,10 @@ public class Results
     private static TimeUnit smallestTimeUnit( BenchmarkDirectory benchmarkDirectory )
     {
         return benchmarkDirectory.measurementForks().stream()
-                .map( forkDirectory -> forkDirectory.findOrFail( Phase.MEASUREMENT.filename ) )
-                .map( Results::extractUnit )
-                .min( Results::compareTimeUnits )
-                .get();
+                                 .map( forkDirectory -> forkDirectory.findOrFail( Phase.MEASUREMENT.filename ) )
+                                 .map( Results::extractUnit )
+                                 .min( Results::compareTimeUnits )
+                                 .get();
     }
 
     private static int compareTimeUnits( TimeUnit tu1, TimeUnit tu2 )
@@ -176,12 +174,12 @@ public class Results
             }
             LineNumberReader reader = new LineNumberReader( Files.newBufferedReader( resultsFile ) );
             reader.lines()
-                .skip( 1 ) // skip header
-                .map( line -> line.split( SEPARATOR ) )
-                .forEach( row ->
-                {
-                    resultsVisitor.visitResultsRow( resultsFile, reader::getLineNumber, row );
-                 } );
+                  .skip( 1 ) // skip header
+                  .map( line -> line.split( SEPARATOR ) )
+                  .forEach( row ->
+                            {
+                                resultsVisitor.visitResultsRow( resultsFile, reader::getLineNumber, row );
+                            } );
         }
         catch ( IOException e )
         {
@@ -218,7 +216,7 @@ public class Results
     private static String makeHeader( TimeUnit unit )
     {
         return SCHEDULED_START + SEPARATOR + START + SEPARATOR + DURATION + "_" + toAbbreviation( unit ) + SEPARATOR
-                + ROWS;
+               + ROWS;
     }
 
     private static void assertValidHeader( String header )
