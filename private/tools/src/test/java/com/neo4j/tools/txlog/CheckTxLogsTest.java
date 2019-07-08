@@ -967,7 +967,7 @@ class CheckTxLogsTest
     {
         ensureLogExists( log );
         try ( StoreChannel channel = fs.write( log );
-              LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0 );
+              LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log );
               PhysicalFlushableChannel writableLogChannel = new PhysicalFlushableChannel( versionedChannel ) )
         {
             long offset = channel.size();
