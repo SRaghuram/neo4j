@@ -50,7 +50,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
             (CollectAggregator, c.arguments.head)
 
           case _: AggregatingFunction =>
-            throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function ${c.name} , use another runtime.")
+            throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function `${c.name}`, use another runtime.")
 
           case _ =>
             throw new SyntaxException(s"Unexpected function in aggregating function position: ${c.name}")

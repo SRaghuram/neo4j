@@ -16,8 +16,8 @@ object MorselBlacklist {
     val unsupport =
       logicalPlan.fold(Set[String]()) {
         //Queries containing these expression cant be handled by morsel runtime yet
-        case e: NestedPlanExpression =>
-          _ + e.toString
+        case _: NestedPlanExpression =>
+          _ + "Nested plan expressions"
 
         case _: ResolvedFunctionInvocation =>
           _ + "User-defined functions"
@@ -26,7 +26,7 @@ object MorselBlacklist {
           _ + (f.functionName.name+"()")
       }
     if (unsupport.nonEmpty) {
-      throw new CantCompileQueryException(s"Morsel does not yet support ${unsupport.mkString("[",",","]")}, use another runtime.")
+      throw new CantCompileQueryException(s"Morsel does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
     }
   }
 }
