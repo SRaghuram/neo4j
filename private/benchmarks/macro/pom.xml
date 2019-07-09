@@ -56,11 +56,6 @@
             <artifactId>benchmark-neo4j-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>commons-logging</groupId>
