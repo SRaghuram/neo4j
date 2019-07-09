@@ -18,7 +18,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
-import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.internal.helpers.AdvertisedSocketAddress
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -94,16 +94,16 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val refresh = Duration(1, TimeUnit.SECONDS)
     val cluster = mock[Cluster]
 
-    val List(seed1, seed2, seed3) = Seq.tabulate(3)(port => new SocketAddress("seedHost", port))
+    val List(seed1, seed2, seed3) = Seq.tabulate(3)(port => new AdvertisedSocketAddress("seedHost", port))
 
     val initialDiscoveryMembers = Seq(seed1, seed2, seed3).mkString(",")
     val initialDiscoveryMembersAsAddresses = Seq(seed1, seed2, seed3)
       .sorted(Ordering.comparatorToOrdering(InitialDiscoveryMembersResolver.advertisedSocketAddressComparator()))
       .map(resolvedAddress => Address("akka", system.name, resolvedAddress.getHostname, resolvedAddress.getPort))
 
-    val config = Config.newBuilder()
-      .set(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers)
-      .set(CausalClusteringSettings.cluster_binding_retry_timeout, refresh.length + "s")
+    val config = Config.builder()
+      .withSetting(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers)
+      .withSetting(CausalClusteringSettings.cluster_binding_retry_timeout, refresh.length + "s")
       .build()
     val resolver = NoOpHostnameResolver.resolver(config)
 

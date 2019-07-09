@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -77,8 +77,8 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
 
     private static CoreServerInfo coreServerInfo()
     {
-        SocketAddress raftServer = new SocketAddress( "hostname", 1234 );
-        SocketAddress catchupServer = new SocketAddress( "hostname", 1234 );
+        AdvertisedSocketAddress raftServer = new AdvertisedSocketAddress( "hostname", 1234 );
+        AdvertisedSocketAddress catchupServer = new AdvertisedSocketAddress( "hostname", 1234 );
         ClientConnectorAddresses clientConnectors = new ClientConnectorAddresses( Collections.emptyList() );
         Set<String> groups = Set.of();
         Set<DatabaseId> databaseIds = Set.of( databaseIdRepository.defaultDatabase() );
@@ -89,7 +89,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     private static ReadReplicaInfo readReplicaInfo()
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( List.of() );
-        SocketAddress catchupServerAddress = new SocketAddress( "hostname", 1234 );
+        AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 1234 );
         Set<String> groups = Set.of();
         Set<DatabaseId> databaseIds = Set.of( databaseIdRepository.defaultDatabase() );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
@@ -130,7 +130,7 @@ class FakeTopologyService extends LifecycleAdapter implements TopologyService
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         throw new CatchupAddressResolutionException( upstream );
     }

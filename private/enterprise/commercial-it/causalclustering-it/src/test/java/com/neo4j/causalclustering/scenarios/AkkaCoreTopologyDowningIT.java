@@ -39,14 +39,13 @@ import java.util.stream.IntStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
@@ -217,23 +216,21 @@ public class AkkaCoreTopologyDowningIT
 
     private TopologyServiceComponents createAndStart( Function<Config,RemoteMembersResolver> resolverFactory, int myPort, int... otherPorts ) throws Throwable
     {
+        Config config = Config.defaults();
+        config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + myPort );
         String initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
                 .mapToObj( port -> "localhost:" + port )
                 .collect( Collectors.joining( "," ) );
+        config.augment( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers );
+        BoltConnector boltConnector = new BoltConnector( "bolt" );
+        AdvertisedSocketAddress boltAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
+        config.augment( boltConnector.type.name(), "BOLT" );
+        config.augment( boltConnector.enabled.name(), "true" );
+        config.augment( boltConnector.listen_address.name(), boltAddress.toString() );
+        config.augment( boltConnector.advertised_address.name(), boltAddress.toString() );
 
-        BoltConnector boltConnector = BoltConnector.group( "bolt" );
-        SocketAddress boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
-
-        Config config = Config.newBuilder()
-                .set( CausalClusteringSettings.discovery_listen_address, "localhost:" + myPort )
-                .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
-                .set( boltConnector.enabled, TRUE )
-                .set( boltConnector.listen_address, boltAddress.toString() )
-                .set( boltConnector.advertised_address, boltAddress.toString() )
-                .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
-                .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG.toString() )
-                .build();
-
+        config.augment( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
+        config.augment( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG.toString() );
         LogProvider logProvider = NullLogProvider.getInstance();
 
         int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
@@ -297,11 +294,11 @@ public class AkkaCoreTopologyDowningIT
         }
 
         @Override
-        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
+        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<AdvertisedSocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
         {
             return dynamicPorts
                     .stream()
-                    .map( port -> new SocketAddress( "localhost", port ) )
+                    .map( port -> new AdvertisedSocketAddress( "localhost", port ) )
                     .sorted( InitialDiscoveryMembersResolver.advertisedSockedAddressComparator )
                     .map( transform )
                     .collect( Collectors.toCollection( collectionFactory ) );

@@ -21,10 +21,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-
-
 
 @ExtendWith( TestDirectoryExtension.class )
 public class Neo4jConfigTest

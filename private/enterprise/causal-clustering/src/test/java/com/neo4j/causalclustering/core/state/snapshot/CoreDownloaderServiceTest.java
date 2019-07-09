@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
 import org.neo4j.logging.LogProvider;
@@ -39,7 +39,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class CoreDownloaderServiceTest
 {
-    private final SocketAddress someMemberAddress = new SocketAddress( "localhost", 1234 );
+    private final AdvertisedSocketAddress someMemberAddress = new AdvertisedSocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( someMemberAddress );
     private final CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );

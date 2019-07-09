@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
-import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -251,7 +250,7 @@ public class DataGenerator
             long startTime = System.currentTimeMillis();
 
             Map<String,String> neo4jConfigMap = Neo4jConfigBuilder.fromFile( neo4jConfig ).build().toMap();
-            inserter = BatchInserters.inserter( DatabaseLayout.of( store.graphDbDirectory().toFile() ), Config.defaults( neo4jConfigMap ) );
+            inserter = BatchInserters.inserter( DatabaseLayout.of( store.graphDbDirectory().toFile() ), neo4jConfigMap );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed

@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.commons.lang.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionGuardException;
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.internal.helpers.HostnamePort;
@@ -92,6 +92,7 @@ import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket.DEFAULT_CONNECTOR_KEY;
 import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
+import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
@@ -148,12 +149,12 @@ public abstract class ProcedureInteractionTestBase<S>
     protected final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
     File securityLog;
 
-    Map<Setting<?>,String> defaultConfiguration() throws IOException
+    Map<String,String> defaultConfiguration() throws IOException
     {
         Path homeDir = Files.createTempDirectory( "logs" );
         securityLog = new File( homeDir.toFile(), "security.log" );
-        return Map.of( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
-                GraphDatabaseSettings.procedure_roles,
+        return stringMap( GraphDatabaseSettings.logs_directory.name(), homeDir.toAbsolutePath().toString(),
+                SecuritySettings.procedure_roles.name(),
                 "test.allowed*Procedure:role1;test.nestedAllowedFunction:role1;" +
                 "test.allowedFunc*:role1;test.*estedAllowedProcedure:role1" );
     }
@@ -164,7 +165,7 @@ public abstract class ProcedureInteractionTestBase<S>
         configuredSetup( defaultConfiguration() );
     }
 
-    void configuredSetup( Map<Setting<?>,String> config ) throws Throwable
+    void configuredSetup( Map<String,String> config ) throws Throwable
     {
         neo = setUpNeoServer( config );
         GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
@@ -210,7 +211,7 @@ public abstract class ProcedureInteractionTestBase<S>
         }
     }
 
-    protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<Setting<?>,String> config ) throws Throwable;
+    protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<String,String> config ) throws Throwable;
 
     @AfterEach
     public void tearDown() throws Throwable

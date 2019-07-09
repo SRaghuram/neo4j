@@ -17,8 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -34,7 +33,7 @@ public class TestTopology
     {
     }
 
-    private static ClientConnectorAddresses wrapAsClientConnectorAddresses( SocketAddress advertisedSocketAddress )
+    private static ClientConnectorAddresses wrapAsClientConnectorAddresses( AdvertisedSocketAddress advertisedSocketAddress )
     {
         return new ClientConnectorAddresses( singletonList( new ConnectorUri( bolt, advertisedSocketAddress ) ) );
     }
@@ -46,9 +45,9 @@ public class TestTopology
 
     public static CoreServerInfo addressesForCore( int id, boolean refuseToBeLeader, Set<DatabaseId> databaseIds )
     {
-        var raftServerAddress = new SocketAddress( "localhost", 3000 + id );
-        var catchupServerAddress = new SocketAddress( "localhost", 4000 + id );
-        var boltServerAddress = new SocketAddress( "localhost", 5000 + id );
+        var raftServerAddress = new AdvertisedSocketAddress( "localhost", 3000 + id );
+        var catchupServerAddress = new AdvertisedSocketAddress( "localhost", 4000 + id );
+        var boltServerAddress = new AdvertisedSocketAddress( "localhost", 5000 + id );
 
         return new CoreServerInfo( raftServerAddress, catchupServerAddress, wrapAsClientConnectorAddresses( boltServerAddress ),
                 Set.of( "core", "core" + id ), databaseIds, refuseToBeLeader );
@@ -56,23 +55,23 @@ public class TestTopology
 
     public static Config configFor( CoreServerInfo coreServerInfo )
     {
-        return Config.newBuilder()
-                .set( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer().toString() )
-                .set( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer().toString() )
-                .set( BoltConnector.group("bolt").listen_address, coreServerInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.group("bolt").enabled, String.valueOf( true ) )
-                .set( CausalClusteringSettings.server_groups, String.join( ",", coreServerInfo.groups() ) )
-                .set( CausalClusteringSettings.refuse_to_be_leader, String.valueOf( coreServerInfo.refusesToBeLeader() ) )
+        return Config.builder()
+                .withSetting( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer().toString() )
+                .withSetting( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer().toString() )
+                .withSetting( "dbms.connector.bolt.listen_address", coreServerInfo.connectors().boltAddress().toString() )
+                .withSetting( "dbms.connector.bolt.enabled", String.valueOf( true ) )
+                .withSetting( CausalClusteringSettings.server_groups, String.join( ",", coreServerInfo.groups() ) )
+                .withSetting( CausalClusteringSettings.refuse_to_be_leader, String.valueOf( coreServerInfo.refusesToBeLeader() ) )
                 .build();
     }
 
     public static Config configFor( ReadReplicaInfo readReplicaInfo )
     {
-        return Config.newBuilder()
-                .set( BoltConnector.group("bolt").listen_address, readReplicaInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.group("bolt").enabled, String.valueOf( true ) )
-                .set( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer().toString() )
-                .set( CausalClusteringSettings.server_groups, String.join( ",", readReplicaInfo.groups() ) )
+        return Config.builder()
+                .withSetting( "dbms.connector.bolt.listen_address", readReplicaInfo.connectors().boltAddress().toString() )
+                .withSetting( "dbms.connector.bolt.enabled", String.valueOf( true ) )
+                .withSetting( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer().toString() )
+                .withSetting( CausalClusteringSettings.server_groups, String.join( ",", readReplicaInfo.groups() ) )
                 .build();
     }
 
@@ -83,9 +82,9 @@ public class TestTopology
 
     public static ReadReplicaInfo addressesForReadReplica( int id, Set<DatabaseId> databaseIds )
     {
-        var clientConnectorSocketAddress = new SocketAddress( "localhost", 6000 + id );
+        var clientConnectorSocketAddress = new AdvertisedSocketAddress( "localhost", 6000 + id );
         var clientConnectorAddresses = new ClientConnectorAddresses( List.of( new ConnectorUri( bolt, clientConnectorSocketAddress ) ) );
-        var catchupSocketAddress = new SocketAddress( "localhost", 4000 + id );
+        var catchupSocketAddress = new AdvertisedSocketAddress( "localhost", 4000 + id );
 
         return new ReadReplicaInfo( clientConnectorAddresses, catchupSocketAddress, Set.of( "replica", "replica" + id ), databaseIds );
     }

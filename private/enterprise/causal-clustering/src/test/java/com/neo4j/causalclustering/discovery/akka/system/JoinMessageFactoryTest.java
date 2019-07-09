@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 class JoinMessageFactoryTest
 {
@@ -125,7 +125,7 @@ class JoinMessageFactoryTest
     private static class OverrideRemoteMembersResolver implements RemoteMembersResolver
     {
         @Override
-        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
+        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<AdvertisedSocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
         {
             return null;
         }
@@ -141,7 +141,7 @@ class JoinMessageFactoryTest
     {
 
         @Override
-        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
+        public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<AdvertisedSocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
         {
             return null;
         }

@@ -35,12 +35,11 @@ class CommercialNeoServerTest
     @Test
     void checkExpectedDatabaseDirectory()
     {
-        Config config = Config.newBuilder().set( GraphDatabaseSettings.SERVER_DEFAULTS )
-                .set( mode, Mode.SINGLE.name() )
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().getAbsolutePath() )
-                .set( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "http" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "https" ).listen_address, "localhost:0" )
+        Config config = Config.builder().withServerDefaults().withSetting( mode, Mode.SINGLE.name() )
+                .withSetting( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().getAbsolutePath() )
+                .withSetting( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" )
+                .withSetting( new BoltConnector( "http" ).listen_address.name(), "localhost:0" )
+                .withSetting( new BoltConnector( "https" ).listen_address.name(), "localhost:0" )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         CommercialNeoServer server = new CommercialNeoServer( config, dependencies );

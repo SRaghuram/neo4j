@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import java.io.IOException;
 import java.util.Objects;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -35,7 +35,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException
+    public void performFullBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
         BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
 
@@ -57,7 +57,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException
+    public void performIncrementalBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
         BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
 
@@ -82,7 +82,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         backupDelegator.stop();
     }
 
-    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, SocketAddress address ) throws BackupExecutionException
+    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
         try
         {
@@ -119,7 +119,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
     }
 
-    private void catchup( SocketAddress fromAddress, StoreId storeId, DatabaseLayout databaseLayout ) throws BackupExecutionException
+    private void catchup( AdvertisedSocketAddress fromAddress, StoreId storeId, DatabaseLayout databaseLayout ) throws BackupExecutionException
     {
         try
         {
@@ -133,11 +133,11 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 
     private static class BackupInfo
     {
-        final SocketAddress remoteAddress;
+        final AdvertisedSocketAddress remoteAddress;
         final StoreId remoteStoreId;
         final StoreId localStoreId;
 
-        BackupInfo( SocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId )
+        BackupInfo( AdvertisedSocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId )
         {
             this.remoteAddress = remoteAddress;
             this.remoteStoreId = remoteStoreId;

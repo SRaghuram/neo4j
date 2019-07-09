@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -141,19 +141,19 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return readReplicaTopologiesByDatabase.getOrDefault( databaseId, DatabaseReadReplicaTopology.EMPTY );
     }
 
-    SocketAddress retrieveCatchupServerAddress( MemberId memberId )
+    AdvertisedSocketAddress retrieveCatchupServerAddress( MemberId memberId )
     {
         CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );
         if ( coreServerInfo != null )
         {
-            SocketAddress address = coreServerInfo.catchupServer();
+            AdvertisedSocketAddress address = coreServerInfo.catchupServer();
             log.debug( "Catchup address for core %s was %s", memberId, address );
             return coreServerInfo.catchupServer();
         }
         ReadReplicaInfo readReplicaInfo = readReplicasByMemberId.get( memberId );
         if ( readReplicaInfo != null )
         {
-            SocketAddress address = readReplicaInfo.catchupServer();
+            AdvertisedSocketAddress address = readReplicaInfo.catchupServer();
             log.debug( "Catchup address for read replica %s was %s", memberId, address );
             return address;
         }

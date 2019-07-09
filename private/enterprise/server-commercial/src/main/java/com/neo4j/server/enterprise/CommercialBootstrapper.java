@@ -9,10 +9,11 @@ import com.neo4j.causalclustering.core.CausalClusterConfigurationValidator;
 import com.neo4j.server.database.CommercialGraphFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GroupSettingValidator;
+import org.neo4j.configuration.ConfigurationValidator;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.NeoServer;
@@ -33,10 +34,10 @@ public class CommercialBootstrapper extends CommunityBootstrapper
     }
 
     @Override
-    protected List<Class<? extends GroupSettingValidator>> configurationValidators()
+    protected Collection<ConfigurationValidator> configurationValidators()
     {
-        List<Class<? extends GroupSettingValidator>> validators = new ArrayList<>( super.configurationValidators() );
-        validators.add( CausalClusterConfigurationValidator.class );
+        List<ConfigurationValidator> validators = new ArrayList<>( super.configurationValidators() );
+        validators.add( new CausalClusterConfigurationValidator() );
         return validators;
     }
 }

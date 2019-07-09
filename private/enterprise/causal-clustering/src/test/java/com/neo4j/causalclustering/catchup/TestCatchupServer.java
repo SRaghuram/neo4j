@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
@@ -41,7 +41,7 @@ class TestCatchupServer extends Server
     TestCatchupServer( CatchupServerHandler catchupServerHandler, LogProvider logProvider, ExecutorService executor )
     {
         super( childInitializer( catchupServerHandler, logProvider ), null, logProvider, logProvider,
-                new SocketAddress( "localhost", 0 ), "fake-catchup-server", executor,
+                new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server", executor,
                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 

@@ -20,7 +20,6 @@ import org.neo4j.test.extension.Inject;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
 @ClusterExtension
@@ -33,7 +32,7 @@ class WillNotBecomeLeaderIT
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
-            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE );
+            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
 
     @Test
     void clusterShouldNotElectNewLeader() throws Exception

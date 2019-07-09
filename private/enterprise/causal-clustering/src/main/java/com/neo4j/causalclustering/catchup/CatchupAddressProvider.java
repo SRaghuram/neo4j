@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 /**
@@ -24,32 +24,32 @@ public interface CatchupAddressProvider
      * leader address.
      * @throws CatchupAddressResolutionException if the provider was unable to find an address to this location.
      */
-    SocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
+    AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
 
     /**
      * @return The address to a secondary location that are not required to be up to date. If there are multiple secondary locations it is recommended to
      * do some simple load balancing for returned addresses. This is to avoid re-sending failed requests to the same instance immediately.
      * @throws CatchupAddressResolutionException if the provider was unable to find an address to this location.
      */
-    SocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
+    AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException;
 
     class SingleAddressProvider implements CatchupAddressProvider
     {
-        private final SocketAddress socketAddress;
+        private final AdvertisedSocketAddress socketAddress;
 
-        public SingleAddressProvider( SocketAddress socketAddress )
+        public SingleAddressProvider( AdvertisedSocketAddress socketAddress )
         {
             this.socketAddress = socketAddress;
         }
 
         @Override
-        public SocketAddress primary( DatabaseId databaseId )
+        public AdvertisedSocketAddress primary( DatabaseId databaseId )
         {
             return socketAddress;
         }
 
         @Override
-        public SocketAddress secondary( DatabaseId databaseId )
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId )
         {
             return socketAddress;
         }
@@ -65,13 +65,13 @@ public interface CatchupAddressProvider
         }
 
         @Override
-        public SocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
             return upstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }
 
         @Override
-        public SocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
             return upstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }
@@ -95,7 +95,7 @@ public interface CatchupAddressProvider
         }
 
         @Override
-        public SocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress primary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
             try
             {
@@ -109,7 +109,7 @@ public interface CatchupAddressProvider
         }
 
         @Override
-        public SocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+        public AdvertisedSocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
         {
             return secondaryUpstreamAddressLookup.lookupAddressForDatabase( databaseId );
         }

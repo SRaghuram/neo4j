@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )

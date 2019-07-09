@@ -9,8 +9,8 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
-import org.neo4j.configuration.SettingImpl;
-import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
@@ -18,7 +18,7 @@ import org.neo4j.kernel.impl.locking.StatementLocks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 
 import static java.util.Objects.requireNonNull;
-import static org.neo4j.configuration.SettingValueParsers.BOOL;
+import static org.neo4j.configuration.Settings.setting;
 
 /**
  * A {@link StatementLocksFactory} that created {@link DeferringStatementLocks} based on the given
@@ -28,13 +28,13 @@ import static org.neo4j.configuration.SettingValueParsers.BOOL;
 public class DeferringStatementLocksFactory implements StatementLocksFactory
 {
     @ServiceProvider
-    public static class Configuration implements SettingsDeclaration
+    public static class Configuration implements LoadableConfig
     {
         @Internal
         @Description( "Enable deferring of locks to commit time. This feature weakens the isolation level. " +
                 "It can result in both domain and storage level inconsistencies." )
         public static final Setting<Boolean> deferred_locks_enabled =
-                SettingImpl.newBuilder( "unsupported.dbms.deferred_locks.enabled", BOOL, false ).build();
+                setting( "unsupported.dbms.deferred_locks.enabled", Settings.BOOLEAN, Settings.FALSE );
     }
 
     private Locks locks;

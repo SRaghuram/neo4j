@@ -44,7 +44,6 @@ import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
@@ -244,10 +243,10 @@ public class AkkaDiscoverySSLEngineProviderIT
     public void shouldConnectWithHostnameVerificationAndClientAuth() throws Throwable
     {
         Config serverConfig = aConfig( "localhost", testDir );
-        serverConfig.set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE );
+        serverConfig.augment( SSL_POLICY_CONFIG.client_auth, "require" );
 
         Config clientConfig = aConfig( "localhost", testDir );
-        clientConfig.set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE );
+        clientConfig.augment( SSL_POLICY_CONFIG.client_auth, "require" );
 
         trust( serverConfig, clientConfig );
         trust( clientConfig, serverConfig );

@@ -50,7 +50,7 @@ public class ConfigurableIOLimiter implements IOLimiter
         this.pauseNanos = pauseNanos;
         Integer iops = config.get( GraphDatabaseSettings.check_point_iops_limit );
         updateConfiguration( iops );
-        config.addListener( GraphDatabaseSettings.check_point_iops_limit,
+        config.registerDynamicUpdateListener( GraphDatabaseSettings.check_point_iops_limit,
                 ( prev, update ) -> updateConfiguration( update ) );
     }
 

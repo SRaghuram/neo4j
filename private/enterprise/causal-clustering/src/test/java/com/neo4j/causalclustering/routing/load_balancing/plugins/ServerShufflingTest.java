@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -43,7 +43,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 class ServerShufflingTest
 {
@@ -54,17 +53,17 @@ class ServerShufflingTest
         var delegate = mock( LoadBalancingPlugin.class );
 
         var routers = List.of(
-                new SocketAddress( "route", 1 ),
-                new SocketAddress( "route", 2 ) );
+                new AdvertisedSocketAddress( "route", 1 ),
+                new AdvertisedSocketAddress( "route", 2 ) );
         var writers = List.of(
-                new SocketAddress( "write", 3 ),
-                new SocketAddress( "write", 4 ),
-                new SocketAddress( "write", 5 ) );
+                new AdvertisedSocketAddress( "write", 3 ),
+                new AdvertisedSocketAddress( "write", 4 ),
+                new AdvertisedSocketAddress( "write", 5 ) );
         var readers = List.of(
-                new SocketAddress( "read", 6 ),
-                new SocketAddress( "read", 7 ),
-                new SocketAddress( "read", 8 ),
-                new SocketAddress( "read", 9 ) );
+                new AdvertisedSocketAddress( "read", 6 ),
+                new AdvertisedSocketAddress( "read", 7 ),
+                new AdvertisedSocketAddress( "read", 8 ),
+                new AdvertisedSocketAddress( "read", 9 ) );
 
         var ttl = 1000;
         var result = new RoutingResult(
@@ -132,7 +131,7 @@ class ServerShufflingTest
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
 
         serverPoliciesPlugin.init( coreTopologyService, leaderService, new TestDatabaseIdRepository(), NullLogProvider.getInstance(),
-                Config.defaults( CausalClusteringSettings.load_balancing_shuffle, TRUE ) );
+                Config.defaults( CausalClusteringSettings.load_balancing_shuffle, "true" ) );
 
         var routers = coreMembers.values().stream().map( ClientConnector::boltAddress ).collect( toList() );
         var leader = coreMembers.get( leaderId );

@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
@@ -14,7 +13,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_lenient_create_relationship -> TRUE
+    GraphDatabaseSettings.cypher_lenient_create_relationship -> "true"
   )
 
   // No CLG decision on this AFAIK, so not TCK material

@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class PreElectionIT
 {
@@ -31,7 +30,7 @@ public class PreElectionIT
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
             .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
-            .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, TRUE );
+            .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, "true" );
 
     @Test
     public void shouldActuallyStartAClusterWithPreVoting() throws Exception
@@ -45,7 +44,7 @@ public class PreElectionIT
     {
         clusterRule
                 .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE );
+                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
         clusterRule.startCluster();
     }
 
@@ -93,7 +92,7 @@ public class PreElectionIT
         // given
         clusterRule
                 .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE );
+                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
         Cluster cluster = clusterRule.startCluster();
         CoreClusterMember oldLeader = cluster.awaitLeader();
 

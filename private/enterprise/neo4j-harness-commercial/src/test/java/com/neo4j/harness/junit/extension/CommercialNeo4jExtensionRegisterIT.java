@@ -17,6 +17,7 @@ import java.time.ZoneOffset;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -48,8 +49,8 @@ class CommercialNeo4jExtensionRegisterIT
             .withFolder( createTempDirectory() )
             .withFixture( "CREATE (u:User)" )
             .withConfig( GraphDatabaseSettings.db_timezone.name(), LogTimeZone.SYSTEM.toString() )
-            .withConfig( GraphDatabaseSettings.legacy_certificates_directory,
-                    getRelativePath( getSharedTestTemporaryFolder(), GraphDatabaseSettings.legacy_certificates_directory) )
+            .withConfig( LegacySslPolicyConfig.certificates_directory.name(),
+                    getRelativePath( getSharedTestTemporaryFolder(), LegacySslPolicyConfig.certificates_directory ) )
             .withFixture( graphDatabaseService ->
             {
                 try ( Transaction tx = graphDatabaseService.beginTx() )
@@ -94,7 +95,7 @@ class CommercialNeo4jExtensionRegisterIT
     @Test
     void customExtensionWorkingDirectory( Neo4j neo4j )
     {
-        assertThat( neo4j.config().get( GraphDatabaseSettings.data_directory ).toFile().getParentFile().getName(), startsWith( REGISTERED_TEMP_PREFIX ) );
+        assertThat( neo4j.config().get( GraphDatabaseSettings.data_directory ).getParentFile().getName(), startsWith( REGISTERED_TEMP_PREFIX ) );
     }
 
     @Test
@@ -117,7 +118,7 @@ class CommercialNeo4jExtensionRegisterIT
     {
         GraphDatabaseAPI api = (GraphDatabaseAPI) databaseService;
         Config config = api.getDependencyResolver().resolveDependency( Config.class );
-        File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
+        File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
         return new String( Files.readAllBytes( new File( dataDirectory, file ).toPath() ), UTF_8 );
     }
 

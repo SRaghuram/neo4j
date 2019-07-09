@@ -17,6 +17,7 @@ import java.util.Optional;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -50,7 +51,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.configuration.LayoutConfig.of;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
@@ -164,7 +164,7 @@ class RestoreDatabaseCommandIT
         // then
         DatabaseManagementService managementService =
                 new TestDatabaseManagementServiceBuilder( toStoreLayout.storeDirectory() )
-                        .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                        .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                         .build();
         GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -182,8 +182,10 @@ class RestoreDatabaseCommandIT
     {
         StoreLayout toStoreLayout = directory.storeLayout( "new" );
         StoreLayout fromStoreLayout = directory.storeLayout( "old" );
+        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath() );
         File customTxLogDirectory = directory.directory( "customLogicalLog" );
-        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath(),  customTxLogDirectory.getAbsolutePath() );
+        String customTransactionLogDirectory = customTxLogDirectory.getAbsolutePath();
+        config.augmentDefaults( transaction_logs_root_path, customTransactionLogDirectory );
 
         DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
         DatabaseLayout toLayout = directory.databaseLayout( toStoreLayout.storeDirectory(), of( config ) );
@@ -216,7 +218,8 @@ class RestoreDatabaseCommandIT
         DatabaseLayout testLayout = directory.databaseLayout("testdatabase");
         File relativeLogDirectory = directory.directory( "relativeDirectory" );
 
-        Config config = configWith( directory.absolutePath().getAbsolutePath(), relativeLogDirectory.toString() );
+        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+        config.augment( transaction_logs_root_path, relativeLogDirectory.getAbsolutePath() );
 
         createDbAt( fromPath, 10 );
 
@@ -229,14 +232,6 @@ class RestoreDatabaseCommandIT
     private static Config configWith( String dataDirectory )
     {
         return Config.defaults( stringMap( GraphDatabaseSettings.databases_root_path.name(), dataDirectory ) );
-    }
-
-    private static Config configWith( String dataDirectory, String transactionDir )
-    {
-        return Config.defaults( stringMap(
-                GraphDatabaseSettings.databases_root_path.name(), dataDirectory,
-                transaction_logs_root_path.name(), transactionDir
-        ) );
     }
 
     private void createDbAt( File fromPath, int nodesToCreate )
@@ -256,7 +251,7 @@ class RestoreDatabaseCommandIT
     private static GraphDatabaseService createDatabase( File databasePath )
     {
         File storeDir = databasePath.getParentFile();
-        managementService = new DatabaseManagementServiceBuilder( storeDir ).setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+        managementService = new DatabaseManagementServiceBuilder( storeDir ).setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() )
                 .setConfig( default_database, databasePath.getName() )
                 .build();
@@ -268,7 +263,7 @@ class RestoreDatabaseCommandIT
         File storeDir = databaseLayout.getStoreLayout().storeDirectory();
         String txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath();
         managementService = new DatabaseManagementServiceBuilder( storeDir ).setConfig(
-                        OnlineBackupSettings.online_backup_enabled, FALSE )
+                        OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                         .setConfig( transaction_logs_root_path, txRootDirectory )
                         .setConfig( default_database, databaseLayout.getDatabaseName() )
                         .build();

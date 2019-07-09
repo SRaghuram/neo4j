@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.graphdb.Node
@@ -346,6 +345,6 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   // Need to override so that grpah.execute will not throw an exception
   override def databaseConfig(): collection.Map[Setting[_], String] = {
-    Map(GraphDatabaseSettings.cypher_hints_error -> FALSE)
+    Map(GraphDatabaseSettings.cypher_hints_error -> "false")
   }
 }

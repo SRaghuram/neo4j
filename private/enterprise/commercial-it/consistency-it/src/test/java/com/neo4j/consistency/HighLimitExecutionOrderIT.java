@@ -5,16 +5,9 @@
  */
 package com.neo4j.consistency;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.neo4j.consistency.checking.full.ExecutionOrderIntegrationTest;
-import org.neo4j.graphdb.config.Setting;
-
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
 {
@@ -23,13 +16,5 @@ public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
     protected String getRecordFormatName()
     {
         return HighLimitWithSmallRecords.NAME;
-    }
-
-    @Override
-    protected Map<Setting<?>,String> getSettings()
-    {
-        Map<Setting<?>, String> settings = new HashMap<>( super.getSettings() );
-        settings.put( OnlineBackupSettings.online_backup_enabled, FALSE );
-        return settings;
     }
 }

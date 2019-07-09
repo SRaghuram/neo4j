@@ -6,7 +6,7 @@
 package com.neo4j.metrics.database;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.metrics.MetricsSettings;
 import com.neo4j.metrics.output.EventReporter;
 import com.neo4j.metrics.source.causalclustering.CatchUpMetrics;
 import com.neo4j.metrics.source.causalclustering.CoreMetrics;

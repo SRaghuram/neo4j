@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
-public class AdvertisedSocketAddressMarshalTest extends BaseMarshalTest<SocketAddress>
+public class AdvertisedSocketAddressMarshalTest extends BaseMarshalTest<AdvertisedSocketAddress>
 {
     public AdvertisedSocketAddressMarshalTest()
     {
-        super( new SocketAddress( "host", 879 ), new AdvertisedSocketAddressMarshal() );
+        super( new AdvertisedSocketAddress( "host", 879 ), new AdvertisedSocketAddressMarshal() );
     }
 }

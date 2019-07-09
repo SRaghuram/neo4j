@@ -17,9 +17,9 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -34,9 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
+import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
@@ -61,7 +62,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldContainRoutingProcedure()
     {
-        SocketAddress advertisedBoltAddress = new SocketAddress( "neo4j.com", 7687 );
+        AdvertisedSocketAddress advertisedBoltAddress = new AdvertisedSocketAddress( "neo4j.com", 7687 );
         db = startDb( advertisedBoltAddress );
 
         RoutingResult expectedResult = newRoutingResult( advertisedBoltAddress );
@@ -81,7 +82,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     void shouldCallRoutingProcedureWithValidDatabaseName()
     {
         String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-        SocketAddress advertisedBoltAddress = new SocketAddress( "database.neo4j.com", 12345 );
+        AdvertisedSocketAddress advertisedBoltAddress = new AdvertisedSocketAddress( "database.neo4j.com", 12345 );
         db = startDb( advertisedBoltAddress );
 
         RoutingResult expectedResult = newRoutingResult( advertisedBoltAddress );
@@ -116,13 +117,14 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         return startDb( null );
     }
 
-    private GraphDatabaseAPI startDb( SocketAddress advertisedBoltAddress )
+    private GraphDatabaseAPI startDb( AdvertisedSocketAddress advertisedBoltAddress )
     {
-        BoltConnector connector = BoltConnector.group( CONNECTOR_NAME );
+        BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
         DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
+        builder.setConfig( connector.type, BOLT.toString() );
         builder.setConfig( connector.encryption_level, OPTIONAL.toString() );
         builder.setConfig( connector.listen_address, "localhost:0" );
         if ( advertisedBoltAddress != null )
@@ -133,9 +135,9 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static RoutingResult newRoutingResult( SocketAddress advertisedBoltAddress )
+    private static RoutingResult newRoutingResult( AdvertisedSocketAddress advertisedBoltAddress )
     {
-        List<SocketAddress> addresses = singletonList( advertisedBoltAddress );
+        List<AdvertisedSocketAddress> addresses = singletonList( advertisedBoltAddress );
         Duration ttl = Config.defaults().get( routing_ttl );
         return new RoutingResult( addresses, addresses, addresses, ttl.getSeconds() );
     }

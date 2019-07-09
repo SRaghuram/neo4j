@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -65,7 +65,7 @@ class BackupStrategyWrapperTest
     private Path availableFreshBackupLocation;
     private Path availableOldBackupLocation;
     private final Config config = Config.defaults();
-    private final SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
+    private final AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
     private final PageCache pageCache = mock( PageCache.class );
     private final LogProvider logProvider = mock( LogProvider.class );
     private final Log log = mock( Log.class );

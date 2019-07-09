@@ -19,8 +19,6 @@ import java.util.Set;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.graphdb.config.Setting;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
@@ -64,26 +62,27 @@ public class ClusterRuleIT
 
         for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
         {
-            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.discovery_listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.transaction_listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.raft_listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, OnlineBackupSettings.online_backup_listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, BoltConnector.group( "bolt" ).listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, HttpConnector.group( "http" ).listen_address ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.discovery_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.transaction_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.raft_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, OnlineBackupSettings.online_backup_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, new BoltConnector( "bolt" ).listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, new HttpConnector( "http" ).listen_address.name() ) );
         }
 
         for ( ReadReplica readReplica : cluster.readReplicas() )
         {
-            portsUsed.add( getPortFromSetting( readReplica, CausalClusteringSettings.transaction_listen_address ) );
-            portsUsed.add( getPortFromSetting( readReplica, OnlineBackupSettings.online_backup_listen_address ) );
-            portsUsed.add( getPortFromSetting( readReplica, BoltConnector.group( "bolt" ).listen_address ) );
-            portsUsed.add( getPortFromSetting( readReplica, HttpConnector.group( "http" ).listen_address ) );
+            portsUsed.add( getPortFromSetting( readReplica, CausalClusteringSettings.transaction_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( readReplica, OnlineBackupSettings.online_backup_listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( readReplica, new BoltConnector( "bolt" ).listen_address.name() ) );
+            portsUsed.add( getPortFromSetting( readReplica, new HttpConnector( "http" ).listen_address.name() ) );
         }
         return portsUsed;
     }
 
-    private static int getPortFromSetting( ClusterMember coreClusterMember, Setting<SocketAddress> setting )
+    private static int getPortFromSetting( ClusterMember coreClusterMember, String settingName )
     {
-        return coreClusterMember.settingValue( setting ).getPort();
+        String setting = coreClusterMember.settingValue( settingName );
+        return Integer.valueOf( setting.split( ":" )[1] );
     }
 }

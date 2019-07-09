@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.values.AnyValue;

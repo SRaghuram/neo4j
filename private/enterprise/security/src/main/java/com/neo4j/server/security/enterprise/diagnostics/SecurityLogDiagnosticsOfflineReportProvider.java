@@ -44,7 +44,7 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
     {
         if ( classifiers.contains( "logs" ) )
         {
-            File securityLog = config.get( SecuritySettings.security_log_filename ).toFile();
+            File securityLog = config.get( SecuritySettings.security_log_filename );
             if ( fs.fileExists( securityLog ) )
             {
                 return newDiagnosticsRotatingFile( "logs/security.log", fs, securityLog );

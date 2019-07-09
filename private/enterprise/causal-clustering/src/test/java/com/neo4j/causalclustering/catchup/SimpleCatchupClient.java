@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StreamToDiskProvider;
 
 import java.io.File;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -38,7 +38,7 @@ class SimpleCatchupClient implements AutoCloseable
     private final TestCatchupServer catchupServer;
     private final DatabaseId databaseId;
 
-    private final SocketAddress from;
+    private final AdvertisedSocketAddress from;
     private final StoreId correctStoreId;
     private final StreamToDiskProvider streamToDiskProvider;
     private final PageCache clientPageCache;
@@ -105,9 +105,9 @@ class SimpleCatchupClient implements AutoCloseable
         return graphDb.getDependencyResolver().resolveDependency( CheckPointer.class );
     }
 
-    private SocketAddress getCatchupServerAddress()
+    private AdvertisedSocketAddress getCatchupServerAddress()
     {
-        return new SocketAddress( "localhost", catchupServer.address().getPort() );
+        return new AdvertisedSocketAddress( "localhost", catchupServer.address().getPort() );
     }
 
     private PageCache createPageCache()

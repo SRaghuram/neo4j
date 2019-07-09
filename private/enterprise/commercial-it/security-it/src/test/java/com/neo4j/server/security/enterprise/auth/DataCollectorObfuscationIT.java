@@ -14,18 +14,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
 public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<CommercialLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

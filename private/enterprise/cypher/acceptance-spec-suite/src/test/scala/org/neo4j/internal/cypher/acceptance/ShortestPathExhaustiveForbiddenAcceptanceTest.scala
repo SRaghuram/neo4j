@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{ExhaustiveShortestPathForbiddenException => InternalExhaustiveShortestPathForbiddenException}
 import org.neo4j.graphdb.Node
@@ -19,7 +18,7 @@ import scala.collection.mutable
 class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   override def databaseConfig(): Map[Setting[_], String] =
-    Map(GraphDatabaseSettings.forbid_exhaustive_shortestpath -> TRUE)
+    Map(GraphDatabaseSettings.forbid_exhaustive_shortestpath -> "true")
 
   test("should fail at run time when using the shortest path fallback") {
     // when

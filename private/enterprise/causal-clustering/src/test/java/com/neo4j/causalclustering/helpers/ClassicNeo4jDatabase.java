@@ -29,7 +29,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
 public class ClassicNeo4jDatabase

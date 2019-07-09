@@ -22,7 +22,6 @@ import java.util.List;
 import org.neo4j.cli.AdminTool;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -57,9 +56,9 @@ public class BackupTestUtil
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
             ClusterMember clusterMember, String databaseName ) throws IOException
     {
-        Config config = Config.newBuilder().fromConfig( clusterMember.config() )
+        Config config = Config.fromSettings( clusterMember.config().getRaw() )
+                .withConnectorsDisabled()
                 .build();
-        ConfigUtils.disableAllConnectors( config );
         DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
         RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseIdRepository.get( databaseName ), true );
         restoreDatabaseCommand.execute();

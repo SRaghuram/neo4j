@@ -9,6 +9,7 @@ import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -44,7 +45,7 @@ class SetConfigValueProcedureTest
         Throwable rootCause = Exceptions.rootCause(
                 assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
-        assertEquals( "Setting `unknown.setting.indeed` not found", rootCause.getMessage() );
+        assertEquals( "Unknown setting: unknown.setting.indeed", rootCause.getMessage() );
     }
 
     @Test
@@ -54,7 +55,7 @@ class SetConfigValueProcedureTest
         Throwable rootCause = Exceptions.rootCause(
                 assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
-        assertEquals( "Setting 'dbms.directories.plugins' is not dynamic and can not be changed at runtime", rootCause.getMessage() );
+        assertEquals( "Setting is not dynamic and can not be changed at runtime", rootCause.getMessage() );
     }
 
     @Test
@@ -62,7 +63,7 @@ class SetConfigValueProcedureTest
     {
         Throwable rootCause = Exceptions.rootCause(
                 assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
-        assertTrue( rootCause instanceof IllegalArgumentException );
-        assertEquals( "must be 'true' or 'false'", rootCause.getMessage() );
+        assertTrue( rootCause instanceof InvalidSettingException );
+        assertEquals( "Bad value 'invalid' for setting 'dbms.logs.query.enabled': must be 'true' or 'false'", rootCause.getMessage() );
     }
 }

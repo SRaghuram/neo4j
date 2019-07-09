@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 
 import java.io.IOException;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.StoreId;
@@ -36,12 +36,12 @@ class BackupDelegator extends LifecycleAdapter
         this.storeCopyClient = storeCopyClient;
     }
 
-    void copy( SocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
+    void copy( AdvertisedSocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
     {
         remoteStore.copy( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true );
     }
 
-    void tryCatchingUp( SocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
+    void tryCatchingUp( AdvertisedSocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
     {
         try
         {
@@ -65,7 +65,7 @@ class BackupDelegator extends LifecycleAdapter
         catchUpClient.stop();
     }
 
-    public StoreId fetchStoreId( SocketAddress fromAddress ) throws StoreIdDownloadFailedException
+    public StoreId fetchStoreId( AdvertisedSocketAddress fromAddress ) throws StoreIdDownloadFailedException
     {
         return storeCopyClient.fetchStoreId( fromAddress );
     }

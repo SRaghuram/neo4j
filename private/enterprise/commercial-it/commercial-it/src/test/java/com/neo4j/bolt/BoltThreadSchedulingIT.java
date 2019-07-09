@@ -42,8 +42,9 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
 public class BoltThreadSchedulingIT
@@ -146,10 +147,11 @@ public class BoltThreadSchedulingIT
     {
         DatabaseManagementServiceBuilder dbFactory = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() );
         managementService = dbFactory
-                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
-                .setConfig( BoltConnector.group( "bolt" ).thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
-                .setConfig( BoltConnector.group( "bolt" ).thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
+                .setConfig( new BoltConnector( "bolt" ).type, BOLT.name() )
+                .setConfig( new BoltConnector( "bolt" ).enabled, TRUE )
+                .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( new BoltConnector( "bolt" ).thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
+                .setConfig( new BoltConnector( "bolt" ).thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );

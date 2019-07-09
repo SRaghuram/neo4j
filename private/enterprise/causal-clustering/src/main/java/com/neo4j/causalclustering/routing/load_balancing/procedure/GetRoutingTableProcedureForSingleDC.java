@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
@@ -73,7 +73,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return new RoutingResult( routeEndpoints, writeEndpoints, readEndpoints, timeToLiveMillis );
     }
 
-    private List<SocketAddress> routeEndpoints( DatabaseId databaseId )
+    private List<AdvertisedSocketAddress> routeEndpoints( DatabaseId databaseId )
     {
         var routers = coreServersFor( databaseId )
                 .stream()
@@ -84,7 +84,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return routers;
     }
 
-    private List<SocketAddress> writeEndpoints( DatabaseId databaseId )
+    private List<AdvertisedSocketAddress> writeEndpoints( DatabaseId databaseId )
     {
         var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseId );
         if ( optionalLeaderAddress.isEmpty() )
@@ -94,7 +94,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
         return optionalLeaderAddress.stream().collect( toList() );
     }
 
-    private List<SocketAddress> readEndpoints( DatabaseId databaseId )
+    private List<AdvertisedSocketAddress> readEndpoints( DatabaseId databaseId )
     {
         var readReplicas = readReplicasFor( databaseId )
                 .stream()
@@ -102,13 +102,13 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
                 .collect( toList() );
 
         var allowReadsOnFollowers = readReplicas.isEmpty() || config.get( cluster_allow_reads_on_followers );
-        var coreReadEndPoints = allowReadsOnFollowers ? coreReadEndPoints( databaseId ) : Stream.<SocketAddress>empty();
+        var coreReadEndPoints = allowReadsOnFollowers ? coreReadEndPoints( databaseId ) : Stream.<AdvertisedSocketAddress>empty();
         var readEndPoints = Stream.concat( readReplicas.stream(), coreReadEndPoints ).collect( toList() );
         Collections.shuffle( readEndPoints );
         return readEndPoints;
     }
 
-    private Stream<SocketAddress> coreReadEndPoints( DatabaseId databaseId )
+    private Stream<AdvertisedSocketAddress> coreReadEndPoints( DatabaseId databaseId )
     {
         var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseId );
         var coreServerInfos = coreServersFor( databaseId );

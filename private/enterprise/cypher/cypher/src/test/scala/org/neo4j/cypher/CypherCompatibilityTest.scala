@@ -6,7 +6,6 @@
 package org.neo4j.cypher
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.Status
@@ -95,7 +94,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should not fail if asked to execute query with runtime=compiled on simple query") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
       db =>
         db.execute("MATCH (n:Movie) RETURN n")
         db.execute("CYPHER runtime=compiled MATCH (n:Movie) RETURN n")
@@ -104,7 +103,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should fail if asked to execute query with runtime=compiled instead of falling back to interpreted if hint errors turned on") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
       db =>
         intercept[QueryExecutionException](
           db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
@@ -113,7 +112,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should not fail if asked to execute query with runtime=compiled and instead fallback to interpreted and return a warning if hint errors turned off") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> FALSE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "false") {
       db =>
         val result = db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
         shouldHaveWarning(result, Status.Statement.RuntimeUnsupportedWarning)

@@ -8,7 +8,7 @@ package com.neo4j.metrics.output;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 import com.codahale.metrics.jmx.ObjectNameFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.metrics.MetricsSettings;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -22,13 +22,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteInterval;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteServer;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEndpoint;
+import static com.neo4j.metrics.MetricsSettings.csvEnabled;
+import static com.neo4j.metrics.MetricsSettings.graphiteEnabled;
+import static com.neo4j.metrics.MetricsSettings.graphiteInterval;
+import static com.neo4j.metrics.MetricsSettings.graphiteServer;
+import static com.neo4j.metrics.MetricsSettings.metricsPrefix;
+import static com.neo4j.metrics.MetricsSettings.prometheusEnabled;
+import static com.neo4j.metrics.MetricsSettings.prometheusEndpoint;
 import static javax.management.ObjectName.quote;
 
 public class EventReporterBuilder

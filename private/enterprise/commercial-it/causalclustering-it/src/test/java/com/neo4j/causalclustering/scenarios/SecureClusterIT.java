@@ -21,8 +21,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -36,7 +37,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.emptyMap;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -63,20 +64,22 @@ class SecureClusterIT
     {
         // given
         String sslPolicyName = "cluster";
-        SslPolicyConfig policyConfig = PemSslPolicyConfig.group( sslPolicyName );
+        BaseSslPolicyConfig policyConfig = new PemSslPolicyConfig( sslPolicyName );
 
         Map<String,String> coreParams = MapUtil.stringMap(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
-                GraphDatabaseSettings.auth_enabled.name(), TRUE,
+                GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
-                policyConfig.base_directory.name(), "certificates/cluster"
+                policyConfig.base_directory.name(), "certificates/cluster",
+                policyConfig.format.name(), PEM.name()
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
-                policyConfig.base_directory.name(), "certificates/cluster"
+                policyConfig.base_directory.name(), "certificates/cluster",
+                policyConfig.format.name(), PEM.name()
         );
 
         int noOfCoreMembers = 3;

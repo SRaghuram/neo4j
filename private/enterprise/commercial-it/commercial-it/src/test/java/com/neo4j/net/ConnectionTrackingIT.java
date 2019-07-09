@@ -37,8 +37,7 @@ import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.bolt.v2.messaging.Neo4jPackV2;
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.configuration.connectors.HttpsConnector;
+import org.neo4j.configuration.Settings;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -73,8 +72,6 @@ import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
@@ -99,11 +96,10 @@ public class ConnectionTrackingIT
 
     @ClassRule
     public static final Neo4jRule neo4j = new CommercialNeo4jRule()
-            .withConfig( auth_enabled, TRUE )
-            .withConfig( HttpConnector.group( "http" ).enabled, TRUE )
-            .withConfig( HttpsConnector.group( "https" ).enabled, TRUE )
+            .withConfig( auth_enabled, "true" )
+            .withConfig( "dbms.connector.https.enabled", "true" )
             .withConfig( webserver_max_threads, "50" ) // higher than the amount of concurrent requests tests execute
-            .withConfig( online_backup_enabled, FALSE );
+            .withConfig( online_backup_enabled, Settings.FALSE );
 
     private static long dummyNodeId;
 

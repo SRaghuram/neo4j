@@ -126,7 +126,7 @@ class ConfigurableIOLimiterTest
         createIOLimiter( 0 );
 
         // Then set a limit of 100 IOPS
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName() );
+        config.updateDynamicSetting( GraphDatabaseSettings.check_point_iops_limit.name(), "100", ORIGIN );
 
         // Do 10*100 = 1000 IOs real quick, when we're limited to 100 IOPS.
         long stamp = IOLimiter.INITIAL_STAMP;
@@ -136,7 +136,7 @@ class ConfigurableIOLimiterTest
         assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
 
         // Change back to unlimited
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
+        config.updateDynamicSetting( GraphDatabaseSettings.check_point_iops_limit.name(), "-1", ORIGIN );
 
         // And verify it's respected
         assertUnlimited();
@@ -150,7 +150,7 @@ class ConfigurableIOLimiterTest
         // Disable the limiter...
         limiter.disableLimit();
         // ...while a dynamic configuration update happens
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
+        config.updateDynamicSetting( GraphDatabaseSettings.check_point_iops_limit.name(), "100", ORIGIN );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
@@ -169,7 +169,7 @@ class ConfigurableIOLimiterTest
         // Disable the limiter...
         limiter.disableLimit();
         // ...while a dynamic configuration update happens
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
+        config.updateDynamicSetting( GraphDatabaseSettings.check_point_iops_limit.name(), "-1", ORIGIN );
         // The limiter must still be disabled...
         assertUnlimited();
         // ...and re-enabling it...
@@ -177,7 +177,7 @@ class ConfigurableIOLimiterTest
         // ...must maintain the limiter disabled.
         assertUnlimited();
         // Until it is re-enabled.
-        config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
+        config.updateDynamicSetting( GraphDatabaseSettings.check_point_iops_limit.name(), "100", ORIGIN );
         long stamp = IOLimiter.INITIAL_STAMP;
         repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
         assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );

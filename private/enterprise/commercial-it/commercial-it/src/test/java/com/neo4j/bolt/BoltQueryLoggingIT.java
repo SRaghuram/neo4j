@@ -18,7 +18,9 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
@@ -29,8 +31,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_filename;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class BoltQueryLoggingIT
 {
@@ -41,15 +41,16 @@ public class BoltQueryLoggingIT
     {
         String tmpDir = ServerTestUtils.createTempDir().getAbsolutePath();
         this.neo4j = new Neo4jRule()
-            .withConfig( ServerSettings.http_logging_enabled, TRUE )
-            .withConfig( GraphDatabaseSettings.legacy_certificates_directory.name(), tmpDir )
-            .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
+            .withConfig( ServerSettings.http_logging_enabled, "true" )
+            .withConfig( LegacySslPolicyConfig.certificates_directory.name(), tmpDir )
+            .withConfig( GraphDatabaseSettings.auth_enabled, "false" )
             .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
-            .withConfig( GraphDatabaseSettings.log_queries, TRUE)
-            .withConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-            .withConfig( BoltConnector.group( "bolt" ).advertised_address, "localhost:0" )
-            .withConfig( BoltConnector.group( "bolt" ).encryption_level, "DISABLED" )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( GraphDatabaseSettings.log_queries, "true")
+            .withConfig( new BoltConnector( "bolt" ).type, "BOLT" )
+            .withConfig( new BoltConnector( "bolt" ).enabled, "true" )
+            .withConfig( new BoltConnector( "bolt" ).address, "localhost:0" )
+            .withConfig( new BoltConnector( "bolt" ).encryption_level, "DISABLED" )
+            .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 
     @Test
@@ -100,7 +101,7 @@ public class BoltQueryLoggingIT
 
         // *** THEN ***
 
-        Path queriesLog = neo4j.getConfig().get( log_queries_filename );
+        Path queriesLog = neo4j.getConfig().get( log_queries_filename ).toPath();
         List<String> lines = Files.readAllLines( queriesLog );
         assertThat( lines, hasSize( 5 ) );
         for ( String line : lines )

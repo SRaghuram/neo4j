@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -44,8 +44,8 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 
 class StoreDownloaderTest
 {
-    private final SocketAddress primaryAddress = new SocketAddress( "primary", 1 );
-    private final SocketAddress secondaryAddress = new SocketAddress( "secondary", 2 );
+    private final AdvertisedSocketAddress primaryAddress = new AdvertisedSocketAddress( "primary", 1 );
+    private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final DatabaseId databaseId = databaseIdRepository.get( "target" );

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -35,8 +36,7 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.function.Predicates.awaitEx;
 
 @ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
@@ -59,7 +59,7 @@ class BackupReadReplicaIT
                 .withNumberOfCoreMembers( 3 )
                 .withSharedCoreParam( online_backup_enabled, FALSE )
                 .withNumberOfReadReplicas( 1 )
-                .withSharedReadReplicaParam( online_backup_enabled, TRUE );
+                .withSharedReadReplicaParam( online_backup_enabled, Settings.TRUE );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

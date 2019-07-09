@@ -10,7 +10,6 @@ import java.io.{File, PrintWriter}
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -875,7 +874,7 @@ order by a.COL1""".format(a, b))
 
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> "0",
-    GraphDatabaseSettings.cypher_compiler_tracing -> TRUE
+    GraphDatabaseSettings.cypher_compiler_tracing -> "true"
   )
 
   case class PlanningListener(planRequests: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty) extends TimingCompilationTracer.EventListener {
@@ -952,7 +951,7 @@ order by a.COL1""".format(a, b))
     val old = new TestCommercialDatabaseManagementServiceBuilder(new File( "target/readonly" )).build()
     old.shutdown()
     val managementService = new TestCommercialDatabaseManagementServiceBuilder( new File( "target/readonly" ))
-      .setConfig(GraphDatabaseSettings.read_only, TRUE)
+      .setConfig(GraphDatabaseSettings.read_only, "true")
       .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {

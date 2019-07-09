@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -58,7 +58,7 @@ public class TransactionBackupServiceProvider
     {
         if ( config.get( OnlineBackupSettings.online_backup_enabled ) )
         {
-            SocketAddress backupAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
+            ListenSocketAddress backupAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
             logProvider.getLog( TransactionBackupServiceProvider.class ).info( "Binding backup service on address %s", backupAddress );
             Server catchupServer = CatchupServerBuilder.builder()
                     .catchupServerHandler( catchupServerHandler )

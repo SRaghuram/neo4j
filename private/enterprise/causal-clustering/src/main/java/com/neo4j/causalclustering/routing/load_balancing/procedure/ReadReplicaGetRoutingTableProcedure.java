@@ -9,8 +9,8 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
@@ -27,9 +27,9 @@ public class ReadReplicaGetRoutingTableProcedure extends SingleInstanceGetRoutin
     }
 
     @Override
-    protected RoutingResult createRoutingResult( SocketAddress address, long routingTableTtl )
+    protected RoutingResult createRoutingResult( AdvertisedSocketAddress address, long routingTableTtl )
     {
-        List<SocketAddress> addresses = singletonList( address );
+        List<AdvertisedSocketAddress> addresses = singletonList( address );
         // read replicas do not expose any writers
         return new RoutingResult( addresses, emptyList(), addresses, routingTableTtl );
     }

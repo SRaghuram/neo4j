@@ -23,9 +23,9 @@ import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -51,7 +51,6 @@ import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
 import static com.neo4j.bench.client.util.Args.concatArgs;
 import static com.neo4j.bench.client.util.Args.splitArgs;
 import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @Command( name = "run-export", description = "runs benchmarks and exports results as JSON" )
 public class RunExportCommand implements Runnable
@@ -229,9 +228,9 @@ public class RunExportCommand implements Runnable
     private String triggeredBy;
 
     static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfigBuilder.empty()
-                                                            .withSetting( BoltConnector.group( "bolt" ).enabled, FALSE )
-                                                            .withSetting( HttpConnector.group( "http" ).enabled, FALSE )
-                                                            .withSetting( HttpConnector.group( "https" ).enabled, FALSE )
+                                                            .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                                                            .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                                                            .withSetting( new HttpConnector( "https" ).enabled, "false" )
                                                             .build();
 
     @Override

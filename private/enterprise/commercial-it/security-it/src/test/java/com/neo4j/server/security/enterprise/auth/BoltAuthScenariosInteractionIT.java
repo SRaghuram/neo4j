@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.impl.util.ValueUtils;
@@ -29,7 +28,7 @@ class BoltAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<Bo
     }
 
     @Override
-    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<Setting<?>,String> config )
+    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<String,String> config )
     {
         return new BoltInteraction( config,
                 () -> new UncloseableDelegatingFileSystemAbstraction( fileSystemRule ) );

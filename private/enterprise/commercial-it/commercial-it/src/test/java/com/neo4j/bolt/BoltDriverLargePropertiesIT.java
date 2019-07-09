@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
@@ -29,7 +30,6 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.Values.parameters;
 
 @RunWith( Parameterized.class )
@@ -37,7 +37,7 @@ public class BoltDriverLargePropertiesIT
 {
     @ClassRule
     public static final Neo4jRule db = new Neo4jRule()
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
     private static Driver driver;
 

@@ -12,7 +12,6 @@ import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 public class CommercialClusterInProcessRunner
@@ -31,7 +30,7 @@ public class CommercialClusterInProcessRunner
                             .withReplicas( 3 )
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
-                            .withConfig( GraphDatabaseSettings.auth_enabled.name(), TRUE )
+                            .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
                             .withConfig( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
                             .withConfig( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
                             .build();

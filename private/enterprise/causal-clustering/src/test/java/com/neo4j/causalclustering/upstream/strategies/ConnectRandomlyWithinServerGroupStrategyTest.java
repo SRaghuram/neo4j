@@ -57,7 +57,8 @@ class ConnectRandomlyWithinServerGroupStrategyTest
     {
         // given
         String groupName = "groupName";
-        Config config = Config.defaults(CausalClusteringSettings.server_groups, groupName );
+        Config config = Config.defaults();
+        config.augment( CausalClusteringSettings.server_groups, groupName );
 
         // and
         ConnectRandomlyWithinServerGroupStrategy connectRandomlyWithinServerGroupStrategy = new ConnectRandomlyWithinServerGroupStrategy();

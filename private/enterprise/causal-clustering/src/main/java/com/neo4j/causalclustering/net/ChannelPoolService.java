@@ -21,7 +21,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
@@ -55,7 +56,7 @@ public class ChannelPoolService implements Lifecycle
         this.poolHandler = channelPoolHandler;
     }
 
-    public CompletableFuture<PooledChannel> acquire( SocketAddress address )
+    public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress address )
     {
         sharedService.lock();
         try

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -73,7 +73,7 @@ class GetRoutingTableProcedureForMultiDCTest
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseIdRepository.get( databaseName ) ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
-        var addresses = List.of( new SocketAddress( "localhost", 12345 ) );
+        var addresses = List.of( new AdvertisedSocketAddress( "localhost", 12345 ) );
         var result = new RoutingResult( addresses, addresses, addresses, 100 );
         when( plugin.run( anyString(), any( MapValue.class ) ) ).thenReturn( result );
         var proc = newProcedure( plugin, databaseManager );

@@ -38,7 +38,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     protected static final BoltChannel BOLT_CHANNEL = BoltTestUtil.newTestBoltChannel( "conn-v0-test-boltchannel-id" );
 
     @RegisterExtension
-    static final SessionExtension env = new SessionExtension( TestCommercialDatabaseManagementServiceBuilder::new );
+    static final SessionExtension env = new SessionExtension( new TestCommercialDatabaseManagementServiceBuilder() );
 
     protected DatabaseManagementService managementService()
     {

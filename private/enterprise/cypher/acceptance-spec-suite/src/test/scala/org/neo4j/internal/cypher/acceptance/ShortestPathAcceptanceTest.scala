@@ -7,7 +7,6 @@ package org.neo4j.internal.cypher.acceptance
 
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.graphdb.{Node, Path}
@@ -21,7 +20,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   var nodeD: Node = _
 
   override def databaseConfig() = Map(
-    GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE,
+    GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "false",
     GraphDatabaseSettings.cypher_idp_solver_duration_threshold -> "10000")
   // Added an increased duration to make up for the test running in parallel, should preferably be solved in a different way
 

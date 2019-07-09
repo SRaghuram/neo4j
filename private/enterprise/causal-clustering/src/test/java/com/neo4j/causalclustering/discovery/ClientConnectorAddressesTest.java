@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import org.junit.Test;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;
@@ -23,12 +23,12 @@ public class ClientConnectorAddressesTest
     {
         // given
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( asList(
-                new ConnectorUri( bolt, new SocketAddress( "host", 1 ) ),
-                new ConnectorUri( http, new SocketAddress( "host", 2 ) ),
-                new ConnectorUri( https, new SocketAddress( "host", 3 ) ),
-                new ConnectorUri( bolt, new SocketAddress( "::1", 4 ) ),
-                new ConnectorUri( http, new SocketAddress( "::", 5 ) ),
-                new ConnectorUri( https, new SocketAddress( "fe80:1:2::3", 6 ) ) )
+                new ConnectorUri( bolt, new AdvertisedSocketAddress( "host", 1 ) ),
+                new ConnectorUri( http, new AdvertisedSocketAddress( "host", 2 ) ),
+                new ConnectorUri( https, new AdvertisedSocketAddress( "host", 3 ) ),
+                new ConnectorUri( bolt, new AdvertisedSocketAddress( "::1", 4 ) ),
+                new ConnectorUri( http, new AdvertisedSocketAddress( "::", 5 ) ),
+                new ConnectorUri( https, new AdvertisedSocketAddress( "fe80:1:2::3", 6 ) ) )
         );
 
         String expectedString = "bolt://host:1,http://host:2,https://host:3,bolt://[::1]:4,http://[::]:5,https://[fe80:1:2::3]:6";
@@ -51,8 +51,8 @@ public class ClientConnectorAddressesTest
     {
         // given
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( asList(
-                new ConnectorUri( bolt, new SocketAddress( "host", 1 ) ),
-                new ConnectorUri( http, new SocketAddress( "host", 2 ) )
+                new ConnectorUri( bolt, new AdvertisedSocketAddress( "host", 1 ) ),
+                new ConnectorUri( http, new AdvertisedSocketAddress( "host", 2 ) )
         ) );
 
         // when

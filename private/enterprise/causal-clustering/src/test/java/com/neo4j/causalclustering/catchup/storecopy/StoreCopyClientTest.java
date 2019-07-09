@@ -37,7 +37,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -87,7 +87,7 @@ class StoreCopyClientTest
     private StoreCopyClient subject;
 
     // params
-    private final SocketAddress expectedAdvertisedAddress = new SocketAddress( "host", 1234 );
+    private final AdvertisedSocketAddress expectedAdvertisedAddress = new AdvertisedSocketAddress( "host", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( expectedAdvertisedAddress );
     private final StoreId expectedStoreId = new StoreId( 1, 2, 3, 4, 5 );
     private final StoreFileStreamProvider expectedStoreFileStream = mock( StoreFileStreamProvider.class );
@@ -118,7 +118,7 @@ class StoreCopyClientTest
     private void mockClient( ApplicationProtocol protocol ) throws Exception
     {
         catchupClient = new MockCatchupClient( protocol, v3Client );
-        when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
     }
 
     @TestWithCatchupProtocols

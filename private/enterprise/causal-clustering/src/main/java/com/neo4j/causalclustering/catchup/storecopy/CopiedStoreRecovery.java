@@ -9,12 +9,10 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -56,16 +54,10 @@ public class CopiedStoreRecovery extends LifecycleAdapter
 
         StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance() );
         Optional<String> storeVersion = storeVersionCheck.storeVersion();
-        if ( databaseLayout.getDatabaseName().equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
-        {
-            // TODO: System database does not support older formats, remove this when it does!
-            config = Config.newBuilder().fromConfig( config ).set( record_format, Standard.LATEST_NAME ).build();
-        }
-        else if ( storeVersion.isPresent() )
+        if ( storeVersion.isPresent() )
         {
             StoreVersion version = storeVersionCheck.versionInformation( storeVersion.get() );
             String configuredVersion = storeVersionCheck.configuredVersion();
-
             if ( configuredVersion != null && !version.isCompatibleWith( storeVersionCheck.versionInformation( configuredVersion ) ) )
             {
                 throw new RuntimeException( failedToStartMessage( config ) );

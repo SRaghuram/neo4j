@@ -27,6 +27,7 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.Validators;
 
+import static org.neo4j.configuration.Config.fromFile;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static picocli.CommandLine.Command;
@@ -49,10 +50,9 @@ class UnbindFromClusterCommand extends AbstractCommand
 
     private static Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
-        return Config.newBuilder()
-                .fromFileNoThrow( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .set( GraphDatabaseSettings.neo4j_home, homeDir.toString() )
-                .build();
+        return fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
+                .withNoThrowOnFileLoadFailure()
+                .withHome( homeDir ).build();
     }
 
     @Override
@@ -63,8 +63,8 @@ class UnbindFromClusterCommand extends AbstractCommand
             Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
             DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
             DatabaseId databaseId = databaseIdRepository.get( database );
-            File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
-            File databasesRoot = config.get( databases_root_path ).toFile();
+            File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
+            File databasesRoot = config.get( databases_root_path );
             DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseId.name() );
 
             boolean hasDatabase = true;

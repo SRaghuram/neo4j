@@ -9,41 +9,34 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoad
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
 
+import java.util.Collections;
 import java.util.Map;
+import javax.annotation.Nonnull;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConfigUtils;
-import org.neo4j.configuration.GroupSettingValidator;
-import org.neo4j.graphdb.config.Setting;
+import org.neo4j.configuration.ConfigurationValidator;
+import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 
-public class CausalClusterConfigurationValidator implements GroupSettingValidator
+public class CausalClusterConfigurationValidator implements ConfigurationValidator
 {
     @Override
-    public String getPrefix()
+    public Map<String,String> validate( @Nonnull Config config, @Nonnull Log log ) throws InvalidSettingException
     {
-        return "causal_clustering";
-    }
-
-    @Override
-    public String getDescription()
-    {
-        return "Validates causal clustering settings";
-    }
-
-    @Override
-    public void validate( Map<Setting<?>,Object> values, Config config )
-    {
+        // Make sure mode is CC
         Mode mode = config.get( CommercialEditionSettings.mode );
         if ( mode.equals( Mode.CORE ) || mode.equals( Mode.READ_REPLICA ) )
         {
             validateInitialDiscoveryMembers( config );
             validateBoltConnector( config );
-            LoadBalancingPluginLoader.validate( config, null );
+            validateLoadBalancing( config, log );
             validateDeclaredClusterSizes( config );
         }
+
+        return Collections.emptyMap();
     }
 
     private void validateDeclaredClusterSizes( Config config )
@@ -53,16 +46,21 @@ public class CausalClusterConfigurationValidator implements GroupSettingValidato
 
         if ( runtime > startup )
         {
-            throw new IllegalArgumentException( String.format( "'%s' must be set greater than or equal to '%s'",
+            throw new InvalidSettingException( String.format( "'%s' must be set greater than or equal to '%s'",
                     minimum_core_cluster_size_at_formation.name(), minimum_core_cluster_size_at_runtime.name() ) );
         }
     }
 
+    private void validateLoadBalancing( Config config, Log log )
+    {
+        LoadBalancingPluginLoader.validate( config, log );
+    }
+
     private void validateBoltConnector( Config config )
     {
-        if ( ConfigUtils.getEnabledBoltConnectors( config ).isEmpty() )
+        if ( config.enabledBoltConnectors().isEmpty() )
         {
-            throw new IllegalArgumentException( "A Bolt connector must be configured to run a cluster" );
+            throw new InvalidSettingException( "A Bolt connector must be configured to run a cluster" );
         }
     }
 
@@ -70,9 +68,9 @@ public class CausalClusterConfigurationValidator implements GroupSettingValidato
     {
         DiscoveryType discoveryType = config.get( CausalClusteringSettings.discovery_type );
         discoveryType.requiredSettings().forEach( setting -> {
-            if ( !config.isExplicitlySet( setting ) )
+            if ( !config.isConfigured( setting ) )
             {
-                throw new IllegalArgumentException( String.format( "Missing value for '%s', which is mandatory with '%s=%s'",
+                throw new InvalidSettingException( String.format( "Missing value for '%s', which is mandatory with '%s=%s'",
                         setting.name(), CausalClusteringSettings.discovery_type.name(), discoveryType ) );
             }
         } );

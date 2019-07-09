@@ -25,7 +25,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -38,12 +37,12 @@ import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
@@ -77,7 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
@@ -255,7 +254,7 @@ class BackupRetriesIT
     private OnlineBackupContext buildBackupContext()
     {
         Config config = Config.defaults();
-        config.set( catch_up_client_inactivity_timeout, Duration.ofSeconds( 30 ) );
+        config.augment( catch_up_client_inactivity_timeout, "30s" );
 
         return OnlineBackupContext.builder()
                 .withAddress( backupAddress( db ) )
@@ -265,13 +264,13 @@ class BackupRetriesIT
                 .build();
     }
 
-    private static SocketAddress backupAddress( GraphDatabaseAPI db )
+    private static AdvertisedSocketAddress backupAddress( GraphDatabaseAPI db )
     {
         HostnamePort address = db.getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class )
                 .getLocalAddress( BACKUP_SERVER_NAME );
 
-        return new SocketAddress( address.getHost(), address.getPort() );
+        return new AdvertisedSocketAddress( address.getHost(), address.getPort() );
     }
 
     private static String randomString()

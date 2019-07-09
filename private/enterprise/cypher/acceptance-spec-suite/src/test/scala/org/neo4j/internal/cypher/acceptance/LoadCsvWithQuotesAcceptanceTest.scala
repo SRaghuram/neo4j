@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.PrintWriter
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.csv.reader.MissingEndQuoteException
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -51,7 +50,7 @@ class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWi
   }
 
   test("import rows with messy quotes using legacy mode") {
-    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> TRUE) { db =>
+    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> "true") { db =>
       val urls = csvUrls({
         writer =>
           writer.println("name,x")
@@ -75,7 +74,7 @@ class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWi
   }
 
   test("import rows with messy quotes using rfc4180 mode") {
-    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> FALSE) { db =>
+    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> "false") { db =>
       val urls = csvUrls({
         writer =>
           writer.println("name,x")
@@ -97,7 +96,7 @@ class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWi
   }
 
   test("fail to import rows with java quotes when in rfc4180 mode") {
-    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> FALSE) { db =>
+    runWithConfig(GraphDatabaseSettings.csv_legacy_quote_escaping -> "false") { db =>
       val urls = csvUrls({
         writer =>
           writer.println("name,x")

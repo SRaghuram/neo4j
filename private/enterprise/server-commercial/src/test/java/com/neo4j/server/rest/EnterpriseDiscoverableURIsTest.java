@@ -19,7 +19,6 @@ import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 class EnterpriseDiscoverableURIsTest
 {
@@ -27,10 +26,11 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeBoltRoutingIfCore()
     {
         // Given
-        BoltConnector bolt = BoltConnector.group( "honestJakesBoltConnector" );
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( bolt.enabled, TRUE )
+        BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );
+        Config config = Config.builder()
+                .withSetting( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
+                .withSetting( bolt.enabled, "true" )
+                .withSetting( bolt.type, BoltConnector.ConnectorType.BOLT.name() )
                 .build();
 
         // When
@@ -45,14 +45,15 @@ class EnterpriseDiscoverableURIsTest
     void shouldGrabPortFromRegisterIfSetTo0()
     {
         // Given
-        BoltConnector bolt = BoltConnector.group( "honestJakesBoltConnector" );
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( bolt.enabled, TRUE )
-                .set( bolt.listen_address, ":0" )
+        BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );
+        Config config = Config.builder()
+                .withSetting( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
+                .withSetting( bolt.enabled, "true" )
+                .withSetting( bolt.type, BoltConnector.ConnectorType.BOLT.name() )
+                .withSetting( bolt.listen_address, ":0" )
                 .build();
         ConnectorPortRegister ports = new ConnectorPortRegister();
-        ports.register( bolt.name(), new InetSocketAddress( 1337 ) );
+        ports.register( bolt.key(), new InetSocketAddress( 1337 ) );
 
         // When
         Map<String,Object> asd = toMap(

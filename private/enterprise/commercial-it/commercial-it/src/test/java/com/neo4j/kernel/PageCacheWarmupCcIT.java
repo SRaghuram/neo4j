@@ -20,6 +20,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
@@ -27,8 +28,6 @@ import org.neo4j.util.concurrent.BinaryLatch;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
 {
@@ -36,11 +35,11 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     public ClusterRule clusterRule = new ClusterRule()
             .withNumberOfReadReplicas( 0 )
             .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
-            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, Settings.TRUE )
             .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
-            .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? FALSE : TRUE )
+            .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? "false" : "true" )
             .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE )
+            .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, Settings.TRUE )
             .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )
             .withSharedReadReplicaParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY );
 

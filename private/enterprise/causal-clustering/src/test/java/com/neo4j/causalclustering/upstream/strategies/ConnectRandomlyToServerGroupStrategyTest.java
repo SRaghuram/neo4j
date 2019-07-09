@@ -62,7 +62,8 @@ class ConnectRandomlyToServerGroupStrategyTest
 
         // and
         LogProvider logProvider = NullLogProvider.getInstance();
-        Config config = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, "firstGroup" );
+        Config config = Config.defaults();
+        config.augment( CausalClusteringSettings.connect_randomly_to_server_group_strategy, "firstGroup" );
         TopologyService topologyService = new TopologyServiceThatPrioritisesItself( myself, "firstGroup" );
         connectRandomlyToServerGroupStrategy.inject( topologyService, config, logProvider, myself );
 

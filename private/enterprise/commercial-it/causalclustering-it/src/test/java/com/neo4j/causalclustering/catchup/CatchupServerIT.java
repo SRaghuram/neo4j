@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
@@ -64,7 +65,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
@@ -99,9 +99,7 @@ class CatchupServerIT
     {
         temporaryDirectory = testDirectory.directory( "temp" );
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setFileSystem( fs )
-                .setConfig( auth_enabled, TRUE )
-                .build();
+                .setFileSystem( fs ).setConfig( auth_enabled, Settings.TRUE ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );

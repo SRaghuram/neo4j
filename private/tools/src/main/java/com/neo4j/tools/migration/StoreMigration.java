@@ -11,6 +11,7 @@ import java.io.IOException;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.helpers.Args;
@@ -47,7 +48,6 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 
@@ -76,16 +76,15 @@ public class StoreMigration
 
     private static Config getMigrationConfig( File workingDirectory )
     {
-        return Config.newBuilder()
-                .set( GraphDatabaseSettings.allow_upgrade, TRUE )
-                .set( logs_directory, workingDirectory.getAbsolutePath() )
-                .build();
+        return Config.builder().withSetting( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
+                               .withSetting( logs_directory, workingDirectory.getAbsolutePath() )
+                               .build();
     }
 
     public static void run( final FileSystemAbstraction fs, final File storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
     {
         StoreLogService logService = StoreLogService.withUserLogProvider( userLogProvider )
-                .withInternalLog( config.get( store_internal_log_path ).toFile() ).build( fs );
+                .withInternalLog( config.get( store_internal_log_path ) ).build( fs );
 
         LifeSupport life = new LifeSupport();
 

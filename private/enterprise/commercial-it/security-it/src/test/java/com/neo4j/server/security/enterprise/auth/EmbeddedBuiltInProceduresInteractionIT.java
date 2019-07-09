@@ -16,7 +16,6 @@ import java.util.Set;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -48,7 +47,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Override
-    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -78,7 +78,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream )
     {
         throw new RuntimeException( "Unimplemented" );
     }
@@ -97,8 +97,8 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
 
     private static CoreServerInfo coreServerInfo( String... groupNames )
     {
-        SocketAddress anyRaftAddress = new SocketAddress( "hostname", 1234 );
-        SocketAddress anyCatchupServer = new SocketAddress( "hostname", 5678 );
+        AdvertisedSocketAddress anyRaftAddress = new AdvertisedSocketAddress( "hostname", 1234 );
+        AdvertisedSocketAddress anyCatchupServer = new AdvertisedSocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
         Set<String> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
@@ -108,7 +108,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     private static ReadReplicaInfo readReplicaInfo( String... groupNames )
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
-        SocketAddress catchupServerAddress = new SocketAddress( "hostname", 2468 );
+        AdvertisedSocketAddress catchupServerAddress = new AdvertisedSocketAddress( "hostname", 2468 );
         Set<String> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );

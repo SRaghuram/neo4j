@@ -5,13 +5,13 @@
  */
 package com.neo4j.backup.impl;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 interface BackupStrategy extends Lifecycle
 {
-    void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException;
+    void performIncrementalBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException;
 
-    void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address ) throws BackupExecutionException;
+    void performFullBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException;
 }

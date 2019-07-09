@@ -24,7 +24,8 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
@@ -46,7 +47,7 @@ public class LocalNetworkPlatform
         {
             log.info( "BEGIN start" );
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
-            SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
+            ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", SOME_BULLSHIT_PORT );
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
             server = new Server( serverProtocolInstaller::install, null, logProvider, logProvider, listenSocketAddress, "RaftServer", executor,
                                  new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
@@ -136,7 +137,7 @@ public class LocalNetworkPlatform
             }
             if ( channel == null )
             {
-                InetSocketAddress address = new SocketAddress( server.address().getHostname(), server.address().getPort() ).socketAddress();
+                InetSocketAddress address = new AdvertisedSocketAddress( server.address().getHostname(), server.address().getPort() ).socketAddress();
                 log.info( "Trying to connect to: " + address );
                 ChannelFuture connect = clientBootstrap.connect( address ).addListener( (ChannelFutureListener) future ->
                 {

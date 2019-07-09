@@ -12,14 +12,15 @@ import java.nio.file.Paths;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 
 public class OnlineBackupContext
 {
-    private final SocketAddress address;
+    private final AdvertisedSocketAddress address;
     private final DatabaseId databaseId;
     private final Path databaseBackupDir;
     private final Path reportDir;
@@ -28,7 +29,7 @@ public class OnlineBackupContext
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
 
-    private OnlineBackupContext( SocketAddress address, DatabaseId databaseId, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
+    private OnlineBackupContext( AdvertisedSocketAddress address, DatabaseId databaseId, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
             boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config )
     {
         this.address = address;
@@ -46,7 +47,7 @@ public class OnlineBackupContext
         return new Builder();
     }
 
-    public SocketAddress getAddress()
+    public AdvertisedSocketAddress getAddress()
     {
         return address;
     }
@@ -88,7 +89,7 @@ public class OnlineBackupContext
 
     public static final class Builder
     {
-        private SocketAddress address;
+        private AdvertisedSocketAddress address;
         private String databaseName;
         private Path backupDirectory;
         private Path reportsDirectory;
@@ -106,10 +107,10 @@ public class OnlineBackupContext
 
         public Builder withAddress( String hostname, int port )
         {
-            return withAddress( new SocketAddress( hostname, port ) );
+            return withAddress( new AdvertisedSocketAddress( hostname, port ) );
         }
 
-        public Builder withAddress( SocketAddress address )
+        public Builder withAddress( AdvertisedSocketAddress address )
         {
             this.address = address;
             return this;
@@ -200,7 +201,7 @@ public class OnlineBackupContext
                 reportsDirectory = Paths.get( "." );
             }
 
-            SocketAddress address = buildAddress();
+            AdvertisedSocketAddress address = buildAddress();
             Path databaseBackupDirectory = backupDirectory.resolve( databaseId.name() );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
 
@@ -208,12 +209,12 @@ public class OnlineBackupContext
                     fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
         }
 
-        private SocketAddress buildAddress()
+        private AdvertisedSocketAddress buildAddress()
         {
             if ( address == null )
             {
-                SocketAddress defaultListenAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
-                address = new SocketAddress( defaultListenAddress.getHostname(), defaultListenAddress.getPort() );
+                ListenSocketAddress defaultListenAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
+                address = new AdvertisedSocketAddress( defaultListenAddress.getHostname(), defaultListenAddress.getPort() );
             }
             return address;
         }

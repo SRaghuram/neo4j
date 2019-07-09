@@ -31,7 +31,6 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @Command(
         name = "upgrade-store",
@@ -145,7 +144,7 @@ public class UpgradeStoreCommand implements Runnable
             FileUtils.forceRecreateFile( neo4jConfigFile );
             Map<String,String> neo4jConfigMap = new HashMap<>();
             neo4jConfigMap.put( record_format.name(), recordFormat );
-            neo4jConfigMap.put( allow_upgrade.name(), TRUE );
+            neo4jConfigMap.put( allow_upgrade.name(), "true" );
             neo4jConfigMap.put( pagecache_memory.name(), storeSizeInMb + "m" );
             Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );
             try ( FileOutputStream stream = new FileOutputStream( neo4jConfigFile ) )

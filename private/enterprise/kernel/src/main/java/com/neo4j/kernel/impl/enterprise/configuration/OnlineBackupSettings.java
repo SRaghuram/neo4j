@@ -6,31 +6,42 @@
 package com.neo4j.kernel.impl.enterprise.configuration;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
-import org.neo4j.configuration.SettingsDeclaration;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.configuration.Migrator;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 
-import static org.neo4j.configuration.SettingImpl.newBuilder;
-import static org.neo4j.configuration.SettingValueParsers.BOOL;
-import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
-import static org.neo4j.configuration.SettingValueParsers.STRING;
+import static org.neo4j.configuration.Settings.BOOLEAN;
+import static org.neo4j.configuration.Settings.NO_DEFAULT;
+import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.Settings.listenAddress;
+import static org.neo4j.configuration.Settings.prefixSetting;
+import static org.neo4j.configuration.Settings.setting;
 
+/**
+ * Settings for online backup
+ */
+@Description( "Online backup configuration settings" )
 @ServiceProvider
-public class OnlineBackupSettings implements SettingsDeclaration
+public class OnlineBackupSettings implements LoadableConfig
 {
     public static final String DEFAULT_BACKUP_HOST = "localhost";
     public static final int DEFAULT_BACKUP_PORT = 6362;
 
     @Description( "Enable support for running online backups." )
-    public static final Setting<Boolean> online_backup_enabled = newBuilder( "dbms.backup.enabled", BOOL, true ).build();
+    public static final Setting<Boolean> online_backup_enabled = setting( "dbms.backup.enabled", BOOLEAN, TRUE );
 
     @Description( "Network interface and port for the backup server to listen on." )
-    public static final Setting<SocketAddress> online_backup_listen_address =
-            newBuilder( "dbms.backup.listen_address", SOCKET_ADDRESS, new SocketAddress( "127.0.0.1", DEFAULT_BACKUP_PORT ) ).build();
+    public static final Setting<ListenSocketAddress> online_backup_listen_address = listenAddress( "dbms.backup.listen_address", DEFAULT_BACKUP_PORT );
 
     @Description( "Name of the SSL policy to be used by backup, as defined under the dbms.ssl.policy.* settings." +
             " If no policy is configured then the communication will not be secured." )
-    public static final Setting<String> ssl_policy = newBuilder( "dbms.backup.ssl_policy", STRING, null ).build();
+    public static final Setting<String> ssl_policy = prefixSetting( "dbms.backup.ssl_policy", STRING, NO_DEFAULT );
 
+    @SuppressWarnings( "unused" ) // accessed by reflection
+    @Migrator
+    private static final ConfigurationMigrator migrator = new OnlineBackupConfigurationMigrator();
 }

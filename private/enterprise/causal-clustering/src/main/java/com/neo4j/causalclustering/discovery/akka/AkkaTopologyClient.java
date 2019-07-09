@@ -29,7 +29,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
@@ -141,9 +141,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        SocketAddress advertisedSocketAddress = globalTopologyState.retrieveCatchupServerAddress( upstream );
+        AdvertisedSocketAddress advertisedSocketAddress = globalTopologyState.retrieveCatchupServerAddress( upstream );
         if ( advertisedSocketAddress == null )
         {
             throw new CatchupAddressResolutionException( upstream );

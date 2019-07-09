@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import javax.naming.NamingException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 
@@ -38,13 +38,13 @@ public class SrvHostnameResolver extends RetryingHostnameResolver
     }
 
     @Override
-    public Collection<SocketAddress> resolveOnce( SocketAddress initialAddress )
+    public Collection<AdvertisedSocketAddress> resolveOnce( AdvertisedSocketAddress initialAddress )
     {
         try
         {
-            Set<SocketAddress> addresses = srvRecordResolver
+            Set<AdvertisedSocketAddress> addresses = srvRecordResolver
                     .resolveSrvRecord( initialAddress.getHostname() )
-                    .map( srvRecord -> new SocketAddress( srvRecord.host, srvRecord.port ) )
+                    .map( srvRecord -> new AdvertisedSocketAddress( srvRecord.host, srvRecord.port ) )
                     .collect( Collectors.toSet() );
 
             userLog.info( "Resolved initial host '%s' to %s", initialAddress, addresses );

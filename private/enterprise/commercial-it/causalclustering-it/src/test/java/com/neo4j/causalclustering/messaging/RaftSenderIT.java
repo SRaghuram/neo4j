@@ -47,7 +47,8 @@ import java.util.concurrent.Semaphore;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
@@ -127,7 +128,7 @@ class RaftSenderIT
         RaftSender sender = new RaftSender( logProvider, raftPoolService );
 
         // when
-        SocketAddress to = new SocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
+        AdvertisedSocketAddress to = new AdvertisedSocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
         MemberId memberId = new MemberId( UUID.randomUUID() );
         RaftId raftId = new RaftId( UUID.randomUUID() );
 
@@ -158,7 +159,7 @@ class RaftSenderIT
 
         ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
 
-        SocketAddress listenAddress = new SocketAddress( "localhost", 0 );
+        ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
 
         return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor,
                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );

@@ -10,7 +10,6 @@ import java.io.File
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -60,7 +59,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   override def transactionalContext(query: (String, Map[String, Any])): TransactionalContext = graph.transactionalContext(query = query)
 
   override def databaseConfig(): collection.Map[Setting[_], String] = {
-    Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
+    Map(GraphDatabaseSettings.cypher_hints_error -> "true",
         GraphDatabaseSettings.cypher_morsel_size -> "4",
         GraphDatabaseSettings.cypher_worker_count -> "0"
     )

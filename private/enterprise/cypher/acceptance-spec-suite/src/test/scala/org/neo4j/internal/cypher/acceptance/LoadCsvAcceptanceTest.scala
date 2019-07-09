@@ -13,7 +13,6 @@ import java.util.Collections.emptyMap
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
@@ -563,7 +562,7 @@ class LoadCsvAcceptanceTest
 
   test("should fail for file urls if local file access disallowed") {
     val managementService = acceptanceTestDatabaseBuilder
-      .setConfig(GraphDatabaseSettings.allow_file_urls, FALSE)
+      .setConfig(GraphDatabaseSettings.allow_file_urls, "false")
       .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {

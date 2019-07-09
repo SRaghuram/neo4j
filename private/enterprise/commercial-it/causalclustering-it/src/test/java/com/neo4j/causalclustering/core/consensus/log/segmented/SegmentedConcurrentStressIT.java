@@ -28,7 +28,7 @@ public class SegmentedConcurrentStressIT extends ConcurrentStressIT<SegmentedRaf
         LogProvider logProvider = getInstance();
         int readerPoolSize = 8;
         CoreLogPruningStrategy pruningStrategy =
-                new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider )
+                new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.getDefaultValue(), logProvider )
                         .newInstance();
         return new SegmentedRaftLog( fsa, dir, rotateAtSize, ignored -> new DummyRaftableContentSerializer(), logProvider,
                 readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );

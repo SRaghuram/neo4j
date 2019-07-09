@@ -6,7 +6,7 @@
 package com.neo4j.metrics.output;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.metrics.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +34,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
@@ -62,7 +61,7 @@ class CsvOutputTest
         // GIVEN
         File home = directory.absolutePath();
         Config config = config(
-                MetricsSettings.csvEnabled.name(), TRUE,
+                MetricsSettings.csvEnabled.name(), "true",
                 MetricsSettings.csvInterval.name(), "10ms",
                 MetricsSettings.csvPath.name(), "the-metrics-dir",
                 GraphDatabaseSettings.neo4j_home.name(), home.getAbsolutePath() );
@@ -81,7 +80,7 @@ class CsvOutputTest
         // GIVEN
         File outputFPath = Files.createTempDirectory( "output" ).toFile();
         Config config = config(
-                MetricsSettings.csvEnabled.name(), TRUE,
+                MetricsSettings.csvEnabled.name(), "true",
                 MetricsSettings.csvInterval.name(), "10ms",
                 MetricsSettings.csvPath.name(), outputFPath.getAbsolutePath() );
         life.add( createCsvOutput( config ) );

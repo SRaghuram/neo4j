@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
@@ -24,7 +23,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   // Need to override so that graph.execute will not throw an exception
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_hints_error -> FALSE,
+    GraphDatabaseSettings.cypher_hints_error -> "false",
     GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10"
   )
 
@@ -641,7 +640,7 @@ class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with
 
   // Need to override so that graph.execute will not throw an exception
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_hints_error -> FALSE,
+    GraphDatabaseSettings.cypher_hints_error -> "false",
     GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10",
     GraphDatabaseSettings.default_schema_provider -> "lucene+native-3.0"
   )

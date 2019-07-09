@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -31,12 +32,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseFile;
@@ -69,8 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
@@ -161,7 +162,7 @@ class OnlineBackupCommandCcIT
     {
         // given a cluster with backup switched off
         ClusterConfig clusterConfig = defaultClusterConfig( recordFormat )
-                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
@@ -442,7 +443,8 @@ class OnlineBackupCommandCcIT
 
     private static DbRepresentation getBackupDbRepresentation( File backupDir, String databaseName )
     {
-        Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, FALSE );
+        Config config = Config.defaults();
+        config.augment( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
         return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ), config );
     }
 
@@ -484,18 +486,22 @@ class OnlineBackupCommandCcIT
 
     private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException
     {
-        SocketAddress address = cluster.awaitLeader().config().get( online_backup_listen_address );
+        ListenSocketAddress address = cluster.awaitLeader().config().get( online_backup_listen_address );
         assertNotNull( address );
         return address.toString();
     }
 
     private static void writeConfigWithLogRotationThreshold( File conf, String value ) throws IOException
     {
-        Config config = Config.defaults( GraphDatabaseSettings.logical_log_rotation_threshold, value );
+        Config config = Config.builder()
+                .withSetting( GraphDatabaseSettings.logical_log_rotation_threshold, value )
+                .build();
 
         try ( BufferedWriter writer = Files.newBufferedWriter( conf.toPath() ) )
         {
-            writer.write( config.toString( false ) );
+            Properties properties = new Properties();
+            properties.putAll( config.getRaw() );
+            properties.store( writer, "" );
         }
     }
 

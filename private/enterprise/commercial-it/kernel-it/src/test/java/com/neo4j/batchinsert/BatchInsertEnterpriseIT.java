@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
-import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -38,7 +37,6 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
@@ -70,10 +68,10 @@ public class BatchInsertEnterpriseIT
     {
         // GIVEN
         BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get(),
-                Config.defaults( stringMap( GraphDatabaseSettings.log_queries.name(), TRUE,
+                stringMap( GraphDatabaseSettings.log_queries.name(), "true",
                         GraphDatabaseSettings.record_format.name(), recordFormat,
                         GraphDatabaseSettings.log_queries_filename.name(),
-                        directory.file( "query.log" ).getAbsolutePath() ) ) );
+                        directory.file( "query.log" ).getAbsolutePath() ) );
         long node1Id;
         long node2Id;
         long relationshipId;

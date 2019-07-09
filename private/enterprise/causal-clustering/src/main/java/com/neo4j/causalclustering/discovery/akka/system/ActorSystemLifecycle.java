@@ -34,7 +34,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
@@ -186,7 +186,7 @@ public class ActorSystemLifecycle
         return ClusterClientSettings.create( actorSystemComponents.actorSystem() ).withInitialContacts( actorPaths );
     }
 
-    private ActorPath toActorPath( SocketAddress addr )
+    private ActorPath toActorPath( AdvertisedSocketAddress addr )
     {
         String path = String.format( "%s://%s@%s/system/receptionist", ClusterJoiningActor.AKKA_SCHEME, ActorSystemFactory.ACTOR_SYSTEM_NAME, addr.toString() );
         return ActorPaths.fromString( path );

@@ -22,12 +22,13 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 
 import static java.util.Collections.unmodifiableCollection;
 
-class SimpleChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,SimpleChannelPool>
+class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddress,SimpleChannelPool>
 {
     private final Bootstrap baseBootstrap;
     private final ChannelPoolHandlers poolHandlers;
@@ -46,7 +47,7 @@ class SimpleChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,SimpleCh
     }
 
     @Override
-    protected SimpleChannelPool newPool( SocketAddress key )
+    protected SimpleChannelPool newPool( AdvertisedSocketAddress key )
     {
         return new SimpleChannelPool( baseBootstrap.remoteAddress( key.socketAddress() ), poolHandlers );
     }

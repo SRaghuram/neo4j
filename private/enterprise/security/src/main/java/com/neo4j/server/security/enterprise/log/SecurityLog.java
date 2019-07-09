@@ -35,7 +35,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
     public SecurityLog( Config config, FileSystemAbstraction fileSystem, Executor executor ) throws IOException
     {
         ZoneId logTimeZoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-        File logFile = config.get( SecuritySettings.security_log_filename ).toFile();
+        File logFile = config.get( SecuritySettings.security_log_filename );
 
         FormattedLog.Builder builder = FormattedLog.withZoneId( logTimeZoneId );
 

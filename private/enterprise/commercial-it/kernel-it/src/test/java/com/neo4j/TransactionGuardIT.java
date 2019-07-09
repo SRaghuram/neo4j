@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -74,8 +74,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_timeout;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionNotFound;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
@@ -457,12 +455,13 @@ public class TransactionGuardIT
         if ( neoServer == null )
         {
             GuardingServerBuilder serverBuilder = new GuardingServerBuilder( databaseManagementService );
-            BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
-            serverBuilder.withProperty( boltConnector.enabled.name(), TRUE )
+            BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
+            serverBuilder.withProperty( boltConnector.type.name(), "BOLT" )
+                    .withProperty( boltConnector.enabled.name(), Settings.TRUE )
                     .withProperty( boltConnector.encryption_level.name(),
                             BoltConnector.EncryptionLevel.DISABLED.name() )
-                    .withProperty( GraphDatabaseSettings.auth_enabled.name(), FALSE );
-            serverBuilder.withProperty( HttpConnector.group( "http" ).listen_address.name(), "localhost:0" );
+                    .withProperty( GraphDatabaseSettings.auth_enabled.name(), Settings.FALSE );
+            serverBuilder.withProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
             neoServer = serverBuilder.build();
             cleanupRule.add( neoServer );
             neoServer.start();
@@ -472,14 +471,15 @@ public class TransactionGuardIT
 
     private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
     {
-        BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
+        BoltConnector boltConnector = new BoltConnector( BOLT_CONNECTOR_KEY );
         return MapUtil.genericMap(
                 transaction_timeout, DEFAULT_TIMEOUT,
-                boltConnector.advertised_address, "localhost:0",
-                boltConnector.enabled, TRUE,
+                boltConnector.address, "localhost:0",
+                boltConnector.type, "BOLT",
+                boltConnector.enabled, "true",
                 boltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
-                OnlineBackupSettings.online_backup_enabled, FALSE,
-                GraphDatabaseSettings.auth_enabled, FALSE );
+                OnlineBackupSettings.online_backup_enabled, Settings.FALSE,
+                GraphDatabaseSettings.auth_enabled, Settings.FALSE );
     }
 
     private static Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
@@ -524,7 +524,6 @@ public class TransactionGuardIT
         DatabaseManagementServiceBuilder databaseBuilder =
                 new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
                         fileSystemRule.get() ).impermanent();
-
         configMap.forEach( databaseBuilder::setConfig );
 
         customManagementService = databaseBuilder.build();
@@ -533,7 +532,8 @@ public class TransactionGuardIT
 
     private IdContextFactory createIdContextFactory( Map<Setting<?>,String> configMap, FileSystemAbstraction fileSystem )
     {
-        Config config = Config.defaults( configMap.entrySet().stream().collect( Collectors.toMap( e -> e.getKey().name(), Map.Entry::getValue ) ) );
+        Config config = Config.defaults();
+        configMap.forEach( config::augment );
 
         return IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( config ), JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(

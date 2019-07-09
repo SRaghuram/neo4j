@@ -29,7 +29,7 @@ import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 class AkkaCoreTopologyServiceIT
@@ -42,10 +42,9 @@ class AkkaCoreTopologyServiceIT
     {
         // Random members that does not exists, discovery will never succeed
         var initialHosts = "localhost:" + PortAuthority.allocatePort() + ",localhost:" + PortAuthority.allocatePort();
-        var config = Config.newBuilder()
-                .set( initial_discovery_members, initialHosts )
-                .set( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() )
-                .build();
+        var config = Config.defaults();
+        config.augment( initial_discovery_members, initialHosts );
+        config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
         var id = new MemberId( UUID.randomUUID() );
 
@@ -78,7 +77,7 @@ class AkkaCoreTopologyServiceIT
     @Test
     void shouldBeAbleToStartAndStopWithoutSuccessfulJoin()
     {
-        assertTimeoutPreemptively( Duration.ofSeconds( 120 ), () ->
+        assertTimeout( Duration.ofSeconds( 120 ), () ->
         {
             service.init();
             service.start();

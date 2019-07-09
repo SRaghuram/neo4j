@@ -8,6 +8,7 @@ package com.neo4j.kernel.impl.locking;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.Settings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
 import org.neo4j.kernel.impl.locking.StatementLocks;
@@ -19,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 class DeferringStatementLocksFactoryTest
 {
@@ -52,7 +51,7 @@ class DeferringStatementLocksFactoryTest
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
 
-        Config config = Config.defaults( deferred_locks_enabled, FALSE );
+        Config config = Config.defaults( deferred_locks_enabled, Settings.FALSE );
 
         DeferringStatementLocksFactory factory = new DeferringStatementLocksFactory();
         factory.initialize( locks, config );
@@ -71,7 +70,7 @@ class DeferringStatementLocksFactoryTest
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
 
-        Config config = Config.defaults( deferred_locks_enabled, TRUE );
+        Config config = Config.defaults( deferred_locks_enabled, Settings.TRUE );
 
         DeferringStatementLocksFactory factory = new DeferringStatementLocksFactory();
         factory.initialize( locks, config );

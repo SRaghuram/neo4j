@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
@@ -44,7 +44,7 @@ class ConnectionInfoIT
         // when
         AssertableLogProvider logProvider = new AssertableLogProvider();
         AssertableLogProvider userLogProvider = new AssertableLogProvider();
-        SocketAddress listenSocketAddress = new SocketAddress( "localhost", testSocket.getLocalPort() );
+        ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", testSocket.getLocalPort() );
 
         ExecutorService executor = Executors.newCachedThreadPool();
         Server catchupServer = new Server( channel -> { }, null, logProvider, userLogProvider, listenSocketAddress, "server-name", executor,

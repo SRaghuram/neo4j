@@ -36,8 +36,7 @@ import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
@@ -48,12 +47,12 @@ public class BoltTlsIT
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
-    private PemSslPolicyConfig sslPolicy = PemSslPolicyConfig.group( "bolt" );
+    private PemSslPolicyConfig sslPolicy = new PemSslPolicyConfig( "bolt" );
 
     private GraphDatabaseAPI db;
     private SslResource sslResource;
 
-    private BoltConnector bolt = BoltConnector.group( "bolt" );
+    private BoltConnector bolt = new BoltConnector( "bolt" );
     private DatabaseManagementService managementService;
 
     @Before
@@ -114,14 +113,15 @@ public class BoltTlsIT
     private void createAndStartDb()
     {
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
-                .setConfig( bolt.enabled, TRUE )
+                .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
-                .setConfig( sslPolicy.allow_key_generation, TRUE )
+                .setConfig( sslPolicy.format, PEM.name() )
+                .setConfig( sslPolicy.allow_key_generation, "true" )
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
                 .setConfig( sslPolicy.client_auth, "none" )
-                .setConfig( sslPolicy.verify_hostname, FALSE ).build();
+                .setConfig( sslPolicy.verify_hostname, "false" ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

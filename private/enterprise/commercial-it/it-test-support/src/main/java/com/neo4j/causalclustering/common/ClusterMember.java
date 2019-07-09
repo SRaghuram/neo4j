@@ -40,7 +40,7 @@ public interface ClusterMember
 
     ClientConnectorAddresses clientConnectorAddresses();
 
-    <T> T settingValue( Setting<T> setting );
+    String settingValue( String settingName );
 
     Config config();
 
@@ -66,8 +66,8 @@ public interface ClusterMember
 
     String boltAdvertisedAddress();
 
-    default <T> void updateConfig( Setting<T> setting, T value )
+    default void updateConfig( Setting<?> setting, String value )
     {
-        config().set( setting, value );
+        config().augment( setting, value );
     }
 }

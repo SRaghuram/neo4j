@@ -188,8 +188,9 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       .run(materializer)
 
     val config = {
+      val conf = Config.defaults()
       val myCoreServerConfig = TestTopology.configFor(coreServerInfo(0))
-      val conf = Config.newBuilder().fromConfig(myCoreServerConfig).build()
+      conf.augment(myCoreServerConfig)
       conf
     }
 

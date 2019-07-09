@@ -8,15 +8,15 @@ package org.neo4j.internal.cypher.acceptance
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.internal.cypher.acceptance.MorselRuntimeAcceptanceTest.MORSEL_SIZE
 import org.scalactic.{Equality, TolerantNumerics}
 
 import scala.collection.Map
+import scala.collection.mutable.ArrayBuffer
 
 object MorselRuntimeAcceptanceTest {
   val MORSEL_SIZE = 4 // The morsel size to use in the config for testing
@@ -81,7 +81,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
       }
     })
   }
-
+  
   ignore("don't stall for nested plan expressions") {
     // Given
     graph.execute( """CREATE (a:A)
@@ -106,19 +106,19 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
-    GraphDatabaseSettings.cypher_hints_error -> TRUE,
+    GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> "0",
-    GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
+    GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false"
   )
 }
 
 class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
-    GraphDatabaseSettings.cypher_hints_error -> TRUE,
+    GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> "1",
-    GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
+    GraphDatabaseSettings.cypher_morsel_fuse_operators -> "false"
   )
 }

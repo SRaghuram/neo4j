@@ -96,7 +96,7 @@ class SegmentedRaftLogCursorIT
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
-        return createRaftLog( rotateAtSize, raft_log_pruning_strategy.defaultValue() );
+        return createRaftLog( rotateAtSize, raft_log_pruning_strategy.getDefaultValue() );
     }
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize, String pruneStrategy )

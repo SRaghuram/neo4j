@@ -25,7 +25,6 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -100,7 +99,7 @@ class TokensRecoveryIT
     private GraphDatabaseService startDatabase( EphemeralFileSystemAbstraction fs )
     {
         DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setFileSystem( fs );
-        builder.setConfig( online_backup_enabled, FALSE );
+        builder.setConfig( online_backup_enabled, "false" );
         builder.setConfig( GraphDatabaseSettings.check_point_policy, "periodic" );
         managementService = builder.build();
         return managementService.database( DEFAULT_DATABASE_NAME );

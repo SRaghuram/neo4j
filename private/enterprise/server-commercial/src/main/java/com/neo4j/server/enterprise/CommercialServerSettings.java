@@ -12,33 +12,34 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.DocumentedDefaultValue;
 import org.neo4j.configuration.Internal;
-import org.neo4j.configuration.SettingValueParsers;
-import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.Setting;
 
-import static org.neo4j.configuration.SettingImpl.newBuilder;
-import static org.neo4j.configuration.SettingValueParsers.BOOL;
-import static org.neo4j.configuration.SettingValueParsers.DURATION;
+import static org.neo4j.configuration.Settings.BOOLEAN;
+import static org.neo4j.configuration.Settings.DURATION;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.Settings.setting;
 
 @Description( "Settings available in the Commercial server" )
 @ServiceProvider
-public class CommercialServerSettings implements SettingsDeclaration
+public class CommercialServerSettings implements LoadableConfig
 {
     @SuppressWarnings( "unused" ) // accessed from the browser
     @Description( "Configure the Neo4j Browser to time out logged in users after this idle period. " +
-            "Setting this to 0 indicates no limit." )
-    public static final Setting<Duration> browser_credentialTimeout =
-            newBuilder( "browser.credential_timeout", DURATION, Duration.ZERO  ).build();
+                  "Setting this to 0 indicates no limit." )
+    public static final Setting<Duration> browser_credentialTimeout = setting( "browser.credential_timeout", DURATION,
+            "0" );
 
     @SuppressWarnings( "unused" ) // accessed from the browser
     @Description( "Configure the Neo4j Browser to store or not store user credentials." )
     public static final Setting<Boolean> browser_retainConnectionCredentials =
-            newBuilder( "browser.retain_connection_credentials", BOOL,  true  ).build();
+            setting( "browser.retain_connection_credentials", BOOLEAN, TRUE );
 
     @SuppressWarnings( "unused" ) // accessed from the browser
     @Description( "Configure the policy for outgoing Neo4j Browser connections." )
     public static final Setting<Boolean> browser_allowOutgoingBrowserConnections =
-            newBuilder( "browser.allow_outgoing_connections", BOOL,  true  ).build();
+            setting( "browser.allow_outgoing_connections", BOOLEAN, TRUE );
 
     @Internal
     @Description( "Publicly discoverable bolt+routing:// URI to use for Neo4j Drivers wanting to access a cluster " +
@@ -47,5 +48,6 @@ public class CommercialServerSettings implements SettingsDeclaration
             "bolt+routing://-schemed URI of the advertised address of the first found bolt connector if the " +
             "instance is a core member of a causal cluster." )
     public static final Setting<URI> bolt_routing_discoverable_address =
-            newBuilder( "unsupported.dbms.discoverable_bolt_routing_address", SettingValueParsers.URI, SettingValueParsers.URI.parse( "" ) ).build();
+            setting( "unsupported.dbms.discoverable_bolt_routing_address", Settings.URI, "" );
+
 }

@@ -9,7 +9,6 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
@@ -29,7 +28,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> "0",
-    GraphDatabaseSettings.cypher_compiler_tracing -> TRUE,
+    GraphDatabaseSettings.cypher_compiler_tracing -> "true",
     GraphDatabaseSettings.pagecache_memory -> "8M"
   )
 

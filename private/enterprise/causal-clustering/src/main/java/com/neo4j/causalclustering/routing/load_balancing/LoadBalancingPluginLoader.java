@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -28,7 +29,7 @@ public class LoadBalancingPluginLoader
     {
     }
 
-    public static void validate( Config config, Log log )
+    public static void validate( Config config, Log log ) throws InvalidSettingException
     {
         LoadBalancingPlugin plugin = findPlugin( config );
         plugin.validate( config, log );
@@ -48,7 +49,7 @@ public class LoadBalancingPluginLoader
         return plugin;
     }
 
-    private static LoadBalancingPlugin findPlugin( Config config )
+    private static LoadBalancingPlugin findPlugin( Config config ) throws InvalidSettingException
     {
         Set<String> availableOptions = new HashSet<>();
         Iterable<LoadBalancingPlugin> allImplementationsOnClasspath = Services.loadAll( LoadBalancingPlugin.class );
@@ -64,7 +65,7 @@ public class LoadBalancingPluginLoader
             availableOptions.add( plugin.pluginName() );
         }
 
-        throw new IllegalArgumentException( String.format( "Could not find load balancing plugin with name: '%s'" +
+        throw new InvalidSettingException( String.format( "Could not find load balancing plugin with name: '%s'" +
                                                    " among available options: %s", configuredName, availableOptions ) );
     }
 }

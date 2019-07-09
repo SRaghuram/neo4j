@@ -16,7 +16,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -33,9 +33,9 @@ class UpstreamAddressLookupTest
     private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
     private final MemberId firstMember = new MemberId( UUID.randomUUID() );
     private final MemberId secondMember = new MemberId( UUID.randomUUID() );
-    private final SocketAddress defaultAddress = new SocketAddress( "Default", 123 );
-    private final SocketAddress firstAddress = new SocketAddress( "First", 456 );
-    private final SocketAddress secondAddress = new SocketAddress( "Second", 789 );
+    private final AdvertisedSocketAddress defaultAddress = new AdvertisedSocketAddress( "Default", 123 );
+    private final AdvertisedSocketAddress firstAddress = new AdvertisedSocketAddress( "First", 456 );
+    private final AdvertisedSocketAddress secondAddress = new AdvertisedSocketAddress( "Second", 789 );
     private final TopologyService topologyService = mock( TopologyService.class );
 
     @BeforeEach
@@ -60,9 +60,9 @@ class UpstreamAddressLookupTest
                 new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // when
-        SocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
-        SocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
-        SocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        AdvertisedSocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        AdvertisedSocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        AdvertisedSocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
 
         // then
         assertEquals( firstAddress, firstResult );

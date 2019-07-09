@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.After;
 import org.junit.Before;
@@ -17,8 +18,11 @@ import org.junit.Test;
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -27,14 +31,8 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
-import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class ClusterCommunityToEnterpriseIT
 {
@@ -69,18 +67,15 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder( testDir.storeDir() )
-                .setConfig( allow_upgrade, TRUE )
-                .setConfig( record_format, HighLimit.NAME )
-                .setConfig( online_backup_enabled, Boolean.FALSE.toString() )
-                .build();
-        GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
-        DatabaseLayout databaseLayout = database.databaseLayout();
+        DatabaseManagementService managementService =
+                new DatabaseManagementServiceBuilder( testDir.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
+                .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() ).build();
+        GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = ((GraphDatabaseAPI) database).databaseLayout();
         managementService.shutdown();
-        Config config = Config.newBuilder()
-                .set( online_backup_enabled, FALSE )
-                .set( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() )
-                .build();
+        Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).withSetting(
+                GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() ).build();
         DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
 
         // when

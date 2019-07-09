@@ -37,7 +37,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -90,7 +89,7 @@ public class RsdrMain
     private static Config buildConfig()
     {
         return Config.defaults( MapUtil.stringMap(
-                GraphDatabaseSettings.read_only.name(), TRUE,
+                GraphDatabaseSettings.read_only.name(), "true",
                 GraphDatabaseSettings.pagecache_memory.name(), "64M"
         ) );
     }

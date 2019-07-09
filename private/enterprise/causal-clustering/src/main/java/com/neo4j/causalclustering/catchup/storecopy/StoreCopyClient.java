@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -58,7 +58,7 @@ public class StoreCopyClient
     {
         try
         {
-            SocketAddress fromAddress = catchupAddressProvider.primary( databaseId );
+            AdvertisedSocketAddress fromAddress = catchupAddressProvider.primary( databaseId );
             PrepareStoreCopyResponse prepareStoreCopyResponse = prepareStoreCopy( fromAddress, expectedStoreId, storeFileStreamProvider );
             TransactionIdHandler txIdHandler = new TransactionIdHandler( prepareStoreCopyResponse );
             copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider, requestWiseTerminationCondition,
@@ -107,7 +107,7 @@ public class StoreCopyClient
         {
             try
             {
-                SocketAddress address = addressProvider.secondary( databaseId );
+                AdvertisedSocketAddress address = addressProvider.secondary( databaseId );
                 log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
 
                 StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )
@@ -153,7 +153,7 @@ public class StoreCopyClient
         }
     }
 
-    private PrepareStoreCopyResponse prepareStoreCopy( SocketAddress from, StoreId expectedStoreId, StoreFileStreamProvider storeFileStream )
+    private PrepareStoreCopyResponse prepareStoreCopy( AdvertisedSocketAddress from, StoreId expectedStoreId, StoreFileStreamProvider storeFileStream )
             throws StoreCopyFailedException
     {
         PrepareStoreCopyResponse prepareStoreCopyResponse;
@@ -177,7 +177,7 @@ public class StoreCopyClient
         return prepareStoreCopyResponse;
     }
 
-    public StoreId fetchStoreId( SocketAddress fromAddress ) throws StoreIdDownloadFailedException
+    public StoreId fetchStoreId( AdvertisedSocketAddress fromAddress ) throws StoreIdDownloadFailedException
     {
         try
         {

@@ -11,14 +11,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.config.Setting;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.rule.SuppressOutput;
 
 @ExtendWith( SuppressOutputExtension.class )
 public class RESTBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<RESTSubject>
 {
+    @Inject
+    SuppressOutput suppressOutput;
 
-    RESTBuiltInProceduresInteractionIT()
+    public RESTBuiltInProceduresInteractionIT()
     {
         super();
         CHANGE_PWD_ERR_MSG = "User is required to change their password.";
@@ -27,7 +30,7 @@ public class RESTBuiltInProceduresInteractionIT extends BuiltInProceduresInterac
     }
 
     @Override
-    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new RESTInteraction( config );
     }

@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.security.AccessMode;
@@ -41,7 +42,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.Strings.escape;
 
 @ExtendWith( {TestDirectoryExtension.class} )
@@ -65,7 +65,7 @@ class SecurityDDLLoggingIT
                 .setInternalLogProvider( inMemoryLog )
                 .setFileSystem( testDirectory.getFileSystem() )
                 .impermanent()
-                .setConfig( auth_enabled, TRUE )
+                .setConfig( auth_enabled, Settings.TRUE )
                 .build();
         database = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
     }

@@ -12,7 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.server.ServerTestUtils;
@@ -24,7 +25,6 @@ import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CommercialInProcessServerBuilderIT
@@ -52,14 +52,14 @@ class CommercialInProcessServerBuilderIT
 
     private Neo4jBuilder getTestServerBuilder( File workDir )
     {
-        String certificatesDirectoryKey = GraphDatabaseSettings.legacy_certificates_directory.name();
+        String certificatesDirectoryKey = LegacySslPolicyConfig.certificates_directory.name();
         String certificatesDirectoryValue = ServerTestUtils.getRelativePath(
                 testDir.directory(),
-                GraphDatabaseSettings.legacy_certificates_directory
+                LegacySslPolicyConfig.certificates_directory
         );
 
         return CommercialTestNeo4jBuilders.newInProcessBuilder( workDir )
                 .withConfig( certificatesDirectoryKey, certificatesDirectoryValue )
-                .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+                .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 }

@@ -36,17 +36,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -65,7 +63,7 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
@@ -302,11 +300,9 @@ class EncryptedBackupIT
 
         private static Cluster initialiseCluster( boolean encryptedTxPort, boolean encryptedBackupPort ) throws Exception
         {
-            Cluster cluster = null;
+            Cluster cluster = aCluster( testDirectoryClassExtension.getTestDirectory() );
             try
             {
-                Map<Setting<?>, String> memberSettings = getClusterMemberSettingsWithEncryption( encryptedTxPort, encryptedBackupPort );
-                cluster = aCluster( testDirectoryClassExtension.getTestDirectory(), memberSettings );
                 setupClusterWithEncryption( cluster, encryptedTxPort, encryptedBackupPort );
                 cluster.start();
             }
@@ -346,47 +342,42 @@ class EncryptedBackupIT
             assertEquals( 1, exitCode );
         }
 
-        private static Cluster aCluster( TestDirectory testDir, Map<Setting<?>, String> memberSettings )
+        private static Cluster aCluster( TestDirectory testDir )
         {
             int noOfCoreMembers = 3;
             int noOfReadReplicas = 3;
 
-            Map<String,IntFunction<String>> memberParams = new HashMap<>();
-            memberSettings.forEach( ( setting, value ) -> {
-                memberParams.put( setting.name(), memberId -> value );
-            } );
-
             DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
             return new Cluster( testDir.directory( UUID.randomUUID().toString() ), noOfCoreMembers, noOfReadReplicas,
-                    discoveryServiceFactory, emptyMap(), memberParams, emptyMap(), memberParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+                    discoveryServiceFactory, emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
         }
 
-        private static IntSupplier backupClientWithoutEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithoutEncryption( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.empty(), false );
         }
 
-        private static IntSupplier backupClientWithClusterEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithClusterEncryption( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.of( 0 ), false );
         }
 
-        private static IntSupplier backupClientWithBackupEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithBackupEncryption( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.of( BACKUP_SSL_START ), false );
         }
 
-        private static IntSupplier backupClientWithBackupEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithBackupEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.of( BACKUP_SSL_START ), true );
         }
 
-        private static IntSupplier backupClientWithClusterEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithClusterEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.of( 0 ), true );
         }
 
-        private static IntSupplier backupClientWithoutEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
+        private static IntSupplier backupClientWithoutEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws Exception
         {
             return backupClient( cluster, addressSetting, Optional.empty(), true );
         }
@@ -400,7 +391,7 @@ class EncryptedBackupIT
          * @return a function that can be used to invoke the client. Return integer is backup exit code
          * @throws IOException if there was an error with non-backup code
          */
-        private static IntSupplier backupClient( Cluster cluster, Setting<?> addressSetting, Optional<Integer> baseSslKeyId, boolean replicaOnly )
+        private static IntSupplier backupClient( Cluster cluster, Setting addressSetting, Optional<Integer> baseSslKeyId, boolean replicaOnly )
                 throws Exception
         {
             // and backup client is configured
@@ -415,7 +406,7 @@ class EncryptedBackupIT
                 selectedNode = cluster.awaitLeader();
             }
             int serverId = clusterUniqueServerId( selectedNode );
-            String selectedNodeAddress = selectedNode.settingValue( addressSetting ).toString();
+            String selectedNodeAddress = selectedNode.settingValue( addressSetting.name() );
             if ( baseSslKeyId.isPresent() )
             {
                 int selectedSslKey = serverId + baseSslKeyId.get();
@@ -463,9 +454,10 @@ class EncryptedBackupIT
             File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
             backupPolicyLocation.mkdirs();
             Properties properties = new Properties();
-            SslPolicyConfig backupSslConfigGroup = PemSslPolicyConfig.group( backupPolicyName );
+            BaseSslPolicyConfig backupSslConfigGroup = new PemSslPolicyConfig( backupPolicyName );
             properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
             properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
+            properties.setProperty( backupSslConfigGroup.format.name(), PEM.name() );
             config.getParentFile().mkdirs();
 
             try ( FileWriter fileWriter = new FileWriter( config ) )
@@ -514,43 +506,47 @@ class EncryptedBackupIT
 
         // ---------------------- New functionality
 
-        private static Map<Setting<?>,String> getClusterMemberSettingsWithEncryption( boolean encryptedTx, boolean encryptedBackup ) throws IOException
-        {
-            Map<Setting<?>,String> settings = new HashMap<>();
-            settings.put( OnlineBackupSettings.online_backup_enabled, TRUE );
-            if ( encryptedTx )
-            {
-                configureClusterConfigEncryptedCluster( settings );
-            }
-            if ( encryptedBackup )
-            {
-                configureClusterConfigEncryptedBackup( settings );
-            }
-            return settings;
-        }
-
         private static void setupClusterWithEncryption( Cluster cluster, boolean encryptedTx, boolean encryptedBackup ) throws IOException
         {
+            allMembers( cluster ).forEach( member -> member.config().augment( OnlineBackupSettings.online_backup_enabled, "true" ) );
             if ( encryptedTx )
             {
+                configureClusterConfigEncryptedCluster( cluster );
                 setupEntireClusterTrusted( cluster, clusterPolicyName, 0 );
             }
             if ( encryptedBackup )
             {
+                configureClusterConfigEncryptedBackup( cluster );
                 setupEntireClusterTrusted( cluster, backupPolicyName, 6 );
             }
         }
 
-        private static void configureClusterConfigEncryptedCluster( Map<Setting<?>,String> settings )
+        private static void configureClusterConfigEncryptedCluster( Cluster cluster )
         {
-            settings.put( CausalClusteringSettings.ssl_policy, clusterPolicyName );
-            settings.put( PemSslPolicyConfig.group( clusterPolicyName ).base_directory, Path.of( "certificates/" + clusterPolicyName ).toString() );
+            BaseSslPolicyConfig clusterPolicyConfig = new PemSslPolicyConfig( clusterPolicyName );
+            Config additionalConf = Config.builder()
+                    .withSetting( CausalClusteringSettings.ssl_policy, clusterPolicyName )
+                    .withSetting( clusterPolicyConfig.format, PEM.name() )
+                    .withSetting( clusterPolicyConfig.base_directory, "certificates/" + clusterPolicyName )
+                    .build();
+            for ( ClusterMember clusterMember : allMembers( cluster ) )
+            {
+                clusterMember.config().augment( additionalConf );
+            }
         }
 
-        private static void configureClusterConfigEncryptedBackup( Map<Setting<?>,String> settings )
+        private static void configureClusterConfigEncryptedBackup( Cluster cluster )
         {
-            settings.put( OnlineBackupSettings.ssl_policy, backupPolicyName );
-            settings.put( PemSslPolicyConfig.group( backupPolicyName ).base_directory, Path.of( "certificates/" + backupPolicyName ).toString() );
+            BaseSslPolicyConfig backupPolicyConfig = new PemSslPolicyConfig( backupPolicyName );
+            Config additionalConf = Config.builder()
+                    .withSetting( OnlineBackupSettings.ssl_policy, backupPolicyName )
+                    .withSetting( backupPolicyConfig.format, PEM.name() )
+                    .withSetting( backupPolicyConfig.base_directory, "certificates/" + backupPolicyName )
+                    .build();
+            for ( ClusterMember clusterMember : allMembers( cluster ) )
+            {
+                clusterMember.config().augment( additionalConf );
+            }
         }
 
         private static Collection<ClusterMember> allMembers( Cluster cluster )

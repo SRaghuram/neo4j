@@ -7,7 +7,6 @@ package com.neo4j.metrics;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.MetricsTestHelper.TimerField;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -36,7 +35,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -166,7 +165,7 @@ class CausalClusterMetricIT
 
     private static File metricsFile( ClusterMember member, String databaseName, String metricName ) throws InterruptedException
     {
-        var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.defaultValue().toString() );
+        var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.getDefaultValue() );
         var metric = "neo4j." + databaseName + ".causal_clustering." + metricName;
         return metricsCsv( metricsDir, metric );
     }

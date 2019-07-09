@@ -59,7 +59,9 @@ class CoreRoutingProcedureInstallerTest
 
     private static Config newConfig( boolean multiDC )
     {
-        return Config.defaults( CausalClusteringSettings.multi_dc_license, Boolean.toString( multiDC ) );
+        var config = Config.defaults();
+        config.augment( CausalClusteringSettings.multi_dc_license, Boolean.toString( multiDC ) );
+        return config;
     }
 
     private static void installRoutingProcedures( Config config, GlobalProcedures procedures ) throws ProcedureException

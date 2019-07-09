@@ -5,7 +5,7 @@
  */
 package com.neo4j.internal.batchimport.store;
 
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.metrics.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.AdditionalInitialIds;
@@ -36,8 +37,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.Settings.TRUE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class BatchingNeoStoresIT
@@ -85,7 +85,7 @@ class BatchingNeoStoresIT
         }
 
         DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( GraphDatabaseSettings.fail_on_missing_files, FALSE )
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

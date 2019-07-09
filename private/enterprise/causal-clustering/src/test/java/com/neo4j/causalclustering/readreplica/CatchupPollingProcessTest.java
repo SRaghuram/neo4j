@@ -29,7 +29,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -69,7 +69,7 @@ class CatchupPollingProcessTest
     private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
-    private final SocketAddress coreMemberAddress = new SocketAddress( "hostname", 1234 );
+    private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
     private final MockClientResponses clientResponses = responses();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
@@ -102,7 +102,7 @@ class CatchupPollingProcessTest
         clearInvocations( databaseContext );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
-        when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }

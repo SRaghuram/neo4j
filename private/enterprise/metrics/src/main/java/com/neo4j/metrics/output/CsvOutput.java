@@ -11,7 +11,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import com.neo4j.metrics.MetricsSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +29,9 @@ import org.neo4j.logging.RotatingFileOutputStreamSupplier;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvEnabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvInterval;
-import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csvPath;
+import static com.neo4j.metrics.MetricsSettings.csvEnabled;
+import static com.neo4j.metrics.MetricsSettings.csvInterval;
+import static com.neo4j.metrics.MetricsSettings.csvPath;
 
 public class CsvOutput implements Lifecycle, EventReporter
 {
@@ -59,7 +59,7 @@ public class CsvOutput implements Lifecycle, EventReporter
     public void init() throws IOException
     {
         // Setup CSV reporting
-        File configuredPath = config.get( csvPath ).toFile();
+        File configuredPath = config.get( csvPath );
         if ( configuredPath == null )
         {
             throw new IllegalArgumentException( csvPath.name() + " configuration is required since " +

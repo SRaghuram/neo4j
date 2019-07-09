@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.internal.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 
@@ -90,7 +90,7 @@ public class RaftServerFactory
         ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
                 handshakeTimeout, logProvider );
 
-        SocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
+        ListenSocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
         Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
         Server raftServer = new Server( channelInitializer, installedProtocolsHandler, logProvider,

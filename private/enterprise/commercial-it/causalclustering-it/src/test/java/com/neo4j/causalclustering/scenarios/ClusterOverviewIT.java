@@ -41,7 +41,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @ExtendWith( SuppressOutputExtension.class )
@@ -248,7 +247,7 @@ class ClusterOverviewIT
             Cluster cluster = clusterFactory.createCluster( clusterConfig
                     .withNumberOfCoreMembers( coreMembers )
                     .withNumberOfReadReplicas( readReplicas )
-                    .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, FALSE ) ); // triggering elections doesn't work otherwise
+                    .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, "false" ) ); // triggering elections doesn't work otherwise
             cluster.start();
 
             CoreClusterMember leader = cluster.awaitLeader();

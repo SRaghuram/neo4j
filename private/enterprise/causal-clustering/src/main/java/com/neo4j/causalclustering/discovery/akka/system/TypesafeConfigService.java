@@ -15,13 +15,13 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForM
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.marshal.BaseAkkaSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.RaftIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForMemberIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseLeaderInfoMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.LeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.MemberIdSerializer;
-import com.neo4j.causalclustering.discovery.akka.marshal.RaftIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRefreshMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessageSerializer;
@@ -30,8 +30,8 @@ import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedLeaderInfoSer
 import com.neo4j.causalclustering.discovery.akka.marshal.UniqueAddressSerializer;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.typesafe.config.ConfigFactory;
 
 import java.time.Duration;
@@ -40,7 +40,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
+import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService
@@ -95,8 +97,8 @@ public final class TypesafeConfigService
 
     private com.typesafe.config.Config transportConfig()
     {
-        SocketAddress listenAddress = config.get( CausalClusteringSettings.discovery_listen_address );
-        SocketAddress advertisedAddress = config.get( CausalClusteringSettings.discovery_advertised_address );
+        ListenSocketAddress listenAddress = config.get( CausalClusteringSettings.discovery_listen_address );
+        AdvertisedSocketAddress advertisedAddress = config.get( CausalClusteringSettings.discovery_advertised_address );
         Map<String,Object> configMap = new HashMap<>();
 
         configMap.put( "akka.remote.artery.enabled", true );

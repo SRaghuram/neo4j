@@ -15,10 +15,12 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_type;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
@@ -27,7 +29,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernete
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @RunWith( Parameterized.class )
 public class CausalClusterConfigurationValidatorTest
@@ -48,31 +49,32 @@ public class CausalClusterConfigurationValidatorTest
     public void validateOnlyIfModeIsCoreOrReplica()
     {
         // when
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE.name() )
-                .set( initial_discovery_members, "" )
-                .addValidator( CausalClusterConfigurationValidator.class )
+        Config config = Config.builder()
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( initial_discovery_members, "" )
+                .withValidator( new CausalClusterConfigurationValidator() )
                 .build();
 
         // then
-        assertTrue( config.isExplicitlySet( initial_discovery_members ) );
-        assertEquals( List.of() , config.get( initial_discovery_members ) );
+        Optional<String> value = config.getRaw( initial_discovery_members.name() );
+        assertTrue( value.isPresent() );
+        assertEquals( "", value.get() );
     }
 
     @Test
     public void validateSuccessList()
     {
         // when
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE.name() )
-                .set( initial_discovery_members, "localhost:99,remotehost:2" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .addValidator( CausalClusterConfigurationValidator.class )
+        Config config = Config.builder()
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( initial_discovery_members, "localhost:99,remotehost:2" )
+                .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withValidator( new CausalClusterConfigurationValidator() )
                 .build();
 
         // then
-        assertEquals( asList( new SocketAddress( "localhost", 99 ),
-                new SocketAddress( "remotehost", 2 ) ),
+        assertEquals( asList( new AdvertisedSocketAddress( "localhost", 99 ),
+                new AdvertisedSocketAddress( "remotehost", 2 ) ),
                 config.get( initial_discovery_members ) );
     }
 
@@ -80,13 +82,13 @@ public class CausalClusterConfigurationValidatorTest
     public void validateSuccessKubernetes()
     {
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE.name() )
-                .set( discovery_type, DiscoveryType.K8S.name() )
-                .set( kubernetes_label_selector, "waldo=fred" )
-                .set( kubernetes_service_port_name, "default" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .addValidator( CausalClusterConfigurationValidator.class )
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( discovery_type, DiscoveryType.K8S.name() )
+                .withSetting( kubernetes_label_selector, "waldo=fred" )
+                .withSetting( kubernetes_service_port_name, "default" )
+                .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withValidator( new CausalClusterConfigurationValidator() )
                 .build();
 
         // then no exception
@@ -95,96 +97,97 @@ public class CausalClusterConfigurationValidatorTest
     @Test
     public void missingBoltConnector()
     {
-        expected.expect( IllegalArgumentException.class );
+        // then
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage( "A Bolt connector must be configured to run a cluster" );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( initial_discovery_members, "" )
-                .set( initial_discovery_members, "localhost:99,remotehost:2" )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode.name(), mode.name() )
+                .withSetting( initial_discovery_members, "" )
+                .withSetting( initial_discovery_members.name(), "localhost:99,remotehost:2" )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 
     @Test
     public void missingInitialMembersDNS()
     {
         // then
-        expected.expect( IllegalArgumentException.class );
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage(
                 "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=DNS'"
         );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( discovery_type, DiscoveryType.DNS.name() )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
+                .withSetting( discovery_type, DiscoveryType.DNS.name() )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 
     @Test
     public void missingInitialMembersLIST()
     {
         // then
-        expected.expect( IllegalArgumentException.class );
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage(
                 "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=LIST'" );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( discovery_type, DiscoveryType.LIST.name() )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
+                .withSetting( discovery_type, DiscoveryType.LIST.name() )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 
     @Test
     public void missingInitialMembersSRV()
     {
         // then
-        expected.expect( IllegalArgumentException.class );
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage(
                 "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=SRV'" );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( discovery_type, DiscoveryType.SRV.name() )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
+                .withSetting( discovery_type, DiscoveryType.SRV.name() )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 
     @Test
     public void missingKubernetesLabelSelector()
     {
         // then
-        expected.expect( IllegalArgumentException.class );
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage(
                 "Missing value for 'causal_clustering.kubernetes.label_selector', which is mandatory with 'causal_clustering.discovery_type=K8S'"
         );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( discovery_type, DiscoveryType.K8S.name() )
-                .set( kubernetes_service_port_name, "default" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
+                .withSetting( discovery_type, DiscoveryType.K8S.name() )
+                .withSetting( kubernetes_service_port_name, "default" )
+                .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 
     @Test
     public void missingKubernetesPortName()
     {
         // then
-        expected.expect( IllegalArgumentException.class );
+        expected.expect( InvalidSettingException.class );
         expected.expectMessage(
                 "Missing value for 'causal_clustering.kubernetes.service_port_name', which is mandatory with 'causal_clustering.discovery_type=K8S'"
         );
 
         // when
-        Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode.name() )
-                .set( discovery_type, DiscoveryType.K8S.name() )
-                .set( kubernetes_label_selector, "waldo=fred" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .addValidator( CausalClusterConfigurationValidator.class ).build();
+        Config.builder()
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
+                .withSetting( discovery_type, DiscoveryType.K8S.name() )
+                .withSetting( kubernetes_label_selector, "waldo=fred" )
+                .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
 }

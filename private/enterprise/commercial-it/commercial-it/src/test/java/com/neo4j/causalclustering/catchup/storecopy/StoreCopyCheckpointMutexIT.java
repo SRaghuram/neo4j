@@ -24,12 +24,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.TreeInconsistencyException;
+import org.neo4j.internal.helpers.ListenSocketAddress;
+import org.neo4j.internal.helpers.SocketAddress;
 import org.neo4j.io.fs.DelegatingFileSystemAbstraction;
 import org.neo4j.io.fs.DelegatingStoreChannel;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -127,7 +128,7 @@ class StoreCopyCheckpointMutexIT
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .installedProtocolsHandler( null )
-                .listenAddress( new SocketAddress( "localhost", 0 ) )
+                .listenAddress( new ListenSocketAddress( "localhost", 0 ) )
                 .scheduler( resolve( db, JobScheduler.class ) )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )
                 .portRegister( resolve( db, ConnectorPortRegister.class ) )

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.LoadBalancingServerPoliciesGroup;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import org.junit.Test;
 
@@ -15,6 +14,8 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_balancing_config;
+import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -25,6 +26,7 @@ public class FilteringPolicyLoaderTest
     public void shouldLoadConfiguredPolicies() throws Exception
     {
         // given
+        String pluginName = "server_policies";
 
         Object[][] input = {
                 {
@@ -59,18 +61,17 @@ public class FilteringPolicyLoaderTest
                 },
         };
 
-        Config.Builder builder = Config.newBuilder();
+        Config config = Config.defaults();
 
         for ( Object[] row : input )
         {
             String policyName = (String) row[0];
             String filterSpec = (String) row[1];
-            builder.set( LoadBalancingServerPoliciesGroup.group( policyName ).value, filterSpec );
+            config.augment( configNameFor( pluginName, policyName ), filterSpec );
         }
-        Config config = builder.build();
 
         // when
-        Policies policies = FilteringPolicyLoader.loadServerPolicies( config, mock( Log.class ) );
+        Policies policies = FilteringPolicyLoader.load( config, pluginName, mock( Log.class ) );
 
         // then
         for ( Object[] row : input )
@@ -88,4 +89,8 @@ public class FilteringPolicyLoaderTest
         return VirtualValues.map( new String[]{Policies.POLICY_KEY}, new AnyValue[]{stringValue( policyName )} );
     }
 
+    private static String configNameFor( String pluginName, String policyName )
+    {
+        return format( "%s.%s.%s", load_balancing_config.name(), pluginName, policyName );
+    }
 }

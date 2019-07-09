@@ -9,8 +9,8 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedureTest;
@@ -27,7 +27,7 @@ class ReadReplicaGetRoutingTableProcedureTest extends SingleInstanceGetRoutingTa
     }
 
     @Override
-    protected List<SocketAddress> expectedWriters( SocketAddress selfAddress )
+    protected List<AdvertisedSocketAddress> expectedWriters( AdvertisedSocketAddress selfAddress )
     {
         return emptyList();
     }

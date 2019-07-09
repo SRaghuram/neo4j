@@ -93,7 +93,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -101,6 +100,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -121,6 +121,7 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -184,14 +185,14 @@ class CoreDatabaseFactory
     private final Map<IdType,Integer> allocationSizes;
     private final CommercialIdTypeConfigurationProvider idTypeConfigurationProvider;
     private final RecoveryFacade recoveryFacade;
-    private final Outbound<SocketAddress,Message> raftSender;
+    private final Outbound<AdvertisedSocketAddress,Message> raftSender;
     private final TransactionEventService txEventService;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<DatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, TransactionEventService txEventService )
+            RaftMessageLogger<MemberId> raftLogger, Outbound<AdvertisedSocketAddress,Message> raftSender, TransactionEventService txEventService )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();
@@ -297,7 +298,7 @@ class CoreDatabaseFactory
                 txEventService.getCommitNotifier( databaseId ) );
 
         Locks lockManager = createLockManager(
-                config, clock, replicator, myIdentity, raftGroup.raftMachine(), replicatedLockTokenStateMachine, databaseId );
+                config, clock, logService, replicator, myIdentity, raftGroup.raftMachine(), replicatedLockTokenStateMachine, databaseId );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
@@ -498,10 +499,10 @@ class CoreDatabaseFactory
         return new ReplicatedIdGeneratorFactory( fileSystem, idRangeAcquirer, logProvider, idTypeConfigurationProvider, panicService );
     }
 
-    private Locks createLockManager( final Config config, Clock clock, final Replicator replicator, MemberId myself, LeaderLocator leaderLocator,
-            ReplicatedLockTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
+    private Locks createLockManager( final Config config, Clock clock, final LogService logging, final Replicator replicator, MemberId myself,
+            LeaderLocator leaderLocator, ReplicatedLockTokenStateMachine lockTokenStateMachine, DatabaseId databaseId )
     {
-        LocksFactory lockFactory = createLockFactory( config );
+        LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
         return new LeaderOnlyLockManager( myself, replicator, leaderLocator, localLocks, lockTokenStateMachine, databaseId );
     }

@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -36,7 +35,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths with explicit same start and end nodes should throw exception when configured to do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> TRUE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "true") { db =>
       setupModel(db)
       val query = "MATCH p=shortestPath((a)-[*]-(a)) RETURN p"
       intercept[ShortestPathCommonEndNodesForbiddenException](
@@ -46,7 +45,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths with explicit same start and end nodes should not throw exception when configured to not do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "false") { db =>
       setupModel(db)
       val query = "MATCH p=shortestPath((a)-[*]-(a)) RETURN p"
       executeUsingCostPlannerOnly(db, query).toList.length should be(0)
@@ -60,7 +59,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths that discover at runtime that the start and end nodes are the same should throw exception when configured to do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> TRUE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "true") { db =>
       setupModel(db)
       val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*]-(b)) RETURN p"
       intercept[ShortestPathCommonEndNodesForbiddenException](
@@ -70,7 +69,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths that discover at runtime that the start and end nodes are the same should not throw exception when configured to not do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "false") { db =>
       setupModel(db)
       val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*]-(b)) RETURN p"
       executeUsingCostPlannerOnly(db, query).toList.length should be(6)
@@ -84,7 +83,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should throw exception even when when configured to do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> TRUE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "true") { db =>
       setupModel(db)
       val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*0..]-(b)) RETURN p"
       executeUsingCostPlannerOnly(db, query).toList.length should be(9)
@@ -92,7 +91,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   }
 
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should not throw exception when configured to not do so") {
-    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE) { db =>
+    runWithConfig(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> "false") { db =>
       setupModel(db)
       val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*0..]-(b)) RETURN p"
       executeUsingCostPlannerOnly(db, query).toList.length should be(9)

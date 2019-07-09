@@ -11,7 +11,7 @@ import org.junit.Test;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
@@ -39,8 +39,8 @@ public class PoliciesTest
         // when
         Policy policy = policies.selectFor( EMPTY_MAP );
         Set<ServerInfo> input = asSet(
-                new ServerInfo( new SocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), asSet( "groupA" ) ),
-                new ServerInfo( new SocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), asSet( "groupB" ) )
+                new ServerInfo( new AdvertisedSocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), asSet( "groupA" ) ),
+                new ServerInfo( new AdvertisedSocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), asSet( "groupB" ) )
         );
 
         Set<ServerInfo> output = policy.apply( input );

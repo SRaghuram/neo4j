@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, _}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{Node, QueryExecutionException}
@@ -14,7 +13,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 import org.neo4j.kernel.api.exceptions.Status
 
 class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
-  override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.cypher_hints_error -> TRUE)
+  override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.cypher_hints_error -> "true")
 
   test("should use index on literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")
@@ -162,14 +161,14 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should generate a warning if executing a query using a 'USING INDEX' which cannot be fulfilled, and hint errors are turned off") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> FALSE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "false") {
       db =>
         shouldHaveWarning(db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n"), Status.Schema.IndexNotFound)
     }
   }
 
   test("should generate an error if executing a query using EXPLAIN and a 'USING INDEX' which cannot be fulfilled, and hint errors are turned on") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
       db =>
         intercept[QueryExecutionException](
           db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
@@ -178,7 +177,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should generate an error if executing a query using a 'USING INDEX' which cannot be fulfilled, and hint errors are turned on") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
       db =>
         intercept[QueryExecutionException](
           db.execute(s"MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
@@ -187,7 +186,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   }
 
   test("should generate an error if executing a query using a 'USING INDEX' for an existing index but which cannot be fulfilled for the query, and hint errors are turned on") {
-    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
+    runWithConfig(GraphDatabaseSettings.cypher_hints_error -> "true") {
       db =>
         db.execute("CREATE INDEX ON :Person(email)")
         intercept[QueryExecutionException](

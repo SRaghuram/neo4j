@@ -30,7 +30,7 @@ import java.util.UUID;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -59,11 +59,11 @@ class ReadReplicaDatabaseLifeTest
     private final RaftId raftId = new RaftId( UUID.randomUUID() );
     private final DatabaseId databaseA = new TestDatabaseIdRepository().get( "dbA" );
     private final MemberId memberA = new MemberId( UUID.randomUUID() );
-    private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
+    private final AdvertisedSocketAddress addressA = new AdvertisedSocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
 
-    TopologyService topologyService( DatabaseId databaseId, MemberId upstreamMember, SocketAddress address ) throws CatchupAddressResolutionException
+    TopologyService topologyService( DatabaseId databaseId, MemberId upstreamMember, AdvertisedSocketAddress address ) throws CatchupAddressResolutionException
     {
         TopologyService topologyService = mock( TopologyService.class );
         Map<MemberId,CoreServerInfo> members = Map.of( upstreamMember, mock( CoreServerInfo.class ) );
@@ -73,7 +73,7 @@ class ReadReplicaDatabaseLifeTest
         return topologyService;
     }
 
-    private CatchupComponents catchupComponents( SocketAddress address, StoreId remoteStoreId ) throws StoreIdDownloadFailedException
+    private CatchupComponents catchupComponents( AdvertisedSocketAddress address, StoreId remoteStoreId ) throws StoreIdDownloadFailedException
     {
         RemoteStore remoteStore = mock( RemoteStore.class );
         when( remoteStore.getStoreId( address ) ).thenReturn( remoteStoreId );

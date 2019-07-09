@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.UncaughtCheckedException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -300,8 +299,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public void setConfigValue( @Name( "setting" ) String setting, @Name( "value" ) String value )
     {
         Config config = resolver.resolveDependency( Config.class );
-        SettingImpl<Object> settingObj = (SettingImpl<Object>) config.getSetting( setting );
-        config.setDynamic( settingObj, settingObj.parse( value ), "dbms.setConfigValue" );
+        config.updateDynamicSetting( setting, value, "dbms.setConfigValue" ); // throws if something goes wrong
     }
 
     /*

@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.util.ValueUtils;
 
 public class BoltConfiguredProceduresIT extends ConfiguredProceduresTestBase<BoltInteraction.BoltSubject>
@@ -26,7 +25,7 @@ public class BoltConfiguredProceduresIT extends ConfiguredProceduresTestBase<Bol
     }
 
     @Override
-    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<Setting<?>, String> config )
+    public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<String, String> config )
     {
         return new BoltInteraction( config );
     }
