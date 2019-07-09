@@ -5,14 +5,14 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static java.util.stream.Collectors.joining;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ProfilerTypeTest
 {
@@ -24,7 +24,7 @@ public class ProfilerTypeTest
     public void shouldParseAllProfilerTypes()
     {
         List<ProfilerType> profilerTypes = ProfilerType.deserializeProfilers( ALL_PROFILER_NAMES );
-        MatcherAssert.assertThat( profilerTypes.size(), CoreMatchers.equalTo( ProfilerType.values().length ) );
+        assertThat( profilerTypes.size(), equalTo( ProfilerType.values().length ) );
     }
 
     @Test( expected = IllegalStateException.class )
