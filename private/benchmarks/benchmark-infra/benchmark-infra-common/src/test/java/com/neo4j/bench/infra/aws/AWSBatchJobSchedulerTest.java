@@ -79,7 +79,7 @@ class AWSBatchJobSchedulerTest
                 new BenchmarkArgs( parameters, URI.create( "s3://benchmarking.neohq.net/worker.jar" ) ) );
 
         // then
-        assertEquals( asList( "1" ), jobIds, "invalid job id in submit job request response" );
+        assertEquals( asList( new JobId( "1" ) ), jobIds, "invalid job id in submit job request response" );
 
         ArgumentCaptor<SubmitJobRequest> captor = ArgumentCaptor.forClass( SubmitJobRequest.class );
         verify( awsBatch ).submitJob( captor.capture() );
