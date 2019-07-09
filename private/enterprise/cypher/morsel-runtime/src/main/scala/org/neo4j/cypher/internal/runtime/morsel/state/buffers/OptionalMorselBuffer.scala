@@ -120,7 +120,8 @@ class OptionalMorselBuffer(id: BufferId,
 
   override def clearAll(): Unit = {
     argumentStateMap.clearAll(buffer => {
-      val morsels = buffer.takeAll()
+      val morselsOrNull = buffer.takeAll()
+      val morsels = if (morselsOrNull != null) morselsOrNull else IndexedSeq.empty
       val data = MorselData(buffer.argumentRowId, morsels, EndOfNonEmptyStream)
       close(data)
     })
