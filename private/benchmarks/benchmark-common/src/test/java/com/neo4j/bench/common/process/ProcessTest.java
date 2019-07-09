@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,8 +36,10 @@ public class ProcessTest
 
     public static class JustForMain
     {
-        public static void main( String[] args )
+        public static void main( String[] args ) throws InterruptedException
         {
+            Duration sleepMs = Duration.ofSeconds( 5 );
+            Thread.sleep( sleepMs.toMillis() );
             System.out.println( "Hello Work" );
         }
     }
