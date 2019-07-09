@@ -94,11 +94,11 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
-  def setupUserJoeWithCustomRole(): Unit = {
+  def setupUserJoeWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom"): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE custom")
-    execute("GRANT ROLE custom TO joe")
+    execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
+    execute(s"CREATE ROLE $rolename")
+    execute(s"GRANT ROLE $rolename TO $username")
   }
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
@@ -135,23 +135,27 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
 
   def executeOnDefault(username: String, password: String, query: String,
                        params: util.Map[String, Object] = Collections.emptyMap(),
-                       resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
-    executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, params, resultHandler)
+                       resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
+                       executeBefore: () => Unit = () => ()): Int = {
+    executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, params, resultHandler, executeBefore)
   }
 
   def executeOnSystem(username: String, password: String, query: String,
                       params: util.Map[String, Object] = Collections.emptyMap(),
-                      resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
-    executeOn(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, username, password, query, params, resultHandler)
+                      resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
+                      executeBefore: () => Unit = () => ()): Int = {
+    executeOn(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, username, password, query, params, resultHandler, executeBefore)
   }
 
   def executeOn(database: String, username: String, password: String, query: String,
-                        params: util.Map[String, Object] = Collections.emptyMap(),
-                        resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {}): Int = {
+                params: util.Map[String, Object] = Collections.emptyMap(),
+                resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
+                executeBefore: () => Unit = () => ()): Int = {
     selectDatabase(database)
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val tx = graph.beginTransaction(Transaction.Type.explicit, login)
     try {
+      executeBefore()
       var count = 0
       val result: Result = new RichGraphDatabaseQueryService(graph).execute(query, params)
       result.accept(row => {

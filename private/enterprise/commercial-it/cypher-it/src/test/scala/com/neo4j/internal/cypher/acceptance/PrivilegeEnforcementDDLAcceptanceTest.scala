@@ -2407,6 +2407,154 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // Mixed tests
 
+  test("should get correct count within transaction for restricted user") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT WRITE (*) ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:A:B), (:B)")
+
+    val countQuery = "MATCH (n:A) RETURN count(n) as count"
+    val createAndCountQuery = "CREATE (x:A) WITH x MATCH (n:A) RETURN count(n) as count"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 3)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 4)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 5)))
+
+  }
+
+  test("should get correct count within transaction for restricted user using count store") {
+    // GIVEN
+    setupUserJoeWithCustomRole()
+    execute("GRANT WRITE (*) ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:A:B), (:B)")
+
+    val countQuery = "MATCH (n:A) RETURN count(n) as count"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+      row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
+    }, executeBefore = () => createLabeledNode("A")) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 3)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
+    }, executeBefore = () => createLabeledNode("A")) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 4)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
+    }, executeBefore = () => createLabeledNode("A")) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 5)))
+
+  }
+
+  test("should support whitelist and blacklist traversal in index seeks") {
+    setupMultilabelData
+    graph.createIndex("A", "foo")
+    setupUserJoeWithCustomRole("user1", "secret", "role1")
+    setupUserJoeWithCustomRole("user2", "secret", "role2")
+    setupUserJoeWithCustomRole("user3", "secret", "role3")
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // role1 whitelist A
+    execute("GRANT READ (foo) ON GRAPH * NODES * TO role1")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO role1")
+
+    // role2 whitelist A and blacklist B
+    execute("GRANT READ (foo) ON GRAPH * NODES * TO role2")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO role2")
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO role2")
+
+    // role3 whitelist all labels and blacklist B
+    execute("GRANT READ (foo) ON GRAPH * NODES * TO role3")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO role3")
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO role3")
+
+    // index with equality
+    Seq("user1" -> 1, "user2" -> 0, "user3" -> 0).foreach {
+      case (user, count) =>
+        val query = "MATCH (n:A) WHERE n.foo = 5 RETURN count(n)"
+        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+          withClue(s"User '$user' should get count $count for query '$query'") {
+            row.get("count(n)") should be(count)
+          }
+        })
+    }
+
+    // index with range
+    Seq("user1" -> 2, "user2" -> 1, "user3" -> 1).foreach {
+      case (user, count) =>
+        val query = "MATCH (n:A) WHERE n.foo > 0 RETURN count(n)"
+        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+          withClue(s"User '$user' should get count $count for query '$query'") {
+            row.get("count(n)") should be(count)
+          }
+        })
+    }
+
+    // index with exists
+    Seq("user1" -> 2, "user2" -> 1, "user3" -> 1).foreach {
+      case (user, count) =>
+        val query = "MATCH (n:A) WHERE exists(n.foo) RETURN count(n)"
+        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+          withClue(s"User '$user' should get count $count for query '$query'") {
+            row.get("count(n)") should be(count)
+          }
+        })
+    }
+  }
+
   test("should rollback transaction") {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
