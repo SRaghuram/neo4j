@@ -5,17 +5,17 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
+import com.neo4j.bench.micro.data.Stores;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Stack;
-
-import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.micro.data.Stores;
 
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.graphdb.GraphDatabaseService;

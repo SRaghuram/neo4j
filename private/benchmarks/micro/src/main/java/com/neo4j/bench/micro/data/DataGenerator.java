@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SplittableRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -37,6 +38,7 @@ import org.neo4j.unsafe.batchinsert.BatchInserters;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
 
