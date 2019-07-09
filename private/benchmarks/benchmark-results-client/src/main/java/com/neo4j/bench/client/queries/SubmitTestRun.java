@@ -22,7 +22,9 @@ import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.types.MapAccessor;
 
+import static com.neo4j.bench.common.model.BenchmarkMetrics.extractBenchmarkMetrics;
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -66,9 +68,17 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                     throw new RuntimeException( "Query returned more than one row!" );
                 }
 
+                // [[benchmark,metrics,params]]
+                List<List<Map<String,Object>>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
+                                                                             .asList( list -> list.asList( MapAccessor::asMap ) );
+                List<BenchmarkMetrics> benchmarkMetrics = benchmarkMetricsLists.stream()
+                                                                               .map( metrics -> extractBenchmarkMetrics( metrics.get( 0 ),
+                                                                                                                         metrics.get( 1 ),
+                                                                                                                         metrics.get( 2 ) ) )
+                                                                               .collect( toList() );
                 SubmitTestRunResult result = new SubmitTestRunResult(
                         new TestRun( record.get( "test_run" ).asMap() ),
-                        extractBenchmarkMetricsList( record.get( "benchmark_metrics" ).asList() ) );
+                        benchmarkMetrics );
 
                 maybeSetNonFatalError( result.benchmarkMetricsList().size() );
 
@@ -85,15 +95,6 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                 return null;
             }
         }
-    }
-
-    // [[benchmark,metrics,params]]
-    private static List<BenchmarkMetrics> extractBenchmarkMetricsList( List<Object> benchmarkMetricsList )
-    {
-        return benchmarkMetricsList.stream()
-                                   .map( o -> (List<Object>) o )
-                                   .map( BenchmarkMetrics::extractBenchmarkMetrics )
-                                   .collect( toList() );
     }
 
     private void maybeSetNonFatalError( int actualResultSize )

@@ -7,7 +7,7 @@ package com.neo4j.bench.ldbc.cli;
 
 import com.google.common.base.Charsets;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;

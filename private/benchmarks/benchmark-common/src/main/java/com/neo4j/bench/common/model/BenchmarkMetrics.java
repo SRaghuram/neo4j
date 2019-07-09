@@ -7,7 +7,6 @@ package com.neo4j.bench.common.model;
 
 import com.neo4j.bench.common.model.Benchmark.Mode;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,15 +18,10 @@ public class BenchmarkMetrics
     private final Benchmark benchmark;
     private final Metrics metrics;
 
-    // [benchmark,metrics,params]
-    public static BenchmarkMetrics extractBenchmarkMetrics( List<Object> benchmarkMetrics )
+    public static BenchmarkMetrics extractBenchmarkMetrics( Map<String,Object> benchmarkMap,
+                                                            Map<String,Object> metricsMap,
+                                                            Map<String,Object> benchmarkParamsMap )
     {
-        int benchmarkIndex = 0;
-        int metricsIndex = 1;
-        int benchmarkParamsIndex = 2;
-        Map<String,Object> benchmarkMap = (Map<String,Object>) benchmarkMetrics.get( benchmarkIndex );
-        Map<String,Object> metricsMap = (Map<String,Object>) benchmarkMetrics.get( metricsIndex );
-        Map<String,Object> benchmarkParamsMap = (Map<String,Object>) benchmarkMetrics.get( benchmarkParamsIndex );
         return new BenchmarkMetrics(
                 (String) benchmarkMap.get( Benchmark.SIMPLE_NAME ),
                 (String) benchmarkMap.get( Benchmark.DESCRIPTION ),

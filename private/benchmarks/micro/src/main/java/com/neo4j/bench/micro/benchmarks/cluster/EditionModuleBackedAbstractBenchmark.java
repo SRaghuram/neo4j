@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
-import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
@@ -21,8 +21,6 @@ import java.nio.file.Path;
 import java.util.Stack;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -61,10 +59,10 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         tempDirectory = createTempDirectory( group, benchmark, stores );
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY,
                                                                   TxProbingEditionModule::new ).build( tempDirectory.toFile(),
-                                                                                                           Config.defaults(),
-                                                                                                           GraphDatabaseDependencies
-                                                                                                                   .newDependencies()
-                                                                                                                   .dependencies( dependencies ) );
+                                                                                                       Config.defaults(),
+                                                                                                       GraphDatabaseDependencies
+                                                                                                               .newDependencies()
+                                                                                                               .dependencies( dependencies ) );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
     }

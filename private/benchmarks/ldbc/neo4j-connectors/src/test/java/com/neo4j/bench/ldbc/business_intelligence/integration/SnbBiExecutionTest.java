@@ -10,7 +10,7 @@ import com.ldbc.driver.client.ResultsDirectory;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -24,11 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -36,11 +32,13 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -250,18 +248,18 @@ public abstract class SnbBiExecutionTest
                                 resultsDirectory.files().stream().map( File::getName ).collect( toList() ) ) );
         }
 
-        assertTrue( resultsDirectory.files().containsAll( resultsDirectory.expectedFiles()),
+        assertTrue( resultsDirectory.files().containsAll( resultsDirectory.expectedFiles() ),
                     format( "Expected that: %s\nWill contain: %s",
                             resultsDirectory.files(),
                             resultsDirectory.expectedFiles() ) );
 
         long actualOperationCount = resultsDirectory.getResultsLogFileLength( false );
         assertThat( "Operation count = " + actualOperationCount,
-                actualOperationCount,
-                allOf(
-                        greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
-                        lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
-                )
+                    actualOperationCount,
+                    allOf(
+                            greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
+                            lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
+                    )
         );
     }
 }

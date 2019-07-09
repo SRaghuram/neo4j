@@ -13,7 +13,7 @@ import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -218,12 +218,12 @@ public abstract class SnbInteractiveExecutionTest
 
             long actualOperationCount = resultsDirectory.getResultsLogFileLength( false );
             assertThat( "Operation count = " + actualOperationCount,
-                    actualOperationCount,
-                    allOf(
-                            greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount()
-                            ) ),
-                            lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
-                    )
+                        actualOperationCount,
+                        allOf(
+                                greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount()
+                                ) ),
+                                lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
+                        )
             );
         }
     }
@@ -324,9 +324,9 @@ public abstract class SnbInteractiveExecutionTest
                     LdbcSnbInteractiveWorkloadConfiguration.PARAMETERS_DIRECTORY,
                     scenario.paramsDir().getAbsolutePath() );
             additionalParameters.put( LdbcSnbInteractiveWorkloadConfiguration.UPDATES_DIRECTORY,
-                    scenario.updatesDir().getAbsolutePath() );
+                                      scenario.updatesDir().getAbsolutePath() );
             additionalParameters.put( LdbcSnbInteractiveWorkloadConfiguration.UPDATE_STREAM_PARSER,
-                    LdbcSnbInteractiveWorkloadConfiguration.UpdateStreamParser.CHAR_SEEKER.name() );
+                                      LdbcSnbInteractiveWorkloadConfiguration.UpdateStreamParser.CHAR_SEEKER.name() );
             configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( additionalParameters );
 
             Map<String,String> ldbcSnbInteractiveReadOnlyConfiguration = MapUtils.loadPropertiesToMap(
@@ -365,13 +365,13 @@ public abstract class SnbInteractiveExecutionTest
 
             long actualOperationCount = resultsDirectory.getResultsLogFileLength( false );
             assertThat( actualOperationCount,
-                    is( configuration.operationCount() + 1 ) ); // + 1 to account for csv headers
+                        is( configuration.operationCount() + 1 ) ); // + 1 to account for csv headers
             assertThat( "Operation count = " + actualOperationCount,
-                    actualOperationCount,
-                    allOf(
-                            greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
-                            lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
-                    )
+                        actualOperationCount,
+                        allOf(
+                                greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
+                                lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
+                        )
             );
         }
     }
@@ -472,7 +472,7 @@ public abstract class SnbInteractiveExecutionTest
             additionalParameters
                     .put( ConsoleAndFileDriverConfiguration.OPERATION_COUNT_ARG, Long.toString( operationCount ) );
             additionalParameters.put( LdbcSnbInteractiveWorkloadConfiguration.UPDATE_STREAM_PARSER,
-                    LdbcSnbInteractiveWorkloadConfiguration.UpdateStreamParser.CHAR_SEEKER.name() );
+                                      LdbcSnbInteractiveWorkloadConfiguration.UpdateStreamParser.CHAR_SEEKER.name() );
             configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( additionalParameters );
 
             Map<String,String> ldbcSnbInteractiveReadOnlyConfiguration =
@@ -502,22 +502,22 @@ public abstract class SnbInteractiveExecutionTest
                 assertTrue( file.exists(),
                             format( "Expected file to exist: %s\nOnly found: %s",
                                     file.getAbsolutePath(),
-                                    resultsDirectory.files().stream().map( File::getName ).collect( toList() ) ));
+                                    resultsDirectory.files().stream().map( File::getName ).collect( toList() ) ) );
             }
 
             assertTrue( resultsDirectory.files().containsAll( resultsDirectory.expectedFiles() ),
-                    format( "Expected that: %s\nWill contain: %s",
-                            resultsDirectory.files(),
-                            resultsDirectory.expectedFiles() )
+                        format( "Expected that: %s\nWill contain: %s",
+                                resultsDirectory.files(),
+                                resultsDirectory.expectedFiles() )
             );
 
             long actualOperationCount = resultsDirectory.getResultsLogFileLength( false );
             assertThat( "Operation count = " + actualOperationCount,
-                    actualOperationCount,
-                    allOf(
-                            greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
-                            lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
-                    )
+                        actualOperationCount,
+                        allOf(
+                                greaterThanOrEqualTo( TestUtils.operationCountLower( configuration.operationCount() ) ),
+                                lessThanOrEqualTo( TestUtils.operationCountUpper( configuration.operationCount() ) )
+                        )
             );
         }
     }

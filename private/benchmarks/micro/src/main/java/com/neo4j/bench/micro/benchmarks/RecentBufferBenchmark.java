@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.Main;
@@ -53,7 +53,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
 
     @Override
     protected void benchmarkSetup( BenchmarkGroup group,
-                                   com.neo4j.bench.client.model.Benchmark benchmark,
+                                   com.neo4j.bench.common.model.Benchmark benchmark,
                                    Stores stores,
                                    Neo4jConfig neo4jConfig )
     {
