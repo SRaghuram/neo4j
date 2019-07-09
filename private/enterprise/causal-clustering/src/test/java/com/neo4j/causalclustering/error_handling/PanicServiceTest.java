@@ -60,7 +60,7 @@ class PanicServiceTest
     }
 
     @Test
-    void shouldCleanupPanicHandlersOnShutdown()
+    void shouldCleanupPanicHandlersOnShutdown() throws InterruptedException
     {
         // given
         LifeSupport life = new LifeSupport();
@@ -76,8 +76,8 @@ class PanicServiceTest
         panicService.panic( new Throwable( "cause" ) );
 
         // then
+        assertEventually( notLifecycled.atomicInteger::get, equalTo( 1 ), 10, TimeUnit.SECONDS );
         assertEquals( 0, lifecycled.atomicInteger.get() );
-        assertEquals( 1, notLifecycled.atomicInteger.get() );
     }
 
     @Test
