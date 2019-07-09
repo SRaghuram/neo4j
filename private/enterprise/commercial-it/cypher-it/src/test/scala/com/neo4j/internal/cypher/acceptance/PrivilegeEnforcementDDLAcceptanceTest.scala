@@ -20,7 +20,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
@@ -38,7 +38,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted read privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -58,7 +58,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -98,7 +98,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE (:A {name:'a'})")
     selectDatabase(SYSTEM_DATABASE_NAME)
 
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
@@ -115,7 +115,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("read privilege for node should not imply traverse privilege") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
@@ -129,7 +129,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("read privilege for relationship should not imply traverse privilege") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE ()-[:REL {name:'a'}]->()")
@@ -390,7 +390,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupMultilabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -448,7 +448,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not be able to traverse labels when denied all label traversal") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -480,7 +480,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not be able to traverse labels with grant and deny on all label traversal") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -531,7 +531,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see correct nodes and labels with grant traversal on all labels and deny on specific label") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -583,7 +583,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see correct nodes and labels with grant and deny traversal on specific labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -607,7 +607,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should get correct labels from procedure") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // Currently you need to have some kind of traverse or read access to be able to call the procedure at all
     execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
@@ -644,7 +644,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not be able read properties when denied read privilege for all labels and all properties") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -690,7 +690,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied read privilege for all labels and specific property") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -743,7 +743,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied read privilege for specific labels and all properties") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -796,7 +796,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied read privilege for specific label and specific property") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -849,7 +849,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties with several grants and denies on read labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -943,7 +943,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not be able read properties when denied match privilege for all labels and all properties") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -989,7 +989,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied match privilege for all labels and specific property") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -1035,7 +1035,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied match privilege for specific labels and all properties") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -1086,7 +1086,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read correct properties when denied match privilege for specific label and specific property") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     setupMultilabelData
 
@@ -1140,7 +1140,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should find relationship when granted traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1167,7 +1167,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not find relationship when denied all reltype traversal") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1196,7 +1196,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not find relationship with grant and deny on all reltype traversal") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1236,7 +1236,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should find correct relationships with grant traversal on all reltypes and deny on specific reltype") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1267,7 +1267,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should find correct relationships with grant and deny traversal on specific reltypes") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1289,7 +1289,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should get correct count for all relationships with traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1329,7 +1329,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should get correct count for specific relationship with traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1371,7 +1371,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     import scala.collection.JavaConverters._
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1432,7 +1432,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should get correct relationship types and count from procedure") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
     val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
 
@@ -1503,7 +1503,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should only see properties on relationship with read privilege") {
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
@@ -1561,7 +1561,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should not be able to read properties when denied read privilege for all reltypes and all properties") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1609,7 +1609,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied read privilege for all reltypes and specific property") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1663,7 +1663,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied read privilege for specific reltype and all properties") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1717,7 +1717,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied read privilege for specific reltype and specific property") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1771,7 +1771,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties with several grants and denies on read relationships") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1858,7 +1858,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should see properties and relationships depending on granted MATCH privileges for role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     execute("GRANT READ (id) ON GRAPH * TO custom")
 
@@ -1915,7 +1915,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should see properties and relationships depending on granted MATCH privileges for role fulltext index") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     execute("GRANT READ (id) ON GRAPH * TO custom")
 
@@ -1970,7 +1970,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should give correct results with relationship") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2049,7 +2049,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should give correct results with relationship fulltext index") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2131,7 +2131,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should not be able to read properties when denied match privilege for all reltypes and all properties") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2181,7 +2181,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied match privilege for all reltypes and specific property") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2232,7 +2232,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied match privilege for specific reltype and all properties") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2281,7 +2281,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should read correct properties when denied match privilege for specific reltype and specific property") {
 
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2330,7 +2330,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should give correct results with relationship fulltext index and denies") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * ELEMENTS * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2409,7 +2409,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should get correct count within transaction for restricted user") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT WRITE (*) ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2455,7 +2455,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should get correct count within transaction for restricted user using count store") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT WRITE (*) ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -2501,9 +2501,9 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should support whitelist and blacklist traversal in index seeks") {
     setupMultilabelData
     graph.createIndex("A", "foo")
-    setupUserJoeWithCustomRole("user1", "secret", "role1")
-    setupUserJoeWithCustomRole("user2", "secret", "role2")
-    setupUserJoeWithCustomRole("user3", "secret", "role3")
+    setupUserWithCustomRole("user1", "secret", "role1")
+    setupUserWithCustomRole("user2", "secret", "role2")
+    setupUserWithCustomRole("user3", "secret", "role3")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
 

@@ -228,7 +228,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should create node when granted WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -254,7 +254,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should not be able to create node when denied WRITE privilege to custom role for all databases")
   {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (n:A {name:'a'})")
 
@@ -295,7 +295,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read you own writes on nodes when granted TRAVERSE and WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
@@ -317,7 +317,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should read you own writes on relationships when granted TRAVERSE and WRITE privilege to custom role for all databases and all types") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
 
@@ -341,7 +341,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should delete node when granted WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
@@ -367,7 +367,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should set and remove property when granted WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
@@ -395,7 +395,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should not create new tokens, indexes or constraints when granted WRITE privilege") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -433,7 +433,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("write privilege should not imply traverse privilege") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
 
@@ -456,7 +456,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name:'a'})")
 
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     execute(s"GRANT WRITE (*) ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS * (*) TO custom")
@@ -485,7 +485,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name:'a'})")
 
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
 
     // WHEN
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
