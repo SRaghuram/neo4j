@@ -27,6 +27,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -42,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -96,6 +98,7 @@ class EndToEndIT extends AnnotationsFixture
 
     @Test
     @Tag( "endtoend" )
+    @Timeout( value = 15, unit = TimeUnit.MINUTES )
     void runReportBenchmarks() throws Exception
     {
         System.out.println( "Working Directory = " + System.getProperty( "user.dir" ) );
