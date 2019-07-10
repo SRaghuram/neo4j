@@ -311,8 +311,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY)
 
-    case RevokeTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+    case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // GRANT/DENY/REVOKE READ (prop) ON GRAPH foo NODES A (*) TO role
@@ -324,8 +324,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY)
 
-    case RevokeRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+    case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName, revokeType,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // GRANT/DENY/REVOKE WRITE (*) ON GRAPH foo NODES * (*) TO role
@@ -337,8 +337,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY)
 
-    case RevokeWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+    case RevokeWrite(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName, revokeType,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
@@ -617,7 +617,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     )
   }
 
-  private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, roleName: String,source: Option[ExecutionPlan]) = {
+  private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier,
+                                      roleName: String, revokeType: ast.RevokeType, source: Option[ExecutionPlan]) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
     val (property: Value, resourceType: Value, resourceMatch: String) = resource match {

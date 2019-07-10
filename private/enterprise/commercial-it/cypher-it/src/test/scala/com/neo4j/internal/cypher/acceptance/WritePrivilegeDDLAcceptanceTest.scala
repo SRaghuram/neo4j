@@ -150,7 +150,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -161,7 +161,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -179,7 +179,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
+      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
     }
 
     // THEN
@@ -196,7 +196,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
+      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
     }
     // THEN
     error.getMessage should include("The role 'role' does not have the specified privilege")
@@ -210,7 +210,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val e = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+      execute("REVOKE GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
     }
     // THEN
     e.getMessage should be("The privilege 'write * ON GRAPH foo NODES *' does not exist.")
@@ -219,9 +219,9 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when revoking WRITE privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
       // THEN
-    } should have message "This is a DDL command and it should be executed against the system database: REVOKE WRITE"
+    } should have message "This is a DDL command and it should be executed against the system database: REVOKE GRANT WRITE"
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges

@@ -80,7 +80,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ (name) ON GRAPH * NODES A (*) FROM custom")
+    execute("REVOKE GRANT READ (name) ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -418,7 +418,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM custom")
 
     val expected2 = List(
       (":A", 1, null),
@@ -433,7 +433,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
     val expected3 = List(
       (":A", 1, null),

@@ -822,7 +822,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -834,7 +834,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -867,7 +867,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -879,7 +879,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -911,7 +911,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -924,7 +924,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -935,7 +935,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -960,7 +960,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (a) ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT READ (a) ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -972,7 +972,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -983,7 +983,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (b) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT READ (b) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1012,7 +1012,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (*) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT READ (*) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1023,7 +1023,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (*) ON GRAPH * FROM custom")
+    execute("REVOKE GRANT READ (*) ON GRAPH * FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1049,7 +1049,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1059,7 +1059,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1086,7 +1086,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1096,7 +1096,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1122,7 +1122,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1132,7 +1132,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1159,7 +1159,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1169,7 +1169,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1198,7 +1198,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1211,7 +1211,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1222,7 +1222,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -1248,7 +1248,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1259,7 +1259,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1289,7 +1289,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1303,7 +1303,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1337,7 +1337,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1351,7 +1351,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1388,7 +1388,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1405,7 +1405,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1439,7 +1439,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1476,7 +1476,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1489,7 +1489,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (*) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT MATCH (*) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1500,7 +1500,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (b) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT MATCH (b) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1536,7 +1536,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (*) ON GRAPH foo FROM custom")
+    execute("REVOKE GRANT MATCH (*) ON GRAPH foo FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1553,7 +1553,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (*) ON GRAPH * FROM custom")
+    execute("REVOKE GRANT MATCH (*) ON GRAPH * FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1592,7 +1592,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1610,7 +1610,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1627,7 +1627,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
+    execute("REVOKE GRANT READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1642,7 +1642,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+    execute("REVOKE GRANT READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1655,7 +1655,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo) ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT READ (foo) ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1667,7 +1667,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+    execute("REVOKE GRANT READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1700,7 +1700,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1717,7 +1717,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1732,7 +1732,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
+    execute("REVOKE GRANT READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1743,7 +1743,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1784,7 +1784,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1803,7 +1803,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1821,7 +1821,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1838,7 +1838,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1882,7 +1882,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1900,7 +1900,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1916,7 +1916,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
+    execute("REVOKE GRANT MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1952,7 +1952,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
+    execute("REVOKE GRANT MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1987,7 +1987,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
 
     // WHEN
-    execute("REVOKE MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
+    execute("REVOKE GRANT MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2018,7 +2018,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error1 = the[QueryExecutionException] thrownBy {
-      executeOnSystem("neo4j", "abc", "REVOKE MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
+      executeOnSystem("neo4j", "abc", "REVOKE GRANT MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
     }
     // THEN
     error1.getMessage should include("The privilege 'read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
@@ -2033,7 +2033,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error2 = the[QueryExecutionException] thrownBy {
-      executeOnSystem("neo4j", "abc", "REVOKE MATCH (bar) ON GRAPH * FROM custom")
+      executeOnSystem("neo4j", "abc", "REVOKE GRANT MATCH (bar) ON GRAPH * FROM custom")
     }
     // THEN
     error2.getMessage should include("The privilege 'read bar ON GRAPH * NODES *' does not exist.")
@@ -2057,7 +2057,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error1 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
+      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
     }
 
     // THEN
@@ -2066,7 +2066,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error2 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
     }
 
     // THEN
@@ -2075,7 +2075,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val error3 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
+      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
     }
     // THEN
     error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
@@ -2093,21 +2093,21 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val errorTraverse = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM role")
+      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM role")
     }
     // THEN
     errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
     val errorRead = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM role")
+      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM role")
     }
     // THEN
     errorRead.getMessage should include("The role 'role' does not have the specified privilege")
 
     // WHEN
     val errorMatch = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE MATCH (*) ON GRAPH * NODES A (*) FROM role")
+      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES A (*) FROM role")
     }
     // THEN
     errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
@@ -2119,7 +2119,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+      execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
     } should have message "The privilege 'find  ON GRAPH foo NODES *' does not exist."
   }
 
@@ -2129,7 +2129,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE custom")
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
     the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE READ (*) ON GRAPH foo NODES * (*) FROM custom")
+      execute("REVOKE GRANT READ (*) ON GRAPH foo NODES * (*) FROM custom")
     } should have message "The privilege 'read * ON GRAPH foo NODES *' does not exist."
   }
 
@@ -2141,7 +2141,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     val e = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+      execute("REVOKE GRANT MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
     }
     // THEN
     e.getMessage should (be("The privilege 'find  ON GRAPH foo NODES *' does not exist.") or
@@ -2151,28 +2151,28 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when revoking traversal privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE TRAVERSE"
+      "This is a DDL command and it should be executed against the system database: REVOKE GRANT TRAVERSE"
   }
 
   test("should fail when revoking read privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE READ (*) ON GRAPH * NODES * (*) FROM custom")
+      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM custom")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE READ"
+      "This is a DDL command and it should be executed against the system database: REVOKE GRANT READ"
   }
 
   test("should fail when revoking MATCH privilege to custom role when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
-      execute("REVOKE MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES * (*) FROM custom")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE MATCH"
+      "This is a DDL command and it should be executed against the system database: REVOKE GRANT MATCH"
   }
 
   // helper variable, methods and class
