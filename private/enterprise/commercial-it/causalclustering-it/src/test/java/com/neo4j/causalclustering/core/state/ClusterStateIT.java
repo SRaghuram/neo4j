@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import java.io.File;
+
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -13,8 +15,6 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.File;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -64,8 +64,7 @@ class ClusterStateIT
             File sessionTrackerStateDir = new File( defaultDatabaseStateDir, "session-tracker-state" );
             File termStateDir = new File( defaultDatabaseStateDir, "term-state" );
             File voteStateDir = new File( defaultDatabaseStateDir, "vote-state" );
-            File lockTokenStateDir = new File( defaultDatabaseStateDir, "lock-token-state" );
-            File idAllocationStateDir = new File( defaultDatabaseStateDir, "id-allocation-state" );
+            File barrierTokenStateDir = new File( defaultDatabaseStateDir, "barrier-token-state" );
 
             // database specific raft log
             File raftLogDir = new File( defaultDatabaseStateDir, "raft-log" );
@@ -78,8 +77,7 @@ class ClusterStateIT
             assertTrue( termStateDir.isDirectory() );
             assertTrue( voteStateDir.isDirectory() );
             assertTrue( raftLogDir.isDirectory() );
-            assertTrue( lockTokenStateDir.isDirectory() );
-            assertTrue( idAllocationStateDir.isDirectory() );
+            assertTrue( barrierTokenStateDir.isDirectory() );
 
             assertTrue( new File( raftIdStateDir, "raft-id" ).isFile() );
             assertTrue( new File( coreMemberIdStateDir, "core-member-id" ).isFile() );
@@ -101,11 +99,8 @@ class ClusterStateIT
 
             assertTrue( new File( raftLogDir, "raft.log.0" ).isFile() );
 
-            assertTrue( new File( lockTokenStateDir, "lock-token.a" ).isFile() );
-            assertTrue( new File( lockTokenStateDir, "lock-token.b" ).isFile() );
-
-            assertTrue( new File( idAllocationStateDir, "id-allocation.a" ).isFile() );
-            assertTrue( new File( idAllocationStateDir, "id-allocation.b" ).isFile() );
+            assertTrue( new File( barrierTokenStateDir, "barrier-token.a" ).isFile() );
+            assertTrue( new File( barrierTokenStateDir, "barrier-token.b" ).isFile() );
         }
     }
 }

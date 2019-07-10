@@ -22,7 +22,7 @@ public class BarrierState
 {
     public static final String TOKEN_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take token when leader.";
 
-    private int barrierTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
+    private volatile int barrierTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
     private final MemberId myself;
     private final Replicator replicator;
     private final LeaderLocator leaderLocator;
