@@ -20,7 +20,7 @@ abstract class ArgumentCountUpdater {
     */
   def argumentStateMaps: ArgumentStateMaps
 
-  // TODO this doe snot really need to collect the argument row ids into a collection
+  // TODO this does not really need to collect the argument row ids into a collection
   // Step 1: It would be enough to have a var with the latest argument row id per downstream.
   // Step 2: Merge with while loop in MorselApplyBuffer
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
@@ -68,7 +68,7 @@ abstract class ArgumentCountUpdater {
   protected def initiateArgumentStatesHere(downstreamStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselExecutionContext): Unit = {
-    downstreamLoop[ArgumentStateMapId](downstreamStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel))
+    downstreamLoop[ArgumentStateMapId](downstreamStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
   }
 
   protected def initiateArgumentReducersHere(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
@@ -77,10 +77,7 @@ abstract class ArgumentCountUpdater {
     downstreamLoop[AccumulatingBuffer](downstreamAccumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
   }
 
-  protected def initiateArgumentReducers(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                         morsel: MorselExecutionContext): Unit = {
-    morselLoop(downstreamAccumulatingBuffers, morsel, _.initiate(_, morsel))
-  }
+  // ----
 
   protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {

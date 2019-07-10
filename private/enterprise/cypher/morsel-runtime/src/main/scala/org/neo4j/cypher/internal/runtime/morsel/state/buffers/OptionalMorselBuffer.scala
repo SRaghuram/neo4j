@@ -104,7 +104,7 @@ class OptionalMorselBuffer(id: BufferId,
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
     DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-    argumentStateMap.initiate(argumentRowId, argumentMorsel)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, null)
     // TODO Reduce-Apply-Reduce-Bug: the downstream might have different argument IDs to care about
     incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
     tracker.increment()
@@ -163,7 +163,7 @@ class OptionalMorselBuffer(id: BufferId,
 // --- Messaging protocol ---
 
 /**
-  * Some Morsels for one argeemnt row id. Depending on the [[StreamContinuation]] there might be more data for this argument row id.
+  * Some Morsels for one argument row id. Depending on the [[StreamContinuation]] there might be more data for this argument row id.
   */
 case class MorselData(argumentRowId: Long, morsels: IndexedSeq[MorselExecutionContext], streamContinuation: StreamContinuation)
 
@@ -205,7 +205,8 @@ trait OptionalBuffer {
   */
 class OptionalArgumentStateBuffer(argumentRowId: Long,
                                   val argumentMorsel: MorselExecutionContext,
-                                  inner: Buffer[MorselExecutionContext] with OptionalBuffer) extends ArgumentStateBuffer(argumentRowId, inner) {
+                                  inner: Buffer[MorselExecutionContext] with OptionalBuffer,
+                                  argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
   /**
     * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
     */
@@ -254,11 +255,11 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
 
 object OptionalArgumentStateBuffer {
   object Factory extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext])
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext], argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext])
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext], argumentRowIdsForReducers)
   }
 }
 

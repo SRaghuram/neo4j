@@ -70,15 +70,16 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): DistinctState =
-      new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType]())
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
+      new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): DistinctState =
-      new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType]())
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
+      new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers)
   }
 
   class DistinctState(override val argumentRowId: Long,
-                      seen: util.Set[groupings.KeyType]) extends ArgumentState {
+                      seen: util.Set[groupings.KeyType],
+                      override val argumentRowIdsForReducers: Array[Long]) extends ArgumentState {
 
     def filterOrProject(row: MorselExecutionContext, queryState: OldQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)

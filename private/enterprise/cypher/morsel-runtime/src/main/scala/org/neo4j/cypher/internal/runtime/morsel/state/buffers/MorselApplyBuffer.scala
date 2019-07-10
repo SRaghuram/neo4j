@@ -52,6 +52,8 @@ class MorselApplyBuffer(id: BufferId,
         // This does not hold for reducers on top of this apply.
 
         // Reducers on the RHS need to be initiated
+        // It is important that the morsel is positioned at the row of the just added argumentRowId, so that the reducer
+        // can read the argument row ids for _its_ downstream reducers from that row of the morsel.
         initiateArgumentReducersHere(argumentReducersOnRHSOfThisApply, argumentRowId, morsel)
 
         // Initiate argument states for limit

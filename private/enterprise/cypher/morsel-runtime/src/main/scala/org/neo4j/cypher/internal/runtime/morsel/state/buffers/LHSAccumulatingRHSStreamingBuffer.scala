@@ -171,7 +171,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
       DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
+      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, null)
     }
 
     override def increment(argumentRowId: Long): Unit = {
@@ -207,7 +207,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
       DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel)
+      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, null)
       // Increment for an ArgumentID in RHS's accumulator
       incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
       tracker.increment()

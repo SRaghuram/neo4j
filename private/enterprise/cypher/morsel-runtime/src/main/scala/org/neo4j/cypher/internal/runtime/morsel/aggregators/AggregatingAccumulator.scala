@@ -13,7 +13,8 @@ import org.neo4j.values.AnyValue
   * Accumulator that compacts input data using some [[Reducer]]s.
   */
 class AggregatingAccumulator(override val argumentRowId: Long,
-                             reducers: Array[Reducer]) extends MorselAccumulator[Array[Updater]] {
+                             reducers: Array[Reducer],
+                             override val argumentRowIdsForReducers: Array[Long]) extends MorselAccumulator[Array[Updater]] {
 
   override def update(data: Array[Updater]): Unit = {
     var i = 0
@@ -32,11 +33,11 @@ class AggregatingAccumulator(override val argumentRowId: Long,
 object AggregatingAccumulator {
 
   class Factory(aggregators: Array[Aggregator]) extends ArgumentStateFactory[AggregatingAccumulator] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer))
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer), argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer))
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer), argumentRowIdsForReducers)
   }
 }
 

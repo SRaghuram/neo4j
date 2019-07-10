@@ -26,8 +26,9 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
-                                            argumentMorsel: MorselExecutionContext): ConcurrentStateController[STATE] =
-    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel))
+                                            argumentMorsel: MorselExecutionContext,
+                                            argumentRowIdsForReducers: Array[Long]): ConcurrentStateController[STATE] =
+    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
 }
 
 object ConcurrentArgumentStateMap {

@@ -12,7 +12,8 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
   * Delegating [[Buffer]] used in argument state maps.
   */
 class ArgumentStateBuffer(override val argumentRowId: Long,
-                          inner: Buffer[MorselExecutionContext])
+                          inner: Buffer[MorselExecutionContext],
+                          override val argumentRowIdsForReducers: Array[Long])
   extends MorselAccumulator[MorselExecutionContext]
      with Buffer[MorselExecutionContext] {
 
@@ -37,10 +38,10 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
 
 object ArgumentStateBuffer {
   object Factory extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, new StandardBuffer[MorselExecutionContext])
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new ArgumentStateBuffer(argumentRowId, new StandardBuffer[MorselExecutionContext], argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, new ConcurrentBuffer[MorselExecutionContext])
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new ArgumentStateBuffer(argumentRowId, new ConcurrentBuffer[MorselExecutionContext], argumentRowIdsForReducers)
   }
 }

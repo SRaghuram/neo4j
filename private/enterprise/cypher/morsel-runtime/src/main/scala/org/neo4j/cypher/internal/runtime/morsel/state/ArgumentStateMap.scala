@@ -101,8 +101,13 @@ trait ArgumentStateMap[S <: ArgumentState] {
     *
     * @param argument       the argument row id
     * @param argumentMorsel the morsel that contains this argument
+    * @param argumentRowIdsForReducers the argument row ids of reducers for that correspond to the given argument.
+    *                                  This is needed to decrement the reducers with the right IDs when
+    *                                  we close an argument state. This is allowed to be null if these argument
+    *                                  states are not closed or are not involved in a buffer with downstream
+    *                                  reducers.
     */
-  def initiate(argument: Long, argumentMorsel: MorselExecutionContext): Unit
+  def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit
 
   /**
     * Increment the argument counter for `argument`.
@@ -139,6 +144,15 @@ object ArgumentStateMap {
       * The ID of the argument row for this state.
       */
     def argumentRowId: Long
+
+    /**
+      * The argument row ids of reducers for that correspond to argumentRowId.
+      * This is needed to decrement the reducers with the right IDs when
+      * we close an argument state. This is allowed to be null if these argument
+      * states are not closed or are not involved in a buffer with downstream
+      * reducers.
+      */
+    def argumentRowIdsForReducers: Array[Long]
   }
 
   /**
@@ -164,9 +178,9 @@ object ArgumentStateMap {
     * the corresponding ArgumentStateMap.
     */
   trait ArgumentStateFactory[S <: ArgumentState] {
-    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): S
+    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
 
-    def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): S
+    def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
   }
 
   /**

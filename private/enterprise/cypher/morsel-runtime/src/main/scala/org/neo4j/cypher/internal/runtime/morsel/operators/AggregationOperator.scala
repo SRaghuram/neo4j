@@ -129,7 +129,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 
   class StandardAggregatingAccumulator(override val argumentRowId: Long,
-                                       aggregators: Array[Aggregator]) extends AggregatingAccumulator {
+                                       aggregators: Array[Aggregator],
+                                       override val argumentRowIdsForReducers: Array[Long]) extends AggregatingAccumulator {
 
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -150,7 +151,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 
   class ConcurrentAggregatingAccumulator(override val argumentRowId: Long,
-                                         aggregators: Array[Aggregator]) extends AggregatingAccumulator {
+                                         aggregators: Array[Aggregator],
+                                         override val argumentRowIdsForReducers: Array[Long]) extends AggregatingAccumulator {
 
     val reducerMap = new ConcurrentHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -173,11 +175,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   object AggregatingAccumulator {
 
     class Factory(aggregators: Array[Aggregator]) extends ArgumentStateFactory[AggregatingAccumulator] {
-      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
-        new StandardAggregatingAccumulator(argumentRowId, aggregators)
+      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
 
-      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): AggregatingAccumulator =
-        new ConcurrentAggregatingAccumulator(argumentRowId, aggregators)
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+        new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
     }
   }
 

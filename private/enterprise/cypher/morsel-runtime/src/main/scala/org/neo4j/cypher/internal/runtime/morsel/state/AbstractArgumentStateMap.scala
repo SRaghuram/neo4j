@@ -29,7 +29,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   /**
     * Create a new state controller
     */
-  protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     onState(controllers.get(argumentRowId).state)
@@ -135,9 +135,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     controllers.remove(argument) != null
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselExecutionContext): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
     DebugSupport.logAsm(f"ASM $argumentStateMapId init $argument%03d")
-    val newController = newStateController(argument, argumentMorsel)
+    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
     controllers.put(argument, newController)
   }
 

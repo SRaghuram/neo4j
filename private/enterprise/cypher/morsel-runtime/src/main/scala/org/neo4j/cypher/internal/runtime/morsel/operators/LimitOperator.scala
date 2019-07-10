@@ -88,11 +88,11 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): LimitState =
-      new StandardLimitState(argumentRowId, count)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LimitState =
+      new StandardLimitState(argumentRowId, count, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): LimitState =
-      new ConcurrentLimitState(argumentRowId, count)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LimitState =
+      new ConcurrentLimitState(argumentRowId, count, argumentRowIdsForReducers)
   }
 
   /**
@@ -102,7 +102,9 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     def reserve(wanted: Long): Long
   }
 
-  class StandardLimitState(override val argumentRowId: Long, countTotal: Long) extends LimitState {
+  class StandardLimitState(override val argumentRowId: Long,
+                           countTotal: Long,
+                           override val argumentRowIdsForReducers: Array[Long]) extends LimitState {
     private var countLeft = countTotal
 
     def reserve(wanted: Long): Long = {
@@ -116,7 +118,9 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     override def toString: String = s"StandardLimitState($argumentRowId, countLeft=$countLeft)"
   }
 
-  class ConcurrentLimitState(override val argumentRowId: Long, countTotal: Long) extends LimitState {
+  class ConcurrentLimitState(override val argumentRowId: Long,
+                             countTotal: Long,
+                             override val argumentRowIdsForReducers: Array[Long]) extends LimitState {
     private val countLeft = new AtomicLong(countTotal)
 
     def reserve(wanted: Long): Long = {

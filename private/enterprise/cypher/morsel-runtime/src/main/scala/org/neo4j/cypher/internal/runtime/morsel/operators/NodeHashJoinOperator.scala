@@ -98,8 +98,10 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 object NodeHashJoinOperator {
 
   class HashTableFactory(lhsOffsets: Array[Int]) extends ArgumentStateFactory[HashTable] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): HashTable = new StandardHashTable(argumentRowId, lhsOffsets)
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext): HashTable = new ConcurrentHashTable(argumentRowId, lhsOffsets)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
+      new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
+      new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
   }
 
   /**
@@ -111,7 +113,8 @@ object NodeHashJoinOperator {
   }
 
   class StandardHashTable(override val argumentRowId: Long,
-                          lhsOffsets: Array[Int]) extends HashTable {
+                          lhsOffsets: Array[Int],
+                          override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
     private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
@@ -138,7 +141,8 @@ object NodeHashJoinOperator {
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
-                          lhsOffsets: Array[Int]) extends HashTable {
+                          lhsOffsets: Array[Int],
+                            override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
     private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[MorselExecutionContext]]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table

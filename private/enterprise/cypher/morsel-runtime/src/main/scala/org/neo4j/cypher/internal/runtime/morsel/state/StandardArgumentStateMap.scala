@@ -23,8 +23,9 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
-                                            argumentMorsel: MorselExecutionContext): StandardStateController[STATE] =
-    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel))
+                                            argumentMorsel: MorselExecutionContext,
+                                            argumentRowIdsForReducers: Array[Long]): StandardStateController[STATE] =
+    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
 }
 
 object StandardArgumentStateMap {
