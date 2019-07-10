@@ -1,3 +1,0 @@
-// Reduce-Apply-Reduce bug must be solved first!
-Feature "OrderByAcceptance": Scenario "ORDER BY nodes should return null results last in ascending order"
-Feature "OrderByAcceptance": Scenario "ORDER BY relationships should return null results last in ascending order"
