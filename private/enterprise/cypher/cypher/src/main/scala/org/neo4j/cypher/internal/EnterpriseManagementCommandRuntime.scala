@@ -654,7 +654,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$role})
          |WITH a, r, d, q
-         |OPTIONAL MATCH (r)-[g:GRANTED]->(a)
+         |OPTIONAL MATCH (r)-[g:${revokeType.relType}]->(a)
          |
          |// Remove the assignment
          |DELETE g
@@ -663,18 +663,18 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       QueryHandler
         .handleResult((offset, value) => {
           if (offset == 0 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"The role '$roleName' does not exist."))
-          else if (offset == 1 && (value eq Values.NO_VALUE))Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier)}."))
+          else if (offset == 1 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier, revokeType)}."))
           else clearCacheForRole(roleName)
         })
-        .handleNoResult(() => Some(new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier)}' does not exist."))),
+        .handleNoResult(() => Some(new InvalidArgumentsException(s"The privilege '${describePrivilege(actionName, resource, database, qualifier, revokeType)}' does not exist."))),
       source
     )
   }
 
-  private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier): String = {
+  private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, revokeType: ast.RevokeType): String = {
     // TODO: Improve description - or unify with main prettifier
     val (res, db, segment) = Prettifier.extractScope(resource, database, qualifier)
-    s"$actionName $res ON GRAPH $db $segment"
+    s"${revokeType.name} $actionName $res ON GRAPH $db $segment"
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =

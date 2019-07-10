@@ -15,13 +15,13 @@ import scala.collection.Map
 
 class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
-  // Tests for granting and denying write privileges
-
   Seq(
     ("grant", "GRANT", "GRANTED" ),
     ("deny", "DENY", "DENIED" ),
   ).foreach {
     case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+
+      // Tests for granting and denying write privileges
 
       test(s"should $grantOrDeny write privilege to custom role for all databases and all elements") {
         // GIVEN
@@ -108,7 +108,104 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         } should have message s"This is a DDL command and it should be executed against the system database: $grantOrDenyCommand WRITE"
       }
 
+      // Tests for revoke grant and revoke deny write privileges
+
+      test(s"should revoke correct $grantOrDeny write privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").node("*").map,
+          write(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").node("*").map,
+          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+      }
+
+      test(s"should fail revoke $grantOrDeny write privilege from non-existent role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // WHEN
+        val error = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
+        }
+
+        // THEN
+        error.getMessage should (be(s"The role 'wrongRole' does not have the specified privilege: $grantOrDenyCommand write * ON GRAPH * NODES *.") or
+          be("The role 'wrongRole' does not exist."))
+      }
+
+      test(s"should fail revoke $grantOrDeny write privilege not granted to role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE ROLE role")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // WHEN
+        val error = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
+        }
+        // THEN
+        error.getMessage should include("The role 'role' does not have the specified privilege")
+      }
+
+      test(s"should fail when revoking $grantOrDeny write privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        // WHEN
+        val e = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        }
+        // THEN
+        e.getMessage should be(s"The privilege '$grantOrDenyCommand write * ON GRAPH foo NODES *' does not exist.")
+      }
+
+      test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+          // THEN
+        } should have message s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand WRITE"
+      }
   }
+
+  // Mixed tests for write privileges
 
   test("should be able to have both grant and deny privilege for write") {
     // GIVEN
@@ -128,100 +225,86 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     ))
   }
 
-  // Tests for revoking write privileges
-
-  test("should revoke correct write privilege different databases") {
+  test("should revoke correct write privilege with a mix of grant and deny") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
+    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").node("*").map,
-      write().role("custom").node("*").database("foo").map,
-      write().role("custom").node("*").database("bar").map,
-      write().role("custom").relationship("*").map,
-      write().role("custom").relationship("*").database("foo").map,
-      write().role("custom").relationship("*").database("bar").map
+      write("GRANTED").role("custom").node("*").map,
+      write("GRANTED").role("custom").relationship("*").map,
+      write("DENIED").role("custom").node("*").map,
+      write("DENIED").role("custom").relationship("*").map
     ))
 
     // WHEN
-    execute("REVOKE GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute(s"REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").node("*").map,
-      write().role("custom").node("*").database("bar").map,
-      write().role("custom").relationship("*").map,
-      write().role("custom").relationship("*").database("bar").map
+      write("DENIED").role("custom").node("*").map,
+      write("DENIED").role("custom").relationship("*").map,
     ))
 
     // WHEN
-    execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute(s"GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) To custom")
+    execute(s"REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").node("*").database("bar").map,
-      write().role("custom").relationship("*").database("bar").map
+      write("GRANTED").role("custom").node("*").map,
+      write("GRANTED").role("custom").relationship("*").map
     ))
   }
 
-  test("should fail revoke write privilege from non-existent role") {
+  test("should not be able to revoke grant write privilege when only having deny") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write("DENIED").role("custom").node("*").map,
+      write("DENIED").role("custom").relationship("*").map
+    ))
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
+      execute(s"REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
     }
-
     // THEN
-    error.getMessage should (be("The role 'wrongRole' does not have the specified privilege: write * ON GRAPH * NODES *.") or
-      be("The role 'wrongRole' does not exist."))
+    error.getMessage should include("The role 'custom' does not have the specified privilege: GRANT write * ON GRAPH * NODES *.")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write("DENIED").role("custom").node("*").map,
+      write("DENIED").role("custom").relationship("*").map,
+    ))
   }
 
-  test("should fail revoke privilege not granted to role") {
+  test("should not be able to revoke deny write privilege when only having grant") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("CREATE ROLE role")
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write().role("custom").node("*").map,
+      write().role("custom").relationship("*").map
+    ))
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
+      execute(s"REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
     }
     // THEN
-    error.getMessage should include("The role 'role' does not have the specified privilege")
-  }
+    error.getMessage should include("The role 'custom' does not have the specified privilege: DENY write * ON GRAPH * NODES *.")
 
-  test("should fail when revoking WRITE privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // WHEN
-    val e = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
-    }
-    // THEN
-    e.getMessage should be("The privilege 'write * ON GRAPH foo NODES *' does not exist.")
-  }
-
-  test("should fail when revoking WRITE privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
-      // THEN
-    } should have message "This is a DDL command and it should be executed against the system database: REVOKE GRANT WRITE"
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write().role("custom").node("*").map,
+      write().role("custom").relationship("*").map,
+    ))
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges

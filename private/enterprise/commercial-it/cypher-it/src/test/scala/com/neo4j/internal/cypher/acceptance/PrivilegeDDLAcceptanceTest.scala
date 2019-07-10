@@ -800,1379 +800,1386 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // Tests for REVOKE READ, TRAVERSE and MATCH
 
-  test("should revoke correct read privilege different label qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo NODES B (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-  }
-
-  test("should revoke correct read privilege different relationship type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT READ (bar) ON GRAPH foo NODES * (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo NODES B (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-  }
-
-  test("should revoke correct read privilege different element type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH foo ELEMENTS B, C (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").node("C").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").node("C").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").node("C").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
-  }
-
-  test("should revoke correct read privilege different property") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT READ (*) ON GRAPH foo TO custom")
-    execute("GRANT READ (a) ON GRAPH foo TO custom")
-    execute("GRANT READ (b) ON GRAPH foo TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (a) ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (b) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map
-    ))
-  }
-
-  test("should revoke correct read privilege different databases") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT READ (*) ON GRAPH * TO custom")
-    execute("GRANT READ (*) ON GRAPH foo TO custom")
-    execute("GRANT READ (*) ON GRAPH bar TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").database("foo").map,
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").database("foo").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (*) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (*) ON GRAPH * FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-  }
-
-  test("should revoke correct traverse node privilege different label qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT TRAVERSE ON GRAPH foo TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").node("A").map,
-      traverse().database("foo").role("custom").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").node("B").map
-    ))
-  }
-
-  test("should revoke correct traverse node privilege different databases") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo NODES * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH bar NODES * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").node("*").database("foo").map,
-      traverse().role("custom").node("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").node("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").node("*").database("bar").map
-    ))
-  }
-
-  test("should revoke correct traverse relationships privilege different type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT TRAVERSE ON GRAPH foo TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("B").map
-    ))
-  }
-
-  test("should revoke correct traverse relationship privilege different databases") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH bar RELATIONSHIPS * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("foo").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-  }
-
-  test("should revoke correct traverse elements privilege different type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT TRAVERSE ON GRAPH foo TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo ELEMENTS A, B, C (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").node("A").map,
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").node("C").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      traverse().database("foo").role("custom").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").node("C").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      traverse().database("foo").role("custom").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").node("C").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      traverse().database("foo").role("custom").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
-  }
-
-  test("should revoke correct traverse element privilege different databases") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT TRAVERSE ON GRAPH * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH bar ELEMENTS * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").node("*").database("foo").map,
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("foo").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").database("bar").map
-    ))
-  }
-
-  test("should revoke correct MATCH privilege different label qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (bar) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("bar").map,
-      traverse().database("foo").role("custom").node("A").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      traverse().database("foo").role("custom").node("B").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("bar").map,
-      traverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("B").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("bar").map,
-      traverse().database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("B").map,
-      read().database("foo").role("custom").property("bar").node("B").map
-    ))
-  }
-
-  test("should revoke correct MATCH privilege different relationship type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (bar) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").node("*").property("bar").map,
-      read().database("foo").role("custom").relationship("*").property("bar").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").node("*").property("bar").map,
-      read().database("foo").role("custom").relationship("*").property("bar").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").node("*").property("bar").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-  }
-
-  test("should revoke correct MATCH privilege different element type qualifier") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (bar) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH foo ELEMENTS A, B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").node("A").map,
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("A").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("A").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("*").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("*").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map
-    ))
-
-    // WHEN
-    execute("GRANT MATCH (bar) ON GRAPH foo ELEMENTS C (*) TO custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").node("C").map,
-      traverse().database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").relationship("B").map,
-      traverse().database("foo").role("custom").relationship("C").map,
-      read().database("foo").role("custom").property("bar").node("B").map,
-      read().database("foo").role("custom").property("bar").node("C").map,
-      read().database("foo").role("custom").property("bar").relationship("B").map,
-      read().database("foo").role("custom").property("bar").relationship("C").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      // TODO: this should be an empty set when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").node("A").map,
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").node("C").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      traverse().database("foo").role("custom").relationship("C").map,
-    ))
-  }
-
-  test("should revoke correct MATCH privilege different property") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (*) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (a) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (b) ON GRAPH foo TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("b").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (*) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").property("b").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (b) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      // TODO: this should be an empty set when revoking MATCH also revokes traverse
-      traverse().database("foo").role("custom").node("*").map,
-      traverse().database("foo").role("custom").relationship("*").map
-    ))
-  }
-
-  test("should revoke correct MATCH privilege different databases") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("GRANT MATCH (*) ON GRAPH * TO custom")
-    execute("GRANT MATCH (*) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (*) ON GRAPH bar TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").node("*").database("foo").map,
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("foo").map,
-      traverse().role("custom").relationship("*").database("bar").map,
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").database("foo").map,
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").database("foo").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (*) ON GRAPH foo FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").node("*").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").map,
-      traverse().role("custom").relationship("*").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").relationship("*").database("bar").map,
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (*) ON GRAPH * FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").node("*").database("foo").map,
-      traverse().role("custom").node("*").database("bar").map,
-      traverse().role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").relationship("*").database("foo").map,
-      traverse().role("custom").relationship("*").database("bar").map,
-      read().role("custom").node("*").database("bar").map,
-      read().role("custom").relationship("*").database("bar").map
-    ))
-  }
-
-  test("should revoke correct traverse and read privileges from different MATCH privileges") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
-    execute("GRANT MATCH (foo,bar) ON GRAPH foo RELATIONSHIPS A,B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("A").map,
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").node("A").property("foo").map,
-      read().database("foo").role("custom").node("B").property("foo").map,
-      read().database("foo").role("custom").relationship("A").property("foo").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").node("B").property("bar").map,
-      read().database("foo").role("custom").relationship("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      traverse().database("foo").role("custom").relationship("B").map,
-      read().database("foo").role("custom").node("A").property("foo").map,
-      read().database("foo").role("custom").node("B").property("foo").map,
-      read().database("foo").role("custom").relationship("A").property("foo").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").node("B").property("bar").map,
-      read().database("foo").role("custom").relationship("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      read().database("foo").role("custom").node("A").property("foo").map,
-      read().database("foo").role("custom").node("B").property("foo").map,
-      read().database("foo").role("custom").relationship("A").property("foo").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").node("B").property("bar").map,
-      read().database("foo").role("custom").relationship("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      read().database("foo").role("custom").node("A").property("foo").map,
-      read().database("foo").role("custom").relationship("A").property("foo").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").relationship("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      read().database("foo").role("custom").node("A").property("foo").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo) ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      read().database("foo").role("custom").relationship("B").property("foo").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().database("foo").role("custom").node("B").map,
-      traverse().database("foo").role("custom").relationship("A").map,
-      read().database("foo").role("custom").node("A").property("bar").map,
-      read().database("foo").role("custom").relationship("B").property("bar").map
-    ))
-  }
-
-  test("should revoke correct traverse and read privileges from different MATCH privileges on elements") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT MATCH (foo,bar) ON GRAPH * ELEMENTS A,B (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").node("B").map,
-      traverse().role("custom").relationship("A").map,
-      traverse().role("custom").relationship("B").map,
-      read().role("custom").node("A").property("foo").map,
-      read().role("custom").node("B").property("foo").map,
-      read().role("custom").node("A").property("bar").map,
-      read().role("custom").node("B").property("bar").map,
-      read().role("custom").relationship("A").property("foo").map,
-      read().role("custom").relationship("B").property("foo").map,
-      read().role("custom").relationship("A").property("bar").map,
-      read().role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("B").map,
-      traverse().role("custom").relationship("B").map,
-      read().role("custom").node("A").property("foo").map,
-      read().role("custom").node("B").property("foo").map,
-      read().role("custom").node("A").property("bar").map,
-      read().role("custom").node("B").property("bar").map,
-      read().role("custom").relationship("A").property("foo").map,
-      read().role("custom").relationship("B").property("foo").map,
-      read().role("custom").relationship("A").property("bar").map,
-      read().role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("A").property("foo").map,
-      read().role("custom").node("B").property("foo").map,
-      read().role("custom").node("A").property("bar").map,
-      read().role("custom").node("B").property("bar").map,
-      read().role("custom").relationship("A").property("foo").map,
-      read().role("custom").relationship("B").property("foo").map,
-      read().role("custom").relationship("A").property("bar").map,
-      read().role("custom").relationship("B").property("bar").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("A").property("foo").map,
-      read().role("custom").node("A").property("bar").map,
-      read().role("custom").relationship("A").property("foo").map,
-      read().role("custom").relationship("A").property("bar").map,
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      read().role("custom").node("A").property("bar").map,
-      read().role("custom").relationship("A").property("bar").map,
-    ))
-  }
-
-  test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("GRANT MATCH (*) ON GRAPH foo TO custom")
-    execute("GRANT MATCH (a) ON GRAPH foo TO custom")
-    execute("GRANT READ  (b) ON GRAPH foo TO custom")
-
-    execute("GRANT TRAVERSE  ON GRAPH foo NODES A (*) TO custom")
-    execute("GRANT MATCH (a) ON GRAPH foo NODES A (*) TO custom")
-
-    execute("GRANT TRAVERSE  ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-    execute("GRANT MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("foo").node("*").map, // From both MATCH *
-      traverse().role("custom").database("foo").relationship("*").map, // From both MATCH *
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").node("*").property("b").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").database("foo").node("A").map, // From both MATCH and TRAVERSE
-      traverse().role("custom").database("foo").relationship("A").map, // From both MATCH and TRAVERSE
-      read().database("foo").role("custom").property("a").node("A").map,
-      read().database("foo").role("custom").property("a").relationship("A").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("foo").node("*").map,
-      traverse().role("custom").database("foo").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").database("foo").node("A").map,
-      traverse().role("custom").database("foo").relationship("A").map,
-      read().database("foo").role("custom").property("a").node("A").map,
-      read().database("foo").role("custom").property("a").relationship("A").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("foo").node("*").map,
-      traverse().role("custom").database("foo").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").database("foo").node("A").map,
-      traverse().role("custom").database("foo").relationship("A").map,
-      read().database("foo").role("custom").property("a").node("A").map,
-      read().database("foo").role("custom").property("a").relationship("A").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("foo").node("*").map,
-      traverse().role("custom").database("foo").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").database("foo").node("A").map,
-      traverse().role("custom").database("foo").relationship("A").map,
-      read().database("foo").role("custom").property("a").relationship("A").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("foo").node("*").map,
-      traverse().role("custom").database("foo").relationship("*").map,
-      read().database("foo").role("custom").node("*").map,
-      read().database("foo").role("custom").node("*").property("a").map,
-      read().database("foo").role("custom").relationship("*").map,
-      read().database("foo").role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").database("foo").node("A").map,
-      traverse().role("custom").database("foo").relationship("A").map
-    ))
-  }
-
-  test("should revoke correct MATCH privilege from different traverse, read and MATCH privileges on elements") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT MATCH (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("GRANT MATCH (a) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("GRANT READ  (b) ON GRAPH * ELEMENTS * (*) TO custom")
-
-    execute("GRANT TRAVERSE  ON GRAPH * ELEMENTS A (*) TO custom")
-    execute("GRANT MATCH (a) ON GRAPH * ELEMENTS A (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map, // From both MATCH ELEMENTS *
-      traverse().role("custom").relationship("*").map, // From both MATCH ELEMENTS *
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").property("a").map,
-      read().role("custom").node("*").property("b").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").property("a").map,
-      read().role("custom").relationship("*").property("b").map,
-
-      traverse().role("custom").node("A").map, // From both MATCH and TRAVERSE
-      traverse().role("custom").relationship("A").map, // From both MATCH and TRAVERSE
-      read().role("custom").node("A").property("a").map,
-      read().role("custom").relationship("A").property("a").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("*").map,
-      read().role("custom").node("*").property("a").map,
-      read().role("custom").relationship("*").map,
-      read().role("custom").relationship("*").property("a").map,
-
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").relationship("A").map,
-      read().role("custom").node("A").property("a").map,
-      read().role("custom").relationship("A").property("a").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("*").map,
-      read().role("custom").relationship("*").map,
-
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").relationship("A").map,
-      read().role("custom").node("A").property("a").map,
-      read().role("custom").relationship("A").property("a").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("*").map,
-      read().role("custom").relationship("*").map,
-
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").relationship("A").map,
-    ))
-  }
-
-  test("should revoke correct elements privilege when granted as nodes + relationships") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
-
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("A").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("A").map,
-      read().role("custom").node("*").map,
-      read().role("custom").relationship("A").map,
-      read().role("custom").relationship("*").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").relationship("A").map,
-      traverse().role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      read().role("custom").node("A").map,
-      read().role("custom").relationship("A").map
-    ))
-  }
-
-  test("should revoke correct elements privilege when granted as specific nodes + relationships") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
-
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("A").map,
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("A").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("A").map,
-      read().role("custom").node("*").map,
-      read().role("custom").relationship("A").map,
-      read().role("custom").relationship("*").map
-    ))
-
-    // WHEN
-    execute("REVOKE GRANT MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").node("*").map,
-      read().role("custom").relationship("*").map
-    ))
-  }
-
-  test("should fail revoke elements privilege when granted only nodes or relationships") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("ALTER USER neo4j SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-
-    execute("GRANT MATCH (foo) ON GRAPH * NODES * TO custom")
-    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS * TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").property("foo").node("*").map,
-      read().role("custom").property("bar").relationship("*").map
-    ))
-
-    // WHEN
-    val error1 = the[QueryExecutionException] thrownBy {
-      executeOnSystem("neo4j", "abc", "REVOKE GRANT MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
-    }
-    // THEN
-    error1.getMessage should include("The privilege 'read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").property("foo").node("*").map,
-      read().role("custom").property("bar").relationship("*").map
-    ))
-
-    // WHEN
-    val error2 = the[QueryExecutionException] thrownBy {
-      executeOnSystem("neo4j", "abc", "REVOKE GRANT MATCH (bar) ON GRAPH * FROM custom")
-    }
-    // THEN
-    error2.getMessage should include("The privilege 'read bar ON GRAPH * NODES *' does not exist.")
-
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").node("*").map,
-      traverse().role("custom").relationship("*").map,
-      read().role("custom").property("foo").node("*").map,
-      read().role("custom").property("bar").relationship("*").map
-    ))
-  }
-
-  test("should fail revoke privilege from non-existent role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN
-    val error1 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
-    }
-
-    // THEN
-    error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
-      be("The role 'wrongRole' does not exist."))
-
-    // WHEN
-    val error2 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
-    }
-
-    // THEN
-    error2.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
-      be("The role 'wrongRole' does not exist."))
-
-    // WHEN
-    val error3 = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
-    }
-    // THEN
-    error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
-      be("The role 'wrongRole' does not exist."))
-  }
-
-  test("should fail revoke privilege not granted to role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE ROLE role")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN
-    val errorTraverse = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM role")
-    }
-    // THEN
-    errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
-
-    // WHEN
-    val errorRead = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM role")
-    }
-    // THEN
-    errorRead.getMessage should include("The role 'role' does not have the specified privilege")
-
-    // WHEN
-    val errorMatch = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES A (*) FROM role")
-    }
-    // THEN
-    errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
-  }
-
-  test("should fail when revoking traversal privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-    } should have message "The privilege 'find  ON GRAPH foo NODES *' does not exist."
-  }
-
-  test("should fail when revoking read privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT READ (*) ON GRAPH foo NODES * (*) FROM custom")
-    } should have message "The privilege 'read * ON GRAPH foo NODES *' does not exist."
-  }
-
-  test("should fail when revoking MATCH privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
-
-    // WHEN
-    val e = the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE GRANT MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
-    }
-    // THEN
-    e.getMessage should (be("The privilege 'find  ON GRAPH foo NODES *' does not exist.") or
-      be("The privilege 'read * ON GRAPH foo NODES *' does not exist."))
-  }
-
-  test("should fail when revoking traversal privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE GRANT TRAVERSE"
-  }
-
-  test("should fail when revoking read privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE GRANT READ"
-  }
-
-  test("should fail when revoking MATCH privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
-      // WHEN
-      execute("REVOKE GRANT MATCH (*) ON GRAPH * NODES * (*) FROM custom")
-      // THEN
-    } should have message
-      "This is a DDL command and it should be executed against the system database: REVOKE GRANT MATCH"
+  Seq(
+    ("grant", "GRANT", "GRANTED"),
+    ("deny", "DENY", "DENIED"),
+  ).foreach {
+    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+
+      test(s"should revoke correct $grantOrDeny read privilege different label qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny read privilege different relationship type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny read privilege different element type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS B, C (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("C").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("C").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("C").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should revoke correct $grantOrDeny read privilege different property") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ (a) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ (b) ON GRAPH foo TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (a) ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (b) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny read privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH bar TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse node privilege different label qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo NODES B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse node privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH bar NODES * (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse relationships privilege different type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse relationship privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH bar RELATIONSHIPS * (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse elements privilege different type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS A, B, C (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("C").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("C").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("C").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse element privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH bar ELEMENTS * (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege different label qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("bar").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("bar").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("bar").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege different relationship type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege different element type qualifier") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS A, B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map
+        ))
+
+        // WHEN
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS C (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("C").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("C").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("C").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("C").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          // TODO: this should be an empty set when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("C").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("C").map,
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege different property") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (b) ON GRAPH foo TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          // TODO: this should be an empty set when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("*").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege different databases") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH bar TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("foo").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").node("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").node("*").database("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH foo RELATIONSHIPS A,B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("B").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).database("foo").role("custom").node("B").map,
+          traverse(grantOrDenyRelType).database("foo").role("custom").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("B").property("bar").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges on elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH * ELEMENTS A,B (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").node("B").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("B").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("B").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("B").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").node("B").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("B").property("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("foo").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("bar").map,
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          read(grantOrDenyRelType).role("custom").node("A").property("bar").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("bar").map,
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ  (b) ON GRAPH foo TO custom")
+
+        execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo NODES A (*) TO custom")
+
+        execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map, // From both MATCH *
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("*").map, // From both MATCH *
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("A").map, // From both MATCH and TRAVERSE
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("A").map, // From both MATCH and TRAVERSE
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").relationship("A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").relationship("A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").node("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").relationship("A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("A").map,
+          read(grantOrDenyRelType).database("foo").role("custom").property("a").relationship("A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").map,
+          read(grantOrDenyRelType).database("foo").role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").database("foo").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").database("foo").relationship("A").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges on elements") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ  (b) ON GRAPH * ELEMENTS * (*) TO custom")
+
+        execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH * ELEMENTS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS A (*) TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map, // From both MATCH ELEMENTS *
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map, // From both MATCH ELEMENTS *
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).role("custom").node("*").property("b").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").property("a").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").property("b").map,
+
+          traverse(grantOrDenyRelType).role("custom").node("A").map, // From both MATCH and TRAVERSE
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map, // From both MATCH and TRAVERSE
+          read(grantOrDenyRelType).role("custom").node("A").property("a").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("a").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").property("a").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").property("a").map,
+
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("a").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("a").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          read(grantOrDenyRelType).role("custom").node("A").property("a").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").property("a").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map,
+
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny elements privilege when granted as nodes + relationships") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("A").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          read(grantOrDenyRelType).role("custom").node("A").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").map
+        ))
+      }
+
+      test(s"should revoke correct $grantOrDeny elements privilege when granted as specific nodes + relationships") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("A").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("A").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("A").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("A").map, // TODO: should be removed when revoking MATCH also revokes traverse
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
+      }
+
+      test(s"should fail revoke $grantOrDeny elements privilege when granted only nodes or relationships") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("ALTER USER neo4j SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+
+        execute(s"$grantOrDenyCommand MATCH (foo) ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH * RELATIONSHIPS * TO custom")
+
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").property("foo").node("*").map,
+          read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map
+        ))
+
+        // WHEN
+        val error1 = the[QueryExecutionException] thrownBy {
+          executeOnSystem("neo4j", "abc", s"REVOKE $grantOrDenyCommand MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
+        }
+        // THEN
+        error1.getMessage should include(s"The privilege '$grantOrDenyCommand read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").property("foo").node("*").map,
+          read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map
+        ))
+
+        // WHEN
+        val error2 = the[QueryExecutionException] thrownBy {
+          executeOnSystem("neo4j", "abc", s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH * FROM custom")
+        }
+        // THEN
+        error2.getMessage should include(s"The privilege '$grantOrDenyCommand read bar ON GRAPH * NODES *' does not exist.")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
+          read(grantOrDenyRelType).role("custom").property("foo").node("*").map,
+          read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map
+        ))
+      }
+
+      test(s"should fail revoke $grantOrDeny privilege from non-existent role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) TO custom")
+
+        // WHEN
+        val error1 = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
+        }
+
+        // THEN
+        error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
+          be("The role 'wrongRole' does not exist."))
+
+        // WHEN
+        val error2 = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+        }
+
+        // THEN
+        error2.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
+          be("The role 'wrongRole' does not exist."))
+
+        // WHEN
+        val error3 = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
+        }
+        // THEN
+        error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
+          be("The role 'wrongRole' does not exist."))
+      }
+
+      test(s"should fail revoke $grantOrDeny privilege not granted to role") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE ROLE role")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) TO custom")
+
+        // WHEN
+        val errorTraverse = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM role")
+        }
+        // THEN
+        errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
+
+        // WHEN
+        val errorRead = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM role")
+        }
+        // THEN
+        errorRead.getMessage should include("The role 'role' does not have the specified privilege")
+
+        // WHEN
+        val errorMatch = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) FROM role")
+        }
+        // THEN
+        errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
+      }
+
+      test(s"should fail when revoking $grantOrDeny traversal privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
+        the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+        } should have message s"The privilege '$grantOrDenyCommand find  ON GRAPH foo NODES *' does not exist."
+      }
+
+      test(s"should fail when revoking $grantOrDeny read privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
+        the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo NODES * (*) FROM custom")
+        } should have message s"The privilege '$grantOrDenyCommand read * ON GRAPH foo NODES *' does not exist."
+      }
+
+      test(s"should fail when revoking $grantOrDeny MATCH privilege with missing database") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * (*) TO custom")
+
+        // WHEN
+        val e = the[InvalidArgumentsException] thrownBy {
+          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+        }
+        // THEN
+        e.getMessage should (be("The privilege 'find  ON GRAPH foo NODES *' does not exist.") or
+          be(s"The privilege '$grantOrDenyCommand read * ON GRAPH foo NODES *' does not exist."))
+      }
+
+      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database") {
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+          // THEN
+        } should have message
+          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand TRAVERSE"
+      }
+
+      test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database") {
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM custom")
+          // THEN
+        } should have message
+          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand READ"
+      }
+
+      test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database") {
+        the[DatabaseManagementException] thrownBy {
+          // WHEN
+          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+          // THEN
+        } should have message
+          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand MATCH"
+      }
   }
 
   // helper variable, methods and class
