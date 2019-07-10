@@ -232,7 +232,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A {name:'a'})")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -256,7 +256,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A {name:'a'})")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -300,7 +300,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
@@ -323,7 +323,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A)-[:REL {name:'a'}]->()")
+    execute("CREATE (n:A)-[:REL {name:'a'}]->()")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
@@ -346,7 +346,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A {name:'a'})")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -372,7 +372,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a', prop: 'b'})")
+    execute("CREATE (n:A {name:'a', prop: 'b'})")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -399,7 +399,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
@@ -492,14 +492,14 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("DENY WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", "CREATE (:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
       row.get("dummy") should be(1)
     }) should be(1)
 
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
 
     the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
+      executeOn("foo", "joe", "soap", "CREATE (:B {name: 'a'}) RETURN 1 AS dummy")
     } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
 
     selectDatabase("foo")

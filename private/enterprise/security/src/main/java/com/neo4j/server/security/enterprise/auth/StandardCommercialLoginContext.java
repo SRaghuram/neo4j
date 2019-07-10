@@ -254,7 +254,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsTraverseLabel( long label )
         {
-            if ( disallowsTraverseAllLabels || blacklistTraverseLabels.notEmpty() )
+            if ( disallowsTraverseAllLabels || !blacklistTraverseLabels.isEmpty() )
             {
                 return false;
             }
@@ -315,7 +315,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 return false;
             }
 
-            return whitelistTraverseRelTypes.contains( relType ) || allowsTraverseAllRelTypes;
+            return allowsTraverseAllRelTypes || whitelistTraverseRelTypes.contains( relType );
         }
 
         @Override

@@ -247,7 +247,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see properties and nodes depending on granted traverse and read privileges for role") {
     // GIVEN
-    setupMultilabelData
+    setupMultiLabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role1")
@@ -318,7 +318,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see properties and nodes depending on granted MATCH privileges for role") {
     // GIVEN
-    setupMultilabelData
+    setupMultiLabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role1")
@@ -388,7 +388,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see properties and nodes when revoking privileges for role") {
     // GIVEN
-    setupMultilabelData
+    setupMultiLabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
 
@@ -457,7 +457,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
@@ -489,7 +488,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
@@ -646,7 +644,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -692,7 +690,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -745,7 +743,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -798,7 +796,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -851,7 +849,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -945,7 +943,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -991,7 +989,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -1037,7 +1035,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -1088,7 +1086,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    setupMultilabelData
+    setupMultiLabelData
 
     val query = "MATCH (n) RETURN n.foo, n.bar ORDER BY n.foo, n.bar"
 
@@ -2379,7 +2377,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       row.get("prop") should be(expected2(index))
     }) should be(3)
 
-
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY READ (prop) ON GRAPH * RELATIONSHIPS A TO custom" )
@@ -2392,7 +2389,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected3(index))
     }) should be(1)
-
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -2450,7 +2446,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 5)))
-
   }
 
   test("should get correct count within transaction for restricted user using count store") {
@@ -2495,11 +2490,10 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }, executeBefore = () => createLabeledNode("A")) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 5)))
-
   }
 
   test("should support whitelist and blacklist traversal in index seeks") {
-    setupMultilabelData
+    setupMultiLabelData
     graph.createIndex("A", "foo")
     setupUserWithCustomRole("user1", "secret", "role1")
     setupUserWithCustomRole("user2", "secret", "role2")
@@ -2571,7 +2565,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   // helper variable, methods and class
 
-  private def setupMultilabelData = {
+  private def setupMultiLabelData = {
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {foo:1, bar:2})")
     execute("CREATE (n:B {foo:3, bar:4})")
