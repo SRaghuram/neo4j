@@ -20,23 +20,34 @@ abstract class ArgumentCountUpdater {
     */
   def argumentStateMaps: ArgumentStateMaps
 
-  // TODO this does not really need to collect the argument row ids into a collection
-  // Step 1: It would be enough to have a var with the latest argument row id per downstream.
-  // Step 2: Merge with while loop in MorselApplyBuffer
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                          morsel: MorselExecutionContext,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
+    val originalRow = morsel.getCurrentRow
+
+    val lastSeenRowIds = new Array[Long](downstreamAccumulatingBuffers.size)
+    // Write all initial last seen ids to -1
     var i = 0
-    while (i < downstreamAccumulatingBuffers.length) {
-      val buffer = downstreamAccumulatingBuffers(i)
-      val argumentRowIds = morsel.allArgumentRowIdsFor(buffer.argumentSlotOffset)
-      var j = 0
-      while (j < argumentRowIds.size) {
-        operation(buffer, argumentRowIds(j))
-        j += 1
-      }
+    while (i < lastSeenRowIds.length) {
+      lastSeenRowIds(i) = -1
       i += 1
     }
+
+    morsel.resetToFirstRow()
+    while(morsel.isValidRow) {
+      i = 0
+      while (i < downstreamAccumulatingBuffers.length) {
+        val buffer = downstreamAccumulatingBuffers(i)
+        val currentRowId = morsel.getLongAt(buffer.argumentSlotOffset)
+        if (currentRowId != lastSeenRowIds(i)) {
+          operation(buffer, currentRowId)
+          lastSeenRowIds(i) = currentRowId
+        }
+        i += 1
+      }
+      morsel.moveToNextRow()
+    }
+    morsel.moveToRow(originalRow)
   }
 
   private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],
@@ -136,20 +147,27 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  // ----
-
-  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  /**
+    * Increment each accumulating buffer for all argument row id in the given morsel.
+    */
+  protected def incrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
-    morselLoop(downstreamAccumulatingBuffers, morsel, _.increment(_))
+    morselLoop(accumulatingBuffers, morsel, _.increment(_))
   }
 
-  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  /**
+    * Decrement each accumulating buffer for all argument row id in the given morsel.
+    */
+  protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
-    morselLoop(downstreamAccumulatingBuffers, morsel, _.decrement(_))
+    morselLoop(accumulatingBuffers, morsel, _.decrement(_))
   }
 
-  protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  /**
+    * Decrement each accumulating buffer for all given argument row ids
+    */
+  protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         argumentRowIds: IndexedSeq[Long]): Unit = {
-    argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.decrement(_))
+    argumentCountLoop(accumulatingBuffers, argumentRowIds, _.decrement(_))
   }
 }

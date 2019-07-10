@@ -47,21 +47,6 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   // ARGUMENT COLUMNS
 
-  def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
-    var i = firstRow
-    val res = new mutable.ArrayBuffer[Long]()
-    var previousId = -1L
-    while (i < validRows) {
-      val currentId = getLongAt(i, offset)
-      if (currentId != previousId) {
-        res += currentId
-        previousId = currentId
-      }
-      i += 1
-    }
-    res
-  }
-
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
   def moveToNextRow(): Unit = {
