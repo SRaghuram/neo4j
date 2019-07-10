@@ -64,7 +64,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
     DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
 
-    val argumentRowIdsForReducers: Array[Long] = incrementArgumentReducers(downstreamArgumentReducers, argumentMorsel)
+    val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
 
     tracker.increment()

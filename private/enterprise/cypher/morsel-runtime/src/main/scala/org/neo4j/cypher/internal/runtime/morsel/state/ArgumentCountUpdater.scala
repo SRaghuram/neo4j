@@ -65,43 +65,72 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  protected def initiateArgumentStatesHere(downstreamStates: IndexedSeq[ArgumentStateMapId],
+  /**
+    * Initiates argument state maps.
+    *
+    * In practice, this is only called for Limit.
+    *
+    * @param argumentStates all argument state maps must be at the same apply nesting level
+    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
+    * @param morsel must point at the row of `argumentRowId`
+    */
+  protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselExecutionContext): Unit = {
-    downstreamLoop[ArgumentStateMapId](downstreamStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
+    downstreamLoop[ArgumentStateMapId](argumentStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
   }
 
-  protected def initiateArgumentReducersHere(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  /**
+    * Initiates accumulating buffers.
+    *
+    * @param accumulatingBuffers all argument state maps must be at the same apply nesting level
+    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
+    * @param morsel must point at the row of `argumentRowId`
+    */
+  protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                              argumentRowId: Long,
                                              morsel: MorselExecutionContext): Unit = {
-    downstreamLoop[AccumulatingBuffer](downstreamAccumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
+    downstreamLoop[AccumulatingBuffer](accumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
   }
 
-  protected def incrementArgumentReducers(downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                          morsel: MorselExecutionContext): Array[Long] = {
-    val argumentRowIdsForReducers: Array[Long] = new Array[Long](downstreamArgumentReducers.size)
+  /**
+    * Apply function on each accumulating buffer, and returns the argument row id for each of them.
+    *
+    * @param accumulatingBuffers buffers to apply function to
+    * @param morsel must point at the row of `argumentRowId`
+    * @param fun function to invoke on buffers
+    * @return array of argument row ids
+    */
+  protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                                           morsel: MorselExecutionContext,
+                                                           fun: (AccumulatingBuffer, Long) => Unit): Array[Long] = {
+    val argumentRowIdsForReducers: Array[Long] = new Array[Long](accumulatingBuffers.size)
     var i = 0
-    while (i < downstreamArgumentReducers.length) {
-      val reducer = downstreamArgumentReducers(i)
+    while (i < accumulatingBuffers.length) {
+      val reducer = accumulatingBuffers(i)
       val offset = reducer.argumentSlotOffset
       val argumentRowIdForReducer = morsel.getLongAt(offset)
       argumentRowIdsForReducers(i) = argumentRowIdForReducer
-
-      // Increment the downstream reducer for its argument row id
-      reducer.increment(argumentRowIdForReducer)
-
+      fun(reducer, argumentRowIdForReducer)
       i += 1
     }
     argumentRowIdsForReducers
   }
 
-  protected def forAllArgumentReducers(downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                       argumentRowIdsForReducers: Array[Long],
+  /**
+    * Apply function on each accumulating buffer
+    *
+    * @param accumulatingBuffers buffers to apply function to
+    * @param argumentRowIds argument row ids for the provided buffers, buffers may be at different apply nesting levels
+    * @param fun function to invoke on buffers
+    */
+  protected def forAllArgumentReducers(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                       argumentRowIds: Array[Long],
                                        fun: (AccumulatingBuffer, Long) => Unit ): Unit = {
     var i = 0
-    while (i < downstreamArgumentReducers.length) {
-      val reducer = downstreamArgumentReducers(i)
-      val argumentRowIdForReducer = argumentRowIdsForReducers(i)
+    while (i < accumulatingBuffers.length) {
+      val reducer = accumulatingBuffers(i)
+      val argumentRowIdForReducer = argumentRowIds(i)
       fun(reducer, argumentRowIdForReducer)
       i += 1
     }
@@ -117,11 +146,6 @@ abstract class ArgumentCountUpdater {
   protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(downstreamAccumulatingBuffers, morsel, _.decrement(_))
-  }
-
-  protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                        argumentRowIds: IndexedSeq[Long]): Unit = {
-    argumentCountLoop(downstreamAccumulatingBuffers, argumentRowIds, _.increment(_))
   }
 
   protected def decrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],

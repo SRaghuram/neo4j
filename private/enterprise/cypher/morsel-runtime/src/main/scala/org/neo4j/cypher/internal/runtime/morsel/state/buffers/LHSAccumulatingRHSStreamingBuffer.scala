@@ -129,7 +129,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     rhsArgumentStateMap.clearAll(buffer => {
       var morsel = buffer.take()
       while (morsel != null) {
-        decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(buffer.argumentRowId))
+        forAllArgumentReducers(downstreamArgumentReducers, buffer.argumentRowIdsForReducers, _.decrement(_))
         tracker.decrement()
         morsel = buffer.take()
       }
@@ -149,7 +149,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
       }
     }
     // Decrement for a morsel in the RHS buffer
-    decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(accumulator.argumentRowId))
+    forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
     tracker.decrement()
   }
 
@@ -171,7 +171,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
       DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, null)
+      val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
+      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
     }
 
     override def increment(argumentRowId: Long): Unit = {
@@ -195,9 +196,11 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
       var i = 0
       while (i < data.length) {
         val argumentValue = data(i)
-        rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => acc.put(argumentValue.value))
-        // Increment for a morsel in the RHS buffer
-        incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentValue.argumentRowId))
+        rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => {
+          acc.put(argumentValue.value)
+          // Increment for a morsel in the RHS buffer
+          forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
+        })
         tracker.increment()
         i += 1
       }
@@ -207,9 +210,9 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
       DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, null)
       // Increment for an ArgumentID in RHS's accumulator
-      incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
+      val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
+      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
       tracker.increment()
     }
 
@@ -221,7 +224,8 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
       val isZero = rhsArgumentStateMap.decrement(argumentRowId)
       if (isZero) {
         // Decrement for an ArgumentID in RHS's accumulator
-        decrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
+        val argumentRowIdsForReducers = rhsArgumentStateMap.peek(argumentRowId).argumentRowIdsForReducers
+        forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
         tracker.decrement()
       }
     }
