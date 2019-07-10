@@ -815,7 +815,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
-  ignore("should change own password when user has no role") {
+  test("should change own password when user has no role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
@@ -828,6 +828,24 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.SUCCESS)
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail on changing own password from wrong password") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE editor TO foo")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'wrongPassword' TO 'baz'")
+      // THEN
+    } should have message "Invalid principal or credentials."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
   }
 
   test("should fail when changing own password to invalid password") {
