@@ -338,10 +338,8 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
                     try
                     {
-                        ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType(type);
-
-                        PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder(privilegeType, actionValue);
-
+                        ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( type );
+                        PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, actionValue );
                         privilegeBuilder.withinScope( qualifier ).onResource( resource );
 
                         assert database.labels().length() == 1;

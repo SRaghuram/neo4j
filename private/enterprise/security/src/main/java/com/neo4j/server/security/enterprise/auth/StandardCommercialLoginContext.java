@@ -33,6 +33,9 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
+import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
+import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
+
 public class StandardCommercialLoginContext implements CommercialLoginContext
 {
     private final MultiRealmAuthManager authManager;
@@ -69,7 +72,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             }
         }
 
-        accessModeBuilder.addPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
+        accessModeBuilder.addBlacklistedPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
         return accessModeBuilder.build();
     }
 
@@ -470,35 +473,25 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private final Set<String> roles;
             private final IdLookup resolver;
 
-            private boolean read;
-            private boolean allowsWrite;
-            private boolean disallowsWrite;
-            private boolean token;
-            private boolean schema;
-            private boolean admin;
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyWrite = new HashMap<>(); // track any writes because we only support global write GRANT/DENY
+            private boolean token;  // TODO - still to support GRANT/DENY
+            private boolean schema; // TODO - still to support GRANT/DENY
+            private boolean admin;  // TODO - still to support GRANT/DENY
 
             private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllLabels = new HashMap<>();
             private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllRelTypes = new HashMap<>();
             private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseLabels = new HashMap<>();
             private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseRelTypes = new HashMap<>();
 
-            private boolean allowReadAllPropertiesAllLabels;
-            private boolean allowReadAllPropertiesAllRelTypes;
-            private MutableIntSet allowedNodeSegmentForAllProperties = IntSets.mutable.empty();
-            private MutableIntSet allowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
-            private MutableIntSet whitelistNodeProperties = IntSets.mutable.empty();
-            private MutableIntSet whitelistRelationshipProperties = IntSets.mutable.empty();
-            private MutableIntObjectMap<IntSet> allowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
-            private MutableIntObjectMap<IntSet> allowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
-
-            private boolean disallowReadAllPropertiesAllLabels;
-            private boolean disallowReadAllPropertiesAllRelTypes;
-            private MutableIntSet disallowedNodeSegmentForAllProperties = IntSets.mutable.empty();
-            private MutableIntSet disallowedRelationshipSegmentForAllProperties = IntSets.mutable.empty();
-            private MutableIntSet blacklistNodeProperties = IntSets.mutable.empty();
-            private MutableIntSet blacklistRelationshipProperties = IntSets.mutable.empty();
-            private MutableIntObjectMap<IntSet> disallowedNodeSegmentForProperty = IntObjectMaps.mutable.empty();
-            private MutableIntObjectMap<IntSet> disallowedRelationshipSegmentForProperty = IntObjectMaps.mutable.empty();
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> readAllPropertiesAllLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> relationshipSegmentForAllProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> nodeProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> relationshipProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -506,59 +499,66 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
                 this.resolver = resolver;
-                this.traverseLabels.put( ResourcePrivilege.GrantOrDeny.GRANT, IntSets.mutable.empty());
-                this.traverseRelTypes.put( ResourcePrivilege.GrantOrDeny.GRANT, IntSets.mutable.empty());
-                this.traverseLabels.put( ResourcePrivilege.GrantOrDeny.DENY, IntSets.mutable.empty());
-                this.traverseRelTypes.put( ResourcePrivilege.GrantOrDeny.DENY, IntSets.mutable.empty());
+                for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
+                {
+                    this.traverseLabels.put( privilegeType, IntSets.mutable.empty() );
+                    this.traverseRelTypes.put( privilegeType, IntSets.mutable.empty() );
+                    this.nodeSegmentForAllProperties.put( privilegeType, IntSets.mutable.empty() );
+                    this.relationshipSegmentForAllProperties.put( privilegeType, IntSets.mutable.empty() );
+                    this.nodeProperties.put( privilegeType, IntSets.mutable.empty() );
+                    this.relationshipProperties.put( privilegeType, IntSets.mutable.empty() );
+                    this.nodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
+                    this.relationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
+                }
             }
 
-            void addPropertyPermissions( MutableIntSet propertyPermissions )
+            private void addBlacklistedPropertyPermissions( MutableIntSet propertyPermissions )
             {
                 for ( int property : propertyPermissions.toArray() )
                 {
-                    blacklistNodeProperties.add( property );
-                    blacklistRelationshipProperties.add( property );
+                    nodeProperties.get( DENY ).add( property );
+                    relationshipProperties.get( DENY ).add( property );
                 }
             }
 
             StandardAccessMode build()
             {
                 return new StandardAccessMode(
-                        isAuthenticated && read,
-                        isAuthenticated && allowsWrite && !disallowsWrite,
+                        isAuthenticated && anyRead.getOrDefault( GRANT, false ),
+                        isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
                         isAuthenticated && token,
                         isAuthenticated && schema,
                         isAuthenticated && admin,
                         passwordChangeRequired,
                         roles,
 
-                        traverseAllLabels.getOrDefault( ResourcePrivilege.GrantOrDeny.GRANT, false ),
-                        traverseAllRelTypes.getOrDefault( ResourcePrivilege.GrantOrDeny.GRANT, false ),
-                        traverseLabels.get( ResourcePrivilege.GrantOrDeny.GRANT ),
-                        traverseRelTypes.get( ResourcePrivilege.GrantOrDeny.GRANT ),
+                        traverseAllLabels.getOrDefault( GRANT, false ),
+                        traverseAllRelTypes.getOrDefault( GRANT, false ),
+                        traverseLabels.get( GRANT ),
+                        traverseRelTypes.get( GRANT ),
 
-                        traverseAllLabels.getOrDefault( ResourcePrivilege.GrantOrDeny.DENY, false ),
-                        traverseAllRelTypes.getOrDefault( ResourcePrivilege.GrantOrDeny.DENY, false ),
-                        traverseLabels.get( ResourcePrivilege.GrantOrDeny.DENY ),
-                        traverseRelTypes.get( ResourcePrivilege.GrantOrDeny.DENY ),
+                        traverseAllLabels.getOrDefault( DENY, false ),
+                        traverseAllRelTypes.getOrDefault( DENY, false ),
+                        traverseLabels.get( DENY ),
+                        traverseRelTypes.get( DENY ),
 
-                        allowReadAllPropertiesAllLabels,
-                        allowReadAllPropertiesAllRelTypes,
-                        allowedNodeSegmentForAllProperties,
-                        allowedRelationshipSegmentForAllProperties,
-                        whitelistNodeProperties,
-                        whitelistRelationshipProperties,
-                        allowedNodeSegmentForProperty,
-                        allowedRelationshipSegmentForProperty,
+                        readAllPropertiesAllLabels.getOrDefault( GRANT, false ),
+                        readAllPropertiesAllRelTypes.getOrDefault( GRANT, false ),
+                        nodeSegmentForAllProperties.get( GRANT ),
+                        relationshipSegmentForAllProperties.get( GRANT ),
+                        nodeProperties.get( GRANT ),
+                        relationshipProperties.get( GRANT ),
+                        nodeSegmentForProperty.get( GRANT ),
+                        relationshipSegmentForProperty.get( GRANT ),
 
-                        disallowReadAllPropertiesAllLabels,
-                        disallowReadAllPropertiesAllRelTypes,
-                        disallowedNodeSegmentForAllProperties,
-                        disallowedRelationshipSegmentForAllProperties,
-                        blacklistNodeProperties,
-                        blacklistRelationshipProperties,
-                        disallowedNodeSegmentForProperty,
-                        disallowedRelationshipSegmentForProperty );
+                        readAllPropertiesAllLabels.getOrDefault( DENY, false ),
+                        readAllPropertiesAllRelTypes.getOrDefault( DENY, false ),
+                        nodeSegmentForAllProperties.get( DENY ),
+                        relationshipSegmentForAllProperties.get( DENY ),
+                        nodeProperties.get( DENY ),
+                        relationshipProperties.get( DENY ),
+                        nodeSegmentForProperty.get( DENY ),
+                        relationshipSegmentForProperty.get( DENY ) );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
@@ -570,10 +570,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 switch ( privilege.getAction() )
                 {
                 case FIND:
-                    if ( privilegeType.isGrant() )
-                    {
-                        read = true;
-                    }
+                    anyRead.put( privilegeType, true );
                     if ( segment instanceof LabelSegment )
                     {
                         LabelSegment labelSegment = (LabelSegment) segment;
@@ -605,25 +602,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
 
                     break;
                 case READ:
-
-                    if ( privilegeType.isGrant() )
-                    {
-                        read = true;
-                    }
-
+                    anyRead.put( privilegeType, true );
                     switch ( resource.type() )
                     {
                     case GRAPH:
-                        if ( privilegeType.isGrant() )
-                        {
-                            allowReadAllPropertiesAllLabels = true;
-                            allowReadAllPropertiesAllRelTypes = true;
-                        }
-                        else
-                        {
-                            disallowReadAllPropertiesAllLabels = true;
-                            disallowReadAllPropertiesAllRelTypes = true;
-                        }
+                        readAllPropertiesAllLabels.put( privilegeType, true );
+                        readAllPropertiesAllRelTypes.put( privilegeType, true );
                         break;
                     case PROPERTY:
                         int propertyId = resolvePropertyId( resource.getArg1() );
@@ -631,54 +615,24 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                if ( privilegeType.isGrant() )
-                                {
-                                    whitelistNodeProperties.add( propertyId );
-                                }
-                                else
-                                {
-                                    blacklistNodeProperties.add( propertyId );
-                                }
+                                nodeProperties.get( privilegeType ).add( propertyId );
                             }
                             else
                             {
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-
-                                if ( privilegeType.isGrant() )
-                                {
-                                    addLabelPropertyCombination( allowedNodeSegmentForProperty, labelId, propertyId );
-                                }
-                                else
-                                {
-                                    addLabelPropertyCombination( disallowedNodeSegmentForProperty, labelId, propertyId );
-                                }
+                                addLabelPropertyCombination( nodeSegmentForProperty.get( privilegeType ), labelId, propertyId );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
                         {
                             if ( segment.equals( RelTypeSegment.ALL ) )
                             {
-                                if ( privilegeType.isGrant() )
-                                {
-                                    whitelistRelationshipProperties.add( propertyId );
-                                }
-                                else
-                                {
-                                    blacklistRelationshipProperties.add( propertyId );
-                                }
+                                relationshipProperties.get( privilegeType ).add( propertyId );
                             }
                             else
                             {
                                 int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-
-                                if ( privilegeType.isGrant() )
-                                {
-                                    addLabelPropertyCombination( allowedRelationshipSegmentForProperty, relTypeId, propertyId );
-                                }
-                                else
-                                {
-                                    addLabelPropertyCombination( disallowedRelationshipSegmentForProperty, relTypeId, propertyId );
-                                }
+                                addLabelPropertyCombination( relationshipSegmentForProperty.get( privilegeType ), relTypeId, propertyId );
                             }
                         }
                         else
@@ -691,18 +645,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                if ( privilegeType.isGrant() )
-                                {
-                                    allowReadAllPropertiesAllLabels = true;
-                                }
-                                else
-                                {
-                                    disallowReadAllPropertiesAllLabels = true;
-                                }
+                                readAllPropertiesAllLabels.put( privilegeType, true );
                             }
                             else
                             {
-                                addLabel( privilegeType.isGrant() ? allowedNodeSegmentForAllProperties : disallowedNodeSegmentForAllProperties, segment );
+                                addLabel( nodeSegmentForAllProperties.get( privilegeType ), segment );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
@@ -710,20 +657,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             RelTypeSegment relTypeSegment = (RelTypeSegment) segment;
                             if ( relTypeSegment.equals( RelTypeSegment.ALL ) )
                             {
-                                if ( privilegeType.isGrant() )
-                                {
-                                    allowReadAllPropertiesAllRelTypes = true;
-                                }
-                                else
-                                {
-                                    disallowReadAllPropertiesAllRelTypes = true;
-                                }
+                                readAllPropertiesAllRelTypes.put( privilegeType, true );
                             }
                             else
                             {
-                                addRelType(
-                                        privilegeType.isGrant() ? allowedRelationshipSegmentForAllProperties : disallowedRelationshipSegmentForAllProperties,
-                                        relTypeSegment );
+                                addRelType( relationshipSegmentForAllProperties.get( privilegeType ), relTypeSegment );
                             }
                         }
                         else
@@ -740,14 +678,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case GRAPH:
                     case PROPERTY:
                     case ALL_PROPERTIES:
-                        if ( privilegeType.isGrant() )
-                        {
-                            allowsWrite = true;
-                        }
-                        else
-                        {
-                            disallowsWrite = true;
-                        }
+                        anyWrite.put( privilegeType, true );
                         break;
                     case TOKEN:
                         token = true;

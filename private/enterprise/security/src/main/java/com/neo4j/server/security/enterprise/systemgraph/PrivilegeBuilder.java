@@ -25,7 +25,7 @@ class PrivilegeBuilder
     private String dbName = "";
     private boolean allDatabases;
 
-    public PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
+    PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
         this.privilegeType = privilegeType;
         this.action = ResourcePrivilege.Action.valueOf( action.toUpperCase() );
