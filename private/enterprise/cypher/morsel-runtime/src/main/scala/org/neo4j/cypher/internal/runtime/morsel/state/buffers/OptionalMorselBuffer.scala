@@ -52,22 +52,22 @@ class OptionalMorselBuffer(id: BufferId,
         argumentState match {
           case ArgumentStateWithCompleted(completedArgument, true) =>
             if (!completedArgument.didReceiveData) {
-              MorselData(completedArgument.argumentRowId, IndexedSeq.empty, EndOfEmptyStream(completedArgument.viewOfArgumentRow(argumentSlotOffset)))
+              MorselData(IndexedSeq.empty, EndOfEmptyStream(completedArgument.viewOfArgumentRow(argumentSlotOffset)), completedArgument.argumentRowIdsForReducers)
             } else {
               val morsels = completedArgument.takeAll()
               if (morsels != null) {
-                MorselData(completedArgument.argumentRowId, morsels, EndOfNonEmptyStream)
+                MorselData(morsels, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers)
               } else {
                 // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
                 // before us), to close and decrement correctly.
-                MorselData(completedArgument.argumentRowId, IndexedSeq.empty, EndOfNonEmptyStream)
+                MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers)
               }
             }
 
           case ArgumentStateWithCompleted(incompleteArgument, false) =>
             val morsels = incompleteArgument.takeAll()
             if (morsels != null) {
-              MorselData(incompleteArgument.argumentRowId, morsels, NotTheEnd)
+              MorselData(morsels, NotTheEnd, incompleteArgument.argumentRowIdsForReducers)
             } else {
               // In this case we can simply not return anything, there will arrive more data for this argument row id.
               null.asInstanceOf[MorselData]
@@ -90,10 +90,12 @@ class OptionalMorselBuffer(id: BufferId,
     // We increment for each morsel view, otherwise we can reach a count of zero too early, when the all data arrived in this buffer, but has not been
     // streamed out yet.
     tracker.incrementBy(data.length)
-    incrementArgumentCounts(downstreamArgumentReducers, data.map(_.argumentRowId))
     var i = 0
     while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      argumentStateMap.update(data(i).argumentRowId, {acc =>
+        acc.update(data(i).value)
+        forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
+      })
       i += 1
     }
   }
@@ -104,9 +106,8 @@ class OptionalMorselBuffer(id: BufferId,
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
     DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, null)
-    // TODO Reduce-Apply-Reduce-Bug: the downstream might have different argument IDs to care about
-    incrementArgumentCounts(downstreamArgumentReducers, IndexedSeq(argumentRowId))
+    val argumentRowIdsForReducers: Array[Long] = incrementArgumentReducers(downstreamArgumentReducers, argumentMorsel)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
     tracker.increment()
   }
 
@@ -122,7 +123,7 @@ class OptionalMorselBuffer(id: BufferId,
     argumentStateMap.clearAll(buffer => {
       val morselsOrNull = buffer.takeAll()
       val morsels = if (morselsOrNull != null) morselsOrNull else IndexedSeq.empty
-      val data = MorselData(buffer.argumentRowId, morsels, EndOfNonEmptyStream)
+      val data = MorselData(morsels, EndOfNonEmptyStream, buffer.argumentRowIdsForReducers)
       close(data)
     })
   }
@@ -130,13 +131,11 @@ class OptionalMorselBuffer(id: BufferId,
   override def close(data: MorselData): Unit = {
     DebugSupport.logBuffers(s"[close] $this -X- $data")
 
-    val theArgumentId = IndexedSeq(data.argumentRowId)
-
    data.streamContinuation match {
       case _:EndOfStream =>
         // Decrement that corresponds to the increment in initiate
         tracker.decrement()
-        decrementArgumentCounts(downstreamArgumentReducers, theArgumentId)
+        forAllArgumentReducers(downstreamArgumentReducers, data.argumentRowIdsForReducers, _.decrement(_))
       case _ =>
        // Do nothing
     }
@@ -147,7 +146,7 @@ class OptionalMorselBuffer(id: BufferId,
 
     var i = 0
     while (i < numberOfDecrements) {
-      decrementArgumentCounts(downstreamArgumentReducers, theArgumentId)
+      forAllArgumentReducers(downstreamArgumentReducers, data.argumentRowIdsForReducers, _.decrement(_))
       i += 1
     }
   }
@@ -165,7 +164,9 @@ class OptionalMorselBuffer(id: BufferId,
 /**
   * Some Morsels for one argument row id. Depending on the [[StreamContinuation]] there might be more data for this argument row id.
   */
-case class MorselData(argumentRowId: Long, morsels: IndexedSeq[MorselExecutionContext], streamContinuation: StreamContinuation)
+case class MorselData(morsels: IndexedSeq[MorselExecutionContext],
+                      streamContinuation: StreamContinuation,
+                      argumentRowIdsForReducers: Array[Long])
 
 trait StreamContinuation
 trait EndOfStream extends StreamContinuation

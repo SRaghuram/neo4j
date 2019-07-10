@@ -60,7 +60,7 @@ object MorselDebugSupport {
   }
 
   private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
-    Array(s"MorselData with argId ${streamedData.argumentRowId}") ++
+    Array(s"MorselData with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
       streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
       (streamedData.streamContinuation match {
         case EndOfEmptyStream(argRow) => prettyMorselWithHeader("EndOfEmptyStream", argRow)

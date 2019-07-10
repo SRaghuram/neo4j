@@ -64,21 +64,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
     DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
 
-    // TODO consider refactoring this into ArgumentCountUpdater
-    val argumentRowIdsForReducers: Array[Long] = new Array[Long](downstreamArgumentReducers.size)
-    var i = 0
-    while (i < downstreamArgumentReducers.length) {
-      val reducer = downstreamArgumentReducers(i)
-      val offset = reducer.argumentSlotOffset
-      val argumentRowIdForReducer = argumentMorsel.getLongAt(offset)
-      argumentRowIdsForReducers(i) = argumentRowIdForReducer
-
-      // Increment the downstream reducer for its argument row id
-      reducer.increment(argumentRowIdForReducer)
-
-      i += 1
-    }
-
+    val argumentRowIdsForReducers: Array[Long] = incrementArgumentReducers(downstreamArgumentReducers, argumentMorsel)
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
 
     tracker.increment()
@@ -101,19 +87,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     */
   def close(accumulator: MorselAccumulator[_]): Unit = {
     DebugSupport.logBuffers(s"[close] $this -X- $accumulator")
-
-    // TODO consider refactoring this into ArgumentCountUpdater
-    val argumentRowIdsForReducers: Array[Long] = accumulator.argumentRowIdsForReducers
-    var i = 0
-    while (i < downstreamArgumentReducers.length) {
-      val reducer = downstreamArgumentReducers(i)
-      val argumentRowIdForReducer = argumentRowIdsForReducers(i)
-
-      reducer.decrement(argumentRowIdForReducer)
-
-      i += 1
-    }
-
+    forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
     tracker.decrement()
   }
 

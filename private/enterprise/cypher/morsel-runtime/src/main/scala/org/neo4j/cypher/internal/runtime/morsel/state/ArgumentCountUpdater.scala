@@ -77,6 +77,36 @@ abstract class ArgumentCountUpdater {
     downstreamLoop[AccumulatingBuffer](downstreamAccumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
   }
 
+  protected def incrementArgumentReducers(downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                          morsel: MorselExecutionContext): Array[Long] = {
+    val argumentRowIdsForReducers: Array[Long] = new Array[Long](downstreamArgumentReducers.size)
+    var i = 0
+    while (i < downstreamArgumentReducers.length) {
+      val reducer = downstreamArgumentReducers(i)
+      val offset = reducer.argumentSlotOffset
+      val argumentRowIdForReducer = morsel.getLongAt(offset)
+      argumentRowIdsForReducers(i) = argumentRowIdForReducer
+
+      // Increment the downstream reducer for its argument row id
+      reducer.increment(argumentRowIdForReducer)
+
+      i += 1
+    }
+    argumentRowIdsForReducers
+  }
+
+  protected def forAllArgumentReducers(downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                       argumentRowIdsForReducers: Array[Long],
+                                       fun: (AccumulatingBuffer, Long) => Unit ): Unit = {
+    var i = 0
+    while (i < downstreamArgumentReducers.length) {
+      val reducer = downstreamArgumentReducers(i)
+      val argumentRowIdForReducer = argumentRowIdsForReducers(i)
+      fun(reducer, argumentRowIdForReducer)
+      i += 1
+    }
+  }
+
   // ----
 
   protected def incrementArgumentCounts(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
