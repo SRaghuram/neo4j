@@ -621,6 +621,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
                                       roleName: String, revokeType: ast.RevokeType, source: Option[ExecutionPlan]) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
+    val relType = if (revokeType.relType.nonEmpty) ":" + revokeType.relType else ""
+
     val (property: Value, resourceType: Value, resourceMatch: String) = resource match {
       case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MATCH (res:Resource {type: $resource, arg1: $property})")
       case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MATCH (res:Resource {type: $resource})")
@@ -654,7 +656,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$role})
          |WITH a, r, d, q
-         |OPTIONAL MATCH (r)-[g:${revokeType.relType}]->(a)
+         |OPTIONAL MATCH (r)-[g $relType]->(a)
          |
          |// Remove the assignment
          |DELETE g
@@ -674,7 +676,8 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
   private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, revokeType: ast.RevokeType): String = {
     // TODO: Improve description - or unify with main prettifier
     val (res, db, segment) = Prettifier.extractScope(resource, database, qualifier)
-    s"${revokeType.name} $actionName $res ON GRAPH $db $segment"
+    val start = if (revokeType.name.nonEmpty) revokeType.name + " " else ""
+    s"$start$actionName $res ON GRAPH $db $segment"
   }
 
   override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =

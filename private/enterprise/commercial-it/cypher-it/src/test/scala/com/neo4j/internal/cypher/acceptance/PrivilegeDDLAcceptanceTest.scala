@@ -801,12 +801,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   // Tests for REVOKE READ, TRAVERSE and MATCH
 
   Seq(
-    ("grant", "GRANT", "GRANTED"),
-    ("deny", "DENY", "DENIED"),
+    ("grant", "GRANT", "GRANTED", "GRANT "),
+    ("deny", "DENY", "DENIED", "DENY "),
+    ("grant", "GRANT", "GRANTED", ""),
+    ("deny", "DENY", "DENIED", ""),
   ).foreach {
-    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType, revokeType) =>
 
-      test(s"should revoke correct $grantOrDeny read privilege different label qualifier") {
+      test(s"should revoke correct $grantOrDeny read privilege different label qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -828,7 +830,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -840,7 +842,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -851,7 +853,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny read privilege different relationship type qualifier") {
+      test(s"should revoke correct $grantOrDeny read privilege different relationship type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -873,7 +875,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -885,7 +887,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -896,7 +898,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny read privilege different element type qualifier") {
+      test(s"should revoke correct $grantOrDeny read privilege different element type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -917,7 +919,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -930,7 +932,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -941,13 +943,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke correct $grantOrDeny read privilege different property") {
+      test(s"should revoke correct $grantOrDeny read privilege different property with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -966,7 +968,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (a) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (a) ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -978,7 +980,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -989,7 +991,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (b) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType READ (b) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -998,7 +1000,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny read privilege different databases") {
+      test(s"should revoke correct $grantOrDeny read privilege different databases with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1018,7 +1020,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType READ (*) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1029,7 +1031,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * FROM custom")
+        execute(s"REVOKE $revokeType READ (*) ON GRAPH * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1038,7 +1040,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse node privilege different label qualifier") {
+      test(s"should revoke correct $grantOrDeny traverse node privilege different label qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1055,7 +1057,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1065,7 +1067,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1074,7 +1076,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse node privilege different databases") {
+      test(s"should revoke correct $grantOrDeny traverse node privilege different databases with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1092,7 +1094,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1102,7 +1104,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1111,7 +1113,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse relationships privilege different type qualifier") {
+      test(s"should revoke correct $grantOrDeny traverse relationships privilege different type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1128,7 +1130,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1138,7 +1140,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1147,7 +1149,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse relationship privilege different databases") {
+      test(s"should revoke correct $grantOrDeny traverse relationship privilege different databases with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1165,7 +1167,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1175,7 +1177,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1184,7 +1186,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse elements privilege different type qualifier") {
+      test(s"should revoke correct $grantOrDeny traverse elements privilege different type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1204,7 +1206,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1217,7 +1219,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1228,13 +1230,13 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke correct $grantOrDeny traverse element privilege different databases") {
+      test(s"should revoke correct $grantOrDeny traverse element privilege different databases with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1254,7 +1256,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1265,7 +1267,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1274,7 +1276,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different label qualifier") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different label qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1295,7 +1297,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1309,7 +1311,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1322,7 +1324,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different relationship type qualifier") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different relationship type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1343,7 +1345,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1357,7 +1359,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1370,7 +1372,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different element type qualifier") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different element type qualifier with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1394,7 +1396,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1411,7 +1413,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1445,7 +1447,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1461,7 +1463,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different property") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different property with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1482,7 +1484,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1495,7 +1497,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1506,7 +1508,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1516,7 +1518,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different databases") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege different databases with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1542,7 +1544,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1559,7 +1561,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * FROM custom")
+        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1574,7 +1576,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges") {
+      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1598,7 +1600,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1616,7 +1618,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1633,7 +1635,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1648,7 +1650,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1661,7 +1663,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo) ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1673,7 +1675,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1684,7 +1686,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges on elements") {
+      test(s"should revoke correct $grantOrDeny traverse and read privileges from different MATCH privileges on elements with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1706,7 +1708,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1723,7 +1725,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * ELEMENTS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1738,7 +1740,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1749,7 +1751,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1758,8 +1760,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges") {
-        // GIVEN
+      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges with REVOKE $revokeType") {
+       // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
@@ -1790,7 +1792,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1809,7 +1811,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1827,7 +1829,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1844,7 +1846,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1860,7 +1862,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges on elements") {
+      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges on elements with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1888,7 +1890,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1906,7 +1908,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1922,7 +1924,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1936,7 +1938,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny elements privilege when granted as nodes + relationships") {
+       test(s"should revoke correct $grantOrDeny elements privilege when granted as nodes + relationships with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1958,7 +1960,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
+        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1971,7 +1973,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny elements privilege when granted as specific nodes + relationships") {
+      test(s"should revoke correct $grantOrDeny elements privilege when granted as specific nodes + relationships with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1993,7 +1995,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
+        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2006,7 +2008,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should fail revoke $grantOrDeny elements privilege when granted only nodes or relationships") {
+      test(s"should fail revoke $grantOrDeny elements privilege when granted only nodes or relationships with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2024,10 +2026,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val error1 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $grantOrDenyCommand MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
+          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
         }
         // THEN
-        error1.getMessage should include(s"The privilege '$grantOrDenyCommand read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
+        error1.getMessage should include(s"The privilege '${revokeType}read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2039,10 +2041,10 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val error2 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $grantOrDenyCommand MATCH (bar) ON GRAPH * FROM custom")
+          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH (bar) ON GRAPH * FROM custom")
         }
         // THEN
-        error2.getMessage should include(s"The privilege '$grantOrDenyCommand read bar ON GRAPH * NODES *' does not exist.")
+        error2.getMessage should include(s"The privilege '${revokeType}read bar ON GRAPH * NODES *' does not exist.")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2053,7 +2055,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         ))
       }
 
-      test(s"should fail revoke $grantOrDeny privilege from non-existent role") {
+      test(s"should fail revoke $grantOrDeny privilege from non-existent role with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2063,7 +2065,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val error1 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
+          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
         }
 
         // THEN
@@ -2072,7 +2074,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val error2 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
         }
 
         // THEN
@@ -2081,14 +2083,14 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val error3 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
+          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
         }
         // THEN
         error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
           be("The role 'wrongRole' does not exist."))
       }
 
-      test(s"should fail revoke $grantOrDeny privilege not granted to role") {
+      test(s"should fail revoke $grantOrDeny privilege not granted to role with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2099,47 +2101,47 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val errorTraverse = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM role")
+          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM role")
         }
         // THEN
         errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
 
         // WHEN
         val errorRead = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM role")
+          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM role")
         }
         // THEN
         errorRead.getMessage should include("The role 'role' does not have the specified privilege")
 
         // WHEN
         val errorMatch = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) FROM role")
+          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES A (*) FROM role")
         }
         // THEN
         errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
       }
 
-      test(s"should fail when revoking $grantOrDeny traversal privilege with missing database") {
+      test(s"should fail when revoking $grantOrDeny traversal privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
         the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"The privilege '$grantOrDenyCommand find  ON GRAPH foo NODES *' does not exist."
+          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+        } should have message s"The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist."
       }
 
-      test(s"should fail when revoking $grantOrDeny read privilege with missing database") {
+      test(s"should fail when revoking $grantOrDeny read privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
         the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"The privilege '$grantOrDenyCommand read * ON GRAPH foo NODES *' does not exist."
+          execute(s"REVOKE $revokeType READ (*) ON GRAPH foo NODES * (*) FROM custom")
+        } should have message s"The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."
       }
 
-      test(s"should fail when revoking $grantOrDeny MATCH privilege with missing database") {
+      test(s"should fail when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2147,38 +2149,116 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
         // WHEN
         val e = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
         }
         // THEN
-        e.getMessage should (be("The privilege 'find  ON GRAPH foo NODES *' does not exist.") or
-          be(s"The privilege '$grantOrDenyCommand read * ON GRAPH foo NODES *' does not exist."))
+        e.getMessage should (be(s"The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist.") or
+          be(s"The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."))
       }
 
-      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database") {
+      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE$revokeType") {
         the[DatabaseManagementException] thrownBy {
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand TRAVERSE"
+          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}TRAVERSE"
       }
 
-      test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database") {
+      test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database with REVOKE $revokeType") {
         the[DatabaseManagementException] thrownBy {
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand READ"
+          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}READ"
       }
 
-      test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database") {
+      test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
         the[DatabaseManagementException] thrownBy {
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE $grantOrDenyCommand MATCH"
+          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}MATCH"
+      }
+  }
+
+  Seq(
+    ("label", "NODES", addNode: builderType),
+    ("relationship type", "RELATIONSHIPS", addRel: builderType)
+  ).foreach {
+    case (segmentName, segmentCommand, segmentFunction: builderType) =>
+
+      test(s"should revoke both grant and deny when revoking traverse $segmentName privilege") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT TRAVERSE ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"DENY TRAVERSE ON GRAPH * $segmentCommand A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
+          segmentFunction(traverse("DENIED").role("custom"), "A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE TRAVERSE ON GRAPH * $segmentCommand A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should revoke both grant and deny when revoking read $segmentName privilege") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT READ (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"DENY READ (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          segmentFunction(read("GRANTED").role("custom").property("prop"), "A").map,
+          segmentFunction(read("DENIED").role("custom").property("prop"), "A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE READ (prop) ON GRAPH * $segmentCommand A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should revoke both grant and deny when revoking match $segmentName privilege") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"GRANT MATCH (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"DENY MATCH (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
+          segmentFunction(traverse("DENIED").role("custom"), "A").map,
+          segmentFunction(read("GRANTED").role("custom").property("prop"), "A").map,
+          segmentFunction(read("DENIED").role("custom").property("prop"), "A").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE MATCH (prop) ON GRAPH * $segmentCommand A (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
+          segmentFunction(traverse("DENIED").role("custom"), "A").map
+        ))
       }
   }
 
