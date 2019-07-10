@@ -69,7 +69,13 @@ public enum ProfilerType
             RecordingType.TRACE_VMSTAT,
             // requires no environment variables
             Sets.newHashSet(),
-            SecondaryRecordingCreator.NONE );
+            SecondaryRecordingCreator.NONE ),
+    NMT_SUMMARY(
+            NativeMemoryTrackingSummaryProfiler.class,
+            RecordingType.NMT_SUMMARY,
+            // requires no environment variables
+            Sets.newHashSet(),
+            new SecondaryRecordingCreator.NativeMemoryTrackingSummaryReporting() );
 
     private final Class<? extends Profiler> profiler;
     private final RecordingType primaryRecording;

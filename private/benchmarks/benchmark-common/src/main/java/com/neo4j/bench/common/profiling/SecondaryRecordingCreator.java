@@ -26,6 +26,7 @@ import static java.util.stream.Collectors.toSet;
 
 abstract class SecondaryRecordingCreator
 {
+
     static final SecondaryRecordingCreator NONE = new None();
     private static final String FLAME_GRAPH_DIR = "FLAMEGRAPH_DIR";
     private static final String JFR_FLAMEGRAPH_DIR = "JFR_FLAMEGRAPH";
@@ -243,6 +244,27 @@ abstract class SecondaryRecordingCreator
                                                     "--colors=java",
                                                     profilerRecording.toAbsolutePath().toString() );
             SecondaryRecordingCreator.waitOnProcess( args, asyncFlameGraphDir, ProfilerType.ASYNC, profilerRecording, flameGraphSvg );
+        }
+    }
+
+    static class NativeMemoryTrackingSummaryReporting extends SecondaryRecordingCreator
+    {
+
+        @Override
+        Set<String> requiredEnvironmentVariables()
+        {
+            return Collections.emptySet();
+        }
+
+        @Override
+        Set<RecordingType> recordingTypes()
+        {
+            return Sets.newHashSet( RecordingType.NMT_SUMMARY_REPORT );
+        }
+
+        @Override
+        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        {
         }
     }
 
