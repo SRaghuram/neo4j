@@ -338,20 +338,9 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
                     try
                     {
+                        ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType(type);
 
-                        PrivilegeBuilder privilegeBuilder;
-                        if ( type.equals( "GRANTED") )
-                        {
-                            privilegeBuilder = PrivilegeBuilder.grant( actionValue );
-                        }
-                        else if ( type.equals( "DENIED" ) )
-                        {
-                            privilegeBuilder = PrivilegeBuilder.deny( actionValue );
-                        }
-                        else
-                        {
-                            throw new IllegalStateException( "Invalid grant:" + type );
-                        }
+                        PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder(privilegeType, actionValue);
 
                         privilegeBuilder.withinScope( qualifier ).onResource( resource );
 

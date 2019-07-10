@@ -400,8 +400,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      read().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
 
     // WHEN
@@ -414,6 +414,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN
     initSystemGraph(defaultConfig)
+    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B {name:'b'})")
 
@@ -459,8 +460,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      read().database("foo").user("joe").role("custom").map,
-      traverse().database("foo").user("joe").role("custom").map
+      read().node("*").database("foo").user("joe").role("custom").map,
+      traverse().node("*").database("foo").user("joe").role("custom").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -477,6 +478,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
+    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")
 
@@ -503,8 +505,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      read().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -521,6 +523,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
+    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B {name:'b'})")
 

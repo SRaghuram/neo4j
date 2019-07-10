@@ -41,6 +41,7 @@ import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphInitializer;
 
+import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 
 public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer
@@ -213,36 +214,36 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SystemResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SystemResource(), LabelSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new SchemaResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SchemaResource(), LabelSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
                 // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, new TokenResource(), LabelSegment.ALL, true ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new TokenResource(), LabelSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
                 // The segment part is ignored for this action
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL, true ) );
+                        new ResourcePrivilege( GRANT, Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL, true ) );
+                        new ResourcePrivilege( GRANT, Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.FIND, new GraphResource(), LabelSegment.ALL, true ) );
+                        new ResourcePrivilege( GRANT, Action.FIND, new GraphResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.FIND, new GraphResource(), RelTypeSegment.ALL, true  ) );
+                        new ResourcePrivilege( GRANT, Action.FIND, new GraphResource(), RelTypeSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.READ, new AllPropertiesResource(), LabelSegment.ALL, true ) );
+                        new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL, true ) );
+                        new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
         }
     }

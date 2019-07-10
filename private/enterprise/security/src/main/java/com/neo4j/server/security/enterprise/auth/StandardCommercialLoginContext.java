@@ -16,7 +16,9 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntSupplier;
@@ -475,15 +477,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean schema;
             private boolean admin;
 
-            private boolean allowsTraverseAllLabels;
-            private boolean allowsTraverseAllRelTypes;
-            private MutableIntSet whitelistTraverseLabels = IntSets.mutable.empty();
-            private MutableIntSet whitelistTraverseRelTypes = IntSets.mutable.empty();
-
-            private boolean disallowsTraverseAllLabels;
-            private boolean disallowsTraverseAllRelTypes;
-            private MutableIntSet blacklistTraverseLabels = IntSets.mutable.empty();
-            private MutableIntSet blacklistTraverseRelTypes = IntSets.mutable.empty();
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllRelTypes = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseRelTypes = new HashMap<>();
 
             private boolean allowReadAllPropertiesAllLabels;
             private boolean allowReadAllPropertiesAllRelTypes;
@@ -509,6 +506,10 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
                 this.resolver = resolver;
+                this.traverseLabels.put( ResourcePrivilege.GrantOrDeny.GRANT, IntSets.mutable.empty());
+                this.traverseRelTypes.put( ResourcePrivilege.GrantOrDeny.GRANT, IntSets.mutable.empty());
+                this.traverseLabels.put( ResourcePrivilege.GrantOrDeny.DENY, IntSets.mutable.empty());
+                this.traverseRelTypes.put( ResourcePrivilege.GrantOrDeny.DENY, IntSets.mutable.empty());
             }
 
             void addPropertyPermissions( MutableIntSet propertyPermissions )
@@ -531,14 +532,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         passwordChangeRequired,
                         roles,
 
-                        allowsTraverseAllLabels,
-                        allowsTraverseAllRelTypes,
-                        whitelistTraverseLabels,
-                        whitelistTraverseRelTypes,
+                        traverseAllLabels.getOrDefault( ResourcePrivilege.GrantOrDeny.GRANT, false ),
+                        traverseAllRelTypes.getOrDefault( ResourcePrivilege.GrantOrDeny.GRANT, false ),
+                        traverseLabels.get( ResourcePrivilege.GrantOrDeny.GRANT ),
+                        traverseRelTypes.get( ResourcePrivilege.GrantOrDeny.GRANT ),
 
-                        disallowsTraverseAllLabels,
-                        disallowsTraverseAllRelTypes,
-                        blacklistTraverseLabels, blacklistTraverseRelTypes,
+                        traverseAllLabels.getOrDefault( ResourcePrivilege.GrantOrDeny.DENY, false ),
+                        traverseAllRelTypes.getOrDefault( ResourcePrivilege.GrantOrDeny.DENY, false ),
+                        traverseLabels.get( ResourcePrivilege.GrantOrDeny.DENY ),
+                        traverseRelTypes.get( ResourcePrivilege.GrantOrDeny.DENY ),
 
                         allowReadAllPropertiesAllLabels,
                         allowReadAllPropertiesAllRelTypes,
@@ -563,49 +565,37 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 Resource resource = privilege.getResource();
                 Segment segment = privilege.getSegment();
-                boolean allowed = privilege.isAllowed();
+                ResourcePrivilege.GrantOrDeny privilegeType = privilege.getPrivilegeType();
 
                 switch ( privilege.getAction() )
                 {
                 case FIND:
-                    if ( allowed )
+                    if ( privilegeType.isGrant() )
                     {
                         read = true;
                     }
                     if ( segment instanceof LabelSegment )
                     {
-                        if ( segment.equals( LabelSegment.ALL ) )
+                        LabelSegment labelSegment = (LabelSegment) segment;
+                        if ( labelSegment.equals( LabelSegment.ALL ) )
                         {
-                            if ( allowed )
-                            {
-                                allowsTraverseAllLabels = true;
-                            }
-                            else
-                            {
-                                disallowsTraverseAllLabels = true;
-                            }
+                            traverseAllLabels.put( privilegeType, true );
                         }
                         else
                         {
-                            addLabel( whitelistTraverseLabels, blacklistTraverseLabels, segment, allowed );
+                            addLabel( traverseLabels.get( privilegeType ), labelSegment );
                         }
                     }
                     else if ( segment instanceof RelTypeSegment )
                     {
-                        if ( segment.equals( RelTypeSegment.ALL ) )
+                        RelTypeSegment relTypeSegment = (RelTypeSegment) segment;
+                        if ( relTypeSegment.equals( RelTypeSegment.ALL ) )
                         {
-                            if ( allowed )
-                            {
-                                allowsTraverseAllRelTypes = true;
-                            }
-                            else
-                            {
-                                disallowsTraverseAllRelTypes = true;
-                            }
+                            traverseAllRelTypes.put( privilegeType, true );
                         }
                         else
                         {
-                            addRelType( whitelistTraverseRelTypes, blacklistTraverseRelTypes, segment, allowed );
+                            addRelType( traverseRelTypes.get( privilegeType ), relTypeSegment );
                         }
                     }
                     else
@@ -616,7 +606,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     break;
                 case READ:
 
-                    if ( allowed )
+                    if ( privilegeType.isGrant() )
                     {
                         read = true;
                     }
@@ -624,7 +614,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     switch ( resource.type() )
                     {
                     case GRAPH:
-                        if ( allowed )
+                        if ( privilegeType.isGrant() )
                         {
                             allowReadAllPropertiesAllLabels = true;
                             allowReadAllPropertiesAllRelTypes = true;
@@ -641,7 +631,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     whitelistNodeProperties.add( propertyId );
                                 }
@@ -654,7 +644,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             {
                                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
 
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     addLabelPropertyCombination( allowedNodeSegmentForProperty, labelId, propertyId );
                                 }
@@ -668,7 +658,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( RelTypeSegment.ALL ) )
                             {
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     whitelistRelationshipProperties.add( propertyId );
                                 }
@@ -681,7 +671,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             {
                                 int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
 
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     addLabelPropertyCombination( allowedRelationshipSegmentForProperty, relTypeId, propertyId );
                                 }
@@ -701,7 +691,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
                             {
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     allowReadAllPropertiesAllLabels = true;
                                 }
@@ -712,14 +702,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                addLabel( allowedNodeSegmentForAllProperties, disallowedNodeSegmentForAllProperties, segment, allowed );
+                                addLabel( privilegeType.isGrant() ? allowedNodeSegmentForAllProperties : disallowedNodeSegmentForAllProperties, segment );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
                         {
-                            if ( segment.equals( RelTypeSegment.ALL ) )
+                            RelTypeSegment relTypeSegment = (RelTypeSegment) segment;
+                            if ( relTypeSegment.equals( RelTypeSegment.ALL ) )
                             {
-                                if ( allowed )
+                                if ( privilegeType.isGrant() )
                                 {
                                     allowReadAllPropertiesAllRelTypes = true;
                                 }
@@ -730,7 +721,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             }
                             else
                             {
-                                addRelType( allowedRelationshipSegmentForAllProperties, disallowedRelationshipSegmentForAllProperties, segment, allowed );
+                                addRelType(
+                                        privilegeType.isGrant() ? allowedRelationshipSegmentForAllProperties : disallowedRelationshipSegmentForAllProperties,
+                                        relTypeSegment );
                             }
                         }
                         else
@@ -747,7 +740,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     case GRAPH:
                     case PROPERTY:
                     case ALL_PROPERTIES:
-                        if ( allowed )
+                        if ( privilegeType.isGrant() )
                         {
                             allowsWrite = true;
                         }
@@ -799,32 +792,15 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 return resolver.getOrCreatePropertyKeyId( property );
             }
 
-            private void addLabel( MutableIntSet whitelist, MutableIntSet blacklist, Segment segment, boolean allowed ) throws KernelException
+            private void addLabel( MutableIntSet whiteOrBlacklist, Segment segment ) throws KernelException
             {
                 int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-
-                if ( allowed )
-                {
-                    whitelist.add( labelId );
-                }
-                else
-                {
-                    blacklist.add( labelId );
-                }
+                whiteOrBlacklist.add( labelId );
             }
 
-            private void addRelType( MutableIntSet whitelist, MutableIntSet blacklist, Segment segment, boolean allowed ) throws KernelException
+            private void addRelType( MutableIntSet whiteOrBlacklist, RelTypeSegment segment ) throws KernelException
             {
-                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-
-                if ( allowed )
-                {
-                    whitelist.add( relTypeId );
-                }
-                else
-                {
-                    blacklist.add( relTypeId );
-                }
+                whiteOrBlacklist.add( resolveRelTypeId( segment.getRelType() ) );
             }
 
             private void addLabelPropertyCombination( MutableIntObjectMap<IntSet> map, int labelId, int propertyId )

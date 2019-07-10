@@ -9,6 +9,8 @@ import java.util
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.{DENY, GRANT}
 import com.neo4j.server.security.enterprise.auth._
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
@@ -302,12 +304,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT)
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY)
 
     case RevokeTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
@@ -315,12 +317,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // GRANT/DENY/REVOKE READ (prop) ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT)
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY)
 
     case RevokeRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
@@ -328,12 +330,12 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
 
     // GRANT/DENY/REVOKE WRITE (*) ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeGrantExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT)
 
     case DenyWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)))
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY)
 
     case RevokeWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
@@ -550,24 +552,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     None
   }
 
-  private def makeGrantExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier,
-                                     roleName: String, source: Option[ExecutionPlan]): UpdatingSystemCommandExecutionPlan = {
-    makeGrantOrDenyExecutionPlan(actionName, resource, database, qualifier, roleName, source, grant = true)
-  }
-
-  private def makeDenyExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier,
-                                     roleName: String, source: Option[ExecutionPlan]): UpdatingSystemCommandExecutionPlan = {
-    makeGrantOrDenyExecutionPlan(actionName, resource, database, qualifier, roleName, source, grant = false)
-  }
-
   private def makeGrantOrDenyExecutionPlan(actionName: String,
                                            resource: ast.ActionResource,
                                            database: ast.GraphScope,
                                            qualifier: ast.PrivilegeQualifier,
                                            roleName: String, source: Option[ExecutionPlan],
-                                           grant: Boolean): UpdatingSystemCommandExecutionPlan = {
+                                           grant: GrantOrDeny): UpdatingSystemCommandExecutionPlan = {
 
-    val (privilege, relType, commandName) = if (grant) ("grant", "GRANTED", "GrantPrivilege") else ("deny", "DENIED", "DenyPrivilege")
+    val commandName = if (grant.isGrant) "GrantPrivilege" else "DenyPrivilege"
 
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
@@ -575,19 +567,19 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MERGE (res:Resource {type: $resource, arg1: $property})")
       case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MERGE (res:Resource {type: $resource})")
       case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MERGE (res:Resource {type: $resource})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"Invalid privilege $privilege resource type $resource")
+      case _ => throw new IllegalStateException(s"Invalid privilege ${grant.name} resource type $resource")
     }
     val (label: Value, qualifierMerge: String) = qualifier match {
       case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {type: 'node', label: $label})")
       case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
       case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {type: 'relationship', label: $label})")
       case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"Invalid privilege $privilege qualifier $qualifier")
+      case _ => throw new IllegalStateException(s"Invalid privilege ${grant.name} qualifier $qualifier")
     }
     val (dbName, db, databaseMerge, scopeMerge) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case _ => throw new IllegalStateException(s"Invalid privilege $privilege scope database $database")
+      case _ => throw new IllegalStateException(s"Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -609,10 +601,10 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |
          |// Connect the role to the action to complete the privilege assignment
          |OPTIONAL MATCH (r:Role {name: $$role})
-         |MERGE (r)-[:$relType]->(a)
+         |MERGE (r)-[:${grant.relType}]->(a)
          |
          |// Return the table of results
-         |RETURN '${privilege.toUpperCase}' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+         |RETURN '${grant.prefix}' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
         .handleResult((offset, _) => {

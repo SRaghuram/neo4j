@@ -18,27 +18,17 @@ import org.neo4j.values.virtual.NodeValue;
 
 class PrivilegeBuilder
 {
-    private final boolean allowed;
+    private final ResourcePrivilege.GrantOrDeny privilegeType;
     private Segment segment;
     private ResourcePrivilege.Action action;
     private Resource resource;
     private String dbName = "";
     private boolean allDatabases;
 
-    private PrivilegeBuilder( boolean allowed, String action )
+    public PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
-        this.allowed = allowed;
+        this.privilegeType = privilegeType;
         this.action = ResourcePrivilege.Action.valueOf( action.toUpperCase() );
-    }
-
-    static PrivilegeBuilder grant( String action )
-    {
-        return new PrivilegeBuilder( true, action );
-    }
-
-    static PrivilegeBuilder deny( String action )
-    {
-        return new PrivilegeBuilder( false, action );
     }
 
     PrivilegeBuilder forAllDatabases()
@@ -136,11 +126,11 @@ class PrivilegeBuilder
     {
         if ( allDatabases )
         {
-            return new ResourcePrivilege( action, resource, segment, allowed );
+            return new ResourcePrivilege( privilegeType, action, resource, segment );
         }
         else
         {
-            return new ResourcePrivilege( action, resource, segment, allowed, dbName );
+            return new ResourcePrivilege( privilegeType, action, resource, segment, dbName );
         }
     }
 }

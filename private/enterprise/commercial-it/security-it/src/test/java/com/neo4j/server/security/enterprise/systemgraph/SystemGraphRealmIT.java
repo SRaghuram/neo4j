@@ -10,7 +10,6 @@ import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.Segment;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
@@ -34,6 +33,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -340,15 +340,15 @@ class SystemGraphRealmIT
                 .mayPerformMigration()
                 .build(), securityLog, dbManager, defaultConfig );
 
-        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, true );
-        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, true );
-        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, true );
-        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), RelTypeSegment.ALL, true );
-        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, true );
-        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( Action.WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, true );
-        ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL, true );
-        ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL, true );
-        ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL, true );
+        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
+        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL );
+        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), RelTypeSegment.ALL );
+        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
+        ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
+        ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL );
+        ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
 
         // When
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
@@ -427,9 +427,9 @@ class SystemGraphRealmIT
         );
 
         // Give Alice match privileges in 'neo4j'
-        ResourcePrivilege readPrivilege = new ResourcePrivilege( Action.READ,
-                new Resource.AllPropertiesResource(), LabelSegment.ALL, true, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege findPrivilege = new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, true, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, Action.READ,
+                new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         systemDB.execute( String.format( "GRANT MATCH(*) ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
 
@@ -453,8 +453,8 @@ class SystemGraphRealmIT
         assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
         // Alice should NOT have read privileges in 'foo'
-        assertFalse( privileges.contains( new ResourcePrivilege( Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, true, "foo" ) ) );
-        assertFalse( privileges.contains( new ResourcePrivilege( Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, true, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
 
         realm.stop();
 

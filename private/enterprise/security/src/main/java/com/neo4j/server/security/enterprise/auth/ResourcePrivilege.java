@@ -9,33 +9,38 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 public class ResourcePrivilege
 {
+    private final GrantOrDeny privilegeType;
     private final Action action;
     private final Resource resource;
     private final Segment segment;
     private final String dbName;
     private final boolean allDatabases;
-    private final boolean allowed;
 
-    public ResourcePrivilege( Action action, Resource resource, Segment segment, Boolean allowed ) throws InvalidArgumentsException
+    public ResourcePrivilege( GrantOrDeny privilegeType, Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
     {
+        this.privilegeType = privilegeType;
         this.action = action;
         this.resource = resource;
         this.segment = segment;
         this.dbName = "";
-        this.allowed = allowed;
         this.allDatabases = true;
         resource.assertValidCombination( action );
     }
 
-    public ResourcePrivilege( Action action, Resource resource, Segment segment, Boolean allowed, String dbName ) throws InvalidArgumentsException
+    public ResourcePrivilege( GrantOrDeny privilegeType, Action action, Resource resource, Segment segment, String dbName ) throws InvalidArgumentsException
     {
+        this.privilegeType = privilegeType;
         this.action = action;
         this.resource = resource;
         this.segment = segment;
         this.dbName = dbName;
-        this.allowed = allowed;
         this.allDatabases = false;
         resource.assertValidCombination( action );
+    }
+
+    public GrantOrDeny getPrivilegeType()
+    {
+        return privilegeType;
     }
 
     public Resource getResource()
@@ -58,11 +63,6 @@ public class ResourcePrivilege
         return this.dbName;
     }
 
-    public boolean isAllowed()
-    {
-        return allowed;
-    }
-
     public boolean isAllDatabases()
     {
         return allDatabases;
@@ -71,16 +71,7 @@ public class ResourcePrivilege
     @Override
     public String toString()
     {
-        String grant;
-        if ( allowed )
-        {
-            grant = "GRANT";
-        }
-        else
-        {
-            grant = "DENY";
-        }
-        return String.format( "(%s, %s, %s, %s)", grant, getAction(), getResource(), getSegment() );
+        return String.format( "(%s, %s, %s, %s)", privilegeType.prefix, getAction(), getResource(), getSegment() );
     }
 
     @Override
@@ -99,10 +90,55 @@ public class ResourcePrivilege
                     && other.resource.equals( this.resource )
                     && other.segment.equals( this.segment )
                     && other.dbName.equals( this.dbName )
-                    && other.allowed == this.allowed
+                    && other.privilegeType == this.privilegeType
                     && other.allDatabases == this.allDatabases;
         }
         return false;
+    }
+
+    public enum GrantOrDeny
+    {
+        GRANT( "GRANTED" ),
+        DENY( "DENIED" );
+
+        public final String name;
+        public final String prefix;
+        public final String relType;
+
+        GrantOrDeny( String relType )
+        {
+            this.name = super.toString().toLowerCase();
+            this.prefix = super.toString().toUpperCase();
+            this.relType = relType;
+        }
+
+        public boolean isGrant()
+        {
+            return this == GRANT;
+        }
+
+        public boolean isDeny()
+        {
+            return this == DENY;
+        }
+
+        public static GrantOrDeny fromRelType( String relType )
+        {
+            for ( GrantOrDeny grantOrDeny : GrantOrDeny.values() )
+            {
+                if ( grantOrDeny.relType.equals( relType ) )
+                {
+                    return grantOrDeny;
+                }
+            }
+            throw new IllegalArgumentException( "Unknown privilege type: " + relType );
+        }
+
+        @Override
+        public String toString()
+        {
+            return name;
+        }
     }
 
     public enum Action
