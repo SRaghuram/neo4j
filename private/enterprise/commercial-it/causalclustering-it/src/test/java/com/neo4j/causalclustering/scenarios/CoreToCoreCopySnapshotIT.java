@@ -99,7 +99,7 @@ public class CoreToCoreCopySnapshotIT
     }
 
     @Test
-    @Ignore("Pending fixes for transactional ids")
+    @Ignore( "Pending fixes for transactional ids" )
     public void shouldBeAbleToDownloadToRejoinedInstanceAfterPruning() throws Exception
     {
         // given
