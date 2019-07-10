@@ -5,7 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatingBuffer
 
 /**
@@ -13,6 +15,14 @@ import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.Accumulati
   */
 abstract class ArgumentCountUpdater {
 
+  /**
+    * Get ArgumentStateMaps by ID.
+    */
+  def argumentStateMaps: ArgumentStateMaps
+
+  // TODO this doe snot really need to collect the argument row ids into a collection
+  // Step 1: It would be enough to have a var with the latest argument row id per downstream.
+  // Step 2: Merge with while loop in MorselApplyBuffer
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                          morsel: MorselExecutionContext,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
@@ -25,6 +35,17 @@ abstract class ArgumentCountUpdater {
         operation(buffer, argumentRowIds(j))
         j += 1
       }
+      i += 1
+    }
+  }
+
+  private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],
+                             morsel: MorselExecutionContext,
+                             operation: T => Unit): Unit = {
+    var i = 0
+    while (i < downstreamAccumulatingBuffers.length) {
+      val buffer = downstreamAccumulatingBuffers(i)
+      operation(buffer)
       i += 1
     }
   }
@@ -42,6 +63,18 @@ abstract class ArgumentCountUpdater {
       }
       i += 1
     }
+  }
+
+  protected def initiateArgumentStatesHere(downstreamStates: IndexedSeq[ArgumentStateMapId],
+                                           argumentRowId: Long,
+                                           morsel: MorselExecutionContext): Unit = {
+    downstreamLoop[ArgumentStateMapId](downstreamStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel))
+  }
+
+  protected def initiateArgumentReducersHere(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+                                             argumentRowId: Long,
+                                             morsel: MorselExecutionContext): Unit = {
+    downstreamLoop[AccumulatingBuffer](downstreamAccumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
   }
 
   protected def initiateArgumentReducers(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],

@@ -29,7 +29,7 @@ class MorselApplyBuffer(id: BufferId,
                         argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
                         argumentReducersOnRHSOfThisApply: IndexedSeq[AccumulatingBuffer],
                         argumentReducersOnTopOfThisApply: IndexedSeq[AccumulatingBuffer],
-                        argumentStateMaps: ArgumentStateMaps,
+                        override val argumentStateMaps: ArgumentStateMaps,
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator,
                         delegates: IndexedSeq[MorselBuffer]
@@ -47,21 +47,23 @@ class MorselApplyBuffer(id: BufferId,
       morsel.resetToFirstRow()
       while (morsel.isValidRow) {
         morsel.setLongAt(argumentSlotOffset, argumentRowId)
+
+        // We can initiate the reducers/limits on the RHS inside of this loop, since they use the argumentRowIds we are generating here.
+        // This does not hold for reducers on top of this apply.
+
+        // Reducers on the RHS need to be initiated
+        initiateArgumentReducersHere(argumentReducersOnRHSOfThisApply, argumentRowId, morsel)
+
+        // Initiate argument states for limit
+        initiateArgumentStatesHere(argumentStatesOnRHSOfThisApply, argumentRowId, morsel)
+
         argumentRowId += 1
         morsel.moveToNextRow()
       }
 
-      // initiate argument states for limit
-      for {
-        argumentStateMapId <- argumentStatesOnRHSOfThisApply
-        asm = argumentStateMaps(argumentStateMapId)
-        argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-      } asm.initiate(argumentId, morsel)
-
-      // Reducers on the RHS need to be initiated
-      initiateArgumentReducers(argumentReducersOnRHSOfThisApply, morsel)
-      // And reducers after the apply need to be incremented
+      // Reducers after the apply need to be incremented
       incrementArgumentCounts(argumentReducersOnTopOfThisApply, morsel)
+
       var i = 0
       while (i < delegates.size) {
         delegates(i).putInDelegate(morsel.shallowCopy())

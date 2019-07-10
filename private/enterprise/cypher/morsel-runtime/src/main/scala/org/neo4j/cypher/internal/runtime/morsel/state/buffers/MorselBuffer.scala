@@ -23,7 +23,7 @@ class MorselBuffer(id: BufferId,
                    tracker: QueryCompletionTracker,
                    downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                    workCancellers: IndexedSeq[ArgumentStateMapId],
-                   argumentStateMaps: ArgumentStateMaps,
+                   override val argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater
                     with Sink[MorselExecutionContext]

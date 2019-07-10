@@ -25,7 +25,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
                                ](
                                  tracker: QueryCompletionTracker,
                                  downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                 argumentStateMaps: ArgumentStateMaps,
+                                 override val argumentStateMaps: ArgumentStateMaps,
                                  val argumentStateMapId: ArgumentStateMapId
                                ) extends ArgumentCountUpdater
                                     with AccumulatingBuffer

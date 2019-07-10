@@ -61,7 +61,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
                                         LHS_ACC <: MorselAccumulator[DATA]
                                        ](tracker: QueryCompletionTracker,
                                          downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                         argumentStateMaps: ArgumentStateMaps,
+                                         override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
                                          lhsPipelineId: PipelineId,

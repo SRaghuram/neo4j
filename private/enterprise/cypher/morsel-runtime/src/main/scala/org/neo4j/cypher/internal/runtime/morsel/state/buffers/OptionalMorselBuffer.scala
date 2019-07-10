@@ -26,7 +26,7 @@ import scala.collection.mutable.ArrayBuffer
 class OptionalMorselBuffer(id: BufferId,
                            tracker: QueryCompletionTracker,
                            downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                           argumentStateMaps: ArgumentStateMaps,
+                           override val argumentStateMaps: ArgumentStateMaps,
                            val argumentStateMapId: ArgumentStateMapId
                           )
   extends ArgumentCountUpdater

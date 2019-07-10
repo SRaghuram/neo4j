@@ -27,6 +27,8 @@ object MorselDebugSupport {
         Array(
           workIdentity.toString
         )
+      case withAccumulator: ContinuableOperatorTaskWithAccumulator[_, _] =>
+        Seq("INPUT:", withAccumulator.accumulator.toString, withAccumulator.workIdentity.toString)
     }
   }
 
