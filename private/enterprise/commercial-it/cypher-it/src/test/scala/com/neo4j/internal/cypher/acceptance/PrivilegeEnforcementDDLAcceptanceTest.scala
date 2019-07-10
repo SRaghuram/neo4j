@@ -143,7 +143,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("read privilege for element should not imply traverse privilege") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name: 'n1'})-[:A {name:'r'}]->(:A {name: 'n2'})")
     val query = "MATCH (n1)-[r]->(n2) RETURN n1.name, r.name, n2.name"
@@ -167,7 +167,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should see correct things when granted element privileges") {
     // GIVEN
-    setupUserJoeWithCustomRole()
+    setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name: 'a1'})-[:A {name: 'ra1'}]->(:A {name: 'a2'})")
     execute("CREATE (:A {name: 'a3'})-[:B {name: 'rb1'}]->(:A {name: 'a4'})")

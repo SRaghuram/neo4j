@@ -328,132 +328,131 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
               }
 
           }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * ELEMENTS * (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").node("*").map) ++
+                startExpected.map(_.role("custom").relationship("*").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific element (that does not need to exist)") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * ELEMENTS A (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").node("A").map) ++
+                startExpected.map(_.role("custom").relationship("A").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and a specific element") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").database("foo").node("A").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("A").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and all elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS * (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").database("foo").node("*").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("*").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS B (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").database("foo").node("A").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+                startExpected.map(_.role("custom").database("foo").node("B").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("B").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements in one grant") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              startExpected.map(_.role("custom").database("foo").node("A").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
+                startExpected.map(_.role("custom").database("foo").node("B").map) ++
+                startExpected.map(_.role("custom").database("foo").relationship("B").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific database and multiple elements in one grant") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE role1")
+            execute("CREATE ROLE role2")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO role1, role2")
+
+            // THEN
+            execute("SHOW ROLE role1 PRIVILEGES").toSet should be(
+              startExpected.map(_.role("role1").database("foo").node("A").map) ++
+                startExpected.map(_.role("role1").database("foo").relationship("A").map) ++
+                startExpected.map(_.role("role1").database("foo").node("B").map) ++
+                startExpected.map(_.role("role1").database("foo").relationship("B").map)
+            )
+            execute("SHOW ROLE role2 PRIVILEGES").toSet should be(
+              startExpected.map(_.role("role2").database("foo").node("A").map) ++
+                startExpected.map(_.role("role2").database("foo").relationship("A").map) ++
+                startExpected.map(_.role("role2").database("foo").node("B").map) ++
+                startExpected.map(_.role("role2").database("foo").relationship("B").map)
+            )
+          }
       }
-
-      test(s"should grant $actionName privilege to custom role for all databases and all elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH * ELEMENTS * (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").node("*").map) ++
-            startExpected.map(_.role("custom").relationship("*").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to custom role for all databases but only a specific element (that does not need to exist)") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH * ELEMENTS A (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").node("A").map) ++
-            startExpected.map(_.role("custom").relationship("A").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to custom role for a specific database and a specific element") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").database("foo").node("A").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("A").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to custom role for a specific database and all elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS * (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").database("foo").node("*").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("*").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to custom role for a specific database and multiple elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A (*) TO custom")
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS B (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").database("foo").node("A").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
-            startExpected.map(_.role("custom").database("foo").node("B").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("B").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to custom role for a specific database and multiple elements in one grant") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          startExpected.map(_.role("custom").database("foo").node("A").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("A").map) ++
-            startExpected.map(_.role("custom").database("foo").node("B").map) ++
-            startExpected.map(_.role("custom").database("foo").relationship("B").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege to multiple roles for a specific database and multiple elements in one grant") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE role1")
-        execute("CREATE ROLE role2")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand ON GRAPH foo ELEMENTS A, B (*) TO role1, role2")
-
-        // THEN
-        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(
-          startExpected.map(_.role("role1").database("foo").node("A").map) ++
-            startExpected.map(_.role("role1").database("foo").relationship("A").map) ++
-            startExpected.map(_.role("role1").database("foo").node("B").map) ++
-            startExpected.map(_.role("role1").database("foo").relationship("B").map)
-        )
-        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(
-          startExpected.map(_.role("role2").database("foo").node("A").map) ++
-            startExpected.map(_.role("role2").database("foo").relationship("A").map) ++
-            startExpected.map(_.role("role2").database("foo").node("B").map) ++
-            startExpected.map(_.role("role2").database("foo").relationship("B").map)
-        )
-      }
-
   }
 
   // Tests for granting and denying privileges on properties
@@ -634,170 +633,169 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
               }
 
           }
+
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * ELEMENTS * (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").property("bar").node("*").map,
+                read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map) ++
+                expectedTraverse.map(_.role("custom").node("*").map) ++
+                expectedTraverse.map(_.role("custom").relationship("*").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific element") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * ELEMENTS A (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").property("bar").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").node("A").map) ++
+                expectedTraverse.map(_.role("custom").relationship("A").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific element") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("*").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("*").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("*").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("*").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS B (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("B").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific element") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo ELEMENTS A (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo ELEMENTS B (*) TO custom")
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("B").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+            )
+          }
+
+          test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE role1")
+            execute("CREATE ROLE role2")
+            execute("CREATE ROLE role3")
+            execute("CREATE DATABASE foo")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand (a, b, c) ON GRAPH foo ELEMENTS A, B, C (*) TO role1, role2, role3")
+
+            // THEN
+            val expected = (for (l <- Seq("A", "B", "C")) yield {
+              (for (p <- Seq("a", "b", "c")) yield {
+                Seq(read(grantOrDenyRelType).database("foo").property(p).node(l),
+                  read(grantOrDenyRelType).database("foo").property(p).relationship(l))
+              }).flatten ++ expectedTraverse.map(expected => expected.database("foo").node(l)) ++
+                expectedTraverse.map(expected => expected.database("foo").relationship(l))
+            }).flatten
+
+            execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
+            execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
+            execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
+          }
       }
-
-      test(s"should grant $actionName privilege for specific property to custom role for all databases and all elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH * ELEMENTS * (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").property("bar").node("*").map,
-            read().role("custom").property("bar").relationship("*").map) ++
-            expectedTraverse.map(_.role("custom").node("*").map) ++
-            expectedTraverse.map(_.role("custom").relationship("*").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for specific property to custom role for all databases but only a specific element") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH * ELEMENTS A (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").property("bar").node("A").map,
-            read().role("custom").property("bar").relationship("A").map) ++
-            expectedTraverse.map(_.role("custom").node("A").map) ++
-            expectedTraverse.map(_.role("custom").relationship("A").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for specific property to custom role for a specific database and a specific element") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").database("foo").property("bar").node("A").map,
-            read().role("custom").database("foo").property("bar").relationship("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for specific property to custom role for a specific database and all elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").database("foo").property("bar").node("*").map,
-            read().role("custom").database("foo").property("bar").relationship("*").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("*").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("*").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for specific property to custom role for a specific database and multiple elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS B (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").database("foo").property("bar").node("A").map,
-            read().role("custom").database("foo").property("bar").relationship("A").map,
-            read().role("custom").database("foo").property("bar").node("B").map,
-            read().role("custom").database("foo").property("bar").relationship("B").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for multiple properties to custom role for a specific database and specific element") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-        execute(s"GRANT $actionCommand (baz) ON GRAPH foo ELEMENTS A (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").database("foo").property("bar").node("A").map,
-            read().role("custom").database("foo").property("bar").relationship("A").map,
-            read().role("custom").database("foo").property("baz").node("A").map,
-            read().role("custom").database("foo").property("baz").relationship("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-        execute(s"GRANT $actionCommand (baz) ON GRAPH foo ELEMENTS B (*) TO custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(
-          Set(read().role("custom").database("foo").property("bar").node("A").map,
-            read().role("custom").database("foo").property("bar").relationship("A").map,
-            read().role("custom").database("foo").property("baz").node("B").map,
-            read().role("custom").database("foo").property("baz").relationship("B").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
-            expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
-        )
-      }
-
-      test(s"should grant $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE role1")
-        execute("CREATE ROLE role2")
-        execute("CREATE ROLE role3")
-        execute("CREATE DATABASE foo")
-
-        // WHEN
-        execute(s"GRANT $actionCommand (a, b, c) ON GRAPH foo ELEMENTS A, B, C (*) TO role1, role2, role3")
-
-        // THEN
-        val expected = (for (l <- Seq("A", "B", "C")) yield {
-          (for (p <- Seq("a", "b", "c")) yield {
-            Seq(read().database("foo").property(p).node(l),
-            read().database("foo").property(p).relationship(l))
-          }).flatten ++ expectedTraverse.map(expected => expected.database("foo").node(l)) ++
-            expectedTraverse.map(expected => expected.database("foo").relationship(l))
-        }).flatten
-
-        execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
-        execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
-        execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-      }
-
   }
 
   // Tests for REVOKE READ, TRAVERSE and MATCH
