@@ -818,17 +818,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val expected = Seq(Map("name" -> "p1"), Map("name" -> "p2"), Map("name" -> "p6"), Map("name" -> "p7"))
 
     // Nodes in index
-    executeSingle("CREATE (:Person {name: 'p1', highScore: 14})")
-    executeSingle("CREATE (:Person {name: 'p2', highScore: 16})")
-    executeSingle("CREATE (:Person {name: 'p3', highScore: 25})")
-    executeSingle("CREATE (:Person {name: 'p4', highScore: 10})")
-    executeSingle("CREATE (:Person {name: 'p5', highScore: 3})")
-    executeSingle("CREATE (:Person {name: 'p6', highScore: 19})")
-    executeSingle("CREATE (:Person {name: 'p7', highScore: 13})")
+    createLabeledNode(Map("name" -> "p1", "highScore" -> 14), "Person")
+    createLabeledNode(Map("name" -> "p2", "highScore" -> 16), "Person")
+    createLabeledNode(Map("name" -> "p3", "highScore" -> 25), "Person")
+    createLabeledNode(Map("name" -> "p4", "highScore" -> 10), "Person")
+    createLabeledNode(Map("name" -> "p5", "highScore" -> 3), "Person")
+    createLabeledNode(Map("name" -> "p6", "highScore" -> 19), "Person")
+    createLabeledNode(Map("name" -> "p7", "highScore" -> 13), "Person")
 
     // Nodes not in index to ensure index is chosen
     for (i <- 8 to 100) {
-      executeSingle(s"CREATE (:Person {name: 'p$i'})")
+      createLabeledNode(Map("name" -> s"p$i"), "Person")
     }
 
     // Given
@@ -851,7 +851,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // More nodes not in index to ensure index is chosen
     for (i <- 100 to 200) {
-      executeSingle(s"CREATE (:Person {name: 'p$i'})")
+      createLabeledNode(Map("name" -> s"p$i"), "Person")
     }
 
     resampleIndexes()
