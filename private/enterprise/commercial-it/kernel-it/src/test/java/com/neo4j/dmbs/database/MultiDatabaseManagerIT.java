@@ -17,6 +17,7 @@ import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.AssertableLogProvider;
@@ -78,6 +79,22 @@ class MultiDatabaseManagerIT
         assertThat( rootCause( exception ).getMessage(),
                 containsString( "The total limit of databases is already reached. To create more you need to either drop databases or change the" +
                         " limit via the config setting 'dbms.max_databases'" ) );
+    }
+
+    @Test
+    void disallowMaxNumberOfDatabaseLowerThanTwo()
+    {
+        managementService.shutdown();
+        InvalidSettingException exception = assertThrows( InvalidSettingException.class, () ->
+        {
+            managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                    .setInternalLogProvider( logProvider )
+                    .setConfig( default_database, CUSTOM_DATABASE_NAME )
+                    .setConfig( maxNumberOfDatabases, "1" )
+                    .build();
+        } );
+
+        assertThat( exception.getMessage(), containsString( "Bad value '1' for setting 'dbms.max_databases': minimum allowed value is: 2" ) );
     }
 
     @Test

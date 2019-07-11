@@ -13,6 +13,8 @@ import org.neo4j.graphdb.config.Setting;
 
 import static org.neo4j.configuration.Settings.LONG;
 import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.buildSetting;
+import static org.neo4j.configuration.Settings.min;
 import static org.neo4j.configuration.Settings.optionsObeyCase;
 import static org.neo4j.configuration.Settings.setting;
 
@@ -25,7 +27,7 @@ public class CommercialEditionSettings implements LoadableConfig
     public static final String COMMERCIAL_SECURITY_MODULE_ID = "commercial-security-module";
 
     @Description( "The maximum number of databases." )
-    public static final Setting<Long> maxNumberOfDatabases = setting( "dbms.max_databases", LONG, "100" );
+    public static final Setting<Long> maxNumberOfDatabases = buildSetting( "dbms.max_databases", LONG, "100" ).constraint( min( 2L ) ).build();
 
     @Internal
     public static final Setting<String> security_module = setting( "unsupported.dbms.security.module", STRING, COMMERCIAL_SECURITY_MODULE_ID );
