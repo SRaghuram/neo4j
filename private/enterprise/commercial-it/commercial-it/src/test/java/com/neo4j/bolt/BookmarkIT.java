@@ -46,7 +46,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotEquals;
@@ -110,7 +110,7 @@ public class BookmarkIT
 
         var bookmark = createNode( driver );
         var split = bookmark.split( ":" );
-        assertThat( split.length, equalTo( 2 ) );
+        assertThat( split, arrayWithSize( 2 ) );
     }
 
     private GraphDatabaseAPI createDb( CommitBlocker commitBlocker )
