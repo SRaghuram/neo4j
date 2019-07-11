@@ -68,8 +68,10 @@ class DemandServingThread(tracker: ConcurrentQueryCompletionTracker,
         tracker.addServed(1)
       }
 
-      tracker.addServed(1)
+      // Because this test 'requests' exactly how much data exists, there is a race between decrementing the tracker and decrementing demand.
+      // For that reason, decrement must be called first to count down the latch, which will also update the status correctly.
       tracker.decrement()
+      tracker.addServed(1)
     }
   }
 }
