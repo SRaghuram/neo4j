@@ -14,7 +14,7 @@ import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import com.neo4j.metrics.source.db.CheckPointingMetrics;
 import com.neo4j.metrics.source.db.CypherMetrics;
 import com.neo4j.metrics.source.db.EntityCountMetrics;
-import com.neo4j.metrics.source.db.LogRotationMetrics;
+import com.neo4j.metrics.source.db.TransactionLogsMetrics;
 import com.neo4j.metrics.source.db.TransactionMetrics;
 
 import org.neo4j.common.Edition;
@@ -58,10 +58,10 @@ public class DatabaseMetricsExporter
                     dependencies.scheduler() ) );
         }
 
-        if ( config.get( MetricsSettings.neoLogRotationEnabled ) )
+        if ( config.get( MetricsSettings.neoTransactionLogsEnabled ) )
         {
-            life.add( new LogRotationMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.logRotationMonitor(),
-                    dependencies.scheduler() ) );
+            life.add( new TransactionLogsMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.logRotationMonitor(),
+                    dependencies.logAppenderMonitor(), dependencies.scheduler() ) );
         }
 
         if ( config.get( MetricsSettings.neoCountsEnabled ) )

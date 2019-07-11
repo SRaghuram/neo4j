@@ -18,6 +18,7 @@ import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
+import org.neo4j.kernel.impl.transaction.log.monitor.LogAppenderMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -55,6 +56,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
         StoreEntityCounters storeEntityCounters();
 
         Supplier<CoreMetaData> coreMetadataSupplier();
+
+        LogAppenderMonitor logAppenderMonitor();
     }
 
     public DatabaseMetricsExtensionFactory()

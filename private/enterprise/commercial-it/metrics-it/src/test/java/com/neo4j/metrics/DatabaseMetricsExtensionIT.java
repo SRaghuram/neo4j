@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -89,7 +90,7 @@ class DatabaseMetricsExtensionIT
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".transaction.committed" );
+        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".transaction.committed" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -107,15 +108,27 @@ class DatabaseMetricsExtensionIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".ids_in_use.node" );
+        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".ids_in_use.node" );
 
         // WHEN
-        // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
         long committedTransactions = readLongGaugeAndAssert( metricsFile,
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
         assertThat( committedTransactions, lessThanOrEqualTo( 1001L ) );
+    }
+
+    @Test
+    void reportTransactionLogsAppendedBytesWithDefaultAllocationConfig() throws InterruptedException, IOException
+    {
+        addNodes( 100 );
+        File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
+
+        long appendedBytes = readLongCounterAndAssert( metricsFile,
+                ( newValue, currentValue ) -> newValue >= currentValue );
+
+        // THEN
+        assertThat( appendedBytes, greaterThan( 0L ) );
     }
 
     @Test
@@ -142,8 +155,8 @@ class DatabaseMetricsExtensionIT
             addNodes( 1 );
         }
 
-        File replanCountMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".cypher.replan_events" );
-        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".cypher.replan_wait_time" );
+        File replanCountMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_events" );
+        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".cypher.replan_wait_time" );
 
         // THEN see that the replan metric have pickup up at least one replan event
         // since reporting happens in an async fashion then give it some time and check now and then
@@ -172,7 +185,7 @@ class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, "neo4j." + db.databaseLayout().getDatabaseName() + ".check_point.duration" );
+        File metricFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.duration" );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 

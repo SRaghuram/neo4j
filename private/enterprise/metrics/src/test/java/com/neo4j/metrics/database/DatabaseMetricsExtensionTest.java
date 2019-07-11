@@ -32,6 +32,8 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.DefaultCheckPointMonitor;
+import org.neo4j.kernel.impl.transaction.log.monitor.DefaultLogAppenderMonitor;
+import org.neo4j.kernel.impl.transaction.log.monitor.LogAppenderMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.DefaultLogRotationMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -169,7 +171,7 @@ class DatabaseMetricsExtensionTest
         }
     }
 
-    private class DatabaseMetricsDependencies implements DatabaseMetricsExtensionFactory.Dependencies
+    private static class DatabaseMetricsDependencies implements DatabaseMetricsExtensionFactory.Dependencies
     {
         private final Config config;
         private final MetricsManager metricsManager;
@@ -261,6 +263,12 @@ class DatabaseMetricsExtensionTest
         public Supplier<CoreMetaData> coreMetadataSupplier()
         {
             return null;
+        }
+
+        @Override
+        public LogAppenderMonitor logAppenderMonitor()
+        {
+            return new DefaultLogAppenderMonitor();
         }
     }
 

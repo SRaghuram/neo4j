@@ -59,9 +59,8 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Boolean> neoCheckPointingEnabled =
             newBuilder( "metrics.neo4j.checkpointing.enabled", BOOL, true ).build();
 
-    @Description( "Enable reporting metrics about the Neo4j log rotation; when it occurs and how much time it takes to "
-            + "complete." )
-    public static final Setting<Boolean> neoLogRotationEnabled = newBuilder( "metrics.neo4j.logrotation.enabled", BOOL, true ).build();
+    @Description( "Enable reporting metrics about the Neo4j transaction logs" )
+    public static final Setting<Boolean> neoTransactionLogsEnabled = newBuilder( "metrics.neo4j.logs.enabled", BOOL, true ).build();
 
     @Description( "Enable reporting metrics about Server threading info." )
     public static final Setting<Boolean> neoServerEnabled = newBuilder( "metrics.neo4j.server.enabled", BOOL, true ).build();
