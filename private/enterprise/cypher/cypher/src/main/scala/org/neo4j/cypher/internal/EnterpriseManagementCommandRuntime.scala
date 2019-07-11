@@ -656,7 +656,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$role})
          |WITH a, r, d, q
-         |OPTIONAL MATCH (r)-[g $relType]->(a)
+         |OPTIONAL MATCH (r)-[g$relType]->(a)
          |
          |// Remove the assignment
          |DELETE g

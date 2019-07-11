@@ -1761,7 +1761,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges with REVOKE $revokeType") {
-       // GIVEN
+        // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
