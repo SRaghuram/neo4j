@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.File;
+
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -84,10 +86,9 @@ class MultiDatabaseManagerIT
     @Test
     void disallowMaxNumberOfDatabaseLowerThanTwo()
     {
-        managementService.shutdown();
         InvalidSettingException exception = assertThrows( InvalidSettingException.class, () ->
         {
-            managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+            new TestCommercialDatabaseManagementServiceBuilder( new File( "testFileForMaxDbTest" ) )
                     .setInternalLogProvider( logProvider )
                     .setConfig( default_database, CUSTOM_DATABASE_NAME )
                     .setConfig( maxNumberOfDatabases, "1" )
