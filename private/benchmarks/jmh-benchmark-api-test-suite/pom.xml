@@ -74,13 +74,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
             <!-- 1. Add source directories for both scalac and javac. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
