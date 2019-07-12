@@ -9,8 +9,7 @@ import java.time.Clock;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
-import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
+import org.neo4j.kernel.impl.transaction.tracing.DatabaseTracer;
 import org.neo4j.kernel.monitoring.tracing.TracerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
@@ -29,20 +28,13 @@ public class TimerTracerFactory implements TracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock,
-            Log log )
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log log )
     {
         return PageCacheTracer.NULL;
     }
 
     @Override
-    public TransactionTracer createTransactionTracer( Clock clock )
-    {
-        return timerTransactionTracer;
-    }
-
-    @Override
-    public CheckPointTracer createCheckPointTracer( Clock clock )
+    public DatabaseTracer createDatabaseTracer( Clock clock )
     {
         return timerTransactionTracer;
     }

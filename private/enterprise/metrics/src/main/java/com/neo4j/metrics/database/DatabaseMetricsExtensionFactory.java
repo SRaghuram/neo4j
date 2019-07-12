@@ -17,10 +17,9 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
-import org.neo4j.kernel.impl.transaction.log.monitor.LogAppenderMonitor;
-import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
+import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
+import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -45,19 +44,17 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
 
         Database database();
 
-        CheckPointerMonitor checkPointerMonitor();
-
         Supplier<TransactionIdStore> transactionIdStoreSupplier();
 
         TransactionCounters transactionCounters();
-
-        LogRotationMonitor logRotationMonitor();
 
         StoreEntityCounters storeEntityCounters();
 
         Supplier<CoreMetaData> coreMetadataSupplier();
 
-        LogAppenderMonitor logAppenderMonitor();
+        TransactionLogCounters transactionLogCounters();
+
+        CheckpointCounters checkpointCounters();
     }
 
     public DatabaseMetricsExtensionFactory()

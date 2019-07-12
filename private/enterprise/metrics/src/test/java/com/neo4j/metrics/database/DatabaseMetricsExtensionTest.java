@@ -28,16 +28,13 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.DefaultCheckPointMonitor;
-import org.neo4j.kernel.impl.transaction.log.monitor.DefaultLogAppenderMonitor;
-import org.neo4j.kernel.impl.transaction.log.monitor.LogAppenderMonitor;
-import org.neo4j.kernel.impl.transaction.log.rotation.monitor.DefaultLogRotationMonitor;
-import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
+import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
+import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -230,9 +227,9 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public CheckPointerMonitor checkPointerMonitor()
+        public CheckpointCounters checkpointCounters()
         {
-            return new DefaultCheckPointMonitor();
+            return new DefaultTracer();
         }
 
         @Override
@@ -248,12 +245,6 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public LogRotationMonitor logRotationMonitor()
-        {
-            return new DefaultLogRotationMonitor();
-        }
-
-        @Override
         public StoreEntityCounters storeEntityCounters()
         {
             return null;
@@ -266,9 +257,9 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public LogAppenderMonitor logAppenderMonitor()
+        public TransactionLogCounters transactionLogCounters()
         {
-            return new DefaultLogAppenderMonitor();
+            return new DefaultTracer();
         }
     }
 

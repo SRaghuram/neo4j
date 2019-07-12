@@ -10,20 +10,12 @@ import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
 import com.neo4j.metrics.output.EventReporter;
 
-import java.util.SortedMap;
-import java.util.TreeMap;
-
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.kernel.impl.transaction.log.monitor.LogAppenderMonitor;
-import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
-import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitorAdapter;
+import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.monitoring.Monitors;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.codahale.metrics.MetricRegistry.name;
-import static java.util.Collections.emptySortedMap;
 
 @Documented( ".Database transaction log metrics" )
 public class TransactionLogsMetrics extends LifecycleAdapter
@@ -34,7 +26,7 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     private static final String LOG_ROTATION_EVENTS_TEMPLATE = name( TX_LOG_PREFIX, "rotation_events" );
     @Documented( "The total time spent in rotating transaction logs so far." )
     private static final String LOG_ROTATION_TOTAL_TIME_TEMPLATE = name( TX_LOG_PREFIX, "rotation_total_time" );
-    @Documented( "The duration of the log rotation event." )
+    @Documented( "The duration of the last log rotation event." )
     private static final String LOG_ROTATION_DURATION_TEMPLATE = name( TX_LOG_PREFIX, "rotation_duration" );
     @Documented( "The total number of bytes appended to transaction log." )
     private static final String LOG_APPENDED_BYTES = name( TX_LOG_PREFIX, "appended_bytes" );
@@ -42,70 +34,37 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     private final String logRotationEvents;
     private final String logRotationTotalTime;
     private final String logRotationDuration;
-    private final String logApppendedBytes;
+    private final String logAppendedBytes;
 
     private final MetricRegistry registry;
-    private final Monitors monitors;
-    private final LogRotationMonitor logRotationMonitor;
-    private final LogAppenderMonitor logAppenderMonitor;
-    private final LogRotationMonitor listener;
+    private final TransactionLogCounters logCounters;
 
     public TransactionLogsMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
-            Monitors monitors, LogRotationMonitor logRotationMonitor, LogAppenderMonitor logAppenderMonitor, JobScheduler jobScheduler )
+            TransactionLogCounters logCounters, JobScheduler jobScheduler )
     {
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_EVENTS_TEMPLATE );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_TOTAL_TIME_TEMPLATE );
         this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_DURATION_TEMPLATE );
-        this.logApppendedBytes = name( metricsPrefix, LOG_APPENDED_BYTES );
+        this.logAppendedBytes = name( metricsPrefix, LOG_APPENDED_BYTES );
         this.registry = registry;
-        this.monitors = monitors;
-        this.logRotationMonitor = logRotationMonitor;
-        this.logAppenderMonitor = logAppenderMonitor;
-        this.listener = new ReportingLogRotationMonitor( reporter, jobScheduler, logRotationDuration );
+        this.logCounters = logCounters;
     }
 
     @Override
     public void start()
     {
-        monitors.addMonitorListener( listener );
-
-        registry.register( logRotationEvents, new MetricsCounter( logRotationMonitor::numberOfLogRotations ) );
-        registry.register( logRotationTotalTime, new MetricsCounter( logRotationMonitor::logRotationAccumulatedTotalTimeMillis ) );
-        registry.register( logApppendedBytes, new MetricsCounter( logAppenderMonitor::appendedBytes ) );
+        registry.register( logRotationEvents, new MetricsCounter( logCounters::numberOfLogRotations ) );
+        registry.register( logRotationTotalTime, new MetricsCounter( logCounters::logRotationAccumulatedTotalTimeMillis ) );
+        registry.register( logAppendedBytes, new MetricsCounter( logCounters::getAppendedBytes ) );
+        registry.register( logRotationDuration, (Gauge<Long>) logCounters::lastLogRotationTimeMillis  );
     }
 
     @Override
     public void stop()
     {
-        monitors.removeMonitorListener( listener );
-
+        registry.remove( logRotationDuration );
         registry.remove( logRotationEvents );
         registry.remove( logRotationTotalTime );
-        registry.remove( logApppendedBytes );
-    }
-
-    private static final class ReportingLogRotationMonitor extends LogRotationMonitorAdapter
-    {
-        private final EventReporter reporter;
-        private final JobScheduler scheduler;
-        private final String metricName;
-
-        ReportingLogRotationMonitor( EventReporter reporter, JobScheduler scheduler, String metricName )
-        {
-            this.reporter = reporter;
-            this.scheduler = scheduler;
-            this.metricName = metricName;
-        }
-
-        @Override
-        public void finishLogRotation( long currentLogVersion, long rotationMillis )
-        {
-            scheduler.schedule( Group.METRICS_EVENT, () ->
-            {
-                SortedMap<String,Gauge> gauges = new TreeMap<>();
-                gauges.put( metricName, () -> rotationMillis );
-                reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
-            } );
-        }
+        registry.remove( logAppendedBytes );
     }
 }

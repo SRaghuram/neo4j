@@ -10,19 +10,20 @@ import org.HdrHistogram.Histogram;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
+import org.neo4j.kernel.impl.transaction.tracing.DatabaseTracer;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
+import org.neo4j.kernel.impl.transaction.tracing.LogFileCreateEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogForceEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogForceWaitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogRotateEvent;
 import org.neo4j.kernel.impl.transaction.tracing.SerializeTransactionEvent;
 import org.neo4j.kernel.impl.transaction.tracing.StoreApplyEvent;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionEvent;
-import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
 
-public class TimerTransactionTracer implements TransactionTracer, CheckPointTracer
+public class TimerTransactionTracer implements DatabaseTracer
 {
     private static volatile long logForceBegin;
     private static volatile long logCheckPointBegin;
@@ -71,25 +72,47 @@ public class TimerTransactionTracer implements TransactionTracer, CheckPointTrac
         }
 
         @Override
+        public void checkpointCompleted( long checkpointMillis )
+        {
+        }
+
+        @Override
         public void close()
         {
             long elapsedNanos = System.nanoTime() - logCheckPointBegin;
             logCheckPointTimes.recordValue( elapsedNanos );
+        }
+
+        @Override
+        public void appendToLogFile( LogPosition positionBeforeCheckpoint, LogPosition positionAfterCheckpoint )
+        {
+
         }
     };
 
     private static final LogRotateEvent LOG_ROTATE_EVENT = new LogRotateEvent()
     {
         @Override
-        public void close()
+        public void rotationCompleted( long rotationMillis )
         {
             long elapsedNanos = System.nanoTime() - logRotateBegin;
             logRotateTimes.recordValue( elapsedNanos );
+        }
+
+        @Override
+        public void close()
+        {
         }
     };
 
     private static final LogAppendEvent LOG_APPEND_EVENT = new LogAppendEvent()
     {
+        @Override
+        public void appendToLogFile( LogPosition logPositionBeforeAppend, LogPosition logPositionAfterAppend )
+        {
+
+        }
+
         @Override
         public void close()
         {
@@ -192,5 +215,53 @@ public class TimerTransactionTracer implements TransactionTracer, CheckPointTrac
     {
         logCheckPointBegin = System.nanoTime();
         return LOG_CHECK_POINT_EVENT;
+    }
+
+    @Override
+    public long getAppendedBytes()
+    {
+        return 0;
+    }
+
+    @Override
+    public long numberOfLogRotations()
+    {
+        return 0;
+    }
+
+    @Override
+    public long logRotationAccumulatedTotalTimeMillis()
+    {
+        return 0;
+    }
+
+    @Override
+    public long lastLogRotationTimeMillis()
+    {
+        return 0;
+    }
+
+    @Override
+    public LogFileCreateEvent createLogFile()
+    {
+        return LogFileCreateEvent.NULL;
+    }
+
+    @Override
+    public long numberOfCheckPoints()
+    {
+        return 0;
+    }
+
+    @Override
+    public long checkPointAccumulatedTotalTimeMillis()
+    {
+        return 0;
+    }
+
+    @Override
+    public long lastCheckpointTimeMillis()
+    {
+        return 0;
     }
 }

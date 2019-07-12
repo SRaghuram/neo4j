@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.metrics;
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
@@ -26,10 +32,9 @@ import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
-import static org.neo4j.configuration.Settings.FALSE;
-import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
@@ -49,7 +54,6 @@ class TransactionLogsMetricsIT
         builder.setConfig( MetricsSettings.csvEnabled, TRUE );
         builder.setConfig( preallocate_logical_logs, FALSE );
         builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        builder.setConfig( check_point_interval_time, "100ms" );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
     }
 
@@ -74,7 +78,6 @@ class TransactionLogsMetricsIT
         logRotation.rotateLogFile();
         addNodes( 1 );
         logRotation.rotateLogFile();
-        addNodes( 1 );
 
         File rotationEvents = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_events" );
         File rotationTime = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.rotation_total_time" );
