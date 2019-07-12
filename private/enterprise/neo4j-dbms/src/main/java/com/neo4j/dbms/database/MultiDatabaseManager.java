@@ -115,11 +115,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             }
             try
             {
-                DB newContext = operation.apply( databaseId, currentContext );
-
-                publishPageCacheMetrics();
-
-                return newContext;
+                return operation.apply( databaseId, currentContext );
             }
             catch ( Throwable t )
             {
@@ -128,18 +124,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
                 return currentContext;
             }
         } );
-    }
-
-    /**
-     * The tracers are implemented using thread locals and need to be flushed from every
-     * thread where suitable. This method supplements the functionality of the referenced
-     * class which lives in the global lifecycle.
-     *
-     * @see org.neo4j.kernel.impl.pagecache.PublishPageCacheTracerMetricsAfterStart
-     */
-    private void publishPageCacheMetrics()
-    {
-        globalModule.getTracers().getPageCursorTracerSupplier().get().reportEvents();
     }
 
     @Override
