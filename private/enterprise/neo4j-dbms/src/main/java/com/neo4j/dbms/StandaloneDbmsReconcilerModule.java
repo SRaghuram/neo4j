@@ -38,7 +38,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
 
         this.dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
-        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository );
+        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository, globalModule.getThreadToTransactionBridge() );
         this.shutdownOperator = new ShutdownOperator( databaseManager, databaseIdRepository );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
@@ -99,7 +99,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
             @Override
             public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
             {
-                systemOperator.transactionCommitted( txData.getTransactionId(), dbmsModel.updatedDatabases( txData ) );
+                systemOperator.transactionCommitted( txData.getTransactionId(), txData );
             }
         } );
     }

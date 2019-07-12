@@ -12,8 +12,6 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
-import static java.util.Collections.emptyList;
-
 public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule<ClusteredMultiDatabaseManager>
 {
     private final TransactionEventService txEventService;
@@ -38,7 +36,7 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     @Override
     protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
     {
-        txEventService.registerHandler( databaseIdRepository.systemDatabase(), txId -> systemOperator.transactionCommitted( txId, emptyList() ) );
+        txEventService.registerHandler( databaseIdRepository.systemDatabase(), txId -> systemOperator.transactionCommitted( txId, null ) );
     }
 
     @Override
