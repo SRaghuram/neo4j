@@ -14,8 +14,15 @@ public class VolumetricCheckPointThreshold extends AbstractCheckPointThreshold
 
     public VolumetricCheckPointThreshold( LogPruning logPruning )
     {
-        super( "tx log pruning" );
+        super( "volumetric checkpoint threshold, based on log pruning strategy" );
         this.logPruning = logPruning;
+    }
+
+    @Override
+    protected String createCheckpointThresholdDescription( String description )
+    {
+        // Always build a new description every time, since the log pruning strategy can change dynamically.
+        return description + " '" + logPruning.describeCurrentStrategy() + "'";
     }
 
     @Override

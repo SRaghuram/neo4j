@@ -14,6 +14,8 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThresholdTestS
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +42,12 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
             {
                 return haveLogsToPrune;
             }
+
+            @Override
+            public String describeCurrentStrategy()
+            {
+                return "test pruning strategy";
+            }
         };
     }
 
@@ -51,7 +59,9 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
         CheckPointThreshold threshold = createThreshold();
         threshold.initialize( 2 );
         assertTrue( threshold.isCheckPointingNeeded( 2, triggered ) );
-        verifyTriggered( "log pruning" );
+        verifyTriggered( allOf(
+                containsString( "log pruning" ),
+                containsString( "test pruning strategy" ) ) );
         verifyNoMoreTriggers();
     }
 
