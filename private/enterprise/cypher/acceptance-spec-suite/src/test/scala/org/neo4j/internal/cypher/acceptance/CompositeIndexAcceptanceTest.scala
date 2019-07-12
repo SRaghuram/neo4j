@@ -741,7 +741,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index for range, prefix, suffix, contains and exists predicates") {
-    // TODO update when contains
     // Given
     graph.createIndex("User", "name", "surname", "age", "active")
     val n = createLabeledNode(Map("name" -> "joe", "surname" -> "soap", "age" -> 25, "active" -> true), "User")
@@ -756,7 +755,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       ("n.name = 'joe' AND n.surname ENDS WITH 'p' AND n.age = 25 AND n.active = true", false, true, "(equality,exists,exists,exists)", Seq(".*cache\\[n\\.surname\\] ENDS WITH .*".r, ".*cache\\[n\\.active\\] = true.*".r, ".*cache\\[n\\.age\\] = .*".r)), // suffix
       ("n.name >= 'i' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(range,exists,exists,exists)", Seq(".*cache\\[n\\.active\\] = true.*".r, ".*cache\\[n\\.surname\\] = .*".r, ".*cache\\[n\\.age\\] = .*".r)), // inequality first
       ("n.name STARTS WITH 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(range,exists,exists,exists)", Seq(".*cache\\[n\\.active\\] = true.*".r, ".*cache\\[n\\.surname\\] = .*".r, ".*cache\\[n\\.age\\] = .*".r)), // prefix first
-//      ("n.name CONTAINS 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(exists,exists,exists,exists)", Seq("FILTER ON CONTAINS".r, ".*cache\\[n\\.active\\] = true.*".r, ".*cache\\[n\\.surname\\] = .*".r, ".*cache\\[n\\.age\\] = .*".r)), // contains first
+      ("n.name CONTAINS 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", true, true, "", Seq(".*cache\\[n\\.name\\] CONTAINS .*".r, ".*cache\\[n\\.active\\] = true.*".r, ".*cache\\[n\\.surname\\] = .*".r, ".*cache\\[n\\.age\\] = .*".r)), // contains first
       ("n.name = 'joe' AND n.surname STARTS WITH 'soap' AND n.age <= 25 AND exists(n.active)", false, true, "(equality,range,exists,exists)", Seq(".*cache\\[n\\.age\\] <= .*".r)), // combination: equality, prefix, inequality, exists()
 
       ("n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND n.active >= true", false, false, "(equality,equality,equality,range)", Seq.empty), // inequality last
@@ -1403,6 +1402,44 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val expected = Set(
       Map("n.prop1" -> "aismfama", "n.prop2" -> "rab"),
       Map("n.prop1" -> "alpha", "n.prop2" -> "ant"),
+      Map("n.prop1" -> "footurama", "n.prop2" -> "bar")
+    )
+    result.toSet should equal(expected)
+  }
+
+  test("should use composite index for CONTAINS") {
+    graph.createIndex("Awesome", "prop1", "prop2")
+    createNodes()
+
+    // Add nodes not in index
+    graph.execute(
+      """
+        |CREATE (:Awesome)
+        |CREATE (:Awesome)
+        |CREATE (:Awesome)
+        |CREATE (:Awesome)
+        |CREATE (:Awesome)
+        |
+        |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
+        |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
+        |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
+      """.stripMargin
+    )
+    resampleIndexes()
+
+    val result = executeWith(Configs.CachedProperty,
+      s"MATCH (n:Awesome) WHERE n.prop1 CONTAINS 'foo' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
+      executeBefore = createNodesInTxState,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("Filter")
+          .containingArgumentRegex(".*cache\\[n\\.prop1\\] CONTAINS .*".r, ".*cache\\[n\\.prop2\\] >= .*".r)
+          .onTopOf(aPlan("NodeIndexScan").containingArgumentRegex("\\:Awesome\\(prop1,prop2\\).*".r))
+      }))
+
+    val expected = Set(
+      Map("n.prop1" -> "foo", "n.prop2" -> "alligator"),
+      Map("n.prop1" -> "fooism", "n.prop2" -> "rab"),
       Map("n.prop1" -> "footurama", "n.prop2" -> "bar")
     )
     result.toSet should equal(expected)
