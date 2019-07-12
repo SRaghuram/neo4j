@@ -24,7 +24,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
 import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;

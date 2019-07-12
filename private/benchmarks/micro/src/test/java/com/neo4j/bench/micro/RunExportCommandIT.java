@@ -158,11 +158,11 @@ class RunExportCommandIT
         assertThat( report.benchmarkTool(), equalTo( expectedBenchmarkTool ) );
 
         int expectedConfigSize = Neo4jConfigBuilder.withDefaults()
-                                            .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
-                                            .mergeWith( RunExportCommand.ADDITIONAL_CONFIG )
-                                            .build()
-                                            .toMap()
-                                            .size();
+                                                   .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                   .mergeWith( RunExportCommand.ADDITIONAL_CONFIG )
+                                                   .build()
+                                                   .toMap()
+                                                   .size();
 
         assertThat( BenchmarkUtil.prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
         assertThat( report.java().jvmArgs(), equalTo(

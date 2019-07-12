@@ -26,12 +26,12 @@ import java.util.Set;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BenchmarksFinderTest extends BenchmarksFinderFixture
+class BenchmarksFinderTest extends BenchmarksFinderFixture
 {
     private Set<Class> invalidBenchmarks = Sets.newHashSet( DuplicateAllowedBenchmark.class,
                                                             DuplicateBaseBenchmark.class,
@@ -45,7 +45,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
                                                           ValidEnabledGroupBenchmark.class );
 
     @Test
-    public void shouldGetParameterFieldsForBenchmark()
+    void shouldGetParameterFieldsForBenchmark()
     {
         BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
         List<Field> fields = benchmarksFinder.getParamFieldsFor( ValidDisabledBenchmark.class );
@@ -54,7 +54,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldGetParameterFieldsForBenchmarksWithoutParameters()
+    void shouldGetParameterFieldsForBenchmarksWithoutParameters()
     {
         BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
         List<Field> fields = benchmarksFinder.getParamFieldsFor( ValidEnabledBenchmarkWithoutParams.class );
@@ -62,7 +62,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldGetAllBenchmarks()
+    void shouldGetAllBenchmarks()
     {
         assertThat( getBenchmarksFinder().getBenchmarks(), equalTo( Sets.union( invalidBenchmarks, validBenchmarks ) ) );
         assertThat( getInvalidBenchmarksFinder().getBenchmarks(), equalTo( invalidBenchmarks ) );
@@ -70,7 +70,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldHasBenchmark()
+    void shouldHasBenchmark()
     {
         for ( Class benchmark : invalidBenchmarks )
         {
@@ -87,7 +87,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldGetBenchmarkMethods()
+    void shouldGetBenchmarkMethods()
     {
         BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
 
@@ -107,16 +107,16 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldPassValidationWhenAllBenchmarksAreValid()
+    void shouldPassValidationWhenAllBenchmarksAreValid()
     {
         BenchmarksFinder benchmarksFinder = getValidBenchmarksFinder();
         BenchmarksValidator.BenchmarkValidationResult validationResult = benchmarksFinder.validate();
 
-        assertTrue( validationResult.message(), validationResult.isValid() );
+        assertTrue( validationResult.isValid(), validationResult.message() );
     }
 
     @Test
-    public void shouldFailValidationWhenSomeBenchmarksAreInvalid()
+    void shouldFailValidationWhenSomeBenchmarksAreInvalid()
     {
         BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
         BenchmarksValidator.BenchmarkValidationResult validationResult = benchmarksFinder.validate();
@@ -125,7 +125,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldReadParameterFields()
+    void shouldReadParameterFields()
     {
         Set<String> parameters = getBenchmarksFinder().getParamFieldsFor( ValidEnabledBenchmark1.class ).stream()
                                                       .map( Field::getName )
@@ -137,7 +137,7 @@ public class BenchmarksFinderTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldReadBenchmarkMethods()
+    void shouldReadBenchmarkMethods()
     {
         Set<String> benchmarkMethodNames = getBenchmarksFinder()
                 .getBenchmarkMethodsFor( ValidEnabledBenchmark1.class )

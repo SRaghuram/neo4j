@@ -21,6 +21,8 @@ import java.nio.file.Path;
 import java.util.Stack;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;

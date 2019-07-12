@@ -36,6 +36,7 @@ import com.neo4j.bench.common.model.TestRunError;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,7 @@ import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.IGNORE;
 import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.client.queries.VerifyStoreSchema.patternCountInStore;
 import static com.neo4j.bench.common.options.Edition.COMMUNITY;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -94,7 +96,7 @@ public class SubmitTestRunsAndPlansIT
     private URI boltUri;
 
     @BeforeEach
-    public void setUp( GraphDatabaseService databaseService )
+    void setUp( GraphDatabaseService databaseService )
     {
         HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
                                                                    .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
@@ -102,14 +104,14 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @AfterEach
-    public void cleanUpDb( GraphDatabaseService databaseService )
+    void cleanUpDb( GraphDatabaseService databaseService )
     {
         // this is hacky HACK, needs to be fixed in Neo4jExtension
         databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
     }
 
     @Test
-    public void shouldNotCorruptSchemaWhenCallingSetVersionMultipleTimes() throws Exception
+    void shouldNotCorruptSchemaWhenCallingSetVersionMultipleTimes() throws Exception
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -120,7 +122,7 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    public void shouldRespectErrorReportingPolicy() throws Exception
+    void shouldRespectErrorReportingPolicy() throws Exception
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -298,7 +300,7 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    public void shouldMaintainSchemaConsistency() throws Exception
+    void shouldMaintainSchemaConsistency() throws Exception
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -448,7 +450,7 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    public void shouldCreateNewPlansWhenNecessary() throws Exception
+    void shouldCreateNewPlansWhenNecessary() throws Exception
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -547,7 +549,7 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    public void shouldReusePlansWhenPossible() throws Exception
+    void shouldReusePlansWhenPossible() throws Exception
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {

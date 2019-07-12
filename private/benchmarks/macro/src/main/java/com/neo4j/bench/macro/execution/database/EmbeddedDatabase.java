@@ -27,6 +27,7 @@ import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
@@ -213,9 +214,12 @@ public class EmbeddedDatabase implements Database
               .getIndexes()
               .forEach( index ->
                         {
-                            if ( !index.isConstraintIndex() )
+                            for ( Label label : index.getLabels() )
                             {
-                                entries.add( new Schema.IndexSchemaEntry( index.getLabel(), Lists.newArrayList( index.getPropertyKeys() ) ) );
+                                if ( !index.isConstraintIndex() )
+                                {
+                                    entries.add( new Schema.IndexSchemaEntry( label, Lists.newArrayList( index.getPropertyKeys() ) ) );
+                                }
                             }
                         } );
 
@@ -296,7 +300,7 @@ public class EmbeddedDatabase implements Database
         {
             throw new RuntimeException(
                     format( "Index (%s,%s) failed to build:\n%s",
-                            index.getLabel(),
+                            index.getLabels(),
                             index.getPropertyKeys(),
                             db.schema().getIndexFailure( index )
                     )

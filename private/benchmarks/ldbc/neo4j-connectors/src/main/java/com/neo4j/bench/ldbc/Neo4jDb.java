@@ -14,6 +14,7 @@ import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiEmbeddedCypherRegularCommands;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
@@ -26,7 +27,6 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommand
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -486,7 +486,7 @@ public class Neo4jDb extends Db
         return new BoltConnector( "bolt" );
     }
 
-    public static String configToString( File configFile ) throws DbException
+    public static String configToString( File configFile )
     {
         if ( null == configFile )
         {
@@ -494,14 +494,7 @@ public class Neo4jDb extends Db
         }
         else
         {
-            try
-            {
-                return FileUtils.readFileToString( configFile );
-            }
-            catch ( IOException e )
-            {
-                throw new DbException( "Error reading Neo4j configuration contents to string", e );
-            }
+            return BenchmarkUtil.fileToString( configFile.toPath() );
         }
     }
 

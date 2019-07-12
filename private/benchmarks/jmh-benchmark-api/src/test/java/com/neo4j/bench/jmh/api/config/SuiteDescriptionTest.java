@@ -21,14 +21,13 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SuiteDescriptionTest extends BenchmarksFinderFixture
+class SuiteDescriptionTest extends BenchmarksFinderFixture
 {
     @Test
-    public void shouldFailValidationWhenOnlySomeParametersAreSet()
+    void shouldFailValidationWhenOnlySomeParametersAreSet()
     {
         // when
         String benchmarkName = ValidDisabledBenchmark.class.getName();
@@ -54,14 +53,14 @@ public class SuiteDescriptionTest extends BenchmarksFinderFixture
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
-        assertFalse( validation.report(), validation.isValid() );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) ) );
+        assertFalse( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldFailValidationWhenProvidedWithInvalidParam()
+    void shouldFailValidationWhenProvidedWithInvalidParam()
     {
         // when
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
@@ -86,14 +85,14 @@ public class SuiteDescriptionTest extends BenchmarksFinderFixture
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
-        assertFalse( validation.report(), validation.isValid() );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) ) );
+        assertFalse( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldReturnCorrectGroupBenchmarkNames()
+    void shouldReturnCorrectGroupBenchmarkNames()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
         Map<String,List<String>> groupBenchmarks = suiteDescription.getGroupBenchmarkNames();

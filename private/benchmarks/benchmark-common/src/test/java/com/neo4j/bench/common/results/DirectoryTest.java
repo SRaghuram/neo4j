@@ -25,9 +25,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.common.model.Benchmark.Mode;
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -48,7 +48,7 @@ public class DirectoryTest
     public TestDirectory temporaryFolder;
 
     @Test
-    public void shouldBeAbleToCreateGroupDirs() throws Exception
+    void shouldBeAbleToCreateGroupDirs() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
@@ -61,7 +61,7 @@ public class DirectoryTest
     }
 
     @Test
-    public void groupDirShouldCreateBenchDirs() throws Exception
+    void groupDirShouldCreateBenchDirs() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
@@ -93,7 +93,7 @@ public class DirectoryTest
     }
 
     @Test
-    public void groupDirShouldBeAbleToOverwriteItself() throws Exception
+    void groupDirShouldBeAbleToOverwriteItself() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
@@ -107,7 +107,7 @@ public class DirectoryTest
     }
 
     @Test
-    public void benchDirShouldCreateForkDirs() throws Exception
+    void benchDirShouldCreateForkDirs() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
@@ -142,7 +142,7 @@ public class DirectoryTest
     }
 
     @Test
-    public void benchDirShouldOpenExistingForkDirs() throws Exception
+    void benchDirShouldOpenExistingForkDirs() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
@@ -156,7 +156,7 @@ public class DirectoryTest
     }
 
     @Test
-    public void benchDirShouldCreateFilesInForkDir() throws Exception
+    void benchDirShouldCreateFilesInForkDir() throws Exception
     {
         Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
 

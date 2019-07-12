@@ -248,13 +248,8 @@ public class RunExportCommand implements Runnable
 
         Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
                                                         .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
-                                                        .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
-                                                        .withSetting( new HttpConnector( "http" ).enabled, "false" )
-                                                        .withSetting( new HttpConnector( "https" ).enabled, "false" )
+                                                        .mergeWith( ADDITIONAL_CONFIG )
                                                         .build();
-                                                 .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
-            .mergeWith( ADDITIONAL_CONFIG )
-            .build();
 
         String[] additionalJvmArgs = splitArgs( this.jvmArgsString, " " );
         String[] jvmArgs = concatArgs( additionalJvmArgs, baseNeo4jConfig.getJvmArgs().toArray( new String[0] ) );

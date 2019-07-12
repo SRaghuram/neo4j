@@ -10,6 +10,7 @@
 	</parent>
 	<artifactId>benchmark-infra-worker</artifactId>
 	<properties>
+		<moduleName>com.neo4j.bench.infra.worker</moduleName>
 		<license-text.header>../../build/license-header.txt</license-text.header>
 	</properties>
 	<dependencies>

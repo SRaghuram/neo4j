@@ -23,8 +23,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -45,7 +45,7 @@ public class ProcessTest
     }
 
     @Test
-    public void shouldSelectRightJava() throws Exception
+    void shouldSelectRightJava()
     {
         Jvm jvm = Jvm.defaultJvm();
         List<String> jvmArgs = Lists.newArrayList( "-Xmx4g" );
@@ -60,7 +60,7 @@ public class ProcessTest
     }
 
     @Test
-    public void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
+    void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
         Path folder = createTempDirectoryPath( temporaryFolder.absolutePath() );
         Files.createFile( folder.resolve( "file1.txt" ) );

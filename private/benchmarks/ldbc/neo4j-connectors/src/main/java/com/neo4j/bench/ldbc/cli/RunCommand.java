@@ -6,7 +6,6 @@
 package com.neo4j.bench.ldbc.cli;
 
 import com.ldbc.driver.Client;
-import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.DriverConfiguration;
@@ -220,14 +219,7 @@ public class RunCommand implements Runnable
             }
 
             System.out.println( "*** Neo4j DB Properties ***" );
-            try
-            {
-                System.out.println( Neo4jDb.configToString( neo4jConfig ) );
-            }
-            catch ( DbException e )
-            {
-                throw new RuntimeException( "Unable to read Neo4j configuration file to string", e );
-            }
+            System.out.println( Neo4jDb.configToString( neo4jConfig ) );
             System.out.println( "************************" );
 
             if ( null != readThreads )

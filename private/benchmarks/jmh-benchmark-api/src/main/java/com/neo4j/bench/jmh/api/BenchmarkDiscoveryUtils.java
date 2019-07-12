@@ -178,7 +178,7 @@ public class BenchmarkDiscoveryUtils
     {
         try
         {
-            BaseBenchmark abstractBenchmark = benchmarkClass.newInstance();
+            BaseBenchmark abstractBenchmark = benchmarkClass.getDeclaredConstructor().newInstance();
             return abstractBenchmark.benchmarkGroup();
         }
         catch ( Exception e )
@@ -196,7 +196,7 @@ public class BenchmarkDiscoveryUtils
     {
         try
         {
-            BaseBenchmark abstractBenchmark = benchmarkClass.newInstance();
+            BaseBenchmark abstractBenchmark = benchmarkClass.getDeclaredConstructor().newInstance();
             return abstractBenchmark.description();
         }
         catch ( Exception e )
@@ -215,7 +215,7 @@ public class BenchmarkDiscoveryUtils
     {
         try
         {
-            BaseBenchmark abstractBenchmark = benchmarkClass.newInstance();
+            BaseBenchmark abstractBenchmark = benchmarkClass.getDeclaredConstructor().newInstance();
             return abstractBenchmark.isThreadSafe();
         }
         catch ( Exception e )

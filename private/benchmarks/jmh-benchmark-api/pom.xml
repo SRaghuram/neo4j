@@ -14,7 +14,6 @@
     <properties>
         <moduleName>com.neo4j.bench.jmh.api</moduleName>
         <jmh.version>1.21</jmh.version>
-        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
@@ -54,7 +53,6 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>27.1-jre</version>
         </dependency>
 
         <dependency>
@@ -87,8 +85,7 @@
 
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>java-hamcrest</artifactId>
-            <version>${java-hamcrest.version}</version>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -175,7 +175,7 @@ public enum ProfilerType
     {
         try
         {
-            return profiler.newInstance();
+            return profiler.getDeclaredConstructor().newInstance();
         }
         catch ( Exception e )
         {

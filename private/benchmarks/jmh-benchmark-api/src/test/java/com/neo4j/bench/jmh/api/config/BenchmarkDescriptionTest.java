@@ -34,21 +34,20 @@ import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 import static org.openjdk.jmh.annotations.Mode.Throughput;
 
-public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
+class BenchmarkDescriptionTest extends BenchmarksFinderFixture
 {
     private static final Map<String,BenchmarkMethodDescription> METHODS = Collections.emptyMap();
     private String group = "regular";
 
     @Test
-    public void shouldConstructFromValidExample()
+    void shouldConstructFromValidExample()
     {
         // when
         Validation validation = new Validation();
@@ -77,11 +76,11 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
                 new BenchmarkMethodDescription( "methodTwo", new Mode[]{Throughput, AverageTime} ),
                 new BenchmarkMethodDescription( "methodOne", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldPassValidationWhenSettingAllParametersOnDisabledBenchmark()
+    void shouldPassValidationWhenSettingAllParametersOnDisabledBenchmark()
     {
         // given
         Validation validation = new Validation();
@@ -108,7 +107,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         assertThat( newHashSet( benchDesc.methods() ),
                     equalTo( newHashSet( new BenchmarkMethodDescription( "method", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         // when
         benchDesc = benchDesc
@@ -145,11 +144,11 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         assertThat( newHashSet( benchDesc.methods() ),
                     equalTo( newHashSet( new BenchmarkMethodDescription( "method", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldPassValidationWhenSettingParameterOnEnabledBenchmark()
+    void shouldPassValidationWhenSettingParameterOnEnabledBenchmark()
     {
         // given
         Validation validation = new Validation();
@@ -184,11 +183,11 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         assertThat( benchDesc.parameters().size(), equalTo( 1 ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).allowedValues(), equalTo( allowedValues ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).values(), equalTo( newHashSet( "1" ) ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldIgnoreEmptyApplyConfig()
+    void shouldIgnoreEmptyApplyConfig()
     {
         // given
         Validation validation = new Validation();
@@ -223,11 +222,11 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         assertThat( benchDesc.parameters().size(), equalTo( 1 ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).allowedValues(), equalTo( allowedValues ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).values(), equalTo( newHashSet( "3" ) ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldFailToApplyConfigToWrongBenchmark()
+    void shouldFailToApplyConfigToWrongBenchmark()
     {
         // given
         Validation validation = new Validation();
@@ -264,7 +263,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldFailValidationWhenConfiguredWithUnrecognizedBenchmark()
+    void shouldFailValidationWhenConfiguredWithUnrecognizedBenchmark()
     {
         // given
         Validation validation = new Validation();
@@ -283,15 +282,15 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
                 validation );
 
         // then
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      newHashSet( CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
-                                  NO_BENCHMARKS_FOUND ) );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( newHashSet( CONFIGURED_BENCHMARK_DOES_NOT_EXIST,
+                                         NO_BENCHMARKS_FOUND ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldFailValidationWhenConfigValueIsNotAllowed()
+    void shouldFailValidationWhenConfigValueIsNotAllowed()
     {
         // given
         Validation validation = new Validation();
@@ -317,14 +316,14 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( CONFIGURED_VALUE_IS_NOT_ALLOWED ) );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( CONFIGURED_VALUE_IS_NOT_ALLOWED ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldFailValidationWhenConfigParameterDoesNotExist()
+    void shouldFailValidationWhenConfigParameterDoesNotExist()
     {
         // given
         Validation validation = new Validation();
@@ -350,42 +349,42 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldFailValidationWhenDuplicateAllowedValues()
+    void shouldFailValidationWhenDuplicateAllowedValues()
     {
         // when
         Validation validation = new Validation();
         BenchmarkDescription.of( DuplicateAllowedBenchmark.class, validation, getBenchmarksFinder() );
 
         // then
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( DUPLICATE_ALLOWED_VALUE ) );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( DUPLICATE_ALLOWED_VALUE ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldFailValidationWhenDuplicateBaseValues()
+    void shouldFailValidationWhenDuplicateBaseValues()
     {
         // when
         Validation validation = new Validation();
         BenchmarkDescription.of( DuplicateBaseBenchmark.class, validation, getBenchmarksFinder() );
 
         // then
-        assertEquals( validation.report(),
-                      validation.errors(),
-                      singleton( DUPLICATE_BASE_VALUE ) );
+        assertThat( validation.report(),
+                    validation.errors(),
+                    equalTo( singleton( DUPLICATE_BASE_VALUE ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldComputeNumExecutions()
+    void shouldComputeNumExecutions()
     {
         Validation validation = new Validation();
 
@@ -415,11 +414,11 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
                         validation );
         assertThat( benchDesc.executionCount( 1 ), equalTo( 3 ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldExplodeBenchmarkDescription()
+    void shouldExplodeBenchmarkDescription()
     {
         String className = "classname";
         String group = "group";
@@ -600,7 +599,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldExplodeBenchmarkDescriptionParameters()
+    void shouldExplodeBenchmarkDescriptionParameters()
     {
         BenchmarkParamDescription tom = new BenchmarkParamDescription(
                 "tom",
@@ -751,7 +750,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldExplodeBenchmarkParamDescription()
+    void shouldExplodeBenchmarkParamDescription()
     {
         BenchmarkParamDescription original = new BenchmarkParamDescription(
                 "bob",
@@ -778,7 +777,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldExplodeBenchmarkMethodDescription()
+    void shouldExplodeBenchmarkMethodDescription()
     {
         String methodName = "name";
         Mode[] methodModes = {SampleTime, Throughput};
@@ -794,7 +793,7 @@ public class BenchmarkDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldExplodeEqualNumberOfElementsToExecutionCount()
+    void shouldExplodeEqualNumberOfElementsToExecutionCount()
     {
         Validation validation = new Validation();
         for ( Class benchmarkClass : getValidBenchmarksFinder().getBenchmarks() )

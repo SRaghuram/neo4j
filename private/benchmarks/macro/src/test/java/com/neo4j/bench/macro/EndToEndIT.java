@@ -66,7 +66,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;

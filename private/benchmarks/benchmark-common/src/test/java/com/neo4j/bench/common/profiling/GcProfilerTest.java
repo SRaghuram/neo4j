@@ -25,23 +25,24 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class GcProfilerTest
+class GcProfilerTest
 {
     @Inject
-    public TestDirectory tempFolder;
+    private TestDirectory tempFolder;
 
     private ForkDirectory forkDirectory;
     private BenchmarkGroup benchmarkGroup;
     private Benchmark benchmark;
 
     @BeforeEach
-    public void setUp() throws Exception
+    void setUp() throws Exception
     {
 
         Path parentDir = createTempDirectoryPath( tempFolder.absolutePath() );
@@ -55,7 +56,7 @@ public class GcProfilerTest
     }
 
     @Test
-    public void jvmArgsForJdk8()
+    void jvmArgsForJdk8()
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 8, "" );
@@ -64,7 +65,7 @@ public class GcProfilerTest
     }
 
     @Test
-    public void jvmArgsForJdk9()
+    void jvmArgsForJdk9()
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );

@@ -12,6 +12,7 @@ import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.TestDirectorySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,17 +32,17 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class JfrProfilerTest
+class JfrProfilerTest
 {
     @Inject
-    public TestDirectory tempFolder;
+    private TestDirectory tempFolder;
 
     private ForkDirectory forkDirectory;
     private BenchmarkGroup benchmarkGroup;
     private Benchmark benchmark;
 
     @BeforeEach
-    public void setUp() throws Exception
+    void setUp() throws Exception
     {
         Path parentDir = TestDirectorySupport.createTempDirectoryPath( tempFolder.absolutePath() );
 
@@ -54,7 +55,7 @@ public class JfrProfilerTest
     }
 
     @Test
-    public void jvmArgsForPreJdk11()
+    void jvmArgsForPreJdk11()
     {
         JvmVersion jvmVersion = JvmVersion.create( 8, JvmVersion.JAVA_TM_SE_RUNTIME_ENVIRONMENT );
         JfrProfiler profiler = new JfrProfiler();
@@ -63,7 +64,7 @@ public class JfrProfilerTest
     }
 
     @Test
-    public void jvmArgsForPostJdk11()
+    void jvmArgsForPostJdk11()
     {
         JvmVersion jvmVersion = JvmVersion.create( 11, "" );
         JfrProfiler profiler = new JfrProfiler();

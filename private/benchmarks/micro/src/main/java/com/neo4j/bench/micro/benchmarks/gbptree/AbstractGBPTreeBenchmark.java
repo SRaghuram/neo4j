@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.index.internal.gbptree.Writer;
@@ -177,7 +178,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     private static GBPTree<AdaptableKey,AdaptableValue> createGBPTree(
             PageCache pageCache,
             File indexFile,
-            AdaptableLayout layout ) throws IOException
+            AdaptableLayout layout )
     {
         return new GBPTree<>(
                 pageCache,

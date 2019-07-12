@@ -46,7 +46,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.common.model.Parameters.CLIENT;
 import static com.neo4j.bench.common.model.Parameters.NONE;
@@ -60,6 +59,7 @@ import static com.neo4j.bench.common.profiling.RecordingType.GC_SUMMARY;
 import static com.neo4j.bench.common.profiling.RecordingType.JFR;
 import static com.neo4j.bench.common.profiling.RecordingType.JFR_FLAMEGRAPH;
 import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -191,9 +191,9 @@ public class AddProfilesIT
                     .getMetricsFor( GROUP_2, BENCHMARK_2_A )
                     .profilerRecordings();
             ProfilerRecordings expectedProfilerRecordings2A = new ProfilerRecordings()
-                    .with( JFR, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR ) )
-            // skip in 4.0
-            // .with( JFR_FLAMEGRAPH, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR_FLAMEGRAPH ) );
+                    // skip in 4.0
+                    // .with( JFR_FLAMEGRAPH, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR_FLAMEGRAPH ) );
+                    .with( JFR, SERVER, "some-s3-bucket/" + filename( GROUP_2, BENCHMARK_2_A, SERVER, JFR ) );
             assertThat( actualProfilerRecordings2A, equalTo( expectedProfilerRecordings2A ) );
 
             // there should be exactly two profiles

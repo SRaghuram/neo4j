@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
-import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
@@ -29,128 +28,121 @@ public class ImportCommand implements Runnable
 {
     public static final String CMD_IMPORTER = "--importer";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_IMPORTER},
-            description = "Neo4j importer to use: BATCH, PARALLEL",
-            title = "Importer",
-            required = false )
+             name = {CMD_IMPORTER},
+             description = "Neo4j importer to use: BATCH, PARALLEL",
+             title = "Importer",
+             required = false )
     private String neo4jImporterString = Neo4jImporter.defaultImporter().name();
 
     public static final String CMD_CSV_SCHEMA = "--csv-schema";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CSV_SCHEMA},
-            description = "Format of source CSV files: CSV_REGULAR, CSV_MERGE",
-            title = "CSV Schema",
-            required = true )
+             name = {CMD_CSV_SCHEMA},
+             description = "Format of source CSV files: CSV_REGULAR, CSV_MERGE",
+             title = "CSV Schema",
+             required = true )
     private String csvSchemaString;
 
     public static final String CMD_NEO4J_SCHEMA = "--neo4j-schema";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_SCHEMA},
-            description = "Desired schema of target Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
-            title = "Neo4j Schema",
-            required = true )
+             name = {CMD_NEO4J_SCHEMA},
+             description = "Desired schema of target Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
+             title = "Neo4j Schema",
+             required = true )
     private String neo4jSchemaString;
 
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Target Neo4j database directory",
-            title = "Database Directory",
-            required = true )
+             name = {CMD_DB},
+             description = "Target Neo4j database directory",
+             title = "Database Directory",
+             required = true )
     private File dbDir;
 
     public static final String CMD_CSV = "--csv";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CSV},
-            description = "Source CSV dataset directory",
-            title = "CSV Dir",
-            required = true )
+             name = {CMD_CSV},
+             description = "Source CSV dataset directory",
+             title = "CSV Dir",
+             required = true )
     private File csvDir;
 
     public static final String CMD_WITH_UNIQUE = "--with-unique";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WITH_UNIQUE},
-            description = "Create unique constraints for properties that should have unique values",
-            title = "Create Unique Constraints",
-            required = false )
+             name = {CMD_WITH_UNIQUE},
+             description = "Create unique constraints for properties that should have unique values",
+             title = "Create Unique Constraints",
+             required = false )
     private boolean withUnique;
 
     public static final String CMD_WITH_MANDATORY = "--with-mandatory";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WITH_MANDATORY},
-            description = "Create mandatory constraints for required properties",
-            title = "Create Mandatory Constraints",
-            required = false )
+             name = {CMD_WITH_MANDATORY},
+             description = "Create mandatory constraints for required properties",
+             title = "Create Mandatory Constraints",
+             required = false )
     private boolean withMandatory;
 
     public static final String CMD_SOURCE_DATE = "--source-date";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_SOURCE_DATE},
-            description = "Format of date values in source CSV files: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
-            title = "Source Date Format",
-            required = true )
+             name = {CMD_SOURCE_DATE},
+             description = "Format of date values in source CSV files: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+             title = "Source Date Format",
+             required = true )
     private LdbcDateCodec.Format fromCsvFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
 
     public static final String CMD_TARGET_DATE = "--target-date";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TARGET_DATE},
-            description = "Format to store date in, in Neo4j database: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
-            title = "Target Date Format",
-            required = true )
+             name = {CMD_TARGET_DATE},
+             description = "Format to store date in, in Neo4j database: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+             title = "Target Date Format",
+             required = true )
     private LdbcDateCodec.Format toNeo4JFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
 
     public static final String CMD_TIMESTAMP_RESOLUTION = "--timestamp-resolution";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TIMESTAMP_RESOLUTION},
-            description = "Resolution of timestamp to append to 'dense' relationship types: " +
-                          "NOT_APPLICABLE, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND",
-            title = "Timestamp Resolution",
-            required = false )
+             name = {CMD_TIMESTAMP_RESOLUTION},
+             description = "Resolution of timestamp to append to 'dense' relationship types: " +
+                           "NOT_APPLICABLE, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND",
+             title = "Timestamp Resolution",
+             required = false )
     private LdbcDateCodec.Resolution timestampResolution = LdbcDateCodec.Resolution.NOT_APPLICABLE;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CONFIG},
-            description = "Import configuration file (only applicable to Batch Inserter importer variants)",
-            title = "Importer Config",
-            required = false )
+             name = {CMD_CONFIG},
+             description = "Import configuration file (only applicable to Batch Inserter importer variants)",
+             title = "Importer Config",
+             required = false )
     private File importerConfigurationFile;
 
     @Override
     public void run()
     {
         System.out.println( format( "Importer                       : %s",
-                neo4jImporterString ) );
+                                    neo4jImporterString ) );
         System.out.println( format( "Source CSV Schema              : %s",
-                csvSchemaString ) );
+                                    csvSchemaString ) );
         System.out.println( format( "Source CSV Directory           : %s",
-                (null == csvDir) ? null : csvDir.getAbsolutePath() ) );
+                                    (null == csvDir) ? null : csvDir.getAbsolutePath() ) );
         System.out.println( format( "Target Neo4j Schema            : %s",
-                neo4jSchemaString ) );
+                                    neo4jSchemaString ) );
         System.out.println( format( "Target Neo4j Directory         : %s",
-                (null == dbDir) ? null : dbDir.getAbsolutePath() ) );
+                                    (null == dbDir) ? null : dbDir.getAbsolutePath() ) );
         System.out.println( format( "Create Unique Constraints      : %s",
-                withUnique ) );
+                                    withUnique ) );
         System.out.println( format( "Create Mandatory Constraints   : %s",
-                withMandatory ) );
+                                    withMandatory ) );
         System.out.println( format( "Source CSV Date Format         : %s",
-                fromCsvFormat ) );
+                                    fromCsvFormat ) );
         System.out.println( format( "Target Neo4j Date Format       : %s",
-                toNeo4JFormat ) );
+                                    toNeo4JFormat ) );
         System.out.println( format( "Dense Timestamp Resolution     : %s",
-                timestampResolution ) );
+                                    timestampResolution ) );
         System.out.println( format( "Importer Configuration File    : %s",
-                (null == importerConfigurationFile) ? null : importerConfigurationFile.getAbsolutePath() ) );
+                                    (null == importerConfigurationFile) ? null : importerConfigurationFile.getAbsolutePath() ) );
 
         System.out.println( "*** Neo4j DB Properties ***" );
-        try
-        {
-            System.out.println( Neo4jDb.configToString( importerConfigurationFile ) );
-        }
-        catch ( DbException e )
-        {
-            throw new RuntimeException( "Unable to read importer configuration file to string", e );
-        }
+        System.out.println( Neo4jDb.configToString( importerConfigurationFile ) );
         System.out.println( "************************" );
 
         if ( !csvDir.exists() )
@@ -166,7 +158,7 @@ public class ImportCommand implements Runnable
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Invalid CSV Schema: %s\nValid values are: %s",
-                    csvSchemaString, Arrays.toString( CsvSchema.values() ) ) );
+                                                csvSchemaString, Arrays.toString( CsvSchema.values() ) ) );
         }
         Neo4jSchema neo4jSchema;
         try
@@ -176,7 +168,7 @@ public class ImportCommand implements Runnable
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Invalid Neo4j Schema: %s\nValid values are: %s",
-                    neo4jSchemaString, Arrays.toString( Neo4jSchema.values() ) ) );
+                                                neo4jSchemaString, Arrays.toString( Neo4jSchema.values() ) ) );
         }
         Neo4jImporter neo4jImporter;
         try
@@ -186,7 +178,7 @@ public class ImportCommand implements Runnable
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Invalid Neo4j Importer: %s\nValid values are: %s",
-                    neo4jImporterString, Arrays.toString( Neo4jImporter.values() ) ) );
+                                                neo4jImporterString, Arrays.toString( Neo4jImporter.values() ) ) );
         }
 
         LdbcSnbImporter importer = LdbcSnbImporter.importerFor( csvSchema, neo4jSchema, neo4jImporter );

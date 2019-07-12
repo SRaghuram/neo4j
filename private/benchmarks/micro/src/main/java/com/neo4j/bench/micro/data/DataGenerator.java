@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 

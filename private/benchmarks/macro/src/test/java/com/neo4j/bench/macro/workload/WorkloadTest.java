@@ -23,6 +23,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;

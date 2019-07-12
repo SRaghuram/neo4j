@@ -14,6 +14,7 @@ import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -35,8 +36,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.allOf;
@@ -190,7 +191,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = createTempFile( temporaryFolder.absolutePath() );
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),

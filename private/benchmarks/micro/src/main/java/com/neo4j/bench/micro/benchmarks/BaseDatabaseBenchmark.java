@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;

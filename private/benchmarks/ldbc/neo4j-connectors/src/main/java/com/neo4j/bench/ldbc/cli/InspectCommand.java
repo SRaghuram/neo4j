@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
-import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.utils.Utils;
@@ -28,18 +27,18 @@ public class InspectCommand implements Runnable
 {
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Target Neo4j database directory",
-            title = "DB Directory",
-            required = true )
+             name = {CMD_DB},
+             description = "Target Neo4j database directory",
+             title = "DB Directory",
+             required = true )
     private File storeDir;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CONFIG},
-            description = "Database configuration file",
-            title = "DB Config",
-            required = false )
+             name = {CMD_CONFIG},
+             description = "Database configuration file",
+             title = "DB Config",
+             required = false )
     private File dbConfigurationFile;
 
     @Override
@@ -48,17 +47,10 @@ public class InspectCommand implements Runnable
         System.out.println( format( "Target Neo4j Directory             : %s",
                                     (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
         System.out.println( format( "Database Configuration File        : %s",
-                (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
+                                    (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
 
         System.out.println( "*** Neo4j DB Properties ***" );
-        try
-        {
-            System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
-        }
-        catch ( DbException e )
-        {
-            throw new RuntimeException( "Unable to read database configuration file to string", e );
-        }
+        System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
         System.out.println( "************************" );
 
         try

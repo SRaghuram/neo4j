@@ -14,7 +14,6 @@
     <properties>
         <moduleName>com.neo4j.bench.jmh.api.test</moduleName>
         <jmh.version>1.21</jmh.version>
-        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
@@ -68,8 +67,7 @@
 
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>java-hamcrest</artifactId>
-            <version>${java-hamcrest.version}</version>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

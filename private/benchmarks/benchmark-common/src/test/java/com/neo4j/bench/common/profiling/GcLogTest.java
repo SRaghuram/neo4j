@@ -23,8 +23,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,9 +36,9 @@ public class GcLogTest
     public TestDirectory temporaryFolder;
 
     @Test
-    public void shouldSerializeGcLogEvent() throws IOException
+    void shouldSerializeGcLogEvent() throws IOException
     {
-        LocalDateTime wallClockTime = LocalDateTime.of(2017,1,1,1,1);
+        LocalDateTime wallClockTime = LocalDateTime.of( 2017, 1, 1, 1, 1 );
         Duration processTime = Duration.ofMillis( 1 );
         GcLog.EventType eventTime = GcLog.EventType.APPLICATION_TIME;
         Duration value = Duration.ofNanos( 40 );
@@ -58,7 +58,7 @@ public class GcLogTest
     }
 
     @Test
-    public void writeResultsToCsv() throws IOException
+    void writeResultsToCsv() throws IOException
     {
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
@@ -74,7 +74,7 @@ public class GcLogTest
     }
 
     @Test
-    public void writeResultsToJson() throws IOException
+    void writeResultsToJson() throws IOException
     {
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
@@ -87,7 +87,7 @@ public class GcLogTest
     }
 
     @Test
-    public void parseJdk8GcLogs() throws IOException
+    void parseJdk8GcLogs() throws IOException
     {
 
         // given
@@ -111,7 +111,7 @@ public class GcLogTest
     }
 
     @Test
-    public void parseInvalidJdk8GcLogs() throws IOException
+    void parseInvalidJdk8GcLogs() throws IOException
     {
 
         // given
@@ -137,7 +137,7 @@ public class GcLogTest
     }
 
     @Test
-    public void parseJdk10GcLogs() throws IOException
+    void parseJdk10GcLogs() throws IOException
     {
 
         // given

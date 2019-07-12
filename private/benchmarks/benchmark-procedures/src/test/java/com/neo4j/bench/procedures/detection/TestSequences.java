@@ -27,8 +27,8 @@ class TestSequences
     {
         return DoubleStream.of( values )
                            .mapToObj( d -> new Point(
-                                   new Double( d ).longValue(),
-                                   new Double( d ).longValue(),
+                                   Double.valueOf( d ).longValue(),
+                                   Double.valueOf( d ).longValue(),
                                    d,
                                    unit,
                                    NEO4J ) )

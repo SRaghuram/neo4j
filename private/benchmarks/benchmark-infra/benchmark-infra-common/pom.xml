@@ -10,6 +10,7 @@
 	</parent>
 	<artifactId>benchmark-infra-common</artifactId>
 	<properties>
+		<moduleName>com.neo4j.bench.infra</moduleName>
 		<license-text.header>../../build/license-header.txt</license-text.header>
 	</properties>
 	<dependencies>
@@ -41,16 +42,20 @@
 
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-api</artifactId>
-			<version>${junit.version}</version>
+			<artifactId>junit-jupiter-migrationsupport</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.vintage</groupId>
+			<artifactId>junit-vintage-engine</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit.version}</version>
+			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-core</artifactId>

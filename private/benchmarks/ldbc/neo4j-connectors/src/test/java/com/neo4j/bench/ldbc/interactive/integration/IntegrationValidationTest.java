@@ -21,7 +21,7 @@ import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
@@ -48,20 +48,20 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class IntegrationValidationTest
+class IntegrationValidationTest
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldCreatePublicValidationSet() throws Exception
+    void shouldCreatePublicValidationSet() throws Exception
     {
         File validationSetDir = getResource( "/validation_sets/neo4j/interactive/" );
         File dataDir = getResource( "/validation_sets/data/" );
@@ -209,7 +209,7 @@ public class IntegrationValidationTest
     }
 
     @Test
-    public void shouldValidateAgainstPublicNeo4jValidationSetApiRegular() throws Exception
+    void shouldValidateAgainstPublicNeo4jValidationSetApiRegular() throws Exception
     {
         doShouldValidateAgainstPublicValidationSet(
                 Scenario.randomInteractiveFor(
@@ -223,7 +223,7 @@ public class IntegrationValidationTest
     }
 
     @Test
-    public void shouldValidateAgainstPublicNeo4jValidationSetApiDense1() throws Exception
+    void shouldValidateAgainstPublicNeo4jValidationSetApiDense1() throws Exception
     {
         doShouldValidateAgainstPublicValidationSet(
                 Scenario.randomInteractiveFor( CsvSchema.CSV_MERGE, Neo4jSchema.NEO4J_DENSE_1 )
@@ -233,7 +233,7 @@ public class IntegrationValidationTest
     // TODO un-ignore Cypher validation test. currently disabled to because it takes too long to run.
     @Disabled
     @Test
-    public void shouldValidateAgainstPublicNeo4jValidationSetCypherDefault() throws Exception
+    void shouldValidateAgainstPublicNeo4jValidationSetCypherDefault() throws Exception
     {
         doShouldValidateAgainstPublicValidationSet(
                 Scenario.randomInteractiveFor(
@@ -253,7 +253,7 @@ public class IntegrationValidationTest
     // TODO un-ignore Cypher validation test. currently disabled to because it takes too long to run.
     @Disabled
     @Test
-    public void shouldValidateAgainstPublicNeo4jValidationSetCypherRemote() throws Exception
+    void shouldValidateAgainstPublicNeo4jValidationSetCypherRemote() throws Exception
     {
         doShouldValidateAgainstPublicValidationSet(
                 Scenario.randomInteractiveFor(

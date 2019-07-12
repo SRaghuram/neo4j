@@ -39,10 +39,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
 
 @ExtendWith( TestDirectoryExtension.class )

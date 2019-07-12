@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
-import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
@@ -31,50 +30,50 @@ public class IndexCommand implements Runnable
 {
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Target Neo4j database directory",
-            title = "DB Directory",
-            required = true )
+             name = {CMD_DB},
+             description = "Target Neo4j database directory",
+             title = "DB Directory",
+             required = true )
     private File storeDir;
 
     public static final String CMD_WITH_UNIQUE = "--with-unique";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WITH_UNIQUE},
-            description = "Create unique constraints for properties that should have unique values",
-            title = "Create Unique Constraints",
-            required = false )
+             name = {CMD_WITH_UNIQUE},
+             description = "Create unique constraints for properties that should have unique values",
+             title = "Create Unique Constraints",
+             required = false )
     private boolean withUnique;
 
     public static final String CMD_WITH_MANDATORY = "--with-mandatory";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WITH_MANDATORY},
-            description = "Create mandatory constraints for required properties",
-            title = "Create Mandatory Constraints",
-            required = false )
+             name = {CMD_WITH_MANDATORY},
+             description = "Create mandatory constraints for required properties",
+             title = "Create Mandatory Constraints",
+             required = false )
     private boolean withMandatory;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CONFIG},
-            description = "Database configuration file",
-            title = "DB Config",
-            required = false )
+             name = {CMD_CONFIG},
+             description = "Database configuration file",
+             title = "DB Config",
+             required = false )
     private File dbConfigurationFile;
 
     public static final String CMD_NEO4J_SCHEMA = "--neo4j-schema";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_SCHEMA},
-            description = "(Optional - can be inferred) Schema of Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
-            title = "Neo4j Schema",
-            required = false )
+             name = {CMD_NEO4J_SCHEMA},
+             description = "(Optional - can be inferred) Schema of Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
+             title = "Neo4j Schema",
+             required = false )
     private String neo4jSchemaString;
 
     public static final String CMD_DROP_FIRST = "--drop-first";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DROP_FIRST},
-            description = "Drop existing indexes & constraints before creating new ones",
-            title = "Drop Any Existing Indexes/Constraints",
-            required = false )
+             name = {CMD_DROP_FIRST},
+             description = "Drop existing indexes & constraints before creating new ones",
+             title = "Drop Any Existing Indexes/Constraints",
+             required = false )
     private boolean dropFirst;
 
     @Override
@@ -83,25 +82,18 @@ public class IndexCommand implements Runnable
         System.out.println( format( "Target Neo4j Directory             : %s",
                                     (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
         System.out.println( format( "Create Unique Constraints          : %s",
-                withUnique ) );
+                                    withUnique ) );
         System.out.println( format( "Create Mandatory Constraints       : %s",
-                withMandatory ) );
+                                    withMandatory ) );
         System.out.println( format( "Drop Existing Indexes/Constraints  : %s",
-                dropFirst ) );
+                                    dropFirst ) );
         System.out.println( format( "Database Configuration File        : %s",
-                (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
+                                    (null == dbConfigurationFile) ? null : dbConfigurationFile.getAbsolutePath() ) );
         System.out.println( format( "Target Neo4j Schema                : %s",
-                neo4jSchemaString ) );
+                                    neo4jSchemaString ) );
 
         System.out.println( "*** Neo4j DB Properties ***" );
-        try
-        {
-            System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
-        }
-        catch ( DbException e )
-        {
-            throw new RuntimeException( "Unable to read database configuration file to string", e );
-        }
+        System.out.println( Neo4jDb.configToString( dbConfigurationFile ) );
         System.out.println( "************************" );
 
         try

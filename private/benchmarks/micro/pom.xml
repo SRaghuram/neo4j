@@ -13,9 +13,9 @@
     <name>Neo4j - Micro Benchmarks</name>
 
     <properties>
+        <moduleName>com.neo4j.bench.micro</moduleName>
         <jmh.version>1.21</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
-        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
@@ -89,12 +89,13 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>27.1-jre</version>
         </dependency>
+
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-storage-engine-api</artifactId>
@@ -175,8 +176,7 @@
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>java-hamcrest</artifactId>
-            <version>${java-hamcrest.version}</version>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

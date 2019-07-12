@@ -216,7 +216,7 @@ public class LdbcIndexer
             for ( IndexDefinition def : db.schema().getIndexes() )
             {
                 LOGGER.info( format( "\t(%s , %s) - %s",
-                        def.getLabel(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
+                        def.getLabels(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
 
                 assertIndexNotFailed( db, def );
 
@@ -227,7 +227,7 @@ public class LdbcIndexer
                         Thread.sleep( 500 );
                     }
                     LOGGER.info( format( "\t(%s , %s) - %s",
-                            def.getLabel(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
+                            def.getLabels(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
 
                     assertIndexNotFailed( db, def );
                 }
@@ -245,7 +245,7 @@ public class LdbcIndexer
         if ( db.schema().getIndexState( def ) == Schema.IndexState.FAILED )
         {
             throw new RuntimeException( format( "Index (%s,%s) failed to build:\n%s",
-                    def.getLabel(),
+                    def.getLabels(),
                     def.getPropertyKeys(),
                     db.schema().getIndexFailure( def ) ) );
         }

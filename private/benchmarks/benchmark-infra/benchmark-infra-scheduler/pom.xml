@@ -12,6 +12,7 @@
     <artifactId>benchmark-infra-scheduler</artifactId>
 
     <properties>
+        <moduleName>com.neo4j.bench.infra.scheduler</moduleName>
         <amazon-sdk.version>1.11.524</amazon-sdk.version>
         <license-text.header>../../build/license-header.txt</license-text.header>
     </properties>

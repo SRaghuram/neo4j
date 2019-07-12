@@ -25,6 +25,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.common.options.Edition.COMMUNITY;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -104,7 +105,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeBenchmarkPlan() throws IOException
+    void shouldSerializeBenchmarkPlan() throws IOException
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -117,7 +118,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializePlan() throws IOException
+    void shouldSerializePlan() throws IOException
     {
         // given
         Plan before = testPlan( "plan description" );
@@ -126,7 +127,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializePlanTree() throws IOException
+    void shouldSerializePlanTree() throws IOException
     {
         // given
         PlanTree before = testPlan( "plan description" ).planTree();
@@ -135,7 +136,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeBenchmarkGroupBenchmarkPlans() throws IOException
+    void shouldSerializeBenchmarkGroupBenchmarkPlans() throws IOException
     {
         // given
         BenchmarkGroupBenchmarkPlans before = new BenchmarkGroupBenchmarkPlans();
@@ -247,7 +248,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeBenchmarkMetrics() throws IOException
+    void shouldSerializeBenchmarkMetrics() throws IOException
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -264,7 +265,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeBenchmarks() throws IOException
+    void shouldSerializeBenchmarks() throws IOException
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -323,7 +324,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializePlanCompilationMetrics() throws IOException
+    void shouldSerializePlanCompilationMetrics() throws IOException
     {
         // given
         Map<String,Long> compilationTimes = new HashMap<>();
@@ -347,7 +348,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeJava() throws IOException
+    void shouldSerializeJava() throws IOException
     {
         // given
         Java before = new Java( "jvm", "version", "jvm args" );
@@ -375,7 +376,7 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializeProfiles() throws IOException
+    void shouldSerializeProfiles() throws IOException
     {
         // given
         ProfilerRecordings profilerRecordings = new ProfilerRecordings()

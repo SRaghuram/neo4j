@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.data;
 
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.DataGenerator.GraphWriter;
 import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;

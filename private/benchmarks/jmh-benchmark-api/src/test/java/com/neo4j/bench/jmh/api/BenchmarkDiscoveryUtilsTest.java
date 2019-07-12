@@ -10,7 +10,6 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
@@ -26,15 +25,15 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.THREADS_PARAM;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.extractParameterValues;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.parametersAsMap;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BenchmarkDiscoveryUtilsTest
+class BenchmarkDiscoveryUtilsTest
 {
     @Test
-    public void shouldReadDescription()
+    void shouldReadDescription()
     {
         String description = BenchmarkDiscoveryUtils.descriptionFor( ValidEnabledBenchmark1.class );
 
@@ -42,7 +41,7 @@ public class BenchmarkDiscoveryUtilsTest
     }
 
     @Test
-    public void shouldReadIsEnabled()
+    void shouldReadIsEnabled()
     {
         boolean benchmark1IsEnabled = BenchmarkDiscoveryUtils.isEnabled( ValidEnabledBenchmark1.class );
         boolean benchmark2IsEnabled = BenchmarkDiscoveryUtils.isEnabled( ValidEnabledBenchmark2.class );
@@ -54,7 +53,7 @@ public class BenchmarkDiscoveryUtilsTest
     }
 
     @Test
-    public void shouldReadBenchmarkGroup()
+    void shouldReadBenchmarkGroup()
     {
         String group = BenchmarkDiscoveryUtils.benchmarkGroupFor( ValidEnabledBenchmark1.class );
 
@@ -62,7 +61,7 @@ public class BenchmarkDiscoveryUtilsTest
     }
 
     @Test
-    public void shouldReadBenchmarkIsThreadSafe()
+    void shouldReadBenchmarkIsThreadSafe()
     {
         boolean benchmark1IsThreadSafe = BenchmarkDiscoveryUtils.isThreadSafe( ValidEnabledBenchmark1.class );
         boolean benchmark2IsThreadSafe = BenchmarkDiscoveryUtils.isThreadSafe( ValidEnabledBenchmark2.class );
@@ -72,7 +71,7 @@ public class BenchmarkDiscoveryUtilsTest
     }
 
     @Test
-    public void shouldThrowExceptionWhenDuplicatesInParameterValues()
+    void shouldThrowExceptionWhenDuplicatesInParameterValues()
     {
         assertTrue( throwsExceptionWhenParameterValuesContainsDuplicates( newArrayList(
                 new ParameterValue( "k1", "v1" ),
@@ -107,7 +106,7 @@ public class BenchmarkDiscoveryUtilsTest
     }
 
     @Test
-    public void shouldExtractJmhParamsAndThreadsCorrectly()
+    void shouldExtractJmhParamsAndThreadsCorrectly()
     {
         int threads = 42;
         ParameterValue param1 = new ParameterValue( "param1", "value" );
@@ -126,7 +125,7 @@ public class BenchmarkDiscoveryUtilsTest
                 false, /* syncIterations */
                 Integer.parseInt( paramThreads.value() ),
                 new int[]{},/* threadGroups */
-                Collections.<String>emptyList(), /* threadGroupLabels */
+                Collections.emptyList(), /* threadGroupLabels */
                 1, /* forks */
                 1, /* warmupForks */
                 new IterationParams(
@@ -144,7 +143,7 @@ public class BenchmarkDiscoveryUtilsTest
                 TimeUnit.DAYS, /* time unit */
                 1, /* opsPerInvocation */
                 "jvm", /* jvm */
-                Collections.<String>emptyList(), /* jvmArgs */
+                Collections.emptyList(), /* jvmArgs */
                 "openjdk", /* vm name*/
                 "1.8.0", /* jdk version */
                 "1.8.0", /* vm version */
@@ -157,6 +156,6 @@ public class BenchmarkDiscoveryUtilsTest
         assertTrue( parameterValues.contains( param2 ) );
         assertTrue( parameterValues.contains( param3 ) );
         assertTrue( parameterValues.contains( paramThreads ) );
-        MatcherAssert.assertThat( parameterValues.size(), CoreMatchers.equalTo( 4 ) );
+        assertThat( parameterValues.size(), CoreMatchers.equalTo( 4 ) );
     }
 }

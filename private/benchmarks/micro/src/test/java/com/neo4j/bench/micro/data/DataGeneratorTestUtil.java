@@ -9,6 +9,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.IOException;

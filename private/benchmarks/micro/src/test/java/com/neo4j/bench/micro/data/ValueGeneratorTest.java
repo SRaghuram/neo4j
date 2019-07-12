@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.client.util.TestDirectorySupport;
+import com.neo4j.bench.common.util.TestDirectorySupport;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;

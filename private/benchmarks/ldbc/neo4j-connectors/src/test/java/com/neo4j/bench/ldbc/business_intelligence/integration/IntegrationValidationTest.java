@@ -18,7 +18,7 @@ import com.ldbc.driver.temporal.TimeSource;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
-import com.neo4j.bench.common.Store;
+import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
@@ -42,19 +42,19 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @Disabled
 @ExtendWith( TestDirectoryExtension.class )
-public class IntegrationValidationTest
+class IntegrationValidationTest
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldCreatePublicValidationSet() throws Exception
+    void shouldCreatePublicValidationSet() throws Exception
     {
         File validationSetDir = DriverConfigUtils.getResource( "/validation_sets/neo4j/business_intelligence/" );
         File dataDir = DriverConfigUtils.getResource( "/validation_sets/data/" );
@@ -192,7 +192,7 @@ public class IntegrationValidationTest
     }
 
     @Test
-    public void shouldValidateAgainstPublicNeo4jValidationSetApi() throws Exception
+    void shouldValidateAgainstPublicNeo4jValidationSetApi() throws Exception
     {
         doShouldValidateAgainstPublicValidationSetApi(
                 Scenario.randomBi()

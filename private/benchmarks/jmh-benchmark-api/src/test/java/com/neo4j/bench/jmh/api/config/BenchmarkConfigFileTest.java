@@ -24,16 +24,15 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
+class BenchmarkConfigFileTest extends BenchmarksFinderFixture
 {
     // READ
 
     @Test
-    public void shouldEnableBenchmark()
+    void shouldEnableBenchmark()
     {
         // when
         Validation validation = new Validation();
@@ -44,11 +43,11 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
         assertTrue( benchmarkConfigFile.getEntry( benchmarkName ).isEnabled() );
         assertThat( benchmarkConfigFile.getEntry( benchmarkName ).values().size(), equalTo( 0 ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldNotIgnoreDisabledBenchmarks()
+    void shouldNotIgnoreDisabledBenchmarks()
     {
         // when
         Validation validation = new Validation();
@@ -59,11 +58,11 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
         assertFalse( benchmarkConfigFile.getEntry( benchmarkName ).isEnabled() );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldParseParam()
+    void shouldParseParam()
     {
         // when
         Validation validation = new Validation();
@@ -80,11 +79,11 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         assertThat( benchmarkConfigFile.getEntry( benchmarkName ).values().get( paramName ),
                     equalTo( newHashSet( paramValue ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldParseInvalidParam()
+    void shouldParseInvalidParam()
     {
         // when
         Validation validation = new Validation();
@@ -108,7 +107,7 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldParseTwoBenchmarks()
+    void shouldParseTwoBenchmarks()
     {
         // when
         Validation validation = new Validation();
@@ -124,12 +123,12 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         assertThat( benchmarkConfigFile.getEntry( benchmarkName1 ), notNullValue() );
         assertThat( benchmarkConfigFile.getEntry( benchmarkName2 ), notNullValue() );
 
-        assertTrue( validation.report(), validation.errors().isEmpty() );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.errors().isEmpty(), validation.report() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
-    public void shouldFailValidationWhenEmptyParam()
+    void shouldFailValidationWhenEmptyParam()
     {
         // when
         Validation validation = new Validation();
@@ -138,12 +137,12 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, "" ), validation, getBenchmarksFinder() );
 
         // then
-        assertEquals( validation.report(), validation.errors(), singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
+        assertThat( validation.report(), validation.errors(), equalTo( singleton( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) ) );
         assertFalse( validation.isValid() );
     }
 
     @Test
-    public void shouldFailValidationWhenParamConfiguredButBenchmarkNotExplicitlyEnabledDisabled()
+    void shouldFailValidationWhenParamConfiguredButBenchmarkNotExplicitlyEnabledDisabled()
     {
         // when
         Validation validation = new Validation();
@@ -153,14 +152,14 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
         fromMap( map( benchmarkName + "." + paramName, "1" ), validation, getBenchmarksFinder() );
 
         // then
-        assertEquals( validation.report(), validation.errors(), singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
+        assertThat( validation.report(), validation.errors(), equalTo( singleton( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) ) );
         assertFalse( validation.isValid() );
     }
 
     // WRITE
 
     @Test
-    public void shouldWriteBenchmark()
+    void shouldWriteBenchmark()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
@@ -176,7 +175,7 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldWriteTwoBenchmarks()
+    void shouldWriteTwoBenchmarks()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
@@ -194,7 +193,7 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldWriteVerboseBenchmark()
+    void shouldWriteVerboseBenchmark()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
@@ -219,7 +218,7 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldWriteDisabledBenchmarks()
+    void shouldWriteDisabledBenchmarks()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
@@ -238,7 +237,7 @@ public class BenchmarkConfigFileTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldWriteVerboseDisabledBenchmark()
+    void shouldWriteVerboseDisabledBenchmark()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getBenchmarksFinder(), new Validation() );
 
