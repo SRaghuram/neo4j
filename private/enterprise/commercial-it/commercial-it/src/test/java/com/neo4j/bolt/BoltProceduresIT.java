@@ -50,6 +50,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 public class BoltProceduresIT
 {
@@ -112,7 +113,7 @@ public class BoltProceduresIT
     @Test
     public void shouldHaveAccessToRoutingProcedureWithDatabaseNameOnSystemDb()
     {
-        try ( var session = driver.session( t -> t.withDatabase( "system" ) ) )
+        try ( var session = driver.session( forDatabase( "system" ) ) )
         {
             var params = new HashMap<String,Object>();
             params.put( "context", NullValue.NULL );

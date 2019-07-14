@@ -41,6 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.SocketAddressParser.socketAddress;
 import static org.neo4j.driver.AccessMode.WRITE;
+import static org.neo4j.driver.AccessMode.READ;
+import static org.neo4j.driver.internal.SessionConfig.builder;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -73,7 +75,7 @@ abstract class BaseRoutingProcedureIT
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
-            try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
+            try ( Session session = driver.session( builder().withDefaultAccessMode( WRITE ).build() ) )
             {
                 assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (:Node)" ).consume() );
             }
@@ -126,7 +128,7 @@ abstract class BaseRoutingProcedureIT
 
     private static void performRead( Driver driver, String databaseName )
     {
-        try ( Session session = driver.session( t -> t.withDefaultAccessMode( AccessMode.READ ).withDatabase( databaseName ) ) )
+        try ( Session session = driver.session( builder().withDefaultAccessMode( READ ).withDatabase( databaseName ).build() ) )
         {
             Record record = session.readTransaction( tx -> tx.run( "RETURN 42 AS id" ).single() );
             assertEquals( 42, record.get( "id" ).asInt() );
@@ -135,7 +137,7 @@ abstract class BaseRoutingProcedureIT
 
     private static void performWrite( Driver driver )
     {
-        try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
+        try ( Session session = driver.session( builder().withDefaultAccessMode( WRITE ).build() ) )
         {
             Record record = session.writeTransaction( tx -> tx.run( "CREATE (n:Node {id: 4242}) RETURN n.id AS id" ).single() );
             assertEquals( 4242, record.get( "id" ).asInt() );

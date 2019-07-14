@@ -65,6 +65,7 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.Values.parameters;
+import static org.neo4j.driver.internal.SessionConfig.builder;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -99,7 +100,7 @@ class BoltCausalClusteringIT
     void removePersons() throws TimeoutException
     {
         try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() );
-                Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
+                Session session = driver.session( builder().withDefaultAccessMode( WRITE ).build() ) )
         {
             // when
             session.run( "MATCH (n:Person) DELETE n" ).consume();
@@ -168,7 +169,7 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( core.routingURI() ) )
         {
 
-            return inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
+            return inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 // when
                 session.run( "MERGE (n:Person {name: 'Jim'})" ).consume();
@@ -188,7 +189,7 @@ class BoltCausalClusteringIT
             CoreClusterMember leader = cluster.awaitLeader();
 
             try ( Driver driver = makeDriver( leader.routingURI() );
-                    Session session = driver.session( t -> t.withDefaultAccessMode( READ ) ) )
+                    Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
             {
                 // when
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
@@ -344,7 +345,7 @@ class BoltCausalClusteringIT
                     fail( "Failed to write to the new leader in time. Addresses seen: " + seenAddresses );
                 }
 
-                try ( Session session = driver.session( t -> t.withDefaultAccessMode( WRITE ) ) )
+                try ( Session session = driver.session( builder().withDefaultAccessMode( WRITE ).build() ) )
                 {
                     StatementResult result = session.run( "CREATE (p:Person)" );
                     ServerInfo server = result.summary().server();
@@ -449,7 +450,7 @@ class BoltCausalClusteringIT
 
             assertNotNull( bookmark );
 
-            try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) );
+            try ( Session session = driver.session( builder().withBookmarks( bookmark ).build() );
                     Transaction tx = session.beginTransaction() )
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
@@ -467,14 +468,14 @@ class BoltCausalClusteringIT
 
         try ( Driver driver = makeDriver( leader.directURI() ) )
         {
-            inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
+            inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 return null;
             } );
 
             String bookmark;
-            try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ) ) )
+            try ( Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -487,7 +488,7 @@ class BoltCausalClusteringIT
 
             assertNotNull( bookmark );
 
-            inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ).withBookmarks( bookmark ) ), session ->
+            inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).withBookmarks( bookmark ).build() ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -518,7 +519,7 @@ class BoltCausalClusteringIT
         try ( Driver driver1 = makeDriver( leader.directURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver1, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
+            String bookmark = inExpirableSession( driver1, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -538,7 +539,7 @@ class BoltCausalClusteringIT
             try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
             {
 
-                try ( Session session = driver2.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
+                try ( Session session = driver2.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
                 {
                     try ( Transaction tx = session.beginTransaction() )
                     {
@@ -559,7 +560,7 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver, d -> d.session( t -> t.withDefaultAccessMode( WRITE ) ), session ->
+            String bookmark = inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -589,7 +590,7 @@ class BoltCausalClusteringIT
             {
                 for ( int i = 0; i < cluster.readReplicas().size(); i++ ) // don't care about cores
                 {
-                    try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
+                    try ( Session session = driver.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
                     {
                         executeReadQuery( session );
 
@@ -650,7 +651,7 @@ class BoltCausalClusteringIT
             } );
 
             // then
-            try ( Session session = driver.session( t -> t.withDefaultAccessMode( READ ).withBookmarks( bookmark ) ) )
+            try ( Session session = driver.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -722,7 +723,7 @@ class BoltCausalClusteringIT
             String bookmark = lastBookmark;
             for ( int i = 0; i < numberOfRequests; i++ ) // don't care about cores
             {
-                try ( Session session = driver.session( t -> t.withBookmarks( bookmark ) ) )
+                try ( Session session = driver.session( builder().withBookmarks( bookmark ).build() ) )
                 {
                     happyCount += session.readTransaction( tx ->
                     {

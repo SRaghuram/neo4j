@@ -30,6 +30,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class MultiDatabaseBoltIT
@@ -60,7 +61,8 @@ class MultiDatabaseBoltIT
         managementService = createManagementService();
         TransientException transientException = assertThrows( TransientException.class, () ->
         {
-            try ( var driver = GraphDatabase.driver( boltAddress() ); var session = driver.session( template -> template.withDatabase( databaseName ) ) )
+            try ( var driver = GraphDatabase.driver( boltAddress() );
+                  var session = driver.session( forDatabase( databaseName ) ) )
             {
                 session.run( "CREATE (n)" ).consume();
             }

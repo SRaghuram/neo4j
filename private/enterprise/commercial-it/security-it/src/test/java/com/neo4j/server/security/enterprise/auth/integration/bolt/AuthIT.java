@@ -51,6 +51,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 @SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )
@@ -399,7 +400,7 @@ public class AuthIT extends AuthTestBase
 
         try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
         {
-            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 session.run( "CREATE USER " + READ_USER + " SET PASSWORD 'foo'" ).list();
                 fail( "should have gotten exception" );
@@ -418,7 +419,7 @@ public class AuthIT extends AuthTestBase
 
         try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
         {
-            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 session.run( "GRANT ROLE none TO " + READ_USER ).list();
                 fail( "should have gotten exception" );
@@ -437,7 +438,7 @@ public class AuthIT extends AuthTestBase
 
         try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
         {
-            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 session.run( "CREATE DATABASE foo" ).consume();
                 session.run( "CREATE ROLE fooRole" ).consume();
@@ -445,7 +446,7 @@ public class AuthIT extends AuthTestBase
                 session.run( "GRANT MATCH (foo) ON GRAPH * NODES * TO fooRole" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO fooRole" ).consume();
             }
-            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE fooRole PRIVILEGES" ).list();
                 assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 4 ) );

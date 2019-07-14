@@ -16,6 +16,7 @@ import org.neo4j.driver.Session;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 public abstract class AuthTestBase extends EnterpriseAuthenticationTestBase
 {
@@ -99,7 +100,7 @@ public abstract class AuthTestBase extends EnterpriseAuthenticationTestBase
     {
         try ( Driver driver = connectDriver( READ_USER, getPassword() ) )
         {
-            try ( Session session = driver.session( t -> t.withDatabase( SYSTEM_DATABASE_NAME ) ) )
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW DATABASES" ).list();
                 assertThat( records.size(), equalTo( 2 ) );
