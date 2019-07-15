@@ -32,7 +32,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -56,6 +55,7 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.driver.AuthTokens.basic;
 import static org.neo4j.driver.AuthTokens.custom;
+import static org.neo4j.driver.GraphDatabase.driver;
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
@@ -275,8 +275,10 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     {
         try
         {
-            return GraphDatabase.driver( "bolt://" +
-                            dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" ).toString(), token, config );
+            var localAddress = dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+            var driver = driver( "bolt://" + localAddress.toString(), token, config );
+            driver.verifyConnectivity();
+            return driver;
         }
         catch ( AuthenticationException e )
         {
