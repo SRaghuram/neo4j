@@ -138,4 +138,10 @@ public class BarrierAwareIdGenerator implements IdGenerator
             throw new IdGenerationException( "This instance is no longer able to manage IDs because of leader re-election", e, e.status() );
         }
     }
+
+    @Override
+    public void clearCache()
+    {
+        delegate.clearCache();
+    }
 }
