@@ -17,6 +17,7 @@
 
     <properties>
         <moduleName>org.neo4j.stresstests</moduleName>
+        <default.jupiter.test.timeout>8h</default.jupiter.test.timeout>
     </properties>
 
     <scm>
