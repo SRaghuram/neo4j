@@ -412,9 +412,9 @@ public class ValueGeneratorTest
     public void shouldSerializeDeserializePointGenerators() throws IOException
     {
         doShouldBeSerializable( PointGenerator.random( -1, 1, Long.MIN_VALUE, Long.MAX_VALUE, new CRS.Cartesian() ) );
-        doShouldBeSerializable( PointGenerator.random( -1, 1, Long.MIN_VALUE, Long.MAX_VALUE, new CRS.WGS84() ) );
+        doShouldBeSerializable( PointGenerator.random( -1, 1, -90, 90, new CRS.WGS84() ) );
         doShouldBeSerializable( PointGenerator.grid( -10, 10, 0, 100, 1_000, new CRS.Cartesian() ) );
-        doShouldBeSerializable( PointGenerator.grid( -10, 10, 0, 100, 1_000, new CRS.WGS84() ) );
+        doShouldBeSerializable( PointGenerator.grid( -180, 180, -90, 90, 1_000, new CRS.WGS84() ) );
         doShouldBeSerializable( circleGrid( ClusterGridDefinition.from(
                 10,
                 10,
@@ -432,8 +432,8 @@ public class ValueGeneratorTest
                 10,
                 -1_000,
                 1_000,
-                -10_000,
-                0,
+                -90,
+                90,
                 1_000_000,
                 new CRS.WGS84()
         ) ) );
@@ -454,8 +454,8 @@ public class ValueGeneratorTest
                 10,
                 -1_000,
                 1_000,
-                -10_000,
-                0,
+                -90,
+                90,
                 1_000_000,
                 new CRS.WGS84()
         ) ) );

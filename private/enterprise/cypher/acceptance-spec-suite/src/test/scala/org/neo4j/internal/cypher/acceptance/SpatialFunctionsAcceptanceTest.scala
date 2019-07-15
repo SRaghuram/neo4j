@@ -41,9 +41,9 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // no wrapping for y coordinates
     failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, 91.0]. Valid range is [-90,90]."))
+      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, 91.0]. Valid range is [-90, 90]."))
     failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, -91.0]. Valid range is [-90,90]."))
+      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, -91.0]. Valid range is [-90, 90]."))
   }
 
   test("point function should work with literal map") {
