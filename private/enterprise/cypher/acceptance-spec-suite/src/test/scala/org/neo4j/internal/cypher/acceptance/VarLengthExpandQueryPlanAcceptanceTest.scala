@@ -414,42 +414,28 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     executeSingle(setup)
   }
 
-
-  // TODO a) Figure out what is going in Q1
-  //      b) Backport extractPredicates de-duplication from 4.0 to avoid. Verify that we get 2 less RollupApplies.
-  //      c) Make the stopper in PatternExpressionSolver stop on `coalesce`. Verify that we get no more RollupApplies.
-  test("q1") {
+  test("Var expand should plan NestedPlanExpressions for inner predicates, not RollUpApply") {
     setupEvilCustomerGraph()
 
-    val q =
+    val query =
       """
-        |WITH 'ACR' AS laacr, 'idSitrDep' AS leIdSitr, 1562144482517 AS ladate
-        |MATCH (etatDepartPropagation:EtatElementHTA {acr:laacr, idSitr:leIdSitr})-[:EST_ETAT_DE]->(elementDepartPropagation:ElementHTA)
-        |WHERE etatDepartPropagation.dateDebut <= ladate < etatDepartPropagation.dateFin
-        |WITH elementDepartPropagation, ladate
-        |MATCH path = ( (elementDepartPropagation) -[:EST_CONNECTE_A*0..]- (element:ElementHTA) )
+        |MATCH (ee1:EtatElementHTA {acr:'ACR', idSitr:'idSitrDep'})-[:EST_ETAT_DE]->(e1:ElementHTA)
+        |WITH e1
+        |MATCH path = ( (e1) -[r1:EST_CONNECTE_A*0..]- (element:ElementHTA) )
         |WHERE
         |    ALL(noeud in nodes(path) WHERE
-        |      noeud.dateDebut <= ladate < noeud.dateFin
-        |      AND coalesce(
-        |            head( [ (noeud)<-[:EST_POSITION_DE]-(pos:Position) WHERE pos.dateDebut <= ladate < pos.dateFin | pos.passant ] ),
-        |            head( [ (noeud)<-[:EST_ETAT_DE]-(etatNoeud:EtatElementHTA) WHERE etatNoeud.dateDebut <= ladate < etatNoeud.dateFin AND EXISTS (etatNoeud.positionSchemaNormal) | false ] ),
-        |            true)
-        |    )// = true
-        |AND
-        |    ALL(r in relationships(path)
-        |        WHERE r.dateDebut <= ladate < r.dateFin)
-        |OPTIONAL MATCH (ge:AnnotationProvisoire:GroupeElectrogene) -[:ANNOTE]-> (element)
-        |  WHERE ge.dateDebut <= ladate < ge.dateFin
-        |WITH element, ge, ladate
-        |MATCH (etat:EtatElementHTA) -[:EST_ETAT_DE]-> (element)
-        |RETURN element
+        |      head( [ (noeud)<-[r2:EST_POSITION_DE]-(pos:Position) | pos.passant ] ) = true
+        |      //noeud.acr = "ACR"
+        |    )
+        |RETURN path
       """.stripMargin
 
-    val r = executeSingle(q)
-
-    println(r.executionPlanDescription())
-    println(r.toList)
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy =
+      ComparePlansWithAssertion( plan => {
+        plan shouldNot includeSomewhere.aPlan("RollUpApply")
+      }))
+    result.toList should have size 1
   }
 
   test("Var expand should honour the predicate also for the first node: with GetDregree") {
