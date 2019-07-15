@@ -22,12 +22,19 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.graphdb.DatabaseShutdownException;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -48,6 +55,9 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -161,6 +171,110 @@ public final class CausalClusteringTestHelpers
         assertThat( checkPointsRemoved, greaterThan( 0 ) );
     }
 
+    public static void createDatabase( String databaseName, Cluster cluster ) throws Exception
+    {
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "CREATE DATABASE " + databaseName );
+            tx.success();
+        } );
+    }
+
+    public static void startDatabase( String databaseName, Cluster cluster ) throws Exception
+    {
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "START DATABASE " + databaseName );
+            tx.success();
+        } );
+    }
+
+    public static void stopDatabase( String databaseName, Cluster cluster ) throws Exception
+    {
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "STOP DATABASE " + databaseName );
+            tx.success();
+        } );
+    }
+
+    public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 1, MINUTES );
+    }
+
+    public static void assertDatabaseEventuallyStarted( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
+                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 1, MINUTES );
+    }
+
+    public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), is( true ), 1, MINUTES );
+    }
+
+    public static void assertDatabaseDoesNotExist( String databaseName, Cluster cluster ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), is( true ), 1, MINUTES );
+    }
+
+    private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
+    {
+        return membersHaveDatabaseState( expected, cluster.allMembers().collect( toSet() ), databaseName );
+    }
+
+    private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Set<ClusterMember> members, String databaseName )
+    {
+        return members.stream()
+                .map( member -> memberDatabaseState( member, databaseName ) )
+                .allMatch( availability -> availability == expected );
+    }
+
+    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Cluster cluster )
+    {
+        return memberDatabaseStates( databaseName, cluster.allMembers().collect( toSet() ) );
+    }
+
+    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Set<ClusterMember> members )
+    {
+        return members.stream()
+                .collect( toMap( identity(), member -> memberDatabaseState( member, databaseName ) ) );
+    }
+
+    private static DatabaseAvailability memberDatabaseState( ClusterMember member, String databaseName )
+    {
+        GraphDatabaseService db;
+
+        try
+        {
+            db = member.managementService().database( databaseName );
+        }
+        catch ( DatabaseNotFoundException ignored )
+        {
+            return DatabaseAvailability.ABSENT;
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.success();
+        }
+        catch ( DatabaseShutdownException ignored )
+        {
+            return DatabaseAvailability.STOPPED;
+        }
+        catch ( TransactionFailureException ignored )
+        {
+            // This should be transient!
+            return DatabaseAvailability.UNDEFINED;
+        }
+
+        return DatabaseAvailability.AVAILABLE;
+    }
+
     private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException
     {
         var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), new Monitors() );
@@ -210,5 +324,25 @@ public final class CausalClusteringTestHelpers
                     .map( type::cast )
                     .orElseThrow( IllegalStateException::new );
         }
+    }
+
+    private enum DatabaseAvailability
+    {
+        /**
+         * The state is undefined (not to be confused with unavailable). Do not assert on this value in tests!
+         */
+        UNDEFINED,
+        /**
+         * A database with the specified name does not exist.
+         */
+        ABSENT,
+        /**
+         * The database is stopped.
+         */
+        STOPPED,
+        /**
+         * The database is available for transactions.
+         */
+        AVAILABLE,
     }
 }

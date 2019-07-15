@@ -15,8 +15,9 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -28,17 +29,21 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final SystemGraphDbmsModel dbmsModel;
     private final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
+    private final ReconciledTransactionIdTracker reconciledTxIdTracker;
     protected final DatabaseIdRepository databaseIdRepository;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, DatabaseIdRepository databaseIdRepository )
     {
+        var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
+        var txBridge = globalModule.getThreadToTransactionBridge();
+
         this.globalModule = globalModule;
         this.databaseManager = databaseManager;
         this.databaseIdRepository = databaseIdRepository;
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
-
+        this.reconciledTxIdTracker = new ReconciledTransactionIdTracker( internalLogProvider );
         this.dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
-        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository, globalModule.getThreadToTransactionBridge() );
+        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository, txBridge, reconciledTxIdTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, databaseIdRepository );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
@@ -64,12 +69,14 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
         systemOperator.trigger( false ).await( databaseIdRepository.systemDatabase() );
 
-        GraphDatabaseService systemDatabase = getSystemDatabase( databaseManager );
+        var systemDatabase = getSystemDatabase( databaseManager );
         dbmsModel.setSystemDatabase( systemDatabase );
 
         //Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
         systemOperator.trigger( false ).awaitAll();
+
+        initializeReconciledTxIdTracker( systemDatabase );
     }
 
     /**
@@ -85,6 +92,11 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     public void stop()
     {
         stopAllDatabases();
+    }
+
+    public ReconciledTransactionIdTracker reconciledTxIdTracker()
+    {
+        return reconciledTxIdTracker;
     }
 
     protected Stream<DbmsOperator> operators()
@@ -104,7 +116,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         } );
     }
 
-    private GraphDatabaseFacade getSystemDatabase( DM databaseManager )
+    private GraphDatabaseAPI getSystemDatabase( DM databaseManager )
     {
         return databaseManager.getDatabaseContext( databaseIdRepository.systemDatabase() ).orElseThrow().databaseFacade();
     }
@@ -113,5 +125,12 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     {
         return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
                 globalModule.getJobScheduler() );
+    }
+
+    private void initializeReconciledTxIdTracker( GraphDatabaseAPI systemDb )
+    {
+        var resolver = systemDb.getDependencyResolver();
+        var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
+        reconciledTxIdTracker.initialize( txIdStore.getLastClosedTransactionId() );
     }
 }

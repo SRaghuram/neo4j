@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -18,6 +17,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
@@ -61,15 +61,13 @@ public class SystemGraphDbmsModel
 
         try ( var tx = systemDatabase.beginTx() )
         {
-            var changedDatabases = StreamSupport
-                    .stream( transactionData.assignedNodeProperties().spliterator(), false )
+            var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
                     .map( PropertyEntry::entity )
                     .filter( n -> n.hasLabel( DATABASE_LABEL ) )
                     .map( this::getDatabaseId )
                     .distinct();
 
-            var deletedDatabases = StreamSupport
-                    .stream( transactionData.assignedLabels().spliterator(), false )
+            var deletedDatabases = Iterables.stream( transactionData.assignedLabels() )
                     .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
                     .map( LabelEntry::node )
                     .map( this::getDatabaseId );

@@ -9,8 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -26,6 +24,8 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
 import com.neo4j.dbms.TransactionEventService;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
@@ -174,8 +174,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        globalModule.getGlobalLife().add( new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService,
-                internalOperator, databaseIdRepository ) );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository );
+        globalModule.getGlobalLife().add( reconcilerModule );
+        globalModule.getGlobalDependencies().satisfyDependency( reconcilerModule.reconciledTxIdTracker() );
 
         return databaseManager;
     }

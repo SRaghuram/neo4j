@@ -15,43 +15,33 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.graphdb.DatabaseShutdownException;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.dbms.database.ClusterDatabaseManagementIT.DatabaseAvailability.ABSENT;
-import static com.neo4j.dbms.database.ClusterDatabaseManagementIT.DatabaseAvailability.AVAILABLE;
-import static com.neo4j.dbms.database.ClusterDatabaseManagementIT.DatabaseAvailability.STOPPED;
-import static com.neo4j.dbms.database.ClusterDatabaseManagementIT.DatabaseAvailability.UNDEFINED;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.util.stream.Collectors.toSet;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
-import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // TODO: Add tests for DROP DATABASE.
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterDatabaseManagementIT
 {
-    private final int DEFAULT_TIMEOUT = 60;
-
     @Inject
     private ClusterFactory clusterFactory;
 
-    private ClusterConfig clusterConfig = clusterConfig()
+    private final ClusterConfig clusterConfig = clusterConfig()
             .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
             .withSharedCoreParam( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME )
             .withNumberOfCoreMembers( 3 )
@@ -62,36 +52,21 @@ class ClusterDatabaseManagementIT
     {
         // given
         var cluster = startCluster();
-        assertTrue( allMembersHaveDatabaseState( ABSENT, cluster, "foo" ) );
+        assertDatabaseDoesNotExist( "foo", cluster );
 
         // when
-        createDatabase( cluster, "foo" );
-        createDatabase( cluster, "bar" );
+        createDatabase( "foo", cluster );
+        createDatabase( "bar", cluster );
 
         // then
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        assertDatabaseEventuallyStarted( "bar", cluster );
 
         for ( int i = 0; i < 3; i++ )
         {
-            assertCanStopStartDatabase( cluster, "foo" );
-            assertCanStopStartDatabase( cluster, "bar" );
+            assertCanStopStartDatabase( "foo", cluster );
+            assertCanStopStartDatabase( "bar", cluster );
         }
-    }
-
-    private void assertCanStopStartDatabase( Cluster cluster, String databaseName ) throws Exception
-    {
-        // when
-        stopDatabase( cluster, databaseName );
-
-        // then
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, databaseName ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-
-        // when
-        startDatabase( cluster, databaseName );
-
-        // then
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, databaseName ), is( true ), DEFAULT_TIMEOUT, SECONDS );
     }
 
     @Test
@@ -102,21 +77,21 @@ class ClusterDatabaseManagementIT
                 .withNumberOfCoreMembers( 4 )
                 .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" );
         var cluster = startCluster( modifiedConfig );
-        assertTrue( allMembersHaveDatabaseState( ABSENT, cluster, "foo" ) );
+        assertDatabaseDoesNotExist( "foo", cluster );
 
         var rejoiningMembers = oneCoreAndOneReadReplica( cluster );
-        var remainingMembers = cluster.allMembers().filter( m -> !rejoiningMembers.contains( m ) ).collect( Collectors.toList() );
+        var remainingMembers = cluster.allMembers().filter( m -> !rejoiningMembers.contains( m ) ).collect( toSet() );
 
         rejoiningMembers.forEach( ClusterMember::shutdown );
 
-        createDatabase( cluster, "foo" );
-        assertEventually( () -> membersHaveDatabaseState( AVAILABLE, remainingMembers, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        createDatabase( "foo", cluster );
+        assertDatabaseEventuallyStarted( "foo", remainingMembers );
 
         // when
         rejoiningMembers.forEach( ClusterMember::start );
 
         // then
-        assertEventually( () -> membersHaveDatabaseState( AVAILABLE, rejoiningMembers, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", rejoiningMembers );
     }
 
     @Test
@@ -125,18 +100,18 @@ class ClusterDatabaseManagementIT
         // given
         var cluster = startCluster();
 
-        createDatabase( cluster, "foo" );
-        createDatabase( cluster, "bar" );
+        createDatabase( "foo", cluster );
+        createDatabase( "bar", cluster );
 
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        assertDatabaseEventuallyStarted( "bar", cluster );
 
         // when
         restartCluster( cluster );
 
         // then
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        assertDatabaseEventuallyStarted( "bar", cluster );
     }
 
     @Test
@@ -145,24 +120,24 @@ class ClusterDatabaseManagementIT
         // given
         var cluster = startCluster();
 
-        createDatabase( cluster, "foo" );
-        createDatabase( cluster, "bar" );
+        createDatabase( "foo", cluster );
+        createDatabase( "bar", cluster );
 
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        assertDatabaseEventuallyStarted( "bar", cluster );
 
-        stopDatabase( cluster, "foo" );
-        stopDatabase( cluster, "bar" );
+        stopDatabase( "foo", cluster );
+        stopDatabase( "bar", cluster );
 
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStopped( "foo", cluster );
+        assertDatabaseEventuallyStopped( "bar", cluster );
 
         // when
         restartCluster( cluster );
 
         // then
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "bar" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStopped( "foo", cluster );
+        assertDatabaseEventuallyStopped( "bar", cluster );
     }
 
     @Test
@@ -170,8 +145,8 @@ class ClusterDatabaseManagementIT
     {
         // given
         var cluster = startCluster();
-        createDatabase( cluster, "foo" );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        createDatabase( "foo", cluster );
+        assertDatabaseEventuallyStarted( "foo", cluster );
 
         var someMembers = oneCoreAndOneReadReplica( cluster );
 
@@ -179,7 +154,7 @@ class ClusterDatabaseManagementIT
         restartMembers( someMembers );
 
         // then
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( "foo", cluster );
     }
 
     @Test
@@ -187,10 +162,10 @@ class ClusterDatabaseManagementIT
     {
         // given
         var cluster = startCluster();
-        createDatabase( cluster, "foo" );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        stopDatabase( cluster, "foo" );
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        createDatabase( "foo", cluster );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        stopDatabase( "foo", cluster );
+        assertDatabaseEventuallyStopped( "foo", cluster );
 
         var someMembers = oneCoreAndOneReadReplica( cluster );
 
@@ -198,37 +173,25 @@ class ClusterDatabaseManagementIT
         restartMembers( someMembers );
 
         // then
-        assertEventually( () -> allMembersHaveDatabaseState( STOPPED, cluster, "foo" ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStopped( "foo", cluster );
     }
 
-    private void createDatabase( Cluster cluster, String databaseName ) throws Exception
+    private static void assertCanStopStartDatabase( String databaseName, Cluster cluster ) throws Exception
     {
-        cluster.coreTx( SYSTEM_DATABASE_NAME, ( sys, tx ) ->
-        {
-            sys.execute( "CREATE DATABASE " + databaseName );
-            tx.success();
-        } );
+        // when
+        stopDatabase( databaseName, cluster );
+
+        // then
+        assertDatabaseEventuallyStopped( databaseName, cluster );
+
+        // when
+        startDatabase( databaseName, cluster );
+
+        // then
+        assertDatabaseEventuallyStarted( databaseName, cluster );
     }
 
-    private void startDatabase( Cluster cluster, String databaseName ) throws Exception
-    {
-        cluster.coreTx( SYSTEM_DATABASE_NAME, ( sys, tx ) ->
-        {
-            sys.execute( "START DATABASE " + databaseName );
-            tx.success();
-        } );
-    }
-
-    private void stopDatabase( Cluster cluster, String databaseName ) throws Exception
-    {
-        cluster.coreTx( SYSTEM_DATABASE_NAME, ( sys, tx ) ->
-        {
-            sys.execute( "STOP DATABASE " + databaseName );
-            tx.success();
-        } );
-    }
-
-    private void restartMembers( Set<ClusterMember> restartingMembers )
+    private static void restartMembers( Set<ClusterMember> restartingMembers )
     {
         restartingMembers.forEach( ClusterMember::shutdown );
         restartingMembers.forEach( ClusterMember::start );
@@ -248,7 +211,7 @@ class ClusterDatabaseManagementIT
         return cluster;
     }
 
-    private void restartCluster( Cluster cluster ) throws InterruptedException, ExecutionException
+    private static void restartCluster( Cluster cluster ) throws InterruptedException, ExecutionException
     {
         cluster.shutdown();
         cluster.start();
@@ -256,82 +219,14 @@ class ClusterDatabaseManagementIT
         assertDefaultDatabasesAreAvailable( cluster );
     }
 
-    private void assertDefaultDatabasesAreAvailable( Cluster cluster ) throws InterruptedException
+    private static void assertDefaultDatabasesAreAvailable( Cluster cluster ) throws InterruptedException
     {
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, SYSTEM_DATABASE_NAME ), is( true ), DEFAULT_TIMEOUT, SECONDS );
-        assertEventually( () -> allMembersHaveDatabaseState( AVAILABLE, cluster, DEFAULT_DATABASE_NAME ), is( true ), DEFAULT_TIMEOUT, SECONDS );
+        assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, cluster );
+        assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
     }
 
-    private Set<ClusterMember> oneCoreAndOneReadReplica( Cluster cluster )
+    private static Set<ClusterMember> oneCoreAndOneReadReplica( Cluster cluster )
     {
         return asSet( cluster.getCoreMemberById( 0 ), cluster.getReadReplicaById( 0 ) );
-    }
-
-    private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
-    {
-        return membersHaveDatabaseState( expected, cluster.allMembers().collect( Collectors.toList() ), databaseName );
-    }
-
-    private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Collection<ClusterMember> members, String databaseName )
-    {
-        for ( ClusterMember member : members )
-        {
-            DatabaseAvailability availability = memberDatabaseState( member, databaseName );
-            if ( availability != expected )
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static DatabaseAvailability memberDatabaseState( ClusterMember member, String databaseName )
-    {
-        GraphDatabaseService db;
-
-        try
-        {
-            db = member.managementService().database( databaseName );
-        }
-        catch ( DatabaseNotFoundException ignored )
-        {
-            return ABSENT;
-        }
-
-        try ( Transaction tx = db.beginTx() )
-        {
-            tx.success();
-        }
-        catch ( DatabaseShutdownException ignored )
-        {
-            return STOPPED;
-        }
-        catch ( TransactionFailureException ignored )
-        {
-            // This should be transient!
-            return UNDEFINED;
-        }
-
-        return AVAILABLE;
-    }
-
-    enum DatabaseAvailability
-    {
-        /**
-         * The state is undefined (not to be confused with unavailable). Do not assert on this value in tests!
-         */
-        UNDEFINED,
-        /**
-         * A database with the specified name does not exist.
-         */
-        ABSENT,
-        /**
-         * The database is stopped.
-         */
-        STOPPED,
-        /**
-         * The database is available for transactions.
-         */
-        AVAILABLE,
     }
 }

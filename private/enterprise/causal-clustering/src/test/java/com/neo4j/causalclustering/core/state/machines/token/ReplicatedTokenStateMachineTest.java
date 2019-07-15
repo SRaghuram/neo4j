@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import org.junit.Before;
+import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -14,10 +13,8 @@ import org.junit.rules.RuleChain;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -29,8 +26,6 @@ import org.neo4j.internal.recordstorage.NeoStoreTransactionApplier;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -47,7 +42,6 @@ import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.lock.LockGroup;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
@@ -71,6 +65,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.CommandVersion.AFTER;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
@@ -85,29 +80,16 @@ public class ReplicatedTokenStateMachineTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final PageCacheRule pageCacheRule = new PageCacheRule();
     private final CleanupRule cleanupRule = new CleanupRule();
-    @SuppressWarnings( "unchecked" )
-    private final DatabaseManager<ClusteredDatabaseContext> databaseManager = mock( DatabaseManager.class );
-    private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
-    private final Database database = mock( Database.class );
 
     @Rule
     public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule ).around( cleanupRule );
-
-    @Before
-    public void setUp() throws Exception
-    {
-        when( databaseContext.database() ).thenReturn( database );
-        when( database.getVersionContextSupplier() ).thenReturn( EmptyVersionContextSupplier.EMPTY );
-        when( databaseManager.getDatabaseContext( databaseId ) ).thenReturn( Optional.of( databaseContext ) );
-    }
 
     @Test
     public void shouldCreateTokenId() throws Exception
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), databaseManager );
+        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
@@ -123,8 +105,7 @@ public class ReplicatedTokenStateMachineTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), databaseManager );
+        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
@@ -141,8 +122,7 @@ public class ReplicatedTokenStateMachineTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), databaseManager );
+        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
@@ -164,8 +144,7 @@ public class ReplicatedTokenStateMachineTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
-                NullLogProvider.getInstance(), databaseManager );
+        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( registry );
 
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
@@ -190,9 +169,7 @@ public class ReplicatedTokenStateMachineTest
         int logIndex = 1;
 
         StubTransactionCommitProcess commitProcess = new StubTransactionCommitProcess( null, null );
-        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine(
-                new TokenRegistry( "Token" ),
-                NullLogProvider.getInstance(), databaseManager );
+        ReplicatedTokenStateMachine stateMachine = newTokenStateMachine( new TokenRegistry( "Token" ) );
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when
@@ -261,6 +238,11 @@ public class ReplicatedTokenStateMachineTest
             return 13L;
         } );
         return commitProcess;
+    }
+
+    private static ReplicatedTokenStateMachine newTokenStateMachine( TokenRegistry tokenRegistry )
+    {
+        return new ReplicatedTokenStateMachine( new DummyStateMachineCommitHelper(), tokenRegistry, nullLogProvider() );
     }
 
     private static class StubTransactionCommitProcess extends TransactionRepresentationCommitProcess

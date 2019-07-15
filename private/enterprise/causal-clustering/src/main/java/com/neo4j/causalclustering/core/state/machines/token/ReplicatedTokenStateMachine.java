@@ -5,29 +5,20 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
+import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 
 import java.util.Collection;
 import java.util.function.Consumer;
 
-import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
-import org.neo4j.lock.LockGroup;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.token.TokenRegistry;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.bytesToCommands;
@@ -36,25 +27,25 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedTokenRequest>
 {
-    private TransactionCommitProcess commitProcess;
-
+    private final StateMachineCommitHelper commitHelper;
     private final TokenRegistry tokenRegistry;
-
     private final Log log;
-    private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
+
+    private TransactionCommitProcess commitProcess;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTokenStateMachine( TokenRegistry tokenRegistry, LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager )
+    public ReplicatedTokenStateMachine( StateMachineCommitHelper commitHelper, TokenRegistry tokenRegistry, LogProvider logProvider )
     {
+        this.commitHelper = commitHelper;
         this.tokenRegistry = tokenRegistry;
         this.log = logProvider.getLog( getClass() );
-        this.databaseManager = databaseManager;
     }
 
     public synchronized void installCommitProcess( TransactionCommitProcess commitProcess, long lastCommittedIndex )
     {
         this.commitProcess = commitProcess;
         this.lastCommittedIndex = lastCommittedIndex;
+        commitHelper.updateLastAppliedCommandIndex( lastCommittedIndex );
         log.info( format("(%s) Updated lastCommittedIndex to %d", tokenRegistry.getTokenType(), lastCommittedIndex) );
     }
 
@@ -80,10 +71,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
             log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
             // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
             // Thus there is no need for us to update the token registry directly.
-            DatabaseId databaseId = tokenRequest.databaseId();
-            VersionContextSupplier versionContextSupplier = databaseManager.getDatabaseContext( databaseId ).orElseThrow(
-                    () -> new DatabaseNotFoundException( databaseId.name() ) ).database().getVersionContextSupplier();
-            applyToStore( commands, commandIndex, versionContextSupplier.getVersionContext() );
+            applyToStore( commands, commandIndex );
             callback.accept( Result.of( newTokenId ) );
         }
         else
@@ -94,15 +82,14 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
         }
     }
 
-    private void applyToStore( Collection<StorageCommand> commands, long logIndex, VersionContext versionContext )
+    private void applyToStore( Collection<StorageCommand> commands, long logIndex )
     {
-        PhysicalTransactionRepresentation representation = new PhysicalTransactionRepresentation( commands );
+        var representation = new PhysicalTransactionRepresentation( commands );
         representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0, 0, 0L, 0L, 0 );
 
-        try ( LockGroup ignored = new LockGroup() )
+        try
         {
-            commitProcess.commit( new TransactionToApply( representation, versionContext ), CommitEvent.NULL,
-                    TransactionApplicationMode.EXTERNAL );
+            commitHelper.commit( commitProcess, representation, logIndex );
         }
         catch ( TransactionFailureException e )
         {

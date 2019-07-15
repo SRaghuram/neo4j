@@ -28,10 +28,12 @@ public final class Reconciliation
     public static final Reconciliation EMPTY = new Reconciliation( Collections.emptyMap() );
 
     private final Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures;
+    private final CompletableFuture<Void> completedFuture;
 
     Reconciliation( Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         this.reconciliationFutures = reconciliationFutures;
+        this.completedFuture = buildCompletedFuture( reconciliationFutures );
     }
 
     public void await( DatabaseId databaseId )
@@ -48,14 +50,24 @@ public final class Reconciliation
         var futures = databaseIds.stream()
                 .map( reconciliationFutures::get )
                 .flatMap( Stream::ofNullable )
-                .toArray( CompletableFuture[]::new );
+                .toArray( CompletableFuture<?>[]::new );
 
         CompletableFuture.allOf( futures ).join();
     }
 
     void awaitAll()
     {
-        var allFutures = reconciliationFutures.values().toArray( CompletableFuture[]::new );
-        CompletableFuture.allOf( allFutures ).join();
+        completedFuture.join();
+    }
+
+    void whenComplete( Runnable action )
+    {
+        completedFuture.whenComplete( ( ignore, error ) -> action.run() );
+    }
+
+    private static CompletableFuture<Void> buildCompletedFuture( Map<DatabaseId,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
+    {
+        var allFutures = reconciliationFutures.values().toArray( CompletableFuture<?>[]::new );
+        return CompletableFuture.allOf( allFutures );
     }
 }

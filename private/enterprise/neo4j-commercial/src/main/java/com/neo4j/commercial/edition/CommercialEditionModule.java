@@ -19,9 +19,9 @@ import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
+import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -133,7 +133,9 @@ public class CommercialEditionModule extends CommunityEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        globalModule.getGlobalLife().add( new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository() ) );
+        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository() );
+        globalModule.getGlobalLife().add( reconcilerModule );
+        globalModule.getGlobalDependencies().satisfyDependency( reconcilerModule.reconciledTxIdTracker() );
 
         return databaseManager;
     }

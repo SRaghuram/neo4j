@@ -6,17 +6,14 @@
 package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -43,10 +40,8 @@ class CommitProcessStateMachineCollaborationTest
 
         int finalLockSessionId = 24;
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
-        ReplicatedTransactionStateMachine stateMachine =
-                new ReplicatedTransactionStateMachine( mock( CommandIndexTracker.class ),
-                        lockState( finalLockSessionId ), 16, NullLogProvider.getInstance(),
-                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
+        ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine( new DummyStateMachineCommitHelper(),
+                lockState( finalLockSessionId ), 16, NullLogProvider.getInstance() );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );

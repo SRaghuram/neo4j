@@ -78,6 +78,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.function.Predicates.notNull;
@@ -488,7 +489,7 @@ public class Cluster
      */
     public CoreClusterMember systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return coreTx( DEFAULT_DATABASE_NAME, op );
+        return coreTx( SYSTEM_DATABASE_NAME, op );
     }
 
     /**

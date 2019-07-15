@@ -5,25 +5,18 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -50,19 +43,6 @@ class ReplicatedTransactionStateMachineTest
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
-    @SuppressWarnings( "unchecked" )
-    private final DatabaseManager<ClusteredDatabaseContext> databaseManager = mock( DatabaseManager.class );
-    private final ClusteredDatabaseContext databaseContext = mock( ClusteredDatabaseContext.class );
-    private final Database database = mock( Database.class );
-    private final int batchSize = 16;
-
-    @BeforeEach
-    void setUp()
-    {
-        when( databaseContext.database() ).thenReturn( database );
-        when( database.getVersionContextSupplier() ).thenReturn( EmptyVersionContextSupplier.EMPTY );
-        when( databaseManager.getDatabaseContext( DATABASE_ID ) ).thenReturn( Optional.of( databaseContext ) );
-    }
 
     @Test
     void shouldCommitTransaction() throws Exception
@@ -75,9 +55,7 @@ class ReplicatedTransactionStateMachineTest
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
 
-        ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine(
-                commandIndexTracker, lockState( lockSessionId ), batchSize, logProvider, () -> cursorTracer, EmptyVersionContextSupplier.EMPTY,
-                mock( TransactionCommitNotifier.class ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( lockSessionId ), cursorTracer );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -101,10 +79,7 @@ class ReplicatedTransactionStateMachineTest
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
-        final ReplicatedTransactionStateMachine stateMachine =
-                new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ),
-                        batchSize, logProvider, PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY,
-                        mock( TransactionCommitNotifier.class ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( currentLockSessionId ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -133,9 +108,7 @@ class ReplicatedTransactionStateMachineTest
 
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( txId );
 
-        ReplicatedTransactionStateMachine stateMachine =
-                new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( currentLockSessionId ), batchSize, logProvider,
-                        PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( currentLockSessionId ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -162,9 +135,7 @@ class ReplicatedTransactionStateMachineTest
         long updatedCommandIndex = 2468;
 
         // and
-        ReplicatedTransactionStateMachine stateMachine =
-                new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( txLockSessionId ), batchSize, logProvider, PageCursorTracerSupplier.NULL,
-                        EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( txLockSessionId ) );
 
         ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
@@ -215,5 +186,17 @@ class ReplicatedTransactionStateMachineTest
         ReplicatedBarrierTokenStateMachine lockState = mock( ReplicatedBarrierTokenStateMachine.class );
         when( lockState.snapshot() ).thenReturn( new ReplicatedBarrierTokenState( -1, lockTokenRequest ) );
         return lockState;
+    }
+
+    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedBarrierTokenStateMachine lockState )
+    {
+        return newTransactionStateMachine( lockState, PageCursorTracer.NULL );
+    }
+
+    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedBarrierTokenStateMachine lockState, PageCursorTracer pageCursorTracer )
+    {
+        var batchSize = 16;
+        var commitHelper = new DummyStateMachineCommitHelper( commandIndexTracker, pageCursorTracer );
+        return new ReplicatedTransactionStateMachine( commitHelper, lockState, batchSize, logProvider );
     }
 }

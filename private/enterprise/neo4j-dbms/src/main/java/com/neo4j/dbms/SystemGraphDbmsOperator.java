@@ -12,6 +12,8 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
@@ -25,28 +27,26 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
 {
     private final SystemGraphDbmsModel dbmsModel;
     private final ThreadToStatementContextBridge txBridge;
+    private final ReconciledTransactionIdTracker reconciledTxIdTracker;
+    private final Log log;
 
-    private long mostRecentlySeenTx;
-
-    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, DatabaseIdRepository databaseIdRepository, ThreadToStatementContextBridge txBridge )
+    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, DatabaseIdRepository databaseIdRepository, ThreadToStatementContextBridge txBridge,
+            ReconciledTransactionIdTracker reconciledTxIdTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;
+        this.reconciledTxIdTracker = reconciledTxIdTracker;
         this.desired.put( databaseIdRepository.systemDatabase(), STARTED );
+        this.log = logProvider.getLog( getClass() );
     }
 
     void transactionCommitted( long txId, TransactionData transactionData )
     {
-        if ( txId <= mostRecentlySeenTx )
-        {
-            throw new IllegalArgumentException( "Transaction ID should be strictly monotonic." );
-        }
-        mostRecentlySeenTx = txId;
-
         if ( txBridge.hasTransaction() )
         {
             // Still in a transaction. This method was most likely invoked after a nested transaction was committed.
             // For example, such transaction could be a token-introducing internal transaction. No need to reconcile.
+            updateLastReconciledTransactionId( txId );
             return;
         }
 
@@ -54,6 +54,7 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
 
         updateDesiredStates(); // TODO: Handle exceptions from this!
         Reconciliation reconciliation = trigger( false );
+        reconciliation.whenComplete( () -> updateLastReconciledTransactionId( txId ) );
 
         // TODO: Remove below when Standalone tests( e.g.SystemDatabaseDatabaseManagementIT ) no longer depend on blocking behaviour of create.
         // Clustered version of this listener does *not * block
@@ -94,5 +95,17 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
             return emptySet();
         }
         return dbmsModel.updatedDatabases( transactionData );
+    }
+
+    private void updateLastReconciledTransactionId( long txId )
+    {
+        try
+        {
+            reconciledTxIdTracker.setLastReconciledTransactionId( txId );
+        }
+        catch ( Throwable t )
+        {
+            log.error( "Failed to update the last reconciled transaction ID", t );
+        }
     }
 }

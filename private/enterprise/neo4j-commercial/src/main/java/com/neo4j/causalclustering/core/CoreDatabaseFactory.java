@@ -34,6 +34,7 @@ import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
+import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
 import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockManager;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
@@ -256,21 +257,21 @@ class CoreDatabaseFactory
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( databaseId, labelTokenRegistry, replicator,
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
-        ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry, debugLog, databaseManager );
-        ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( propertyKeyTokenRegistry, debugLog, databaseManager );
-
-        ReplicatedTokenStateMachine relationshipTypeTokenStateMachine = new ReplicatedTokenStateMachine(
-                relationshipTypeTokenRegistry, debugLog, databaseManager );
-
-        ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( raftContext.commandIndexTracker(),
-                replicatedBarrierTokenStateMachine, config.get( state_machine_apply_max_batch_size ), debugLog, cursorTracerSupplier, versionContextSupplier,
+        StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), cursorTracerSupplier, versionContextSupplier,
                 txEventService.getCommitNotifier( databaseId ) );
+
+        ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, labelTokenRegistry, debugLog );
+        ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, propertyKeyTokenRegistry, debugLog );
+        ReplicatedTokenStateMachine relTypeTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, relationshipTypeTokenRegistry, debugLog );
+
+        ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedBarrierTokenStateMachine,
+                config.get( state_machine_apply_max_batch_size ), debugLog );
 
         Locks lockManager = createLockManager( config, clock, logService,barrierState );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
-        CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relationshipTypeTokenStateMachine,
+        CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relTypeTokenStateMachine,
                 propertyKeyTokenStateMachine, replicatedBarrierTokenStateMachine, new DummyMachine(), consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
