@@ -24,6 +24,8 @@ object MorselExecutionContext {
   def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int, validRows: Int) = new MorselExecutionContext(morsel,
     numberOfLongs, numberOfReferences, validRows, 0, SlotConfiguration.empty)
 
+  val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), 0, 0, 0, 0, SlotConfiguration.empty)
+
   private val EMPTY_SINGLE_ROW =
     new MorselExecutionContext(
       Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)

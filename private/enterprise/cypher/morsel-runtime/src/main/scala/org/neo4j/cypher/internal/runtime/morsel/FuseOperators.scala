@@ -35,6 +35,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
       if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
+    //For a fully fused pipeline that includes ProduceResult we don't need to allocate an output morsel
+    val needsMorsel = (p.outputDefinition, maybeHeadOperator, unhandledMiddlePlans) match {
+      case (_:ProduceResultOutput, Some(_), Seq()) => false
+      case _ => true
+    }
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle).toArray
     ExecutablePipeline(p.id,
@@ -43,7 +48,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                        p.serial,
                        physicalPlan.slotConfigurations(p.headPlan.id),
                        p.inputBuffer,
-                       operatorFactory.createOutput(unhandledOutput))
+                       operatorFactory.createOutput(unhandledOutput),
+                       needsMorsel)
   }
 
   private def fuseOperators(headPlan: LogicalPlan,

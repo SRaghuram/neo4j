@@ -23,7 +23,8 @@ case class ExecutablePipeline(id: PipelineId,
                               serial: Boolean,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
-                              outputOperator: OutputOperator) extends WorkIdentity {
+                              outputOperator: OutputOperator,
+                              needsMorsel: Boolean = true) extends WorkIdentity {
 
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,
@@ -95,18 +96,19 @@ class PipelineState(val pipeline: ExecutablePipeline,
   }
 
   def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
-
-      val slots = pipeline.slots
-      val slotSize = slots.size()
-      val morsel = Morsel.create(slots, state.morselSize)
-      new MorselExecutionContext(
-        morsel,
-        slotSize.nLongs,
-        slotSize.nReferences,
-        state.morselSize,
-        currentRow = 0,
-        slots,
-        producingWorkUnitEvent)
+      if (pipeline.needsMorsel) {
+        val slots = pipeline.slots
+        val slotSize = slots.size()
+        val morsel = Morsel.create(slots, state.morselSize)
+        new MorselExecutionContext(
+          morsel,
+          slotSize.nLongs,
+          slotSize.nReferences,
+          state.morselSize,
+          currentRow = 0,
+          slots,
+          producingWorkUnitEvent)
+      } else  MorselExecutionContext.empty
   }
 
   private def innerNextTask(context: QueryContext,
