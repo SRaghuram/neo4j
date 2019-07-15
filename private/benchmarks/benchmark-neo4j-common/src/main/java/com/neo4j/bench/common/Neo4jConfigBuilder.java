@@ -27,12 +27,13 @@ import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allo
 public class Neo4jConfigBuilder
 {
 
-    private static final String BOLT_ADDRESS_SETTING = "dbms.connector.bolt.listen_address";
+    private static final String BOLT_ADDRESS_SETTING = ".";
 
     public static Neo4jConfigBuilder withDefaults()
     {
         return empty()
-                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
+                .withSetting( GraphDatabaseSettings.fail_on_missing_files, "false" );
     }
 
     public static Neo4jConfigBuilder empty()
