@@ -31,6 +31,37 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
+  test("should not show privileges on a dropped database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
+    val grantOnFoo = Set(traverse().node("*").role("custom").database("foo").map)
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantOnFoo)
+
+    // WHEN
+    execute("DROP DATABASE foo")
+
+    // THEN
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
+  }
+
+  test("should not show privileges on a dropped role") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    val grantForCustom = Set(traverse().node("*").role("custom").map)
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantForCustom)
+
+    // WHEN
+    execute("DROP ROLE custom")
+
+    // THEN
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
+  }
+
   test("should fail when showing privileges for all users when not on system database") {
     the[DatabaseManagementException] thrownBy {
       // WHEN
@@ -76,6 +107,37 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     resultEmpty.toSet should be(Set.empty)
+  }
+
+  test("should not show role privileges on a dropped database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
+    val grantOnFoo = Set(traverse().node("*").role("custom").database("foo").map)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(grantOnFoo)
+
+    // WHEN
+    execute("DROP DATABASE foo")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should not show role privileges on a dropped role") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    val grantForCustom = Set(traverse().node("*").role("custom").map)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(grantForCustom)
+
+    // WHEN
+    execute("DROP ROLE custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should fail when showing privileges for roles when not on system database") {
@@ -126,6 +188,58 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     resultEmpty.toSet should be(Set.empty)
+  }
+
+  test("should give nothing when showing privileges for a dropped user") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER bar SET PASSWORD 'secret'")
+    execute("GRANT ROLE custom TO bar")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom)
+
+    // WHEN
+    execute("DROP USER bar")
+
+    // THEN
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should not show user privileges on a dropped database") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER bar SET PASSWORD 'secret'")
+    execute("GRANT ROLE custom TO bar")
+    execute("CREATE DATABASE foo")
+    execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
+    val grantOnFoo = Set(traverse().node("*").role("custom").user("bar").database("foo").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantOnFoo)
+
+    // WHEN
+    execute("DROP DATABASE foo")
+
+    // THEN
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should not show user privileges on a dropped role") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER bar SET PASSWORD 'secret'")
+    execute("GRANT ROLE custom TO bar")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom)
+
+    // WHEN
+    execute("DROP ROLE custom")
+
+    // THEN
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should fail when showing privileges for users when not on system database") {
