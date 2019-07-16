@@ -133,6 +133,7 @@ public class BoltFailuresIT
         try
         {
             driver = GraphDatabase.driver( "bolt://localhost:" + getBoltPort( db ), Config.build().withoutEncryption().toConfig() );
+            driver.verifyConnectivity();
             if ( shouldBeAbleToBeginTransaction )
             {
                 try ( Session session = driver.session();
@@ -203,7 +204,9 @@ public class BoltFailuresIT
 
     private static Driver createDriver( int port )
     {
-        return GraphDatabase.driver( "bolt://localhost:" + port, Config.build().withoutEncryption().toConfig() );
+        Driver driver = GraphDatabase.driver( "bolt://localhost:" + port, Config.build().withoutEncryption().toConfig() );
+        driver.verifyConnectivity();
+        return driver;
     }
 
     private static Monitors newMonitorsSpy( ThrowingSessionMonitor sessionMonitor )
