@@ -1988,8 +1988,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
-  def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Value]("setCachedPropertyAt"), constant(offset), value)
+  def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = setRefAt(offset, value)
 
   protected final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
