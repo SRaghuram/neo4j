@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
+import java.util
+
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
@@ -27,12 +29,9 @@ abstract class ArgumentCountUpdater {
 
     val lastSeenRowIds = new Array[Long](downstreamAccumulatingBuffers.size)
     // Write all initial last seen ids to -1
-    var i = 0
-    while (i < lastSeenRowIds.length) {
-      lastSeenRowIds(i) = -1
-      i += 1
-    }
+    util.Arrays.fill(lastSeenRowIds, -1L)
 
+    var i = 0
     morsel.resetToFirstRow()
     while(morsel.isValidRow) {
       i = 0

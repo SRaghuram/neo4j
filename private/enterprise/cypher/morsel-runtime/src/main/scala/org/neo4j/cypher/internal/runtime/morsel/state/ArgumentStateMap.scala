@@ -70,9 +70,9 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
     * Initiate state and counting for a new argument
     *
-    * @param argument       the argument row id
-    * @param argumentMorsel the morsel that contains this argument
-    * @param argumentRowIdsForReducers the argument row ids of reducers for that correspond to the given argument.
+    * @param argument                  the argument row id
+    * @param argumentMorsel            the morsel that contains this argument
+    * @param argumentRowIdsForReducers the argument row ids of reducers that correspond to the given argument.
     *                                  This is needed to decrement the reducers with the right IDs when
     *                                  we close an argument state. This is allowed to be null if these argument
     *                                  states are not closed or are not involved in a buffer with downstream
