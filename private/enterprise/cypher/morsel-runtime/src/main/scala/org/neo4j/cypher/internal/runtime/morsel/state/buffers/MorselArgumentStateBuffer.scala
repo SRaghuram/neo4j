@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, ArgumentStateMapWithoutArgumentIdCounter, QueryCompletionTracker}
 
 /**
   * Morsel buffer that groups incoming rows by argumentRowId by delegating to an [[ArgumentStateMap]].
@@ -34,7 +34,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
                                     with SinkByOrigin
                                     with DataHolder {
 
-  private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
+  private val argumentStateMap: ArgumentStateMapWithoutArgumentIdCounter[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithoutArgumentIdCounter[ACC]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 

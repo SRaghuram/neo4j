@@ -13,7 +13,8 @@ import scala.collection.JavaConverters._
 /**
   * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
   */
-abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]] extends ArgumentStateMap[STATE] {
+abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
+  extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
 
   /**
     * A Map of the controllers.

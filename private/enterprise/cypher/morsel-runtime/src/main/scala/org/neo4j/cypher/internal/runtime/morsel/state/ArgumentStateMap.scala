@@ -40,35 +40,6 @@ trait ArgumentStateMap[S <: ArgumentState] {
                                isCancelled: S => Boolean): IndexedSeq[Long]
 
   /**
-    * Take the [[ArgumentState]] of one complete arguments. The [[ArgumentState]] will
-    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
-    */
-  def takeOneCompleted(): S
-
-  /**
-    * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
-    * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
-    *
-    * The counter is unaffected by other methods that take, so they should not be mixed!
-    *
-    * Returns an ArgumentStateWithCompleted of the [[ArgumentState]] for the specified argumentId
-    * which indicated whether the state was completed or not,
-    * or `null` if no state exist for that argumentId..
-    */
-  def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
-
-  /**
-    * Returns `true` if the next [[ArgumentState]] according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]]
-    * is either completed or fulfills the given predicate.
-    */
-  def nextArgumentStateIsCompletedOr(statePredicate: S => Boolean): Boolean
-
-  /**
-    * Peeks at the next argument state according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]].
-    */
-  def peekNext(): S
-
-  /**
     * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
     */
   def peekCompleted(): Iterator[S]
@@ -129,6 +100,43 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * Slot offset of the argument slot.
     */
   def argumentSlotOffset: Int
+}
+
+trait ArgumentStateMapWithoutArgumentIdCounter[S <: ArgumentState]extends ArgumentStateMap[S] {
+  /**
+    * Take the [[ArgumentState]] of one complete arguments. The [[ArgumentState]] will
+    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
+    */
+  def takeOneCompleted(): S
+}
+
+/**
+  * This interface groups all methods that make use of the [[AbstractArgumentStateMap.lastCompletedArgumentId]]. We split this out so that
+  * users of [[ArgumentStateMap]] do not accidentally mix calls with other methods.
+  */
+trait ArgumentStateMapWithArgumentIdCounter[S <: ArgumentState] extends ArgumentStateMap[S] {
+  /**
+    * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
+    * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
+    *
+    * The counter is unaffected by other methods that take, so they should not be mixed!
+    *
+    * Returns an ArgumentStateWithCompleted of the [[ArgumentState]] for the specified argumentId
+    * which indicated whether the state was completed or not,
+    * or `null` if no state exist for that argumentId..
+    */
+  def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
+
+  /**
+    * Returns `true` if the next [[ArgumentState]] according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]]
+    * is either completed or fulfills the given predicate.
+    */
+  def nextArgumentStateIsCompletedOr(statePredicate: S => Boolean): Boolean
+
+  /**
+    * Peeks at the next argument state according to the internal counter mentioned in [[takeNextIfCompletedOrElsePeek()]].
+    */
+  def peekNext(): S
 }
 
 /**

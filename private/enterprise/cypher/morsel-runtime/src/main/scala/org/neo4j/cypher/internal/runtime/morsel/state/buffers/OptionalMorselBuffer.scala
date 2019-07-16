@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap._
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMapWithArgumentIdCounter, QueryCompletionTracker}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 import scala.collection.mutable.ArrayBuffer
@@ -36,7 +36,7 @@ class OptionalMorselBuffer(id: BufferId,
   with SinkByOrigin
   with DataHolder {
 
-  private val argumentStateMap: ArgumentStateMap[OptionalArgumentStateBuffer] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[OptionalArgumentStateBuffer]]
+  private val argumentStateMap: ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
