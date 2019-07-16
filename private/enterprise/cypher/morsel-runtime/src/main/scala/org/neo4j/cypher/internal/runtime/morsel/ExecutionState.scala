@@ -54,28 +54,28 @@ trait ExecutionState extends ArgumentStateMapCreator {
     *
     * @return the morsel to take, or `null` if no morsel was available
     */
-  def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
+  def takeMorsel(bufferId: BufferId): MorselParallelizer
 
   /**
     * Take one accumulator that is ready from the argument state map buffer with id `bufferId`.
     *
     * @return the ready morsel accumulator, or `null` if no accumulators are ready
     */
-  def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): ACC
+  def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): ACC
 
   /**
     * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingBuffer]] with id `bufferId`.
     *
     * @return the ready morsel accumulator, or `null` if no accumulator is ready
     */
-  def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[DATA, ACC]
+  def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC]
 
   /**
     * Take data from the [[OptionalMorselBuffer]] buffer with id `bufferId`.
     *
     * @return the data to take, or `null` if no data was available
     */
-  def takeData[DATA <: AnyRef](bufferId: BufferId, pipeline: ExecutablePipeline): DATA
+  def takeData[DATA <: AnyRef](bufferId: BufferId): DATA
 
   /**
     * Close a pipeline task which was executing over an input morsel.

@@ -157,19 +157,19 @@ class PipelineState(val pipeline: ExecutablePipeline,
   /* OperatorInput */
 
   override def takeMorsel(): MorselParallelizer = {
-    executionState.takeMorsel(pipeline.inputBuffer.id, pipeline)
+    executionState.takeMorsel(pipeline.inputBuffer.id)
   }
 
   override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): ACC = {
-    executionState.takeAccumulator(pipeline.inputBuffer.id, pipeline)
+    executionState.takeAccumulator(pipeline.inputBuffer.id)
   }
 
   override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): AccumulatorAndMorsel[DATA, ACC] = {
-    executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id, pipeline)
+    executionState.takeAccumulatorAndMorsel(pipeline.inputBuffer.id)
   }
 
   override def takeData[DATA <: AnyRef](): DATA = {
-    executionState.takeData(pipeline.inputBuffer.id, pipeline)
+    executionState.takeData(pipeline.inputBuffer.id)
   }
 
   /* OperatorCloser */

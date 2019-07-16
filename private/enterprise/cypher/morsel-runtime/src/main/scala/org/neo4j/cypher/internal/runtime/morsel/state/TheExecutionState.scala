@@ -112,19 +112,19 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
+  override def takeMorsel(bufferId: BufferId): MorselParallelizer = {
     buffers.morselBuffer(bufferId).take()
   }
 
-  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): ACC = {
+  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): ACC = {
     buffers.source[ACC](bufferId).take()
   }
 
-  override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, pipeline: ExecutablePipeline): AccumulatorAndMorsel[DATA, ACC] = {
+  override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC] = {
     buffers.source[AccumulatorAndMorsel[DATA, ACC]](bufferId).take()
   }
 
-  override def takeData[DATA <: AnyRef](bufferId: BufferId, pipeline: ExecutablePipeline): DATA = {
+  override def takeData[DATA <: AnyRef](bufferId: BufferId): DATA = {
     buffers.source[DATA](bufferId).take()
   }
 
