@@ -23,6 +23,12 @@ public class ReconciledTransactionIdTracker
     private static final int INITIAL_ARRAY_SIZE = 200;
     private static final long[] NO_METADATA = new long[0];
 
+    /**
+     * Lock protects {@link #getLastReconciledTransactionId()} and {@link #setLastReconciledTransactionId(long)}
+     * from running concurrently with {@link #initialize(long)} and reading/updating a stale {@link #sequence}. This
+     * is especially required when re-initialization happens at runtime and not during start of the lifecycle.
+     * Re-initialization can happen after a store copy of the system database.
+     */
     private final ReadWriteLock initializationLock;
     private final Log log;
 
@@ -80,6 +86,7 @@ public class ReconciledTransactionIdTracker
             checkState( sequence != null, "Not initialized" );
 
             var currentLastReconciledTxId = getLastReconciledTransactionId();
+            // gap-free ID should always be lower than the given ID
             checkArgument( reconciledTransactionId > currentLastReconciledTxId,
                     "Received illegal transaction ID %s which is lower than the current transaction ID %s. Sequence: %s",
                     reconciledTransactionId, currentLastReconciledTxId, sequence );
