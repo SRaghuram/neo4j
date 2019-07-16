@@ -92,12 +92,40 @@ class ConvenientLocalExecutionIT
             Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
             Files.createDirectories( profilerRecordingsDir );
             Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
-            List<String> runWorkloadArgs =
-                    RunWorkloadCommand.argsFor( RUNTIME, PLANNER, EXECUTION_MODE, WORKLOAD_NAME, store, neo4jConfigFile(), neo4jVersion, neo4jBranch,
-                            neo4jCommit, neo4jBranchOwner, toolBranch, toolCommit, toolBranchOwner, RESULT_DIR, PROFILERS, EDITION, Jvm.defaultJvm(),
-                            WARMUP_COUNT, MEASUREMENT_COUNT, FORK_COUNT, Duration.ofSeconds( 0 ), Duration.ofMinutes( 10 ), resultsJson, TimeUnit.MICROSECONDS,
-                            ErrorPolicy.FAIL, parentTeamcityBuild, teamcityBuild, JVM_ARGS, RECREATE_SCHEMA, profilerRecordingsDir, SKIP_FLAME_GRAPHS,
-                            DEPLOYMENT, triggeredBy );
+            List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
+                    RUNTIME,
+                    PLANNER,
+                    EXECUTION_MODE,
+                    WORKLOAD_NAME,
+                    store,
+                    neo4jConfigFile(),
+                    neo4jVersion,
+                    neo4jBranch,
+                    neo4jCommit,
+                    neo4jBranchOwner,
+                    toolBranch,
+                    toolCommit,
+                    toolBranchOwner,
+                    RESULT_DIR,
+                    PROFILERS,
+                    EDITION,
+                    Jvm.defaultJvm(),
+                    WARMUP_COUNT,
+                    MEASUREMENT_COUNT,
+                    FORK_COUNT,
+                    Duration.ofSeconds( 0 ),
+                    Duration.ofMinutes( 10 ),
+                    resultsJson,
+                    TimeUnit.MICROSECONDS,
+                    ErrorPolicy.FAIL,
+                    parentTeamcityBuild,
+                    teamcityBuild,
+                    JVM_ARGS,
+                    RECREATE_SCHEMA,
+                    profilerRecordingsDir,
+                    SKIP_FLAME_GRAPHS,
+                    DEPLOYMENT,
+                    triggeredBy );
             Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
         }
     }
@@ -112,15 +140,33 @@ class ConvenientLocalExecutionIT
         try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT.mode() );
-            Query query = workload.queries().stream().filter( q -> q.name().equals( QUERY_NAME ) ).findFirst().orElseThrow(
-                    () -> new RuntimeException( format( "Workload `%s` does not contain query `%s`", workload.name(), QUERY_NAME ) ) );
+            Query query = workload.queries()
+                                  .stream()
+                                  .filter( q -> q.name().equals( QUERY_NAME ) )
+                                  .findFirst()
+                                  .orElseThrow(
+                                          () -> new RuntimeException( format( "Workload `%s` does not contain query `%s`", workload.name(), QUERY_NAME ) ) );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( RESULT_DIR, workload.benchmarkGroup() );
             BenchmarkGroupBenchmarkMetricsPrinter printer = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             Jvm jvm = Jvm.bestEffort( JDK_DIR );
-            ForkRunner.runForksFor(
-                    DEPLOYMENT.launcherFor( Edition.ENTERPRISE, WARMUP_COUNT, MEASUREMENT_COUNT, Duration.ofSeconds( 30 ), Duration.ofMinutes( 10 ), jvm ),
-                    groupDir, query.copyWith( PLANNER ).copyWith( RUNTIME ), Store.createFrom( STORE_DIR ), EDITION, neo4jConfig(), PROFILERS, jvm, FORK_COUNT,
-                    TimeUnit.MILLISECONDS, printer, jvmArgsFromString( JVM_ARGS ), resources );
+            ForkRunner.runForksFor( DEPLOYMENT.launcherFor( Edition.ENTERPRISE,
+                                                            WARMUP_COUNT,
+                                                            MEASUREMENT_COUNT,
+                                                            Duration.ofSeconds( 30 ),
+                                                            Duration.ofMinutes( 10 ),
+                                                            jvm ),
+                                    groupDir,
+                                    query.copyWith( PLANNER ).copyWith( RUNTIME ),
+                                    Store.createFrom( STORE_DIR ),
+                                    EDITION,
+                                    neo4jConfig(),
+                                    PROFILERS,
+                                    jvm,
+                                    FORK_COUNT,
+                                    TimeUnit.MILLISECONDS,
+                                    printer,
+                                    jvmArgsFromString( JVM_ARGS ),
+                                    resources );
         }
     }
 
@@ -136,7 +182,7 @@ class ConvenientLocalExecutionIT
     {
         // Unless NEO4J_CONFIG points to a real file, this is equivalent to Neo4jConfig.empty()
         return Neo4jConfigBuilder.fromFile( NEO4J_CONFIG )
-                // Additional settings you wish to run with
-                .withSetting( GraphDatabaseSettings.allow_upgrade, FALSE ).build();
+                                 // Additional settings you wish to run with
+                                 .withSetting( GraphDatabaseSettings.allow_upgrade, FALSE ).build();
     }
 }

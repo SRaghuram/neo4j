@@ -66,7 +66,6 @@ public class Neo4jConfigBuilderTest
         expectedSettings.put( "dbms.connector.bolt.enabled", "true" );
         expectedSettings.put( "dbms.connector.http.enabled", "true" );
         expectedSettings.put( "dbms.connector.https.enabled", "true" );
-        expectedSettings.put( "ha.pull_interval", "10" );
         expectedSettings.put( "dbms.windows_service_name", "neo4j" );
 
         assertThat( config.getJvmArgs(), equalTo( expectedJvmArgs ) );

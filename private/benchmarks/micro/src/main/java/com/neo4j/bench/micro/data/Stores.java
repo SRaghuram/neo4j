@@ -44,6 +44,7 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 
@@ -172,8 +173,11 @@ public class Stores
 
         // will create an empty database directory under top level
         new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
-                .setConfig( config.neo4jConfig().toMap().entrySet().stream()
-                        .collect( Collectors.toMap( e -> SettingImpl.newBuilder( e.getKey(), STRING, null ).build(), Map.Entry::getValue ) ) )
+                .setConfig( config.neo4jConfig()
+                                  .toMap()
+                                  .entrySet()
+                                  .stream()
+                                  .collect( toMap( e -> SettingImpl.newBuilder( e.getKey(), STRING, null ).build(), Map.Entry::getValue ) ) )
                 .build()
                 .shutdown();
 
