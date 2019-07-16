@@ -103,7 +103,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
 
-  def copyAllRowsFrom(input: MorselExecutionContext, nInputRows: Int): Unit = {
+  def copyRowsFrom(input: MorselExecutionContext, nInputRows: Int): Unit = {
     if (longsPerRow > 0)
       System.arraycopy(input.morsel.longs, 0, morsel.longs, firstRow * longsPerRow, nInputRows * longsPerRow)
     if (refsPerRow > 0)

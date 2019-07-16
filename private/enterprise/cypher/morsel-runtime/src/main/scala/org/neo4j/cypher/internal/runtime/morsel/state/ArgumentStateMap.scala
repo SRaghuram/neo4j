@@ -46,7 +46,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def takeOneCompleted(): S
 
   /**
-    * When using this method to take argument states, an internal counter of the argument id last completed argument state is kept.
+    * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
     * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
     *
     * The counter is unaffected by other methods that take, so they should not be mixed!

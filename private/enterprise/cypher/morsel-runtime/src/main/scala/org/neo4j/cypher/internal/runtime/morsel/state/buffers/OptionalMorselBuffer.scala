@@ -131,7 +131,7 @@ class OptionalMorselBuffer(id: BufferId,
   override def close(data: MorselData): Unit = {
     DebugSupport.logBuffers(s"[close] $this -X- $data")
 
-   data.streamContinuation match {
+   data.argumentStream match {
       case _:EndOfStream =>
         // Decrement that corresponds to the increment in initiate
         tracker.decrement()
@@ -162,14 +162,14 @@ class OptionalMorselBuffer(id: BufferId,
 // --- Messaging protocol ---
 
 /**
-  * Some Morsels for one argument row id. Depending on the [[StreamContinuation]] there might be more data for this argument row id.
+  * Some Morsels for one argument row id. Depending on the [[ArgumentStream]] there might be more data for this argument row id.
   */
 case class MorselData(morsels: IndexedSeq[MorselExecutionContext],
-                      streamContinuation: StreamContinuation,
+                      argumentStream: ArgumentStream,
                       argumentRowIdsForReducers: Array[Long])
 
-trait StreamContinuation
-trait EndOfStream extends StreamContinuation
+trait ArgumentStream
+trait EndOfStream extends ArgumentStream
 
 /**
   * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
@@ -185,7 +185,7 @@ case object EndOfNonEmptyStream extends EndOfStream
 /**
   * There will be more data for this argument row id.
   */
-case object NotTheEnd extends StreamContinuation
+case object NotTheEnd extends ArgumentStream
 
 // --- Inner Buffer ---
 
@@ -250,7 +250,7 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentMorsel=$argumentMorsel)"
+    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=$argumentRowIdsForReducers, argumentMorsel=$argumentMorsel)"
   }
 }
 

@@ -60,8 +60,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   class OTask(val morselData: MorselData) extends OptionalOperatorTask {
 
     private val morselIterator = morselData.morsels.iterator
-    // To remember whether we already processed the StreamContinuation, which can lead to a null row.
-    private var consumedStreamContinuation = false
+    // To remember whether we already processed the ArgumentStream, which can lead to a null row.
+    private var consumedArgumentStream = false
     private var currentMorsel: MorselExecutionContext = _
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
@@ -84,8 +84,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
             output.moveToNextRow()
             currentMorsel.moveToNextRow()
           }
-        } else if (!consumedStreamContinuation && output.isValidRow) {
-          morselData.streamContinuation match {
+        } else if (!consumedArgumentStream) {
+          morselData.argumentStream match {
             case EndOfEmptyStream(viewOfArgumentRow) =>
               // An argument id did not produce any rows. We need to manufacture a row with arguments + nulls
               // 1) Copy arguments from state
@@ -97,7 +97,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
             case _ =>
             // Do nothing
           }
-          consumedStreamContinuation = true
+          consumedArgumentStream = true
         }
       }
       output.finishedWriting()
@@ -107,8 +107,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean =
       (currentMorsel != null && currentMorsel.isValidRow) ||
-      (morselIterator != null && morselIterator.hasNext) ||
-      !consumedStreamContinuation
+      morselIterator.hasNext ||
+      !consumedArgumentStream
 
     override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
       operatorCloser.closeData(morselData)
