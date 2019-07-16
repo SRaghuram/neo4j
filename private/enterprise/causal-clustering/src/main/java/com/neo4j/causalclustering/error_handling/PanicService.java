@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
@@ -39,7 +38,6 @@ public class PanicService implements Panicker
 
     public PanicEventHandlerLifecycle addPanicEventHandler( PanicEventHandler panicEventHandler )
     {
-        eventHandlers.add( panicEventHandler );
         return new PanicEventHandlerLifecycle( this, panicEventHandler );
     }
 
@@ -92,6 +90,16 @@ public class PanicService implements Panicker
         }
     }
 
+    void add( PanicEventHandler eventHandler )
+    {
+        this.eventHandlers.add( eventHandler );
+    }
+
+    void remove( PanicEventHandler eventHandler )
+    {
+        this.eventHandlers.remove( eventHandler );
+    }
+
     private class PanicEventExecutor implements Runnable
     {
         private static final String FAIL_MESSAGE = "Failed to handle panic event";
@@ -110,24 +118,6 @@ public class PanicService implements Panicker
                     tryLog( FAIL_MESSAGE, t );
                 }
             }
-        }
-    }
-
-    public static class PanicEventHandlerLifecycle extends LifecycleAdapter
-    {
-        private final PanicService parent;
-        private final PanicEventHandler eventHandler;
-
-        private PanicEventHandlerLifecycle( PanicService parent, PanicEventHandler eventHandler )
-        {
-            this.parent = parent;
-            this.eventHandler = eventHandler;
-        }
-
-        @Override
-        public void stop()
-        {
-            parent.eventHandlers.remove( eventHandler );
         }
     }
 }

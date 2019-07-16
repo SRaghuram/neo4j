@@ -27,10 +27,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( {SuppressOutputExtension.class }  )
+@ExtendWith( SuppressOutputExtension.class )
 class PanicServiceTest
 {
 
@@ -78,6 +82,22 @@ class PanicServiceTest
         // then
         assertEventually( notLifecycled.atomicInteger::get, equalTo( 1 ), 10, TimeUnit.SECONDS );
         assertEquals( 0, lifecycled.atomicInteger.get() );
+    }
+
+    @Test
+    void shouldOnlyAddPanicHandlersToServiceOnStart()
+    {
+        var panicService = mock( PanicService.class );
+        PanicEventHandler eventHandler = () -> {};
+
+        var panicServiceLifecycle = new PanicEventHandlerLifecycle( panicService, eventHandler );
+
+        verify( panicService, never() ).add( eventHandler );
+        verify( panicService, never() ).remove( eventHandler );
+        panicServiceLifecycle.start();
+        verify( panicService, times( 1 ) ).add( eventHandler );
+        panicServiceLifecycle.stop();
+        verify( panicService, times( 1 ) ).remove( eventHandler );
     }
 
     @Test
