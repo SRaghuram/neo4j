@@ -1133,6 +1133,149 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }) should be(2)
   }
 
+  test("should get the correct values from index") {
+    //GIVEN
+    setupUserWithCustomRole("customUser", "secret", "customRole")
+    execute("GRANT TRAVERSE ON GRAPH * TO customRole")
+    execute("GRANT READ (foo) ON GRAPH * NODES A TO customRole")
+    execute("DENY READ (foo) ON GRAPH * NODES C TO customRole")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {foo: 1}), (:B {foo: 2}), (:C {foo: 3}), (:A:B {foo: 4}), (:A:C {foo: 5})")
+
+    val queryMatch = "MATCH (n) RETURN n.foo ORDER BY n.foo"
+    val queryEquals = "MATCH (n:A) WHERE n.foo = 5 RETURN n.foo ORDER BY n.foo"
+    val queryRange = "MATCH (n:A) WHERE n.foo < 8 RETURN n.foo ORDER BY n.foo"
+    val queryExists = "MATCH (n:A) WHERE exists(n.foo) RETURN n.foo ORDER BY n.foo"
+
+    val expectedMatch = List(1, 4, null, null, null)
+    val expectedRangeExists = List(1, 4)
+    val expectedEquals = (_: Int) => fail("should get no rows")
+
+    // without index
+    // WHEN .. THEN
+    Seq(
+      (queryMatch, expectedMatch, 5),
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 2),
+      (queryExists, expectedRangeExists, 2)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+          row.getNumber("n.foo") should be(expected(index))
+        }) should be(nbrRows)
+    }
+
+    // with index
+    graph.createIndex("A", "foo")
+
+    // WHEN .. THEN
+    Seq(
+      (queryMatch, expectedMatch, 5),
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 2),
+      (queryExists, expectedRangeExists, 2)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+          row.getNumber("n.foo") should be(expected(index))
+        }) should be(nbrRows)
+    }
+  }
+
+  test("should get the correct values from composite index") {
+    //GIVEN
+    setupUserWithCustomRole("customUser", "secret", "customRole")
+    execute("GRANT TRAVERSE ON GRAPH * TO customRole")
+    execute("GRANT READ (foo) ON GRAPH * NODES A TO customRole")
+    execute("GRANT READ (prop) ON GRAPH * NODES B TO customRole")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
+
+    val queryExists = "MATCH (n:A) WHERE exists(n.foo) AND exists(n.prop) RETURN n.foo, n.prop"
+    val queryEquals = "MATCH (n:A) WHERE n.foo = 5 AND n.prop = 10 RETURN n.foo, n.prop"
+    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND exists(n.prop) RETURN n.foo, n.prop"
+
+    val expectedRangeExists = (4, 9)
+    val expectedEquals = () => fail("should get no rows")
+
+
+    // without index
+    // WHEN .. THEN
+    Seq(
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 1),
+      (queryExists, expectedRangeExists, 1)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, _) => {
+          (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected)
+        }) should be(nbrRows)
+    }
+
+    // with index
+    graph.createIndex("A", "foo", "prop")
+
+    // WHEN .. THEN
+    Seq(
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 1),
+      (queryExists, expectedRangeExists, 1)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, _) => {
+          (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected)
+        }) should be(nbrRows)
+    }
+  }
+
+  test("should get the correct values from composite index with deny") {
+    //GIVEN
+    setupUserWithCustomRole("customUser", "secret", "customRole")
+    execute("GRANT TRAVERSE ON GRAPH * TO customRole")
+    execute("GRANT READ (foo, prop) ON GRAPH * NODES A TO customRole")
+    execute("DENY READ (prop) ON GRAPH * NODES C TO customRole")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
+
+    val queryExists = "MATCH (n:A) WHERE exists(n.foo) AND exists(n.prop) RETURN n.foo, n.prop ORDER BY n.foo"
+    val queryEquals = "MATCH (n:A) WHERE n.foo = 5 AND n.prop = 10 RETURN n.foo, n.prop ORDER BY n.foo"
+    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND exists(n.prop) RETURN n.foo, n.prop ORDER BY n.foo"
+
+    val expectedRangeExists = List((1, 6), (4, 9))
+    val expectedEquals = (_: Int) => fail("should get no rows")
+
+    // without index
+    // WHEN .. THEN
+    Seq(
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 2),
+      (queryExists, expectedRangeExists, 2)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+          (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected(index))
+        }) should be(nbrRows)
+    }
+
+    // with index
+    graph.createIndex("A", "foo", "prop")
+
+    // WHEN .. THEN
+    Seq(
+      (queryEquals, expectedEquals, 0),
+      (queryRange, expectedRangeExists, 2),
+      (queryExists, expectedRangeExists, 2)
+    ).foreach {
+      case (query, expected, nbrRows) =>
+        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+          (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected(index))
+        }) should be(nbrRows)
+    }
+  }
+
   // Tests for relationship privileges
 
   test("should find relationship when granted traversal privilege") {

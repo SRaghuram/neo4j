@@ -324,7 +324,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             return (allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey )) && !disallowsReadPropertyForSomeLabel( propertyKey );
         }
 
-        private boolean disallowsReadPropertyForSomeLabel( int propertyKey )
+        @Override
+        public boolean disallowsReadPropertyForSomeLabel( int propertyKey )
         {
             return disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) || !blacklistedLabelsForAllProperties.isEmpty() ||
                     blacklistedLabelsForProperty.get( propertyKey ) != null;
