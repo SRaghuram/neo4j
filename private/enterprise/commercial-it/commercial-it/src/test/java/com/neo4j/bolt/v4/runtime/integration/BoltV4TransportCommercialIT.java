@@ -14,7 +14,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.List;
+import java.util.Map;
 
+import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket;
 import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
 import org.neo4j.bolt.v1.transport.socket.client.SecureSocketConnection;
@@ -56,6 +58,7 @@ import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @RunWith( Parameterized.class )
 public class BoltV4TransportCommercialIT
@@ -116,7 +119,7 @@ public class BoltV4TransportCommercialIT
             String query = "CYPHER runtime=" + runtime + " UNWIND $param AS x RETURN x";
 
             // begin a transaction
-            connection.send( util.chunk( new BeginMessage( VirtualValues.EMPTY_MAP ) ) );
+            connection.send( util.chunk( new BeginMessage() ) );
             assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
             // execute a query
@@ -167,7 +170,7 @@ public class BoltV4TransportCommercialIT
         negotiateBoltV4();
 
         // begin a transaction
-        connection.send( util.chunk( new BeginMessage( VirtualValues.EMPTY_MAP ) ) );
+        connection.send( util.chunk( new BeginMessage() ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
         // execute a query
@@ -221,7 +224,7 @@ public class BoltV4TransportCommercialIT
             String query = "CYPHER runtime=" + runtime + " UNWIND $param AS x RETURN x";
 
             // begin a transaction
-            connection.send( util.chunk( new BeginMessage( VirtualValues.EMPTY_MAP ) ) );
+            connection.send( util.chunk( new BeginMessage() ) );
             assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
             // execute query #0
@@ -364,7 +367,7 @@ public class BoltV4TransportCommercialIT
 
     private void sessionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
-        connection.send( util.chunk( new RunMessage( query, VirtualValues.EMPTY_MAP, asMapValue( map( "db", databaseName ) ) ) ) );
+        connection.send( util.chunk( new RunMessage( EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), query, EMPTY_MAP, databaseName ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess( allOf( hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
         // "pull all"
@@ -376,7 +379,7 @@ public class BoltV4TransportCommercialIT
     private void transactionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
         // begin a transaction
-        connection.send( util.chunk( new BeginMessage( asMapValue( map( "db", databaseName ) ) ) ) );
+        connection.send( util.chunk( new BeginMessage( EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
         // run

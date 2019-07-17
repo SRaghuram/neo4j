@@ -8,9 +8,12 @@ package com.neo4j.bolt.v4.runtime.integration;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.bolt.messaging.BoltIOException;
+import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.StatementProcessor;
 import org.neo4j.bolt.testing.BoltResponseRecorder;
 import org.neo4j.bolt.testing.RecordedBoltResponse;
@@ -42,8 +45,6 @@ import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
 import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_NAME;
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 
 class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTestBase
 {
@@ -152,7 +153,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
-        machine.process( new RunMessage( query, EMPTY_PARAMS, asMapValue( map( "db", databaseName ) ) ), recorder );
+        machine.process( new RunMessage( EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), query, EMPTY_PARAMS, databaseName ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( AutoCommitState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );
@@ -170,7 +171,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // BEGIN
-        machine.process( new BeginMessage( asMapValue( map( "db", databaseName ) ) ), recorder );
+        machine.process( new BeginMessage( EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( InTransactionState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );
