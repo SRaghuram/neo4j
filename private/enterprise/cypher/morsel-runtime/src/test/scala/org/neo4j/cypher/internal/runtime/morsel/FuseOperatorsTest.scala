@@ -146,7 +146,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                     new ApplyPlans,
                                     new NestedPlanArgumentConfigurations,
                                     new AvailableExpressionVariables,
-                                    ParameterMapping.empty)
+                                    ParameterMapping.empty,
+                                    0)
     physicalPlan.slotConfigurations.set(theId, pipelineBuilder.slotConfiguration)
     physicalPlan.argumentSizes.set(theId, Size.zero)
     val converter = new CompiledExpressionConverter(NullLog.getInstance(), physicalPlan,
@@ -154,7 +155,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     val expressionConverters = new ExpressionConverters(converter)
 
-    val executionGraphDefinition = ExecutionGraphDefinition(physicalPlan, null, null, null, Map.empty)
+    val executionGraphDefinition = ExecutionGraphDefinition(physicalPlan, null, null, null, Map.empty, 0)
     val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
                                   fusingEnabled = true,

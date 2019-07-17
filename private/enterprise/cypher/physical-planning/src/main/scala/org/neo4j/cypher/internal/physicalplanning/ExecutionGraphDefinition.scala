@@ -157,7 +157,8 @@ case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
                                     buffers: IndexedSeq[BufferDefinition],
                                     argumentStateMaps: IndexedSeq[ArgumentStateDefinition],
                                     pipelines: IndexedSeq[PipelineDefinition],
-                                    applyRhsPlans: Map[Int, Int]) {
+                                    applyRhsPlans: Map[Int, Int],
+                                    transactionMaxMemory: Long) {
   def findArgumentStateMapForPlan(planId: Id): ArgumentStateMapId = {
     argumentStateMaps.find(_.planId == planId).map(_.id).getOrElse {
       throw new IllegalStateException("Requested an ArgumentStateMap for an operator which does not have any.")

@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.immutable
 
-class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
+class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
 
   test("should support simple hash join over nodes") {
     // given
@@ -32,7 +32,7 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
     val right = mockPipeFor(slots, RowL(node2), RowL(node3))
 
     // when
-    val result = NodeHashJoinSlottedPrimitivePipe(0, 0, left, right, slots, Array(), Array(), Array())().createResults(queryState)
+    val result = NodeHashJoinSlottedSingleNodePipe(0, 0, left, right, slots, Array(), Array(), Array())().createResults(queryState)
 
     // then
     val list: Iterator[ExecutionContext] = result
@@ -52,7 +52,7 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
     val right = mock[Pipe]
 
     // when
-    val result = NodeHashJoinSlottedPrimitivePipe(0, 0, left, right, slots, Array(), Array(), Array())().
+    val result = NodeHashJoinSlottedSingleNodePipe(0, 0, left, right, slots, Array(), Array(), Array())().
       createResults(queryState)
 
     // then
@@ -71,7 +71,7 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
     val right = mockPipeFor(slots, RowL(node0))
 
     // when
-    val result = NodeHashJoinSlottedPrimitivePipe(0, 0, left, right, slots, Array(), Array(), Array())().
+    val result = NodeHashJoinSlottedSingleNodePipe(0, 0, left, right, slots, Array(), Array(), Array())().
       createResults(queryState)
 
     // then
@@ -98,7 +98,7 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
     val rhsPipe = mockPipeFor(slotConfig, n1001_to_2000:_*)
 
     // when
-    val result = NodeHashJoinSlottedPrimitivePipe(
+    val result = NodeHashJoinSlottedSingleNodePipe(
       lhsOffset = 0,
       rhsOffset = 0,
       left = lhsPipe,

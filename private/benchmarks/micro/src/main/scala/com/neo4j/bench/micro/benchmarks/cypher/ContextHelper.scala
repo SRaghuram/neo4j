@@ -33,7 +33,8 @@ object ContextHelper extends MockitoSugar {
     waitTimeout = Duration(3000, TimeUnit.MILLISECONDS),
     scheduler = CypherMorselRuntimeSchedulerOption.default,
     lenientCreateRelationship = false,
-    fuseOperators = true
+    fuseOperators = true,
+    transactionMaxMemory = 0
   )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,

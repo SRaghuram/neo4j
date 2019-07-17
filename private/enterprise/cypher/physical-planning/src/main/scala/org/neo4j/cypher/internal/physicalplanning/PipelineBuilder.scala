@@ -24,7 +24,8 @@ object PipelineBuilder {
       executionStateDefinitionBuild.buffers.map(mapBuffer),
       executionStateDefinitionBuild.argumentStateMaps.map(mapArgumentStateDefinition),
       pipelineTreeBuilder.pipelines.map(mapPipeline),
-      pipelineTreeBuilder.applyRhsPlans.toMap
+      pipelineTreeBuilder.applyRhsPlans.toMap,
+      physicalPlan.transactionMaxMemory
     )
   }
 

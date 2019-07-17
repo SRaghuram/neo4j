@@ -429,7 +429,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result().toArray
 
         if (leftNodes.length == 1) {
-          NodeHashJoinSlottedPrimitivePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+          NodeHashJoinSlottedSingleNodePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
         } else {
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
         }

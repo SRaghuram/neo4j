@@ -3779,7 +3779,8 @@ class InterpretedExpressionIT extends ExpressionsIT {
                           cursors,
                           Array.empty,
                           expressionVariables,
-                          DO_NOTHING_SUBSCRIBER)
+                          DO_NOTHING_SUBSCRIBER,
+                          NoMemoryTracker)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null,
@@ -3789,7 +3790,8 @@ class InterpretedExpressionIT extends ExpressionsIT {
                             new ApplyPlans,
                             new NestedPlanArgumentConfigurations,
                             new AvailableExpressionVariables,
-                            ParameterMapping.empty)
+                            ParameterMapping.empty,
+                            0)
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(SlottedExpressionConverters(plan),

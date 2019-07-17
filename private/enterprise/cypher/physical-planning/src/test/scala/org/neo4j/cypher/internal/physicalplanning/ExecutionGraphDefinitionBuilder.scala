@@ -41,6 +41,7 @@ class ExecutionGraphDefinitionBuilder()
       logicalPlan,
       semanticTable,
       breakingPolicy,
+      0,
       allocateArgumentSlots = true)
     PipelineBuilder.build(breakingPolicy, physicalPlan)
   }

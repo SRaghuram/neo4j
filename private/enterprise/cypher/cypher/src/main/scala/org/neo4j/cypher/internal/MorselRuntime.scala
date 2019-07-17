@@ -45,6 +45,7 @@ class MorselRuntime(parallelExecution: Boolean,
                                             query.logicalPlan,
                                             query.semanticTable,
                                             MorselPipelineBreakingPolicy,
+                                            context.config.transactionMaxMemory,
                                             allocateArgumentSlots = true)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {

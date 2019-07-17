@@ -36,7 +36,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
   private def build(beforeRewrite: LogicalPlan): Pipe = {
     val tokenContext = mock[TokenContext]
     when(tokenContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
-    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy)
+    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy, 0)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
                                                                           CommunityExpressionConverter(TokenContext.EMPTY))
 

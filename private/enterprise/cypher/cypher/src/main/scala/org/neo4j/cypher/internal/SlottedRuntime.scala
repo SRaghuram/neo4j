@@ -43,7 +43,8 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                               query.logicalPlan,
                                               query.semanticTable,
-                                              SlottedPipelineBreakingPolicy)
+                                              SlottedPipelineBreakingPolicy,
+                                              context.config.transactionMaxMemory)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(physicalPlan.logicalPlan)
@@ -78,6 +79,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
                                                  physicalPlan.slotConfigurations,
                                                  physicalPlan.parameterMapping,
                                                  context.config.lenientCreateRelationship,
+                                                 context.config.transactionMaxMemory,
                                                  query.hasLoadCSV)
 
       if (ENABLE_DEBUG_PRINTS) {
