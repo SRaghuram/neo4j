@@ -79,6 +79,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
+import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -1298,7 +1299,7 @@ class BackupIT
     private static void rotateAndCheckPoint( GraphDatabaseService db ) throws IOException
     {
         DependencyResolver resolver = dependencyResolver( db );
-        resolver.resolveDependency( LogRotation.class ).rotateLogFile();
+        resolver.resolveDependency( LogRotation.class ).rotateLogFile( LogAppendEvent.NULL );
         resolver.resolveDependency( CheckPointer.class ).forceCheckPoint( new SimpleTriggerInfo( "test" ) );
     }
 

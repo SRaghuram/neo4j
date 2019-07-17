@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
+import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -102,7 +103,7 @@ public class ReadReplicaStoreCopyIT
         try
         {
             DependencyResolver dependencyResolver = core.defaultDatabase().getDependencyResolver();
-            dependencyResolver.resolveDependency( LogRotation.class ).rotateLogFile();
+            dependencyResolver.resolveDependency( LogRotation.class ).rotateLogFile( LogAppendEvent.NULL );
             SimpleTriggerInfo info = new SimpleTriggerInfo( "test" );
             dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );
         }

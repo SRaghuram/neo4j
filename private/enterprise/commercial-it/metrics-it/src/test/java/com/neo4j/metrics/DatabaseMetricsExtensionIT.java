@@ -37,8 +37,10 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
+import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static java.lang.System.currentTimeMillis;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -49,6 +51,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
 class DatabaseMetricsExtensionIT
@@ -79,6 +82,17 @@ class DatabaseMetricsExtensionIT
     void setup()
     {
         addNodes( 1 ); // to make sure creation of label and property key tokens do not mess up with assertions in tests
+    }
+
+    @Test
+    void reportCheckpointMetrics() throws Exception
+    {
+        CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
+        checkPointer.forceCheckPoint( new SimpleTriggerInfo( "testTrigger" ) );
+
+        File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
+        assertEventually( "Metrics report should have correct number of checkpoints.",
+                () -> readLongCounterValue( checkpointsMetricsFile ), greaterThanOrEqualTo( 1L ), 1, MINUTES );
     }
 
     @Test
