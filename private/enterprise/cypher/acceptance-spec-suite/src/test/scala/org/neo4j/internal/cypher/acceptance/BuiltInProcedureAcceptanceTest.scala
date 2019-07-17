@@ -5,8 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.graphdb.schema.IndexDefinition
 import org.neo4j.graphdb.{Label, Node, Relationship}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.schema.SchemaDescriptor
+import org.neo4j.kernel.impl.api.index.IndexingService
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.scalatest.LoneElement._
 
@@ -417,21 +420,22 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.execute("CALL db.awaitIndexes(10)")
-    val index = graph.getIndex("Person", Seq("name"))
 
+    val index = inTx(kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")),
+                                                       tokenReader(t => t.propertyKey("name"))))
     // when
     val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
 
     // Then
     listResult.toList should equal(
       List(Map("description" -> "INDEX ON :Person(name)",
-        "indexName" -> "index_3",
+        "indexName" -> index.getName,
         "tokenNames" -> List("Person"),
         "properties" -> List("name"),
         "state" -> "ONLINE",
         "progress" -> 100D,
         "type" -> "node_label_property",
-        "id" -> 3,
+        "id" -> index.getId,
         "provider" -> Map(
           "version" -> "3.0",
           "key" -> "lucene+native"),
