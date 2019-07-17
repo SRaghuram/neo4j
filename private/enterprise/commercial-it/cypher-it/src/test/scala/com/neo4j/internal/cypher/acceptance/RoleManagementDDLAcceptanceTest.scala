@@ -158,7 +158,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
-    } should have message "The specified role 'foo' already exists."
+    } should have message "Failed to create the specified role 'foo': Role already exists."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
@@ -229,14 +229,14 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
-    } should have message "Role 'foo' does not exist."
+    } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF ``")
       // THEN
-    } should have message "Role '' does not exist."
+    } should have message "Failed to create a role as copy of '': Role does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -275,7 +275,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
-    } should have message "The specified role 'bar' already exists."
+    } should have message "Failed to create the specified role 'bar': Role already exists."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
   }
@@ -290,7 +290,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
       // THEN
-    } should have message "Role 'foo' does not exist."
+    } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
   }
@@ -338,14 +338,14 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
-    } should have message "Role 'foo' does not exist."
+    } should have message "Failed to delete the specified role 'foo': Role does not exist."
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP ROLE ``")
       // THEN
-    } should have message "Role '' does not exist."
+    } should have message "Failed to delete the specified role '': Role does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -478,7 +478,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
+    } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
@@ -489,7 +489,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE `` TO Bar")
       // THEN
-    } should have message "Cannot grant non-existent role '' to user 'Bar'"
+    } should have message "Failed to grant role '' to user 'Bar': Role does not exist."
 
     // AND
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
@@ -508,7 +508,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Cannot grant role 'dragon' to non-existent user 'Bar'"
+    } should have message "Failed to grant role 'dragon' to user 'Bar': User does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -520,7 +520,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO ``")
       // THEN
-    } should have message "Cannot grant role 'dragon' to non-existent user ''"
+    } should have message "Failed to grant role 'dragon' to user '': User does not exist."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -537,7 +537,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
-    } should have message "Cannot grant non-existent role 'dragon' to user 'Bar'"
+    } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
@@ -547,7 +547,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("GRANT ROLE `` TO ``")
       // THEN
-    } should have message "Cannot grant non-existent role '' to user ''"
+    } should have message "Failed to grant role '' to user '': Role does not exist."
 
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
@@ -716,7 +716,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
-    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
+    } should have message "Failed to revoke role 'custom' from user 'user': Role does not exist."
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
@@ -731,7 +731,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
-    } should have message "Cannot revoke role 'custom' from non-existent user 'user'"
+    } should have message "Failed to revoke role 'custom' from user 'user': User does not exist."
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
@@ -745,7 +745,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE ROLE custom FROM user")
       // THEN
-    } should have message "Cannot revoke non-existent role 'custom' from user 'user'"
+    } should have message "Failed to revoke role 'custom' from user 'user': Role does not exist."
 
     // AND
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
