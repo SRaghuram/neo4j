@@ -11,20 +11,20 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-case class NodeHashJoinSlottedPrimitivePipe(lhsOffset: Int,
-                                            rhsOffset: Int,
-                                            left: Pipe,
-                                            right: Pipe,
-                                            slots: SlotConfiguration,
-                                            longsToCopy: Array[(Int, Int)],
-                                            refsToCopy: Array[(Int, Int)],
-                                            cachedPropertiesToCopy: Array[(Int, Int)])
-                                           (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
+case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
+                                             rhsOffset: Int,
+                                             left: Pipe,
+                                             right: Pipe,
+                                             slots: SlotConfiguration,
+                                             longsToCopy: Array[(Int, Int)],
+                                             refsToCopy: Array[(Int, Int)],
+                                             cachedPropertiesToCopy: Array[(Int, Int)])
+                                            (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
 
     if (input.isEmpty)
@@ -35,7 +35,7 @@ case class NodeHashJoinSlottedPrimitivePipe(lhsOffset: Int,
     if (rhsIterator.isEmpty)
       return Iterator.empty
 
-    val table = buildProbeTable(input, state)
+    val table = buildProbeTable(state.memoryTracker.memoryTrackingIterator(input), state)
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it

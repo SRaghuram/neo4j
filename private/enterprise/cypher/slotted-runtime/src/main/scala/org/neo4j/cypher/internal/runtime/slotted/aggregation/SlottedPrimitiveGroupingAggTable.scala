@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.{Aggr
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, GroupingAggTable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{AggregationPipe, ExecutionContextFactory, Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{LongArray, Values}
 
 import scala.collection.JavaConverters._
@@ -78,6 +77,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
       }
       functions
     })
+    state.memoryTracker.checkMemoryRequirement(resultMap.size)
     var i = 0
     while (i < functions.length) {
       functions(i)(row, state)

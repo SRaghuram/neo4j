@@ -15,11 +15,11 @@ case class EagerSlottedPipe(source: Pipe, slots: SlotConfiguration)(val id: Id =
   extends PipeWithSource(source) {
 
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    input.map { inputRow =>
+    state.memoryTracker.memoryTrackingIterator(input.map { inputRow =>
       // this is necessary because Eager is the beginning of a new pipeline
       val outputRow = SlottedExecutionContext(slots)
       inputRow.copyTo(outputRow)
       outputRow
-    }.toIndexedSeq.iterator
+    }).toIndexedSeq.iterator
   }
 }
