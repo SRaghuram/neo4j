@@ -223,7 +223,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE USER neo4j SET PASSWORD 'password'")
       // THEN
-    } should have message "The specified user 'neo4j' already exists."
+    } should have message "Failed to create the specified user 'neo4j': User already exists."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -337,7 +337,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       executeOnSystem("neo4j", "neo", "DROP USER neo4j")
       // THEN
-    } should have message "Deleting yourself (user 'neo4j') is not allowed."
+    } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
@@ -352,7 +352,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP USER foo")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to delete the specified user 'foo': User does not exist."
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
@@ -362,7 +362,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP USER `:foo`")
       // THEN
-    } should have message "User ':foo' does not exist."
+    } should have message "Failed to delete the specified user ':foo': User does not exist."
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
@@ -423,7 +423,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN
-    } should have message "Old password and new password cannot be the same."
+    } should have message "Failed to alter the specified user 'foo': Old password and new password cannot be the same."
 
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -639,7 +639,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz'")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: parameter password (and illegal username)") {
@@ -650,7 +650,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER `neo:4j` SET PASSWORD $password", Map("password" -> "baz"))
       // THEN
-    } should have message "User 'neo:4j' does not exist."
+    } should have message "Failed to alter the specified user 'neo:4j': User does not exist."
   }
 
   test("should fail when altering a non-existing user: string password and password mode") {
@@ -661,7 +661,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: parameter password and password mode") {
@@ -672,7 +672,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE REQUIRED", Map("password" -> "baz"))
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: string password and status") {
@@ -683,7 +683,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS ACTIVE")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: parameter password and status") {
@@ -694,7 +694,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: string password, password mode and status") {
@@ -705,7 +705,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED SET STATUS ACTIVE")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: password mode") {
@@ -716,7 +716,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: password mode and status") {
@@ -727,7 +727,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS SUSPENDED")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: status") {
@@ -738,7 +738,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET STATUS SUSPENDED")
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a dropped user") {
@@ -751,7 +751,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
       // THEN
-    } should have message "User 'foo' does not exist."
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering user when not on system database") {
@@ -841,7 +841,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'wrongPassword' TO 'baz'")
       // THEN
-    } should have message "Invalid principal or credentials."
+    } should have message "User 'foo' failed to alter their own password: Invalid principal or credentials."
 
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
@@ -869,7 +869,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'bar'")
       // THEN
-    } should have message "Old password and new password cannot be the same."
+    } should have message "User 'foo' failed to alter their own password: Old password and new password cannot be the same."
 
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
@@ -1030,7 +1030,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
       // THEN
-    } should have message "Invalid principal or credentials."
+    } should have message "User 'foo' failed to alter their own password: Invalid principal or credentials."
 
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)

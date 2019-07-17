@@ -372,7 +372,8 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE DATABASE `foo`")
       // THEN
-    } should have message "The total limit of databases is already reached. To create more you need to either drop databases or change the limit via the config setting 'dbms.max_databases'"
+    } should have message "Failed to create the specified database 'foo': The total limit of databases is already reached. " +
+      "To create more you need to either drop databases or change the limit via the config setting 'dbms.max_databases'"
 
     // THEN
     execute("SHOW DATABASES").toList.size should equal(2)
@@ -547,7 +548,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
-    } should have message "The specified database 'foo' already exists."
+    } should have message "Failed to create the specified database 'foo': Database already exists."
   }
 
   test("should fail when creating a database with invalid name") {
@@ -687,14 +688,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to drop the specified database 'foo': Database does not exist."
 
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE ``")
       // THEN
-    } should have message "Database '' does not exist."
+    } should have message "Failed to drop the specified database '': Database does not exist."
   }
 
   test("should fail when dropping a dropped database") {
@@ -710,7 +711,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to drop the specified database 'foo': Database does not exist."
   }
 
   test("should fail on dropping system database") {
@@ -802,14 +803,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("START DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to start the specified database 'foo': Database does not exist."
 
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE ``")
       // THEN
-    } should have message "Database '' does not exist."
+    } should have message "Failed to start the specified database '': Database does not exist."
   }
 
   test("should fail when starting a dropped database") {
@@ -824,7 +825,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("START DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to start the specified database 'foo': Database does not exist."
 
     // THEN
     val result = execute("SHOW DATABASE foo")
@@ -996,14 +997,14 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to stop the specified database 'foo': Database does not exist."
 
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE ``")
       // THEN
-    } should have message "Database '' does not exist."
+    } should have message "Failed to stop the specified database '': Database does not exist."
   }
 
   test("should fail when stopping a dropped database") {
@@ -1018,7 +1019,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN
-    } should have message "Database 'foo' does not exist."
+    } should have message "Failed to stop the specified database 'foo': Database does not exist."
 
     // THEN
     val result = execute("SHOW DATABASE foo")

@@ -286,25 +286,31 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
             selectDatabase(SYSTEM_DATABASE_NAME)
 
             // WHEN
-            the[InvalidArgumentsException] thrownBy {
+            val error1 = the[InvalidArgumentsException] thrownBy {
               // WHEN
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * NODES * (*) TO custom")
               // THEN
-            } should have message "Role 'custom' does not exist."
+            }
+            error1.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
+              be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist."))
 
             // WHEN
-            the[InvalidArgumentsException] thrownBy {
+            val error2 = the[InvalidArgumentsException] thrownBy {
               // WHEN
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * RELATIONSHIPS * (*) TO custom")
               // THEN
-            } should have message "Role 'custom' does not exist."
+            }
+            error2.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
+              be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist."))
 
             // WHEN
-            the[InvalidArgumentsException] thrownBy {
+            val error3 = the[InvalidArgumentsException] thrownBy {
               // WHEN
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
               // THEN
-            } should have message "Role 'custom' does not exist."
+            }
+            error3.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
+              be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist."))
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
@@ -314,9 +320,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
             // GIVEN
             selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
-            the[DatabaseNotFoundException] thrownBy {
+            val error = the[DatabaseNotFoundException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo TO custom")
-            } should have message "Database 'foo' does not exist."
+            }
+            error.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Database 'foo' does not exist.") or
+              be(s"Failed to $grantOrDeny read privilege to role 'custom': Database 'foo' does not exist."))
           }
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
@@ -2183,8 +2191,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         }
 
         // THEN
-        error1.getMessage should (be("The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
-          be("The role 'wrongRole' does not exist."))
+        error1.getMessage should (be("Failed to revoke traversal privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
+          be("Failed to revoke traversal privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
 
         // WHEN
         val error2 = the[InvalidArgumentsException] thrownBy {
@@ -2192,8 +2200,8 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         }
 
         // THEN
-        error2.getMessage should (be("The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
-          be("The role 'wrongRole' does not exist."))
+        error2.getMessage should (be("Failed to revoke read privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
+          be("Failed to revoke read privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
 
         // WHEN
         val error3 = the[InvalidArgumentsException] thrownBy {
@@ -2201,7 +2209,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         }
         // THEN
         error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
-          be("The role 'wrongRole' does not exist."))
+          include("privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
       }
 
       test(s"should fail revoke $grantOrDeny privilege not granted to role with REVOKE $revokeType") {
@@ -2242,7 +2250,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
         the[InvalidArgumentsException] thrownBy {
           execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist."
+        } should have message s"Failed to revoke traversal privilege from role 'custom': The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist."
       }
 
       test(s"should fail when revoking $grantOrDeny read privilege with missing database with REVOKE $revokeType") {
@@ -2252,7 +2260,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
         the[InvalidArgumentsException] thrownBy {
           execute(s"REVOKE $revokeType READ (*) ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."
+        } should have message s"Failed to revoke read privilege from role 'custom': The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."
       }
 
       test(s"should fail when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
@@ -2266,11 +2274,11 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
         }
         // THEN
-        e.getMessage should (be(s"The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist.") or
-          be(s"The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."))
+        e.getMessage should (include(s"privilege from role 'custom': The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist.") or
+          include(s"privilege from role 'custom': The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."))
       }
 
-      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE$revokeType") {
+      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE $revokeType") {
         the[DatabaseManagementException] thrownBy {
           // WHEN
           execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
