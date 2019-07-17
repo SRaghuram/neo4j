@@ -38,6 +38,11 @@ import static org.neo4j.values.storable.Values.pointValue;
 
 public class PointGeneratorIT
 {
+    private double WGS_MIN_Y = -90;
+    private double WGS_MAX_Y = 90;
+    private double WGS_MIN_X = -180;
+    private double WGS_MAX_X = 180;
+
     @Test
     public void shouldGenerateSmallGrid()
     {
@@ -95,12 +100,40 @@ public class PointGeneratorIT
                     maxX,
                     minY,
                     maxY );
+
+            double[] newMinYAndMaxY = restrictYCoordinateWithWGS84BoundingBox( minY, maxY );
             doShouldGenerateLargeAsymmetricGrid(
                     new WGS84(),
                     minX,
                     maxX,
-                    minY,
-                    maxY );
+                    newMinYAndMaxY[0],
+                    newMinYAndMaxY[1] );
+        }
+    }
+
+    private double[] restrictYCoordinateWithWGS84BoundingBox( double min, double max )
+    {
+        double a = wgsBoundingBoxForY( min );
+        double b = wgsBoundingBoxForY( max );
+        if ( a < b )
+        {
+            return new double[]{a, b};
+        }
+        else
+        {
+            return new double[]{b, a}; // making sure that the order is always [min, max]
+        }
+    }
+
+    private double wgsBoundingBoxForY( double value )
+    {
+        if ( value > 0 )
+        {
+            return value % WGS_MAX_Y;
+        }
+        else
+        {
+            return value % WGS_MIN_Y;
         }
     }
 
@@ -112,6 +145,24 @@ public class PointGeneratorIT
             double maxY )
     {
         int approximateCount = 100_000;
+
+        // because in WGS-84 we wrap around the globe for anything that is not in [-180,180]
+        if ( crs.crs().isGeographic() )
+        {
+            PointValue wrapMinPoint = pointValue( crs.crs(), minX, minY );
+            PointValue wrapMaxPoint = pointValue( crs.crs(), maxX, minY ); // don't care for Y here, only doing it to wrap the X value
+            // getting the real value after wrapping and making sure they are still sensible
+            minX = wrapMinPoint.coordinate()[0];
+            maxX = wrapMaxPoint.coordinate()[0];
+            if ( minX > maxX )
+            {
+                // due to wrapping min and max must switch now
+                double temp = minX;
+                minX = maxX;
+                maxX = temp;
+            }
+            assert minX < maxX;
+        }
         ValueGeneratorFactory<Point> gridGenerator = grid( minX, maxX, minY, maxY, approximateCount, crs );
         ValueGeneratorFun<Point> gridFun1 = gridGenerator.create();
         ValueGeneratorFun<Point> gridFun2 = gridGenerator.create();
@@ -177,12 +228,14 @@ public class PointGeneratorIT
                     maxY,
                     rng1.innerRng(),
                     rng2.innerRng() );
+            double[] newMinYAndMaxY = restrictYCoordinateWithWGS84BoundingBox( minY, maxY );
+
             doShouldGenerateLargeAsymmetricRandom(
                     new WGS84(),
                     minX,
                     maxX,
-                    minY,
-                    maxY,
+                    newMinYAndMaxY[0],
+                    newMinYAndMaxY[1],
                     rng1.innerRng(),
                     rng2.innerRng() );
         }
@@ -197,6 +250,24 @@ public class PointGeneratorIT
             SplittableRandom rng1,
             SplittableRandom rng2 )
     {
+        // because in WGS-84 we wrap around the globe for anything that is not in [-180,180]
+        if ( crs.crs().isGeographic() )
+        {
+            // getting the real value after wrapping and making sure they are still sensible
+            PointValue wrapMinPoint = pointValue( crs.crs(), minX, minY );
+            PointValue wrapMaxPoint = pointValue( crs.crs(), maxX, minY ); // don't care for Y here, only doing it to wrap the X value
+            minX = wrapMinPoint.coordinate()[0];
+            maxX = wrapMaxPoint.coordinate()[0];
+            if ( minX > maxX )
+            {
+                // due to wrapping min and max must switch now
+                double temp = minX;
+                minX = maxX;
+                maxX = temp;
+            }
+            assert minX < maxX;
+        }
+
         ValueGeneratorFactory<Point> randomGenerator = random( minX, maxX, minY, maxY, crs );
         ValueGeneratorFun<Point> randomFun1 = randomGenerator.create();
         ValueGeneratorFun<Point> randomFun2 = randomGenerator.create();
@@ -374,12 +445,12 @@ public class PointGeneratorIT
 
         // specific scenario that is easy to reason about and surfaced many bugs during development
         int approximateCount = 100_000;
-        double clusterSizeX = 300;
-        double clusterSizeY = 300;
-        double extentMinX = -1000;
-        double extentMaxX = 1000;
-        double extentMinY = -1000;
-        double extentMaxY = 1000;
+        double clusterSizeX = 50;
+        double clusterSizeY = 50;
+        double extentMinX = WGS_MIN_X;
+        double extentMaxX = WGS_MAX_X;
+        double extentMinY = WGS_MIN_Y;
+        double extentMaxY = WGS_MAX_Y;
 
         doShouldGenerateLargeClusteredGrid(
                 from(
@@ -407,12 +478,12 @@ public class PointGeneratorIT
                 rng2.innerRng() );
 
         // specific scenario that is easy to reason about and surfaced many bugs during development
-        clusterSizeX = 2000;
-        clusterSizeY = 2000;
-        extentMinX = -1000;
-        extentMaxX = 1000;
-        extentMinY = -1000;
-        extentMaxY = 1000;
+        clusterSizeX = 100;
+        clusterSizeY = 100;
+        extentMinX = WGS_MIN_X;
+        extentMaxX = WGS_MAX_X;
+        extentMinY = WGS_MIN_Y;
+        extentMaxY = WGS_MAX_Y;
         doShouldGenerateLargeClusteredGrid(
                 from(
                         clusterSizeX,
@@ -441,11 +512,12 @@ public class PointGeneratorIT
         // random valid scenarios
         for ( int i = 0; i < 10; i++ )
         {
-            double extentX = 1_000_000 * rng.nextDouble();
-            double extentY = 1_000_000 * rng.nextDouble();
-            extentMinX = rng.nextGaussian() * extentX;
+            double extentX = WGS_MAX_X * rng.nextDouble();
+            double extentY = WGS_MAX_Y * rng.nextDouble();
+            // making sure that the range for min can fit all of the extent to not hit the upper boundary
+            extentMinX = rng.nextDouble() * getOneOrMinusOne( rng ) * (WGS_MAX_X - extentX);
             extentMaxX = extentMinX + extentX;
-            extentMinY = rng.nextGaussian() * extentY;
+            extentMinY = rng.nextDouble() * getOneOrMinusOne( rng ) * (WGS_MAX_Y - extentY);
             extentMaxY = extentMinY + extentY;
             // it will always be possible to fit at least 1 cluster in the extent
             double maxPercentageOfExtentThatClusterCanBe = 0.5;
@@ -476,6 +548,22 @@ public class PointGeneratorIT
                     rng1.innerRng(),
                     rng2.innerRng() );
         }
+    }
+
+    public double getOneOrMinusOne( RichRandom rng )
+    {
+        switch ( rng.nextInt( 0, 2 ) )
+        {
+        case 0:
+            return -1;
+        default:
+            return 1;
+        }
+    }
+
+    public double wrapXValueInWGS84Boundary( double x )
+    {
+        return pointValue( new WGS84().crs(), x, 0 ).coordinate()[0];
     }
 
     private void doShouldGenerateLargeClusteredGrid( ClusterGridDefinition definition, SplittableRandom rng1, SplittableRandom rng2 )
@@ -605,14 +693,14 @@ public class PointGeneratorIT
                 rng2.innerRng() );
         doShouldGenerateLargeCircleGrid(
                 from(
-                        circleRadius,
-                        circleRadius,
+                        WGS_MAX_Y * 2,
+                        WGS_MAX_Y * 2,
                         circleCountX,
                         circleCountY,
-                        extentMinX,
-                        extentMaxX,
-                        extentMinY,
-                        extentMaxY,
+                        WGS_MIN_Y,
+                        WGS_MAX_Y,
+                        WGS_MIN_Y,
+                        WGS_MAX_Y,
                         approximateCount,
                         new WGS84() ),
                 rng1.innerRng(),
@@ -644,16 +732,21 @@ public class PointGeneratorIT
                             new Cartesian() ),
                     rng1.innerRng(),
                     rng2.innerRng() );
+            double[] newMinYAndMaxY = restrictYCoordinateWithWGS84BoundingBox( extentMinY, extentMaxY );
+            double newExtentMinY = newMinYAndMaxY[0];
+            double newExtentMaxY = newMinYAndMaxY[1];
+            double newExtend = newExtentMaxY - newExtentMinY;
+
             doShouldGenerateLargeClusteredGrid(
                     from(
-                            circleRadius,
-                            circleRadius,
+                            newExtend,
+                            newExtend,
                             circleCountX,
                             circleCountY,
-                            extentMinX,
-                            extentMaxX,
-                            extentMinY,
-                            extentMaxY,
+                            newExtentMinY,
+                            newExtentMaxY,
+                            newExtentMinY,
+                            newExtentMaxY,
                             approximateCount,
                             new WGS84() ),
                     rng1.innerRng(),

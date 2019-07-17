@@ -351,8 +351,16 @@ public abstract class PointGenerator
                 @Override
                 public PointValue next( SplittableRandom rng )
                 {
-                    Point clusterCorner = clusterCorners.next( rng );
-                    double clusterCenterX = xFor( clusterCorner ) + clusterDiameterX;
+                    Point clusterCorner;
+                    double clusterCenterX;
+
+                    do
+                    {
+                        clusterCorner = clusterCorners.next( rng );
+                        clusterCenterX = xFor( clusterCorner ) + clusterDiameterX;
+                    }
+                    while ( clusterCenterX + clusterDiameterX >= 180 && crs.isGeographic() ); // prevent stuff from being wrapped by WGS-84 boundaries
+
                     double clusterCenterY = yFor( clusterCorner ) + clusterDiameterY;
                     return pointValue( crs, clusterCenterX, clusterCenterY );
                 }
@@ -466,59 +474,121 @@ public abstract class PointGenerator
         @Override
         public ValueGeneratorFun<Point> create()
         {
-            return new ValueGeneratorFun<>()
+            CoordinateReferenceSystem coordinateReferenceSystem = CRS.from( crsString ).crs();
+            if ( coordinateReferenceSystem.isGeographic() )
             {
-                private final CoordinateReferenceSystem crs = CRS.from( crsString ).crs();
-                private double x = minX;
-                private double y = minY;
-                private long currentCount;
-
-                @Override
-                public boolean wrapped()
+                PointValue wrappedMinPoint = pointValue( coordinateReferenceSystem, minX, minY );
+                return new ValueGeneratorFun<>()
                 {
-                    return currentCount > 0 && x == minX && y == minY;
-                }
+                    private final CoordinateReferenceSystem crs = coordinateReferenceSystem;
+                    private final double wrappedMinX = wrappedMinPoint.coordinate()[0];
+                    private double x = wrappedMinX;
+                    private double y = minY;
+                    private long currentCount;
 
-                private boolean hasFilledX()
-                {
-                    return currentCount % xStepCount == 0;
-                }
-
-                private boolean hasFilledY()
-                {
-                    return currentCount % totalStepCount == 0;
-                }
-
-                @Override
-                public PointValue next( SplittableRandom rng )
-                {
-                    PointValue point = pointValue( crs, x, y );
-                    currentCount++;
-                    if ( hasFilledX() )
+                    @Override
+                    public boolean wrapped()
                     {
-                        x = minX;
-                        if ( hasFilledY() )
+                        return currentCount > 0 && x == wrappedMinX && y == minY;
+                    }
+
+                    private boolean hasFilledX()
+                    {
+                        return currentCount % xStepCount == 0;
+                    }
+
+                    private boolean hasFilledY()
+                    {
+                        return currentCount % totalStepCount == 0;
+                    }
+
+                    @Override
+                    public PointValue next( SplittableRandom rng )
+                    {
+                        PointValue point = pointValue( crs, x, y );
+                        currentCount++;
+                        if ( hasFilledX() )
                         {
-                            y = minY;
+                            x = minX;
+                            if ( hasFilledY() )
+                            {
+                                y = minY;
+                            }
+                            else
+                            {
+                                y += yStep;
+                            }
                         }
                         else
                         {
-                            y += yStep;
+                            x += xStep;
                         }
+                        return point;
                     }
-                    else
-                    {
-                        x += xStep;
-                    }
-                    return point;
-                }
 
-                @Override
-                public Value nextValue( SplittableRandom rng )
+                    @Override
+                    public Value nextValue( SplittableRandom rng )
+                    {
+                        return next( rng );
+                    }
+                };
+            }
+            else
+            {
+                return new ValueGeneratorFun<>()
                 {
-                    return next( rng );
-                }
-            };
+                    private final CoordinateReferenceSystem crs = coordinateReferenceSystem;
+                    private double x = minX ;
+                    private double y = minY;
+                    private long currentCount;
+
+                    @Override
+                    public boolean wrapped()
+                    {
+                        return currentCount > 0 && x == minX && y == minY;
+                    }
+
+                    private boolean hasFilledX()
+                    {
+                        return currentCount % xStepCount == 0;
+                    }
+
+                    private boolean hasFilledY()
+                    {
+                        return currentCount % totalStepCount == 0;
+                    }
+
+                    @Override
+                    public PointValue next( SplittableRandom rng )
+                    {
+                        PointValue point = pointValue( crs, x, y );
+                        currentCount++;
+                        if ( hasFilledX() )
+                        {
+                            x = minX;
+                            if ( hasFilledY() )
+                            {
+                                y = minY;
+                            }
+                            else
+                            {
+                                y += yStep;
+                            }
+                        }
+                        else
+                        {
+                            x += xStep;
+                        }
+                        return point;
+                    }
+
+                    @Override
+                    public Value nextValue( SplittableRandom rng )
+                    {
+                        return next( rng );
+                    }
+                };
+            }
         }
 
         @Override
