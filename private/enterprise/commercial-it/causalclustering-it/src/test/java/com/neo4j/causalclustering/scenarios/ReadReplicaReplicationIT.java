@@ -35,6 +35,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
@@ -45,7 +46,6 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.kernel.api.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
