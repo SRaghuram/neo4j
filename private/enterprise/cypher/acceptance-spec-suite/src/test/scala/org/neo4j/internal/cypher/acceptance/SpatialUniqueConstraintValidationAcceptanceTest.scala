@@ -89,7 +89,7 @@ class SpatialUniqueConstraintValidationAcceptanceTest
     execute("CREATE ( node:Label1 { key1: point({x:1, y:2}) } )")
     execute("CREATE ( node:Label1 { key1: point({x:1, y:1000000}) } )")
     execute("CREATE ( node:Label1 { key1: point({x:1, y:2, crs: 'wgs-84'}) } )")
-    execute("CREATE ( node:Label1 { key1: point({x:1, y:1000000, crs: 'wgs-84'}) } )")
+    execute("CREATE ( node:Label1 { key1: point({x:1, y:10, crs: 'wgs-84'}) } )")
 
     // WHEN
     Set("cartesian", "wgs-84").foreach { crs =>
@@ -97,8 +97,8 @@ class SpatialUniqueConstraintValidationAcceptanceTest
       execute(s"CREATE ( node:Label2 { key1: point({x:1, y:2, crs: '$crs'}) } )")
       execute(s"CREATE ( node:Label1 { key1: point({x:3, y:4, crs: '$crs'}) } )")
       execute(s"CREATE ( node:Label1 { key2: point({x:1, y:2, crs: '$crs'}) } )")
-      execute(s"CREATE ( node:Label1 { key1: point({x:1, y:1000001, crs: '$crs'}) } )")
-      execute(s"CREATE ( node:Label1 { key1: point({x:1, y:2000000, crs: '$crs'}) } )")
+      execute(s"CREATE ( node:Label1 { key1: point({x:1, y:11, crs: '$crs'}) } )")
+      execute(s"CREATE ( node:Label1 { key1: point({x:1, y:20, crs: '$crs'}) } )")
     }
 
     // THEN

@@ -354,12 +354,12 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
 
     //  And when creating in merge
-    val result2 = executeWith(Configs.InterpretedAndSlotted, "MERGE (p:Place {location: point({latitude: 156.7, longitude: 112.78, crs: 'WGS-84'}) }) RETURN p.location as point")
+    val result2 = executeWith(Configs.InterpretedAndSlotted, "MERGE (p:Place {location: point({latitude: 156.7, longitude: 65.78, crs: 'WGS-84'}) }) RETURN p.location as point")
 
     // Then
     val plan2 = result2.executionPlanDescription()
     plan2 should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r)
-    result2.toList should equal(List(Map("point" -> wgsPoint(112.78, 156.7))))
+    result2.toList should equal(List(Map("point" -> wgsPoint(longitude = 65.78, latitude = 156.7))))
   }
 
   test("indexed points close together in WGS84 - range query greaterThan") {

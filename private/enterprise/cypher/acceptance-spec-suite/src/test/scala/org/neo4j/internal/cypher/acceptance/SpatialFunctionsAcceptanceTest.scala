@@ -17,7 +17,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude:1, latitude:2, height:3})) AS s").toList should equal(List(Map("s" -> "point({x: 1.0, y: 2.0, z: 3.0, crs: 'wgs-84-3d'})")))
   }
 
-  test("geometric points should validate and possibly wrap coordinates") {
+  test("2D geometric points should validate and possibly wrap coordinates") {
     executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 180, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 180.0, y: 0.0, crs: 'wgs-84'})")))
     executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -180, latitude: 0})) AS s").toList should
@@ -41,9 +41,42 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // no wrapping for y coordinates
     failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, 91.0]. Valid range is [-90, 90]."))
+      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0]. Valid range for Y coordinate is [-90, 90]."))
     failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate for Y: [0.0, -91.0]. Valid range is [-90, 90]."))
+      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0]. Valid range for Y coordinate is [-90, 90]."))
+  }
+
+  test("3D geometric points should validate and possibly wrap coordinates") {
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 180, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -180, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: -180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 190, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: -170.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -190, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 170.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 360, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 0.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -360, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 0.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 540, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -540, latitude: 0, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: -180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 90, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 0.0, y: 90.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -90, height: 9999})) AS s").toList should
+      equal(List(Map("s" -> "point({x: 0.0, y: -90.0, z: 9999.0, crs: 'wgs-84-3d'})")))
+
+    // no wrapping for y coordinates
+    failWithError(Configs.InterpretedAndSlottedAndMorsel,
+      query = "RETURN toString(point({longitude: 0, latitude: 91, height: 9999})) AS s",
+      errorType = Seq("InvalidArgumentException"),
+      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel,
+      query = "RETURN toString(point({longitude: 0, latitude: -91, height: 9999})) AS s",
+      errorType = Seq("InvalidArgumentException"),
+      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
   }
 
   test("point function should work with literal map") {
