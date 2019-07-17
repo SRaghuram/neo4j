@@ -124,6 +124,9 @@ class MorselOptionalSingleThreadedNoFusingTest extends OptionalTestBase(SINGLE_T
 class MorselMiscTest extends MiscTestBase(SINGLE_THREADED, MORSEL)
 class MorselMiscNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
+class MorselMemoryManagementTest extends MemoryManagementTestBase(SINGLE_THREADED, MORSEL)
+class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
+class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(SINGLE_THREADED, MORSEL)
 
 // WORKLOAD
 class MorselWorkloadTest extends WorkloadTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
