@@ -63,6 +63,6 @@ class SetConfigValueProcedureTest
         Throwable rootCause = Exceptions.rootCause(
                 assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
-        assertEquals( "must be 'true' or 'false'", rootCause.getMessage() );
+        assertEquals( "'invalid' is not a valid boolean value, must be 'true' or 'false'", rootCause.getMessage() );
     }
 }
