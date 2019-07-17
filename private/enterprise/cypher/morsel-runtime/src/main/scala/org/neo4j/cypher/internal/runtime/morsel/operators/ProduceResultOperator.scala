@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{DbAccess, QueryContext, ValuePopulation}
+import org.neo4j.cypher.internal.runtime.{DbAccess, NoMemoryTracker, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
@@ -133,6 +133,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                        Array.empty[IndexReadSession],
                                        resources.expressionVariables(state.nExpressionSlots),
                                        state.subscriber,
+                                       NoMemoryTracker,
                                        prePopulateResults = state.prepopulateResults)
 
     val subscriber: QuerySubscriber = state.subscriber

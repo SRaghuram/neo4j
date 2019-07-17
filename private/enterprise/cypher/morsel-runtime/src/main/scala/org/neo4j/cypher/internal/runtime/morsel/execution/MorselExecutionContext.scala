@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
@@ -44,7 +45,7 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private var validRows: Int,
                              private var currentRow: Int,
                              val slots: SlotConfiguration,
-                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
+                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible with Sized {
 
   // The index of the first valid row
   private var firstRow: Int = 0
@@ -58,6 +59,8 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   def getValidRows: Int = validRows
+
+  override def size: Long = getValidRows
 
   def getFirstRow: Int = firstRow
 

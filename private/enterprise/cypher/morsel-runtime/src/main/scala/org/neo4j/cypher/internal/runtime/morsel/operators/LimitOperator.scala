@@ -9,18 +9,17 @@ import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
-import org.neo4j.values.storable.{FloatingPointValue, NumberValue}
+import org.neo4j.values.storable.FloatingPointValue
 
 /**
   * Limit the number of rows to `countExpression` per argument.
@@ -29,10 +28,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator with NumericHelper {
 
-  override def createTask(argumentStateCreator: ArgumentStateMapCreator,
-                          queryContext: QueryContext,
-                          state: QueryState,
-                          resources: QueryResources): OperatorTask = {
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
 
     val queryState = new OldQueryState(queryContext,
                                        resources = null,
@@ -40,7 +36,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                        resources.expressionCursors,
                                        Array.empty[IndexReadSession],
                                        resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber)
+                                       state.subscriber,
+                                       NoMemoryTracker)
 
     val limitNumber = asNumber(countExpression(ExecutionContext.empty, queryState))
     if (limitNumber.isInstanceOf[FloatingPointValue]) {

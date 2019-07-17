@@ -6,17 +6,17 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer, Sized}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Implementation of [[StateFactory]] which constructs concurrent state management classes.
   */
-object ConcurrentStateFactory extends StateFactory {
-  override def newBuffer[T <: AnyRef](): Buffer[T] = new ConcurrentBuffer[T]
+class ConcurrentStateFactory extends StateFactory {
+  override def newBuffer[T <: Sized](): Buffer[T] = new ConcurrentBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new ConcurrentSingletonBuffer[T]
 
@@ -34,4 +34,13 @@ object ConcurrentStateFactory extends StateFactory {
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
   }
+
+  override val memoryTracker: MemoryTracker = NoMemoryTracker
+}
+
+// We currently don't track memory in parallel
+class MemoryTrackingConcurrentStateFactory(transactionMaxMemory: Long) extends ConcurrentStateFactory {
+  override def newBuffer[T <: Sized](): Buffer[T] = new ConcurrentBuffer[T]
+
+  override val memoryTracker: MemoryTracker = NoMemoryTracker
 }

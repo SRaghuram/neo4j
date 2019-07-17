@@ -23,10 +23,6 @@ trait ArgumentStateMapCreator {
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                  factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
 
-  /**
-    * Create a new [[Buffer]]
-    */
-  def newBuffer[T <: AnyRef](): Buffer[T]
 }
 
 /**
@@ -40,7 +36,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def pipelineStates: Array[PipelineState]
 
   /**
-    * The sink with if `bufferId` of the pipeline with id `fromPipeline`.
+    * The sink with id `bufferId` of the pipeline with id `fromPipeline`.
     */
   def getSink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T]
 

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -32,12 +32,13 @@ class FilterOperator(val workIdentity: WorkIdentity,
 
     val writingRow = readingRow.shallowCopy()
     val queryState = new OldQueryState(context,
-                                       resources = null,
-                                       params = state.params,
-                                       resources.expressionCursors,
-                                       Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
     while (readingRow.isValidRow) {
       val matches = predicate(readingRow, queryState) eq Values.TRUE

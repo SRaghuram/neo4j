@@ -6,17 +6,17 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext, StandardMemoryTracker}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer, StandardBuffer, StandardSingletonBuffer}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{BoundedStandardBuffer, Buffer, SingletonBuffer, Sized, StandardBuffer, StandardSingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
   */
-object StandardStateFactory extends StateFactory {
-  override def newBuffer[T <: AnyRef](): Buffer[T] = new StandardBuffer[T]
+class StandardStateFactory extends StateFactory {
+  override def newBuffer[T <: Sized](): Buffer[T] = new StandardBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new StandardSingletonBuffer[T]
 
@@ -34,4 +34,12 @@ object StandardStateFactory extends StateFactory {
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
   }
+
+  override val memoryTracker: MemoryTracker = NoMemoryTracker
+}
+
+class MemoryTrackingStandardStateFactory(transactionMaxMemory: Long) extends StandardStateFactory {
+  override def newBuffer[T <: Sized](): Buffer[T] = new BoundedStandardBuffer[T](transactionMaxMemory)
+
+  override val memoryTracker: MemoryTracker = StandardMemoryTracker(transactionMaxMemory)
 }

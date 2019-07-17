@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.morsel.state.{StandardStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.morsel.state.{MemoryTrackingStandardStateFactory, StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -45,9 +45,15 @@ class CallingThreadQueryExecutor(morselSize: Int,
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
+    val stateFactory = if (executionGraphDefinition.transactionMaxMemory == 0) {
+      new StandardStateFactory
+    } else {
+      new MemoryTrackingStandardStateFactory(executionGraphDefinition.transactionMaxMemory)
+    }
+
     val resources = new QueryResources(cursors)
     val tracer = schedulerTracer.traceQuery()
-    val tracker = StandardStateFactory.newTracker(subscriber, queryContext, tracer)
+    val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
                                 subscriber,
                                 tracker,
@@ -61,7 +67,7 @@ class CallingThreadQueryExecutor(morselSize: Int,
 
     val executionState = new TheExecutionState(executionGraphDefinition,
                                                executablePipelines,
-                                               StandardStateFactory,
+                                               stateFactory,
                                                this,
                                                queryContext,
                                                queryState,

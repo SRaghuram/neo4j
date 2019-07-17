@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.CypherFunctions
@@ -55,7 +55,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession],
                                                  resources.expressionVariables(state.nExpressionSlots),
-                                                 state.subscriber)
+                                                 state.subscriber,
+                                                 NoMemoryTracker)
 
       initExecutionContext.copyFrom(inputMorsel, inputMorsel.getLongsPerRow, inputMorsel.getRefsPerRow)
       val value = collection(initExecutionContext, queryState)

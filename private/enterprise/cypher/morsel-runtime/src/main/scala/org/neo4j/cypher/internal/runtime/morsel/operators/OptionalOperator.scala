@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -37,8 +38,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  override def createState(argumentStateCreator: ArgumentStateMapCreator): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, OptionalArgumentStateBuffer.Factory)
+  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory))
     new OptionalOperatorState
   }
 
@@ -126,4 +127,6 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 
 trait OptionalOperatorTask extends ContinuableOperatorTask {
   def morselData: MorselData
+
+  override def size: Long = morselData.morsels.map(_.size).sum
 }

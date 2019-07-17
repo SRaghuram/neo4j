@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.ManyQueriesExactNodeIn
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext, makeValueNeoSafe}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext, makeValueNeoSafe}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
@@ -75,12 +75,13 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
       val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()

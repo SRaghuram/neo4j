@@ -6,10 +6,10 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer, Sized}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -19,7 +19,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
   * versions, depending on whether the execution is concurrent or not.
   */
 trait StateFactory {
-  def newBuffer[T <: AnyRef](): Buffer[T]
+  def newBuffer[T <: Sized](): Buffer[T]
   def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T]
   def newTracker(subscriber: QuerySubscriber,
                  queryContext: QueryContext,
@@ -29,4 +29,9 @@ trait StateFactory {
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
+
+  /**
+    * Obtain the memory tracker (this call does not create a new object).
+    */
+  def memoryTracker: MemoryTracker
 }

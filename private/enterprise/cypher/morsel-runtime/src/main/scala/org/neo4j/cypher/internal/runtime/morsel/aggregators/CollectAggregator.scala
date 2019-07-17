@@ -8,9 +8,13 @@ package org.neo4j.cypher.internal.runtime.morsel.aggregators
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import org.neo4j.cypher.internal.runtime.MemoryTracker
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
+
+import scala.collection.mutable.ArrayBuffer
 
 
 /**
@@ -19,8 +23,8 @@ import org.neo4j.values.virtual.{ListValue, VirtualValues}
 case object CollectAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CollectUpdater
-  override def newStandardReducer: Reducer = new CollectStandardReducer
-  override def newConcurrentReducer: Reducer = new CollectConcurrentReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
+  override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 class CollectUpdater() extends Updater {
@@ -31,19 +35,22 @@ class CollectUpdater() extends Updater {
     }
 }
 
-class CollectStandardReducer() extends Reducer {
-  private val collections = Array.newBuilder[ListValue]
-  override def update(updater: Updater): Unit =
+class CollectStandardReducer(memoryTracker: MemoryTracker) extends Reducer {
+  private val collections = new ArrayBuffer[ListValue]
+  override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
         collections += VirtualValues.fromList(u.collection)
     }
+    // TODO we need to call a different method here once we can estimate value size
+    memoryTracker.checkMemoryRequirement(collections.map(_.size()).sum)
+  }
 
-  override def result: AnyValue = VirtualValues.concat(collections.result():_*)
+  override def result: AnyValue = VirtualValues.concat(collections: _*)
 }
 
 class CollectConcurrentReducer() extends Reducer {
-  private val collections = new ConcurrentLinkedQueue[AnyValue]()
+  private val collections = new ConcurrentLinkedQueue[ListValue]()
 
   override def update(updater: Updater): Unit =
     updater match {

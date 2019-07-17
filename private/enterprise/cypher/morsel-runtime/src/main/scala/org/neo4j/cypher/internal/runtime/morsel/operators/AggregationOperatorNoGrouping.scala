@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState}
@@ -73,7 +73,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                                            resources.expressionCursors,
                                            Array.empty[IndexReadSession],
                                            resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber)
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
                                                  morsel,
@@ -116,8 +117,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     extends Operator
       with ReduceOperatorState[Array[Updater], AggregatingAccumulator] {
 
-    override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations))
+    override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
       this
     }
 

@@ -9,12 +9,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, Reducer, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState}
@@ -82,7 +82,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                            resources.expressionCursors,
                                            Array.empty[IndexReadSession],
                                            resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber)
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
                                              morsel,
@@ -130,7 +131,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   class StandardAggregatingAccumulator(override val argumentRowId: Long,
                                        aggregators: Array[Aggregator],
-                                       override val argumentRowIdsForReducers: Array[Long]) extends AggregatingAccumulator {
+                                       override val argumentRowIdsForReducers: Array[Long],
+                                       memoryTracker: MemoryTracker) extends AggregatingAccumulator {
 
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -138,7 +140,9 @@ case class AggregationOperator(workIdentity: WorkIdentity,
      val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
-        val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newStandardReducer))
+        val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newStandardReducer(memoryTracker)))
+        memoryTracker.checkMemoryRequirement(reducerMap.size())
+
         var i = 0
         while (i < reducers.length) {
           reducers(i).update(entry.getValue()(i))
@@ -160,7 +164,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
-          val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newConcurrentReducer))
+        val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newConcurrentReducer))
           var i = 0
           while (i < reducers.length) {
             reducers(i).update(entry.getValue()(i))
@@ -174,9 +178,9 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   object AggregatingAccumulator {
 
-    class Factory(aggregators: Array[Aggregator]) extends ArgumentStateFactory[AggregatingAccumulator] {
+    class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
       override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
+        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker)
 
       override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
@@ -193,8 +197,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
-    override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations))
+    override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
       this
     }
 

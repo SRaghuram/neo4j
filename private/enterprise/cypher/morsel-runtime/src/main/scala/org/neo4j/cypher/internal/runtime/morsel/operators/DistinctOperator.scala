@@ -10,14 +10,14 @@ import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 /**
@@ -37,11 +37,12 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                        groupings: GroupingExpression) extends MiddleOperator {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                          stateFactory: StateFactory,
                           queryContext: QueryContext,
                           state: QueryState,
                           resources: QueryResources): OperatorTask = {
 
-    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, DistinctStateFactory))
+    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker)))
   }
 
   class DistinctOperatorTask(argumentStateMap: ArgumentStateMap[DistinctState]) extends OperatorTask {
@@ -54,12 +55,13 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                          resources: QueryResources): Unit = {
 
       val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
       argumentStateMap.filter[DistinctState](output,
                                              (distinctState, _) => distinctState,
@@ -69,21 +71,23 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   }
 
-  object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
+  class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
-      new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers)
+      new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
-      new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers)
+      new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
   }
 
   class DistinctState(override val argumentRowId: Long,
                       seen: util.Set[groupings.KeyType],
-                      override val argumentRowIdsForReducers: Array[Long]) extends ArgumentState {
+                      override val argumentRowIdsForReducers: Array[Long],
+                      memoryTracker: MemoryTracker) extends ArgumentState {
 
     def filterOrProject(row: MorselExecutionContext, queryState: OldQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
+        memoryTracker.checkMemoryRequirement(seen.size())
         groupings.project(row, groupingKey)
         true
       } else {

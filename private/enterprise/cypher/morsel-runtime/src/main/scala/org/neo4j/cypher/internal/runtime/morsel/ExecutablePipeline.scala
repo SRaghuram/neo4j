@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorState, _}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
@@ -29,13 +29,14 @@ case class ExecutablePipeline(id: PipelineId,
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,
                   queryState: QueryState,
-                  resources: QueryResources): PipelineState =
-
+                  resources: QueryResources,
+                  stateFactory: StateFactory): PipelineState = {
     new PipelineState(this,
-                      start.createState(executionState),
-                      middleOperators.map(_.createTask(executionState, queryContext, queryState, resources)),
+                      start.createState(executionState, stateFactory),
+                      middleOperators.map(_.createTask(executionState, stateFactory, queryContext, queryState, resources)),
                       () => outputOperator.createState(executionState, id),
                       executionState)
+    }
 
   override val workId: Id = start.workIdentity.workId
   override val workDescription: String = composeWorkDescriptions(start, middleOperators, outputOperator)

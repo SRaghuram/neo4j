@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.MemoryTracker
 import org.neo4j.values.storable.Values
 import org.neo4j.values.{AnyValue, AnyValues}
 
@@ -17,7 +18,7 @@ import org.neo4j.values.{AnyValue, AnyValues}
 case object MaxAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MaxUpdater
-  override def newStandardReducer: Reducer = new MaxStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MaxStandardReducer
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =

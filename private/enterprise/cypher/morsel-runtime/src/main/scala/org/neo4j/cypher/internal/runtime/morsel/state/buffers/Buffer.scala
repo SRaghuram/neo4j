@@ -77,3 +77,10 @@ trait ClosingSource[T <: AnyRef] extends Source[T] {
 
   def close(data: T): Unit
 }
+
+trait Sized {
+  /**
+    * The size of the thing.
+    */
+  def size: Long
+}

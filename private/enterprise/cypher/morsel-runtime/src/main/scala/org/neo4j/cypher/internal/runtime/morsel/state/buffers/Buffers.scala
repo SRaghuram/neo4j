@@ -121,7 +121,7 @@ class Buffers(numBuffers: Int,
                                    x.argumentStateMapId)
 
         case x: BufferDefinition =>
-          new MorselBuffer(x.id, tracker, reducers, workCancellerIDs, argumentStateMaps, stateFactory.newBuffer())
+          new MorselBuffer(x.id, tracker, reducers, workCancellerIDs, argumentStateMaps, stateFactory.newBuffer[MorselExecutionContext]())
       }
   }
 

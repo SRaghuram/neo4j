@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
@@ -50,12 +50,13 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
       val read = context.transactionalContext.dataRead
       val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       val value = valueExpr(initExecutionContext, queryState)

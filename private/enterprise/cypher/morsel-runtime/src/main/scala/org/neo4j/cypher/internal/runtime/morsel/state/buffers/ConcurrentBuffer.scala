@@ -5,7 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+
+import org.neo4j.cypher.internal.v4_0.util.TransactionOutOfMemoryException
 
 /**
   * Implementation of a concurrent [[Buffer]] of elements of type `T`.
@@ -50,5 +52,25 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
     })
     sb += ')'
     sb.result()
+  }
+}
+
+class BoundedConcurrentBuffer[T <: Sized](bound: Int) extends ConcurrentBuffer[T] {
+  private val size = new AtomicLong(0)
+
+  override def put(t: T): Unit = {
+    val _size = size.addAndGet(t.size)
+    if (_size > bound) {
+      throw new TransactionOutOfMemoryException()
+    }
+    super.put(t)
+  }
+
+  override def take(): T = {
+    val t = super.take()
+    if (t != null) {
+      size.addAndGet(-t.size)
+    }
+    t
   }
 }

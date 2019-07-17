@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -25,7 +26,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
                         pipelineState: PipelineState)
-  extends Task[QueryResources] {
+  extends Task[QueryResources] with Sized {
 
   /**
     * This _output reference is needed to support reactive results in produce results,
@@ -107,4 +108,6 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   override def workDescription: String = pipelineState.pipeline.workDescription
 
   override def canContinue: Boolean = startTask.canContinue || outputOperatorState.canContinue
+
+  override def size: Long = startTask.size
 }

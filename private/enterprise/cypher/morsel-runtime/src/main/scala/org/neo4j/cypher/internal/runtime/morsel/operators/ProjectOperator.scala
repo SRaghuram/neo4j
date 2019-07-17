@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -23,12 +23,13 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                        resources: QueryResources): Unit = {
 
     val queryState = new OldQueryState(context,
-                                       resources = null,
-                                       params = state.params,
-                                       resources.expressionCursors,
-                                       Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
 
     while (currentRow.isValidRow) {
       projectionOps.project(currentRow, queryState)

@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
 
 /**
@@ -35,8 +36,8 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     .map(MorselSorting.createMorselComparator)
     .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, ArgumentStateBuffer.Factory)
+  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
     this
   }
 

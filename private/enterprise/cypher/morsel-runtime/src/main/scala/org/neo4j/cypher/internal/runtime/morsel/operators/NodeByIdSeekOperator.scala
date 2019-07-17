@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperT
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, Read}
@@ -63,12 +63,13 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber)
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       ids = nodeIdsExpr.expressions(initExecutionContext, queryState).iterator()
       true

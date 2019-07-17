@@ -10,7 +10,7 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, MemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
@@ -19,7 +19,8 @@ import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.NodeHashJoinOperator.{HashTable, HashTableFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{ArgumentStateBuffer, Sized}
 import org.neo4j.values.storable.{LongArray, Values}
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
@@ -32,13 +33,13 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            refsToCopy: Array[(Int, Int)],
                            cachedPropertiesToCopy: Array[(Int, Int)]) extends Operator with OperatorState {
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator): OperatorState = {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffsets))
+      new HashTableFactory(lhsOffsets, stateFactory.memoryTracker))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      ArgumentStateBuffer.Factory)
+      new ArgumentStateBuffer.Factory(stateFactory))
     this
   }
 
@@ -97,9 +98,9 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinOperator {
 
-  class HashTableFactory(lhsOffsets: Array[Int]) extends ArgumentStateFactory[HashTable] {
+  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
-      new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
+      new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
       new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
   }
@@ -114,7 +115,8 @@ object NodeHashJoinOperator {
 
   class StandardHashTable(override val argumentRowId: Long,
                           lhsOffsets: Array[Int],
-                          override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
+                          override val argumentRowIdsForReducers: Array[Long],
+                          memoryTracker: MemoryTracker) extends HashTable with Sized {
     private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
@@ -131,6 +133,7 @@ object NodeHashJoinOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           table.put(Values.longArray(key), morsel.shallowCopy())
+          memoryTracker.checkMemoryRequirement(size)
         }
         morsel.moveToNextRow()
       }
@@ -138,10 +141,16 @@ object NodeHashJoinOperator {
 
     override def lhsRows(nodeIds: LongArray): util.Iterator[MorselExecutionContext] =
       table.get(nodeIds).iterator()
+
+
+    // TODO the size here will count the same morsel multiple times.
+    // We either need to solve that or it will automatically be solved once we can call
+    // memoryTracker.registerBytes(morsel.size)
+    override def size: Long = table.valuesView().collectLong(_.size).sum()
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
-                          lhsOffsets: Array[Int],
+                            lhsOffsets: Array[Int],
                             override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
     private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[MorselExecutionContext]]()
 

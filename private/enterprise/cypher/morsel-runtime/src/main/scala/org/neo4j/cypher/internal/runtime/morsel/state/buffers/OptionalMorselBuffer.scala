@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap._
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMapWithArgumentIdCounter, QueryCompletionTracker}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMapWithArgumentIdCounter, QueryCompletionTracker, StateFactory}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 import scala.collection.mutable.ArrayBuffer
@@ -255,33 +255,33 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
 }
 
 object OptionalArgumentStateBuffer {
-  object Factory extends ArgumentStateFactory[ArgumentStateBuffer] {
+  class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext], argumentRowIdsForReducers)
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext]()), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext], argumentRowIdsForReducers)
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext]()), argumentRowIdsForReducers)
   }
 }
 
-class StandardOptionalBuffer[T <: AnyRef] extends StandardBuffer[T] with OptionalBuffer {
+class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends StandardBuffer[T] with OptionalBuffer {
   private var _didReceiveData : Boolean = false
 
   override def put(t: T): Unit = {
     _didReceiveData = true
-    super.put(t)
+    inner.put(t)
   }
 
   def didReceiveData: Boolean = _didReceiveData
 }
 
-class ConcurrentOptionalBuffer[T <: AnyRef] extends ConcurrentBuffer[T] with OptionalBuffer {
+class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends ConcurrentBuffer[T] with OptionalBuffer {
   @volatile
   private var _didReceiveData : Boolean = false
 
   override def put(t: T): Unit = {
     _didReceiveData = true
-    super.put(t)
+    inner.put(t)
   }
 
   def didReceiveData: Boolean = _didReceiveData
