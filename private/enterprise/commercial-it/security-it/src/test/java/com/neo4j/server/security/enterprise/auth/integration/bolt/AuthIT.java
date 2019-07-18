@@ -413,6 +413,47 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    public void shouldFailNicelyOnAlterUserPassword()
+    {
+        assumeTrue( createUsers );
+
+        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "CREATE USER fooUser SET PASSWORD 'foo'" ).list();
+                session.run( "ALTER USER fooUser SET PASSWORD 'foo' CHANGE NOT REQUIRED" ).list();
+                fail( "should have gotten exception" );
+            }
+            catch ( ClientException ce )
+            {
+                assertThat( ce.getMessage(),
+                        equalTo( "Failed to alter the specified user 'fooUser': Old password and new password cannot be the same." ) );
+            }
+        }
+    }
+
+    @Test
+    public void shouldFailNicelyOnAlterCurrentUserPassword()
+    {
+        assumeTrue( createUsers );
+
+        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "ALTER CURRENT USER SET PASSWORD FROM 'wrongCredentials' TO 'newPassword'" ).list();
+                fail( "should have gotten exception" );
+            }
+            catch ( ClientException ce )
+            {
+                assertThat( ce.getMessage(),
+                        equalTo( "User '" + ADMIN_USER + "' failed to alter their own password: Invalid principal or credentials." ) );
+            }
+        }
+    }
+
+    @Test
     public void shouldFailNicelyOnGrantToNonexistentRole()
     {
         assumeTrue( createUsers );
