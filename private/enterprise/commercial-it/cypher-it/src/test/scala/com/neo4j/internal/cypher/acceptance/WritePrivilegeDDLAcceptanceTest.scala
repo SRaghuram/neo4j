@@ -85,7 +85,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           // WHEN
           execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role 'custom' does not exist."
+        } should have message "Role 'custom' does not exist."
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
@@ -97,7 +97,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         execute("CREATE ROLE custom")
         the[DatabaseNotFoundException] thrownBy {
           execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
+        } should have message "Database 'foo' does not exist."
       }
 
       test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
@@ -185,8 +185,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
         }
 
         // THEN
-        error.getMessage should (be(s"Failed to revoke write privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: $grantOrDenyCommand write * ON GRAPH * NODES *.") or
-          be("Failed to revoke write privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
+        error.getMessage should (be(s"The role 'wrongRole' does not have the specified privilege: $grantOrDenyCommand write * ON GRAPH * NODES *.") or
+          be("The role 'wrongRole' does not exist."))
       }
 
       test(s"should fail revoke $grantOrDeny write privilege not granted to role") {
@@ -215,7 +215,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
         }
         // THEN
-        e.getMessage should be(s"Failed to revoke write privilege from role 'custom': The privilege '$grantOrDenyCommand write * ON GRAPH foo NODES *' does not exist.")
+        e.getMessage should be(s"The privilege '$grantOrDenyCommand write * ON GRAPH foo NODES *' does not exist.")
       }
 
       test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
@@ -301,8 +301,8 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
     }
 
     // THEN
-    error.getMessage should (be(s"Failed to revoke write privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: write * ON GRAPH * NODES *.") or
-      be("Failed to revoke write privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
+    error.getMessage should (be(s"The role 'wrongRole' does not have the specified privilege: write * ON GRAPH * NODES *.") or
+      be("The role 'wrongRole' does not exist."))
   }
 
   test("should fail revoke write privilege not granted to role") {
@@ -333,7 +333,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute(s"REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
     }
     // THEN
-    e.getMessage should be(s"Failed to revoke write privilege from role 'custom': The privilege 'write * ON GRAPH foo NODES *' does not exist.")
+    e.getMessage should be(s"The privilege 'write * ON GRAPH foo NODES *' does not exist.")
   }
 
   test("should fail when revoking write privilege to custom role when not on system database") {
