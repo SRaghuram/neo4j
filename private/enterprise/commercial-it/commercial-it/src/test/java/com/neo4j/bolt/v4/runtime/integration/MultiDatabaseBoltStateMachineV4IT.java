@@ -31,6 +31,7 @@ import org.neo4j.bolt.v4.runtime.ReadyState;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.values.AnyValue;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -45,6 +46,9 @@ import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
 import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_NAME;
+import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.DB_NAME_KEY;
+import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.virtual.VirtualValues.map;
 
 class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTestBase
 {
@@ -171,7 +175,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // BEGIN
-        machine.process( new BeginMessage( EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
+        var beginMetadata = map( new String[]{DB_NAME_KEY}, new AnyValue[]{stringValue( databaseName )} );
+        machine.process( new BeginMessage( beginMetadata, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( InTransactionState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );

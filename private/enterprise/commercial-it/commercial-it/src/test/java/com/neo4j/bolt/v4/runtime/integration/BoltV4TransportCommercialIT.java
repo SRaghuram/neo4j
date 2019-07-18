@@ -52,6 +52,7 @@ import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
 import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newMessageEncoder;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newNeo4jPack;
+import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.DB_NAME_KEY;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -59,6 +60,7 @@ import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
+import static org.neo4j.values.virtual.VirtualValues.map;
 
 @RunWith( Parameterized.class )
 public class BoltV4TransportCommercialIT
@@ -367,7 +369,8 @@ public class BoltV4TransportCommercialIT
 
     private void sessionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
-        connection.send( util.chunk( new RunMessage( query, EMPTY_MAP, EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
+        var runMetadata = map( new String[]{DB_NAME_KEY}, new AnyValue[]{stringValue( databaseName )} );
+        connection.send( util.chunk( new RunMessage( query, EMPTY_MAP, runMetadata, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess( allOf( hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
         // "pull all"
@@ -379,7 +382,8 @@ public class BoltV4TransportCommercialIT
     private void transactionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
         // begin a transaction
-        connection.send( util.chunk( new BeginMessage( EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
+        var beginMetadata = map( new String[]{DB_NAME_KEY}, new AnyValue[]{stringValue( databaseName )} );
+        connection.send( util.chunk( new BeginMessage( beginMetadata, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
 
         // run
@@ -402,7 +406,7 @@ public class BoltV4TransportCommercialIT
 
     private static MapValue paramWithRange( int from, int to )
     {
-        return VirtualValues.map( new String[]{"param"}, new AnyValue[]{VirtualValues.range( from, to, 1 )} );
+        return map( new String[]{"param"}, new AnyValue[]{VirtualValues.range( from, to, 1 )} );
     }
 
     private void negotiateBoltV4() throws Exception
