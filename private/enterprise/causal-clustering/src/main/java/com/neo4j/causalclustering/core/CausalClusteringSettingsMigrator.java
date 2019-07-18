@@ -16,8 +16,15 @@ import org.neo4j.configuration.SettingMigrator;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_listen_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_listen_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
+import static org.neo4j.configuration.SettingMigrators.migrateAdvertisedAddressInheritanceChange;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ServiceProvider
@@ -30,6 +37,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         migrateDisableMiddlewareLogging( input, log );
         migrateMiddlewareLoggingLevelSetting( input, log );
         migrateMiddlewareLoggingLevelValue( input, log );
+        migrateAdvertisedAddresses( input, log );
     }
 
     private void migrateRoutingTtl( Map<String,String> input, Log log )
@@ -103,5 +111,12 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         {
             return Level.ERROR;
         }
+    }
+
+    private void migrateAdvertisedAddresses( Map<String,String> input, Log log )
+    {
+        migrateAdvertisedAddressInheritanceChange( input, log, transaction_listen_address.name(), transaction_advertised_address.name() );
+        migrateAdvertisedAddressInheritanceChange( input, log, raft_listen_address.name(), raft_advertised_address.name() );
+        migrateAdvertisedAddressInheritanceChange( input, log, discovery_listen_address.name(), discovery_advertised_address.name() );
     }
 }

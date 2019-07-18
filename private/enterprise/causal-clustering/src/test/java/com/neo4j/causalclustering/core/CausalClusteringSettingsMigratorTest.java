@@ -14,11 +14,18 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_listen_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_listen_address;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
@@ -91,6 +98,56 @@ class CausalClusteringSettingsMigratorTest
         testDisableMiddlewareLoggingMigration( null, Level.INFO, Level.INFO );
         testDisableMiddlewareLoggingMigration( null, Level.WARN, Level.WARN );
         testDisableMiddlewareLoggingMigration( null, Level.NONE, Level.NONE );
+    }
+
+    @Test
+    void testConnectorAddressesMigration()
+    {
+        var settings = Map.of( transaction_listen_address, transaction_advertised_address,
+                               raft_listen_address, raft_advertised_address,
+                               discovery_listen_address, discovery_advertised_address );
+
+        settings.forEach( ( listenAddr, advertisedAddr ) -> {
+            Config config1 = Config.defaults( listenAddr, "foo:111" );
+            Config config2 = Config.defaults( listenAddr, ":222" );
+            Config config3 = Config.newBuilder().set( listenAddr, ":333" ).set( advertisedAddr, "bar" ).build();
+            Config config4 = Config.newBuilder().set( listenAddr, "foo:444" ).set( advertisedAddr, ":555" ).build();
+            Config config5 = Config.newBuilder().set( listenAddr, "foo" ).set( listenAddr, "bar" ).build();
+            Config config6 = Config.newBuilder().set( listenAddr, "foo:666" ).set( advertisedAddr, "bar:777" ).build();
+
+            var logProvider = new AssertableLogProvider();
+            config1.setLogger( logProvider.getLog( Config.class ) );
+            config2.setLogger( logProvider.getLog( Config.class ) );
+            config3.setLogger( logProvider.getLog( Config.class ) );
+            config4.setLogger( logProvider.getLog( Config.class ) );
+            config5.setLogger( logProvider.getLog( Config.class ) );
+            config6.setLogger( logProvider.getLog( Config.class ) );
+
+            assertEquals( new SocketAddress( "localhost", 111 ), config1.get( advertisedAddr ) );
+            assertEquals( new SocketAddress( "localhost", 222 ), config2.get( advertisedAddr ) );
+            assertEquals( new SocketAddress( "bar", 333 ), config3.get( advertisedAddr ) );
+            assertEquals( new SocketAddress( "localhost", 555 ), config4.get( advertisedAddr ) );
+            assertEquals( new SocketAddress( "bar", advertisedAddr.defaultValue().getPort() ), config5.get( listenAddr ) );
+            assertEquals( new SocketAddress( "bar", 777 ), config6.get( advertisedAddr ) );
+
+            logProvider.assertAtLeastOnce( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 111, listenAddr.name(), advertisedAddr.name() ) );
+
+            logProvider.assertAtLeastOnce( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 222, listenAddr.name(), advertisedAddr.name() ) );
+
+            logProvider.assertAtLeastOnce( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 333, listenAddr.name(), advertisedAddr.name() ) );
+
+            logProvider.assertNone( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 444, listenAddr.name(), advertisedAddr.name() ) );
+
+            logProvider.assertNone( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 555, listenAddr.name(), advertisedAddr.name() ) );
+
+            logProvider.assertNone( inLog( Config.class )
+                    .warn( "Use of deprecated setting port propagation. port %s is migrated from %s to %s.", 666, listenAddr.name(), advertisedAddr.name() ) );
+        } );
     }
 
     private static void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )

@@ -29,6 +29,7 @@ import org.neo4j.logging.Level;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingConstraints.range;
@@ -121,44 +122,45 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Integer> minimum_core_cluster_size_at_runtime =
             newBuilder( "causal_clustering.minimum_core_cluster_size_at_runtime", INT, 3 ).addConstraint( min( 2 ) ).build();
 
+    public static final int DEFAULT_DISCOVERY_PORT = 5000;
+    public static final int DEFAULT_TRANSACTION_PORT = 6000;
+    public static final int DEFAULT_RAFT_PORT = 7000;
+
     @Description( "Network interface and port for the transaction shipping server to listen on. Please note that it is also possible to run the backup " +
             "client against this port so always limit access to it via the firewall and configure an ssl policy." )
     public static final Setting<SocketAddress> transaction_listen_address =
-            newBuilder( "causal_clustering.transaction_listen_address", SOCKET_ADDRESS, new SocketAddress( 6000 ) )
+            newBuilder( "causal_clustering.transaction_listen_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_TRANSACTION_PORT ) )
                     .setDependency( default_listen_address )
-                    .immutable()
                     .build();
 
     @Description( "Advertised hostname/IP address and port for the transaction shipping server." )
     public static final Setting<SocketAddress> transaction_advertised_address =
-            newBuilder( "causal_clustering.transaction_advertised_address", SOCKET_ADDRESS, null )
-                    .setDependency( transaction_listen_address )
+            newBuilder( "causal_clustering.transaction_advertised_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_TRANSACTION_PORT ) )
+                    .setDependency( default_advertised_address )
                     .build();
 
     @Description( "Network interface and port for the RAFT server to listen on." )
     public static final Setting<SocketAddress> raft_listen_address =
-            newBuilder( "causal_clustering.raft_listen_address", SOCKET_ADDRESS, new SocketAddress( 7000 ) )
+            newBuilder( "causal_clustering.raft_listen_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_RAFT_PORT ) )
                     .setDependency( default_listen_address )
-                    .immutable()
                     .build();
 
     @Description( "Advertised hostname/IP address and port for the RAFT server." )
     public static final Setting<SocketAddress> raft_advertised_address =
-            newBuilder( "causal_clustering.raft_advertised_address", SOCKET_ADDRESS, null )
-                    .setDependency( raft_listen_address )
+            newBuilder( "causal_clustering.raft_advertised_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_RAFT_PORT ) )
+                    .setDependency( default_advertised_address )
                     .build();
 
     @Description( "Host and port to bind the cluster member discovery management communication." )
     public static final Setting<SocketAddress> discovery_listen_address =
-            newBuilder( "causal_clustering.discovery_listen_address", SOCKET_ADDRESS, new SocketAddress( 5000 ) )
+            newBuilder( "causal_clustering.discovery_listen_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_DISCOVERY_PORT ) )
                     .setDependency( default_listen_address )
-                    .immutable()
                     .build();
 
     @Description( "Advertised cluster member discovery management communication." )
     public static final Setting<SocketAddress> discovery_advertised_address =
-            newBuilder( "causal_clustering.discovery_advertised_address", SOCKET_ADDRESS, null )
-                    .setDependency( discovery_listen_address )
+            newBuilder( "causal_clustering.discovery_advertised_address", SOCKET_ADDRESS, new SocketAddress( DEFAULT_DISCOVERY_PORT ) )
+                    .setDependency( default_advertised_address )
                     .build();
 
     @Description( "A comma-separated list of other members of the cluster to join." )
