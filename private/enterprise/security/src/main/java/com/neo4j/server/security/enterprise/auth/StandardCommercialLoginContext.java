@@ -254,7 +254,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsTraverseLabel( long label )
         {
-            if ( disallowsTraverseAllLabels || !blacklistTraverseLabels.isEmpty() )
+            if ( disallowsTraverseAllLabels || blacklistTraverseLabels.contains( (int) label ) )
             {
                 return false;
             }

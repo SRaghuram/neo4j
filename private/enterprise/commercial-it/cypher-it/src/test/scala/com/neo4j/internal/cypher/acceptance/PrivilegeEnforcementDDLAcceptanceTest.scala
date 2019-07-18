@@ -638,6 +638,14 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("label"), row.get("count")) should be(("A", 1))
     }) should be(1)
+
+    // WHEN
+    graph.createIndex("B","foo")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.get("label"), row.get("count")) should be(("A", 1))
+    }) should be(1)
   }
 
   test("should not be able read properties when denied read privilege for all labels and all properties") {
