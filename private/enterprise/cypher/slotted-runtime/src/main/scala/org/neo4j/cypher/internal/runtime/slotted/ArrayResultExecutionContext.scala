@@ -159,4 +159,6 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   override def setLinenumber(line: Option[ResourceLinenumber]): Unit = fail()
 
   override def getLinenumber: Option[ResourceLinenumber] = fail()
+
+  override def estimatedHeapUsage: Long = resultArray.foldLeft(0L)(_ + _.estimatedHeapUsage())
 }

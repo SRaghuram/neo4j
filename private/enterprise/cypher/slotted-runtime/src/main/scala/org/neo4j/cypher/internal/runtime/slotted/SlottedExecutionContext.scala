@@ -155,6 +155,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def getCachedProperty(key: ASTCachedProperty): Value = fail()
 
+  override def estimatedHeapUsage: Long = refs.foldLeft(longs.length * 8L)(_ + _.estimatedHeapUsage())
+
   private def fail(): Nothing = throw new InternalException("Tried using a slotted context as a map")
 
   //-----------------------------------------------------------------------------------------------------------

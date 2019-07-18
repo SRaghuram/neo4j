@@ -278,6 +278,16 @@ class MorselExecutionContext(private val morsel: Morsel,
     slottedRow
   }
 
+  override def estimatedHeapUsage: Long = {
+    var usage = longsPerRow * 8L
+    var i = currentRow * refsPerRow
+    while (i < ((currentRow + 1) * refsPerRow)) {
+      usage += morsel.refs(i).estimatedHeapUsage()
+      i += 1
+    }
+    usage
+  }
+
   override def copyWith(key1: String, value1: AnyValue): ExecutionContext = fail()
 
   override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): ExecutionContext = fail()
