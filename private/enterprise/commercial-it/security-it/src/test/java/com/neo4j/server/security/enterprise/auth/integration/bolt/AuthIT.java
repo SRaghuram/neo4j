@@ -407,7 +407,7 @@ public class AuthIT extends AuthTestBase
             }
             catch ( ClientException ce )
             {
-                assertThat( ce.getMessage(), equalTo( "Failed to create the specified user '" + READ_USER + "': User already exists." ) );
+                assertThat( ce.getMessage(), equalTo( "The specified user '" + READ_USER + "' already exists." ) );
             }
         }
     }
@@ -426,7 +426,7 @@ public class AuthIT extends AuthTestBase
             }
             catch ( ClientException ce )
             {
-                assertThat( ce.getMessage(), equalTo( "Failed to grant role 'none' to user '" + READ_USER + "': Role does not exist." ) );
+                assertThat( ce.getMessage(), equalTo( "Cannot grant non-existent role 'none' to user '" + READ_USER + "'" ) );
             }
         }
     }
