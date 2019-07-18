@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 
@@ -40,14 +41,25 @@ class CausalClusteringSettingsMigratorTest
     }
 
     @Test
-    void shouldMigrateMiddlewareLoggingLevelFromIntegerToLevel()
+    void shouldMigrateMiddlewareLoggingLevelFromIntegerToLevelAndNewSettingName()
     {
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.OFF, Level.NONE );
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.FINE, Level.DEBUG );
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.FINER, Level.DEBUG );
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.INFO, Level.INFO );
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.WARNING, Level.WARN );
-        testMiddlewareLoggingLevelMigration( java.util.logging.Level.SEVERE, Level.ERROR );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.OFF, Level.NONE );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.FINE, Level.DEBUG );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.FINER, Level.DEBUG );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.INFO, Level.INFO );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.WARNING, Level.WARN );
+        testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level.SEVERE, Level.ERROR );
+    }
+
+    @Test
+    void shouldMigrateMiddlewareLoggingLevelFromIntegerToLevelWithExistingSettingName()
+    {
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.OFF, Level.NONE );
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.FINE, Level.DEBUG );
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.FINER, Level.DEBUG );
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.INFO, Level.INFO );
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.WARNING, Level.WARN );
+        testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level.SEVERE, Level.ERROR );
     }
 
     @Test
@@ -99,20 +111,39 @@ class CausalClusteringSettingsMigratorTest
         }
     }
 
-    private static void testMiddlewareLoggingLevelMigration( java.util.logging.Level julLevel, Level neo4jLevel )
+    private static void testMiddlewareLoggingLevelMigrationFromNewSetting( java.util.logging.Level julLevel, Level neo4jLevel )
     {
         var setting = middleware_logging_level;
-
-        String oldValue = String.valueOf( julLevel.intValue() );
-        var config = Config.defaults( setting, oldValue  );
+        var oldValue = String.valueOf( julLevel.intValue() );
+        var config = Config.defaults( setting, oldValue );
 
         assertEquals( neo4jLevel, config.get( setting ) );
 
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );
 
-        logProvider.assertAtLeastOnce( inLog( Config.class )
-                .warn( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue, neo4jLevel.toString() ) );
+        logProvider.assertAtLeastOnce(
+                inLog( Config.class )
+                        .warn( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue, neo4jLevel.toString() ) );
+    }
+
+    private static void testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level julLevel, Level neo4jLevel )
+    {
+        var oldSettingName = "causal_clustering.middleware_logging.level";
+        var oldValue = String.valueOf( julLevel.intValue() );
+        var config = Config.defaults( MapUtil.genericMap( oldSettingName, oldValue ) );
+
+        assertThrows( IllegalArgumentException.class, () -> config.getSetting( oldSettingName ) );
+        assertEquals( neo4jLevel, config.get( middleware_logging_level ) );
+
+        var logProvider = new AssertableLogProvider();
+        config.setLogger( logProvider.getLog( Config.class ) );
+
+        logProvider.assertAtLeastOnce(
+                inLog( Config.class )
+                        .warn( "Use of deprecated setting %s. It is replaced by %s", oldSettingName, middleware_logging_level.name() ),
+                inLog( Config.class )
+                        .warn( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue, neo4jLevel.toString() ) );
     }
 
     private static void testDisableMiddlewareLoggingMigration( String rawValue, Level configuredLevel, Level expectedLevel )

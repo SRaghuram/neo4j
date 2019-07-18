@@ -28,7 +28,8 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
     {
         migrateRoutingTtl( input, log );
         migrateDisableMiddlewareLogging( input, log );
-        migrateMiddlewareLoggingLevel( input, log );
+        migrateMiddlewareLoggingLevelSetting( input, log );
+        migrateMiddlewareLoggingLevelValue( input, log );
     }
 
     private void migrateRoutingTtl( Map<String,String> input, Log log )
@@ -55,7 +56,19 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         }
     }
 
-    private void migrateMiddlewareLoggingLevel( Map<String,String> input, Log log )
+    private void migrateMiddlewareLoggingLevelSetting( Map<String,String> input, Log log )
+    {
+        String oldSetting = "causal_clustering.middleware_logging.level";
+        String newSetting = middleware_logging_level.name();
+        String value = input.remove( oldSetting );
+        if ( StringUtils.isNotEmpty( value ) && NumberUtils.isParsable( value ) )
+        {
+            log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
+            input.put( newSetting, value );
+        }
+    }
+
+    private void migrateMiddlewareLoggingLevelValue( Map<String,String> input, Log log )
     {
         String setting = middleware_logging_level.name();
         String value = input.get( setting );

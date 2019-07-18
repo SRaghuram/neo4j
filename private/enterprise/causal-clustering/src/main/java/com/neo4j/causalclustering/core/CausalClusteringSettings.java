@@ -235,7 +235,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
 
     @Description( "The level of middleware logging" )
     public static final Setting<Level> middleware_logging_level =
-            newBuilder( "causal_clustering.middleware_logging.level", ofEnum( Level.class ), Level.NONE ).build();
+            newBuilder( "causal_clustering.middleware.logging.level", ofEnum( Level.class ), Level.NONE ).build();
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
