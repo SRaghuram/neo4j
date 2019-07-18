@@ -19,10 +19,13 @@ import java.util.List;
 
 import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.graphdb.config.Setting;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class Neo4jConfigBuilder
 {
@@ -33,7 +36,10 @@ public class Neo4jConfigBuilder
     {
         return empty()
                 .withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
-                .withSetting( GraphDatabaseSettings.fail_on_missing_files, "false" );
+                .withSetting( GraphDatabaseSettings.fail_on_missing_files, "false" )
+                .withSetting( HttpConnector.enabled, FALSE )
+                .withSetting( HttpsConnector.enabled, FALSE )
+                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
     public static Neo4jConfigBuilder empty()
