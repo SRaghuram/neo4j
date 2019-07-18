@@ -170,14 +170,14 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
           Array(Values.stringValue(currentUser),
             Values.stringValue(authManager.createCredentialForPassword(validatePassword(newPassword)).serialize()))),
         QueryHandler
-          .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to alter its own password.", e))
+          .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password.", e))
           .handleResult((_, value) => {
             val maybeThrowable = {
               val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
               if (!oldCredentials.matchesPassword(currentPassword))
-                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter its own password: Invalid principal or credentials."))
+                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password: Invalid principal or credentials."))
               else if (oldCredentials.matchesPassword(newPassword))
-                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter its own password: Old password and new password cannot be the same."))
+                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password: Old password and new password cannot be the same."))
               else
                 None
             }
