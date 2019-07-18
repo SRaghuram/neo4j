@@ -153,7 +153,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
-        machine.process( new RunMessage( EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), query, EMPTY_PARAMS, databaseName ), recorder );
+        machine.process( new RunMessage( query, EMPTY_PARAMS, EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( AutoCommitState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );

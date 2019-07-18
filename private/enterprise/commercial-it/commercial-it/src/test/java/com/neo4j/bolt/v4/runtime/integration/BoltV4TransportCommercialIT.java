@@ -367,7 +367,7 @@ public class BoltV4TransportCommercialIT
 
     private void sessionRun( String query, String databaseName, AnyValue expected ) throws Exception
     {
-        connection.send( util.chunk( new RunMessage( EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), query, EMPTY_MAP, databaseName ) ) );
+        connection.send( util.chunk( new RunMessage( query, EMPTY_MAP, EMPTY_MAP, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess( allOf( hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
 
         // "pull all"
