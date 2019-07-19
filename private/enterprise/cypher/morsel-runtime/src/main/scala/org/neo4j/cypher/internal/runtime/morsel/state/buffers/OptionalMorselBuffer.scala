@@ -264,7 +264,7 @@ object OptionalArgumentStateBuffer {
   }
 }
 
-class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends StandardBuffer[T] with OptionalBuffer {
+class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with OptionalBuffer {
   private var _didReceiveData : Boolean = false
 
   override def put(t: T): Unit = {
@@ -273,9 +273,17 @@ class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends StandardBuff
   }
 
   def didReceiveData: Boolean = _didReceiveData
+
+  override def foreach(f: T => Unit): Unit = inner.foreach(f)
+
+  override def hasData: Boolean = inner.hasData
+
+  override def take(): T = inner.take()
+
+  override def canPut: Boolean = inner.canPut
 }
 
-class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends ConcurrentBuffer[T] with OptionalBuffer {
+class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with OptionalBuffer {
   @volatile
   private var _didReceiveData : Boolean = false
 
@@ -285,4 +293,12 @@ class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Concurrent
   }
 
   def didReceiveData: Boolean = _didReceiveData
+
+  override def foreach(f: T => Unit): Unit = inner.foreach(f)
+
+  override def hasData: Boolean = inner.hasData
+
+  override def take(): T = inner.take()
+
+  override def canPut: Boolean = inner.canPut
 }
