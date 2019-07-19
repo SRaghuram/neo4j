@@ -278,6 +278,9 @@ class MorselExecutionContext(private val morsel: Morsel,
     slottedRow
   }
 
+  /**
+    * Estimation of the number of bytes used by the current row
+    */
   override def estimatedHeapUsage: Long = {
     var usage = longsPerRow * 8L
     var i = currentRow * refsPerRow
