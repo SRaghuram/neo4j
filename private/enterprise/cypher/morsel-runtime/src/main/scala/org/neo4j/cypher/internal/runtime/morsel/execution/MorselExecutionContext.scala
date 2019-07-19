@@ -97,7 +97,12 @@ class MorselExecutionContext(private val morsel: Morsel,
   /**
     * Set the valid rows of the morsel to the current position of another morsel
     */
-  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = otherContext.currentRow - otherContext.firstRow
+  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = {
+    if (this.firstRow != otherContext.firstRow) {
+      throw new IllegalStateException("Cannot write to a context from a context with a different first row.")
+    }
+    otherContext.currentRow - otherContext.firstRow
+  }
 
   /**
     * @param start first index of the view (inclusive start)
