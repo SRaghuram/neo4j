@@ -428,6 +428,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         @Override
         public boolean allowsPropertyReads( int propertyKey )
         {
+            if ( disallowsReadAllPropertiesAllLabels && disallowsReadAllPropertiesAllRelTypes )
+            {
+                return false;
+            }
+
             return !(blacklistedNodeProperties.contains( propertyKey ) && blacklistedRelationshipProperties.contains( propertyKey ));
         }
 

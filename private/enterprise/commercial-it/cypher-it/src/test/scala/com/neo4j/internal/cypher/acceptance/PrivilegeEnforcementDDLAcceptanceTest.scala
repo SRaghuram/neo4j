@@ -2714,6 +2714,99 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should get correct result from propertyKeys procedure depending on read privileges") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)-[:X]->(:B)<-[:Y]-(:C)")
+    execute("MATCH (n:A) SET n.prop1 = 1")
+    execute("MATCH (n:A) SET n.prop2 = 2")
+    execute("MATCH (n:A) SET n.prop3 = 3")
+    execute("MATCH (n:B) SET n.prop3 = 3")
+    execute("MATCH (n:B) SET n.prop4 = 4")
+    execute("MATCH (n:C) SET n.prop5 = 5")
+    execute("MATCH (n:C) SET n.prop1 = 1")
+    execute("MATCH ()<-[x:X]-() SET x.prop6 = 6")
+    execute("MATCH ()<-[x:Y]-() SET x.prop7 = 7")
+    execute("MATCH (n:A) REMOVE n.prop2") // -> unused prop2
+
+    val query = "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey ORDER BY propertyKey"
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
+
+    // THEN
+    val all = List("prop1", "prop2", "prop3", "prop4", "prop5", "prop6", "prop7")
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(all(index))
+    }) should be(all.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ (*) ON GRAPH * NODES A TO custom")
+
+    // THEN
+    // expect no change
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(all(index))
+    }) should be(all.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (prop3) ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(all(index))
+    }) should be(all.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (*) ON GRAPH * NODES C TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(all(index))
+    }) should be(all.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (prop5) ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(all(index))
+    }) should be(all.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (prop5) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val withoutFive = List("prop1", "prop2", "prop3", "prop4", "prop6", "prop7")
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(withoutFive(index))
+    }) should be(withoutFive.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (*) ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(withoutFive(index))
+    }) should be(withoutFive.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("Should be empty because all properties are denied on everything")
+    }) should be(0)
+  }
+
   // helper variable, methods and class
 
   private def setupMultiLabelData = {
