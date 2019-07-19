@@ -94,7 +94,7 @@ class MultiDatabaseManagerIT
                     .build();
         } );
 
-        assertThat( exception.getMessage(), containsString( "Error evaluate setting 'dbms.max_databases' minimum allowed value is 2" ) );
+        assertThat( exception.getMessage(), containsString( "Error evaluating value for setting 'dbms.max_databases'. minimum allowed value is 2" ) );
     }
 
     @Test

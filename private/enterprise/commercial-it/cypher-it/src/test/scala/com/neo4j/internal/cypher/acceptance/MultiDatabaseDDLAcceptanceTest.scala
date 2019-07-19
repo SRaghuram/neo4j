@@ -36,7 +36,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
   test("should fail at startup when config setting for default database name is invalid") {
     // GIVEN
-    val startOfError = "Error evaluate setting 'dbms.default_database' "
+    val startOfError = "Error evaluating value for setting 'dbms.default_database'. "
 
     // Empty name
     the[IllegalArgumentException] thrownBy {
