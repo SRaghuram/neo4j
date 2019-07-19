@@ -2571,7 +2571,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
-      row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
+      row.get("count") should be(3) // committed (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
     }) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 3)))
@@ -2582,7 +2582,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
-      row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
+      row.get("count") should be(4) // committed one more, and allowed traverse on all labels (but not matching on B)
     }) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 4)))
@@ -2593,7 +2593,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // THEN
     executeOnDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
-      row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
+      row.get("count") should be(4) // Committed one more, but disallowed B so (:A:B) disappears
     }) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 5)))
