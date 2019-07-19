@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
@@ -33,12 +34,9 @@ class FuseOperators(operatorFactory: OperatorFactory,
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
-    // Fused operators do not support Cached properties for now
-    val cannotFuse = p.treeExists { case _:ASTCachedProperty => true }
-
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
-      if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
+      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
     //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel

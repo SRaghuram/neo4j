@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import java.util
 import java.util.concurrent.atomic.AtomicLong
-import java.util.regex
+import java.util.{Optional, regex}
 
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, noValue, or, ternary, variable}
@@ -28,6 +28,8 @@ import org.neo4j.exceptions.{CypherTypeException, InternalException}
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
+import org.neo4j.kernel.api.StatementConstants
+import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.util.ValueUtils.asAnyValue
 import org.neo4j.values.AnyValue
@@ -1259,7 +1261,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     case NodeProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty"),
+        invoke(DB_ACCESS, NODE_PROPERTY,
                getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR, constant(true))))
 
       val ops = block(lazySet, load(variableName))
@@ -1267,25 +1269,55 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case SlottedCachedProperty(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, entityType) =>
-      val variableName = namer.nextVariableName()
-      val (cachedPropertyMethodInvocation, cursor) = entityType match {
-        case NODE_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyWithLongSlot" else "cachedNodePropertyWithRefSlot"
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
-            vNODE_CURSOR)
-        case RELATIONSHIP_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyWithLongSlot" else "cachedRelationshipPropertyWithRefSlot"
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-            vRELATIONSHIP_CURSOR)
+      if (token == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
+        IntermediateExpression(noValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
+      else {
+        val variableName = namer.nextVariableName()
+        val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
+        val cacheProperty = setCachedPropertyAt(cachedPropertyOffset, load(variableName))
+        val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
+
+        /**
+          * {{{
+          *   var property = NO_VALUE
+          *   if (id != -1L) {
+          *     property = [get property from tx state]
+          *     if (property == null) {
+          *       property = [getCachedProperty]
+          *       if (property == null) {
+          *         property = [get property from store]
+          *         [cacheProperty]
+          *       }
+          *     }
+          *   }
+          * }}}
+          */
+        val getAndCacheProperty = oneTime(
+          block(
+            declareAndAssign(typeRefOf[Value], variableName, noValue),
+            condition(notEqual(entityId, constant(-1L)))(
+              block(
+                assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, constant(token))),
+                condition(isNull(load(variableName)))(
+                  block(
+                    assign(variableName, getCachedPropertyAt(cachedPropertyOffset)),
+                    condition(isNull(load(variableName)))(
+                      block(
+                        assign(variableName,
+                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor,
+                                      PROPERTY_CURSOR, constant(true))),
+                        cacheProperty)
+                      )
+                    )
+                  )
+                )
+              )
+            ))
+        val ops = block(getAndCacheProperty, load(variableName))
+        val nullChecks = block(getAndCacheProperty, equal(load(variableName), noValue))
+        Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
+                                    requireNullCheck = false))
       }
-
-      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, cachedPropertyMethodInvocation))
-
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1293,7 +1325,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,  block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty"),
+          invoke(DB_ACCESS, NODE_PROPERTY,
                  getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR, constant(true)))))
 
       val ops = block(lazySet, load(variableName))
@@ -1303,26 +1335,57 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     case SlottedCachedPropertyLate(_, _, offset, offsetIsForLongSlot, propKey, cachedPropertyOffset, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
-      val (cachedPropertyMethodInvocation, cursor) = entityType match {
-        case NODE_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyWithLongSlot" else "cachedNodePropertyWithRefSlot"
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
-            vNODE_CURSOR)
-        case RELATIONSHIP_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyWithLongSlot" else "cachedRelationshipPropertyWithRefSlot"
-          (invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-            vRELATIONSHIP_CURSOR)
-      }
-      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
-        condition(equal(loadField(f), constant(-1)))(
-          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
-                                   cachedPropertyMethodInvocation)))
+      val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
+      val cacheProperty = setCachedPropertyAt(cachedPropertyOffset, load(variableName))
+      val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
 
+      /**
+        * {{{
+        *   var property = NO_VALUE
+        *   if (id != -1L && prop != -1) {
+        *     property = [get property from tx state]
+        *     if (property == null) {
+        *       property = [getCachedProperty]
+        *       if (property == null) {
+        *         property = [get property from store]
+        *         [cacheProperty]
+        *       }
+        *     }
+        *   }
+        * }}}
+        */
+      val getAndCacheProperty =
+        block(
+          declareAndAssign(typeRefOf[Value], variableName, noValue),
+          condition(and(notEqual(entityId, constant(NO_SUCH_NODE)), notEqual(loadField(f), constant(-1))))(
+            block(
+              assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, loadField(f))),
+              condition(isNull(load(variableName)))(
+                block(
+                  assign(variableName, getCachedPropertyAt(cachedPropertyOffset)),
+                  condition(isNull(load(variableName)))(
+                    block(
+                      assign(variableName,
+                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor,
+                                    PROPERTY_CURSOR, constant(true))),
+                      cacheProperty
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+
+      val lazySet =
+        oneTime(
+          block(
+            condition(equal(loadField(f), constant(-1)))(
+              setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
+            getAndCacheProperty))
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq(f), Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
+      Some(IntermediateExpression(ops, Seq(f), Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case NodePropertyExists(offset, token, _) =>
       Some(
@@ -2030,6 +2093,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = setRefAt(offset, value)
 
+  def getCachedPropertyAt(offset: Int): IntermediateRepresentation = cast[Value](getRefAt(offset))
+
   protected final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
 
@@ -2667,56 +2732,133 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   private def cachedExists(property: ASTCachedProperty) = property match {
     case SlottedCachedProperty(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
-      val (cachedPropertyMethodInvocation, cursor) = entityType match {
-        case NODE_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyExistsWithLongSlot" else "cachedNodePropertyExistsWithRefSlot"
-          (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), constant(prop), constant(propertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
-            vNODE_CURSOR)
+      if (prop == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
+        IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
+      else {
+        val existsVariable = namer.nextVariableName()
+        val propertyVariable = namer.nextVariableName()
+        val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
+        val cacheProperty = setCachedPropertyAt(propertyOffset, load(propertyVariable))
+        val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
 
-        case RELATIONSHIP_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyExistsWithLongSlot" else "cachedRelationshipPropertyExistsWithRefSlot"
-          (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), constant(prop), constant(propertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-            vRELATIONSHIP_CURSOR)
+        val hasChanges = namer.nextVariableName()
+
+        /**
+          * {{{
+          *   var hasProperty = NO_VALUE
+          *   if (id != -1L) {
+          *     val hasChanges = [check if exists in tx state]
+          *     if (hasChanges.isEmpty) {
+          *       var property = [getCachedProperty]
+          *       if (property == null) {
+          *         property = [get property from store]
+          *         [cacheProperty]
+          *       }
+          *       hasProperty = property == NO_VALUE ? FALSE : TRUE
+          *     } else {
+          *       hasProperty = hasChanges.get ? TRUE: FALSE
+          *     }
+          *   }
+          * }}}
+          */
+        val getAndCacheProperty = oneTime(
+          block(
+            declareAndAssign(typeRefOf[Value], existsVariable, noValue),
+            condition(notEqual(entityId, constant(-1L)))(
+              block(
+                declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
+                                 invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
+                ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
+                  block(
+                    declareAndAssign(typeRefOf[Value], propertyVariable, getCachedPropertyAt(propertyOffset)),
+                    condition(isNull(load(propertyVariable)))(
+                      block(
+                        assign(propertyVariable,
+                               invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
+                                      PROPERTY_CURSOR, constant(true))),
+                        cacheProperty
+                        )
+                      ),
+                    assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
+                    )
+                  )(assign(existsVariable,
+                         ternary(unbox(cast[java.lang.Boolean](invoke(load(hasChanges),
+                                              method[Optional[_], Object]("get")))), trueValue, falseValue)))
+                )
+              )
+            )
+          )
+        val ops = block(getAndCacheProperty, load(existsVariable))
+        val nullChecks = block(getAndCacheProperty, equal(load(existsVariable), noValue))
+        Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
+                                    requireNullCheck = false))
       }
-
-      val variableName = namer.nextVariableName()
-      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, cachedPropertyMethodInvocation))
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case SlottedCachedPropertyLate(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
-      val variableName = namer.nextVariableName()
-      val (cachedPropertyMethodInvocation, cursor) = entityType match {
-        case NODE_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedNodePropertyExistsWithLongSlot" else "cachedNodePropertyExistsWithRefSlot"
-          (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), loadField(f), constant(propertyOffset), NODE_CURSOR, PROPERTY_CURSOR),
-            vNODE_CURSOR)
+      val existsVariable = namer.nextVariableName()
+      val propertyVariable = namer.nextVariableName()
+      val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
+      val cacheProperty = setCachedPropertyAt(propertyOffset, load(propertyVariable))
+      val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
 
-        case RELATIONSHIP_TYPE =>
-          val methodName = if (offsetIsForLongSlot) "cachedRelationshipPropertyExistsWithLongSlot" else "cachedRelationshipPropertyExistsWithRefSlot"
-          (invokeStatic(
-            method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, RelationshipScanCursor, PropertyCursor](methodName),
-            LOAD_CONTEXT, DB_ACCESS, constant(entityOffset), loadField(f), constant(propertyOffset), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-            vRELATIONSHIP_CURSOR)
-      }
+      val hasChanges = namer.nextVariableName()
 
-      val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
+      /**
+        * {{{
+        *   var hasProperty = NO_VALUE
+        *   if (id != -1L) {
+        *     val hasChanges = [check if exists in tx state]
+        *     if (hasChanges.isEmpty) {
+        *       var property = [getCachedProperty]
+        *       if (property == null) {
+        *         property = [get property from store]
+        *         [cacheProperty]
+        *       }
+        *       hasProperty = property == NO_VALUE ? FALSE : TRUE
+        *     } else {
+        *       hasProperty = hasChanges.get ? TRUE: FALSE
+        *     }
+        *   }
+        * }}}
+        */
+      val getAndCacheProperty = oneTime(
+        block(
+          declareAndAssign(typeRefOf[Value], existsVariable, noValue),
+          condition(notEqual(entityId, constant(-1L)))(
+            block(
+              declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
+                               invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
+              ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
+                block(
+                  declareAndAssign(typeRefOf[Value], propertyVariable, getCachedPropertyAt(propertyOffset)),
+                  condition(isNull(load(propertyVariable)))(
+                    block(
+                      assign(propertyVariable,
+                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor,
+                                    PROPERTY_CURSOR, constant(true))),
+                      cacheProperty
+                      )
+                    ),
+                  assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
+                  )
+                )(assign(existsVariable,
+                         ternary(unbox(cast[java.lang.Boolean](invoke(load(hasChanges),
+                                                                      method[Optional[_], Object]("get")))), trueValue, falseValue)))
+              )
+            )
+          )
+        )
+
+      val lazySet = oneTime(block(
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(prop)))),
-        cachedPropertyMethodInvocation)))
+        getAndCacheProperty))
 
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      val ops = block(lazySet, load(existsVariable))
+      val nullChecks = block(lazySet, equal(load(existsVariable), noValue))
 
-      Some(IntermediateExpression(ops, Seq(f), Seq(cursor, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
+      Some(IntermediateExpression(ops, Seq(f), Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
     case _ => None
   }
@@ -2727,6 +2869,36 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
     arrayLoad(load("expressionVariables"), ev.offset)
+  }
+
+  private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType): IntermediateRepresentation = {
+    if (offsetIsForLongSlot) getLongAt(offset)
+    else {
+      val entityVar = namer.nextVariableName()
+      val getId = entityType match {
+        case NODE_TYPE => invoke(cast[VirtualNodeValue](getRefAt(offset)),
+                                 method[VirtualNodeValue, Long]("id"))
+        case RELATIONSHIP_TYPE => invoke(cast[VirtualRelationshipValue](getRefAt(offset)),
+                                         method[VirtualRelationshipValue, Long]("id"))
+      }
+      block(
+        oneTime(declareAndAssign(typeRefOf[Long], entityVar, getId)),
+        load(entityVar))
+    }
+  }
+
+  private def callPropertyGet(entityType: EntityType) = entityType match {
+    case NODE_TYPE =>
+      (NODE_PROPERTY, GET_TX_STATE_NODE_PROP, NODE_CURSOR, vNODE_CURSOR)
+    case RELATIONSHIP_TYPE =>
+      (RELATIONSHIP_PROPERTY, GET_TX_STATE_RELATIONSHIP_PROP, RELATIONSHIP_CURSOR, vRELATIONSHIP_CURSOR)
+  }
+
+  private def callPropertyExists(entityType: EntityType) = entityType match {
+    case NODE_TYPE =>
+      (NODE_PROPERTY, HAS_TX_STATE_NODE_PROP, NODE_CURSOR, vNODE_CURSOR)
+    case RELATIONSHIP_TYPE =>
+      (RELATIONSHIP_PROPERTY, HAS_TX_STATE_RELATIONSHIP_PROP, RELATIONSHIP_CURSOR, vRELATIONSHIP_CURSOR)
   }
 }
 
@@ -2750,6 +2922,14 @@ object ExpressionCompiler {
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
   private val LOAD_CONTEXT = load("context")
+
+  private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
+  private val GET_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateRelationshipPropertyOrNull")
+  private val HAS_TX_STATE_NODE_PROP: Method = method[DbAccess, Optional[_], Long, Int]("hasTxStatePropertyForCachedNodeProperty")
+  private val HAS_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Optional[_], Long, Int]("hasTxStatePropertyForCachedRelationshipProperty")
+
+  private val NODE_PROPERTY: Method = method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty")
+  private val RELATIONSHIP_PROPERTY: Method = method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty")
 
   private val PACKAGE_NAME = "org.neo4j.codegen"
 

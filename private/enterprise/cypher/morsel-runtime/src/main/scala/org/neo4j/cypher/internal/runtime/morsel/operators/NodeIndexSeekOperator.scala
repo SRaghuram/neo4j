@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method, _}
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -268,7 +268,8 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+        endInnerLoop
       )
     )
   }
@@ -454,7 +455,8 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                               indexReadSession(queryIndexId),
                               loadField(nodeIndexCursorField),
                               loadField(queryIteratorField),
-                              loadField(DATA_READ)))
+                              loadField(DATA_READ))),
+        endInnerLoop
         )
       )
   }

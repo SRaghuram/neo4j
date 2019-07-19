@@ -234,7 +234,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField)))
+        setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
+        endInnerLoop
         )
       )
   }

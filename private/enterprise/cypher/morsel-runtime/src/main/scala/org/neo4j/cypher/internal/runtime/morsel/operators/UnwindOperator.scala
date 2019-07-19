@@ -146,6 +146,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
         profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, invoke(loadField(iteratorField), method[java.util.Iterator[_], Boolean]("hasNext"))),
+        endInnerLoop
         )
       )
   }

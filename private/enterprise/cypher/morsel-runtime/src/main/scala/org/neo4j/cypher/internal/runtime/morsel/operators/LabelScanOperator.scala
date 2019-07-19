@@ -156,7 +156,8 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
               setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
-            )
+              endInnerLoop
+              )
           },
           load(hasInnerLoop)
         )

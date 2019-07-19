@@ -503,6 +503,18 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       noop()
   }
 
+  def resetLocalVariables: IntermediateRepresentation = {
+    block(
+      codeGen.locals.getAllLocalsForLongSlots.map {
+        case (_, name) =>
+          assign(name, constant(-1L))
+      } ++
+        codeGen.locals.getAllLocalsForRefSlots.map {
+          case (_, name) =>
+            assign(name, constant(null))
+        } :_*)
+  }
+
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   def predicate: IntermediateRepresentation = {
@@ -549,7 +561,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       } ++
       codeGen.locals.getAllLocalsForRefSlots.map {
         case (_, name) =>
-          variable[AnyValue](name, noValue)
+          variable[AnyValue](name, constant(null))
       }
 
     if (shouldCheckOutputCounter) {

@@ -153,7 +153,8 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
         block(cacheProperties:_*),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+        endInnerLoop
         )
       )
   }

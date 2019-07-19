@@ -212,4 +212,6 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     * }}}
     */
   protected def genCloseInnerLoop: IntermediateRepresentation
+
+  protected def endInnerLoop: IntermediateRepresentation = innermost.resetLocalVariables
 }

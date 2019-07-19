@@ -19,9 +19,9 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryConte
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
 import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
-import org.neo4j.internal.kernel.api._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -264,7 +264,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
+        setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+        endInnerLoop
       )
     )
   }

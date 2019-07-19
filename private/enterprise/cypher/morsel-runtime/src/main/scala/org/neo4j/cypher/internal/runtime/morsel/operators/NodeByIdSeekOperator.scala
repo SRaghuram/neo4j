@@ -10,9 +10,9 @@ import java.util
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -176,7 +176,8 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, load(idVariable)),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, constant(false)))
+        setField(canContinue, constant(false)),
+        endInnerLoop),
       )
   }
 
@@ -258,7 +259,8 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             profileRow(id),
             inner.genOperateWithExpressions
             )),
-        setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))))
+        setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))),
+        endInnerLoop)
       )
   }
 
