@@ -55,7 +55,7 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     {
         registry.register( logRotationEvents, new MetricsCounter( logCounters::numberOfLogRotations ) );
         registry.register( logRotationTotalTime, new MetricsCounter( logCounters::logRotationAccumulatedTotalTimeMillis ) );
-        registry.register( logAppendedBytes, new MetricsCounter( logCounters::getAppendedBytes ) );
+        registry.register( logAppendedBytes, new MetricsCounter( logCounters::appendedBytes ) );
         registry.register( logRotationDuration, (Gauge<Long>) logCounters::lastLogRotationTimeMillis  );
     }
 

@@ -218,7 +218,7 @@ public class TimerTransactionTracer implements DatabaseTracer
     }
 
     @Override
-    public long getAppendedBytes()
+    public long appendedBytes()
     {
         return 0;
     }
