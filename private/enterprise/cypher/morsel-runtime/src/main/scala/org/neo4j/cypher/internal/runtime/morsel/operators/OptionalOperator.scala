@@ -128,5 +128,5 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 trait OptionalOperatorTask extends ContinuableOperatorTask {
   def morselData: MorselData
 
-  override def size: Long = morselData.morsels.map(_.size).sum
+  override def estimatedHeapUsage: Long = morselData.morsels.map(_.estimatedHeapUsage).sum
 }

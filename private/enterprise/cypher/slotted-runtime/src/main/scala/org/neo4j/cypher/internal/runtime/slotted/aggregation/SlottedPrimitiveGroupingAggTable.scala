@@ -77,7 +77,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
       }
       functions
     })
-    state.memoryTracker.checkMemoryRequirement(resultMap.size)
+    state.memoryTracker.checkMemoryRequirement(resultMap.keySet().asScala.toList.map(_.estimatedHeapUsage).sum)
     var i = 0
     while (i < functions.length) {
       functions(i)(row, state)

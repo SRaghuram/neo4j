@@ -6,12 +6,11 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, SchedulingInputException}
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
@@ -249,7 +248,7 @@ trait OperatorTask extends HasWorkIdentity {
 /**
   * Operator task which might require several operate calls to be fully executed.
   */
-trait ContinuableOperatorTask extends OperatorTask with Sized {
+trait ContinuableOperatorTask extends OperatorTask with WithHeapUsageEstimation {
   def canContinue: Boolean
   def close(operatorCloser: OperatorCloser, resources: QueryResources): Unit = {
     // NOTE: we have to close cursors before closing the input to make sure that all cursors
@@ -282,7 +281,7 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
 
-  override def size: Long = inputMorsel.size
+  override def estimatedHeapUsage: Long = inputMorsel.estimatedHeapUsage
 }
 
 trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends ContinuableOperatorTask {
@@ -303,7 +302,7 @@ trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumu
   override protected def closeCursors(resources: QueryResources): Unit = {}
 
   // Since we track memory separately on the ArgumentStates in ArgumentStateMaps, we can disregard any size here.
-  override def size: Long = 0
+  override def estimatedHeapUsage: Long = 0
 }
 
 trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]]

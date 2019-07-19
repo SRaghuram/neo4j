@@ -10,17 +10,17 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, MemoryTracker, QueryContext}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.NodeHashJoinOperator.{HashTable, HashTableFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{ArgumentStateBuffer, Sized}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, MemoryTracker, QueryContext, WithHeapUsageEstimation}
 import org.neo4j.values.storable.{LongArray, Values}
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
@@ -116,7 +116,7 @@ object NodeHashJoinOperator {
   class StandardHashTable(override val argumentRowId: Long,
                           lhsOffsets: Array[Int],
                           override val argumentRowIdsForReducers: Array[Long],
-                          memoryTracker: MemoryTracker) extends HashTable with Sized {
+                          memoryTracker: MemoryTracker) extends HashTable with WithHeapUsageEstimation {
     private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
@@ -132,8 +132,8 @@ object NodeHashJoinOperator {
           //        }
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
-          table.put(Values.longArray(key), morsel.shallowCopy())
-          memoryTracker.checkMemoryRequirement(size)
+          table.put(Values.longArray(key), morsel.view(morsel.getCurrentRow, morsel.getCurrentRow + 1))
+          memoryTracker.checkMemoryRequirement(estimatedHeapUsage)
         }
         morsel.moveToNextRow()
       }
@@ -143,10 +143,7 @@ object NodeHashJoinOperator {
       table.get(nodeIds).iterator()
 
 
-    // TODO the size here will count the same morsel multiple times.
-    // We either need to solve that or it will automatically be solved once we can call
-    // memoryTracker.registerBytes(morsel.size)
-    override def size: Long = table.valuesView().collectLong(_.size).sum()
+    override def estimatedHeapUsage: Long = table.valuesView().toList.collectLong(_.estimatedHeapUsage).sum
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,

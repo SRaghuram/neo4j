@@ -9,7 +9,6 @@ import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.cypher.internal.runtime.MemoryTracker
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
@@ -42,8 +41,7 @@ class CollectStandardReducer(memoryTracker: MemoryTracker) extends Reducer {
       case u: CollectUpdater =>
         collections += VirtualValues.fromList(u.collection)
     }
-    // TODO we need to call a different method here once we can estimate value size
-    memoryTracker.checkMemoryRequirement(collections.map(_.size()).sum)
+    memoryTracker.checkMemoryRequirement(collections.map(_.estimatedHeapUsage()).sum)
   }
 
   override def result: AnyValue = VirtualValues.concat(collections: _*)

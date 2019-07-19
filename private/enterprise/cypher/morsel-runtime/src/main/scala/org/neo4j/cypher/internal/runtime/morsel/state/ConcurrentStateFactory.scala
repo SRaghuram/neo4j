@@ -7,16 +7,16 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer, Sized}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext, WithHeapUsageEstimation}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Implementation of [[StateFactory]] which constructs concurrent state management classes.
   */
 class ConcurrentStateFactory extends StateFactory {
-  override def newBuffer[T <: Sized](): Buffer[T] = new ConcurrentBuffer[T]
+  override def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T] = new ConcurrentBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new ConcurrentSingletonBuffer[T]
 

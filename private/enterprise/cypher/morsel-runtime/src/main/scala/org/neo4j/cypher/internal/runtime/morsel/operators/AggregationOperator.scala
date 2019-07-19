@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, Execut
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
+import scala.collection.JavaConverters._
 
 /**
   * General purpose aggregation operator, supporting clauses like
@@ -141,7 +142,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       while (iterator.hasNext) {
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newStandardReducer(memoryTracker)))
-        memoryTracker.checkMemoryRequirement(reducerMap.size())
+        memoryTracker.checkMemoryRequirement(reducerMap.keySet().asScala.toList.map(_.estimatedHeapUsage).sum)
 
         var i = 0
         while (i < reducers.length) {

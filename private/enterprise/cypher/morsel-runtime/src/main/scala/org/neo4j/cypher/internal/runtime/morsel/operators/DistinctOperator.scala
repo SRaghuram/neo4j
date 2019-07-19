@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
+import scala.collection.JavaConverters._
 
 /**
   * The distinct operator, for Cypher like
@@ -87,7 +88,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     def filterOrProject(row: MorselExecutionContext, queryState: OldQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
-        memoryTracker.checkMemoryRequirement(seen.size())
+        memoryTracker.checkMemoryRequirement(seen.asScala.toList.map(_.estimatedHeapUsage).sum)
         groupings.project(row, groupingKey)
         true
       } else {

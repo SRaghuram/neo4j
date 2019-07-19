@@ -32,7 +32,7 @@ case class DistinctSlottedPipe(source: Pipe,
 
           val key = groupingExpression.computeGroupingKey(next, state)
           if (seen.add(key)) {
-            state.memoryTracker.checkMemoryRequirement(seen.size)
+            state.memoryTracker.checkMemoryRequirement(seen.toList.collectLong(_.estimatedHeapUsage).sum)
             // Found unseen key! Set it as the next element to yield, and exit
             groupingExpression.project(next, key)
             return Some(next)

@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{Aggregat
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExecutionContextFactory, Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 
+import scala.collection.JavaConverters._
+
 /**
   * Slotted variant of [[GroupingAggTable]]
   */
@@ -43,7 +45,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
       }
       functions
     })
-    state.memoryTracker.checkMemoryRequirement(resultMap.size)
+    state.memoryTracker.checkMemoryRequirement(resultMap.keySet().asScala.toList.map(_.estimatedHeapUsage).sum)
     var i = 0
     while (i < functions.length) {
       functions(i)(row, state)

@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sized
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
@@ -45,7 +44,7 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private var validRows: Int,
                              private var currentRow: Int,
                              val slots: SlotConfiguration,
-                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible with Sized {
+                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
 
   // The index of the first valid row
   private var firstRow: Int = 0
@@ -59,8 +58,6 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   def getValidRows: Int = validRows
-
-  override def size: Long = getValidRows
 
   def getFirstRow: Int = firstRow
 
@@ -279,12 +276,14 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   /**
-    * Estimation of the number of bytes used by the current row
+    * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
+    * The reasoning behind this is that the other parts of the morsel whould be part of other views in other buffers/argument states and will
+    * also be accounted for.
     */
   override def estimatedHeapUsage: Long = {
-    var usage = longsPerRow * 8L
-    var i = currentRow * refsPerRow
-    while (i < ((currentRow + 1) * refsPerRow)) {
+    var usage = longsPerRow * validRows * 8L
+    var i = firstRow * refsPerRow
+    while (i < ((firstRow + validRows) * refsPerRow)) {
       usage += morsel.refs(i).estimatedHeapUsage()
       i += 1
     }

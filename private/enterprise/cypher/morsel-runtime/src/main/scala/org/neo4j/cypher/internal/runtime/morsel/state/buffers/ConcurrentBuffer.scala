@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
+import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.v4_0.util.TransactionOutOfMemoryException
 
 /**
@@ -55,11 +56,11 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
   }
 }
 
-class BoundedConcurrentBuffer[T <: Sized](bound: Int) extends ConcurrentBuffer[T] {
-  private val size = new AtomicLong(0)
+class BoundedConcurrentBuffer[T <: WithHeapUsageEstimation](bound: Int) extends ConcurrentBuffer[T] {
+  private val heapSize = new AtomicLong(0)
 
   override def put(t: T): Unit = {
-    val _size = size.addAndGet(t.size)
+    val _size = heapSize.addAndGet(t.estimatedHeapUsage)
     if (_size > bound) {
       throw new TransactionOutOfMemoryException()
     }
@@ -69,7 +70,7 @@ class BoundedConcurrentBuffer[T <: Sized](bound: Int) extends ConcurrentBuffer[T
   override def take(): T = {
     val t = super.take()
     if (t != null) {
-      size.addAndGet(-t.size)
+      heapSize.addAndGet(-t.estimatedHeapUsage)
     }
     t
   }
