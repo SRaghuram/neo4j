@@ -8,6 +8,8 @@ package com.neo4j.dbms;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -16,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith( SuppressOutputExtension.class )
+@ResourceLock( Resources.SYSTEM_OUT )
 class ReconciledTransactionIdTrackerTest
 {
     private ReconciledTransactionIdTracker tracker;

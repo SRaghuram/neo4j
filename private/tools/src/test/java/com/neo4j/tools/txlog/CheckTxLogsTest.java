@@ -7,6 +7,8 @@ package com.neo4j.tools.txlog;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -62,6 +64,7 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 
 @ExtendWith( {SuppressOutputExtension.class, EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+@ResourceLock( Resources.SYSTEM_OUT )
 class CheckTxLogsTest
 {
     @Inject

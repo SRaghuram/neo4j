@@ -12,6 +12,8 @@ import org.eclipse.collections.impl.factory.Sets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -60,6 +62,7 @@ import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.PortUtils.getConnectorAddress;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@ResourceLock( Resources.SYSTEM_OUT )
 class BackupSchemaIT
 {
     private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
