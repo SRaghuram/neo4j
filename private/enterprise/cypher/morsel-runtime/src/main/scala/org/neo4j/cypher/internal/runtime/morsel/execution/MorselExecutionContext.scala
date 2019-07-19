@@ -40,11 +40,13 @@ object MorselExecutionContext {
 class MorselExecutionContext(private val morsel: Morsel,
                              private val longsPerRow: Int,
                              private val refsPerRow: Int,
+                             // The number of valid rows in the morsel
                              private var validRows: Int,
                              private var currentRow: Int,
                              val slots: SlotConfiguration,
                              val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
 
+  // The index of the first valid row
   private var firstRow: Int = 0
 
   // ARGUMENT COLUMNS
@@ -59,6 +61,8 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   def getFirstRow: Int = firstRow
 
+  def getLastRow: Int = firstRow + validRows - 1
+
   def getCurrentRow: Int = currentRow
 
   def getLongsPerRow: Int = longsPerRow
@@ -69,15 +73,15 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   def resetToFirstRow(): Unit = currentRow = firstRow
   def resetToBeforeFirstRow(): Unit = currentRow = firstRow - 1
-  def setToAfterLastRow(): Unit = currentRow = validRows
+  def setToAfterLastRow(): Unit = currentRow = getLastRow + 1
 
-  def isValidRow: Boolean = currentRow < validRows && currentRow >= firstRow
-  def hasNextRow: Boolean = currentRow + 1 < validRows
+  def isValidRow: Boolean = currentRow >= firstRow && currentRow <= getLastRow
+  def hasNextRow: Boolean = currentRow < getLastRow
 
   /**
     * Check if there is at least one valid row of data
     */
-  def hasData: Boolean = validRows > firstRow
+  def hasData: Boolean = validRows > 0
 
   /**
     * Check if the morsel is empty
@@ -85,22 +89,26 @@ class MorselExecutionContext(private val morsel: Morsel,
   def isEmpty: Boolean = !hasData
 
   /**
-    * Set the valid rows of the morsel to the current position, which usually
-    * happens after one operator finishes writing to a morsel.
+    * Adapt the valid rows of the morsel so that the last valid row is the previous one according to the current position.
+    * This usually happens after one operator finishes writing to a morsel.
     */
-  def finishedWriting(): Unit = validRows = currentRow
+  def finishedWriting(): Unit = validRows = currentRow - firstRow
 
   /**
     * Set the valid rows of the morsel to the current position of another morsel
     */
-  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = otherContext.currentRow
+  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = otherContext.currentRow - otherContext.firstRow
 
-
+  /**
+    * @param start first index of the view (inclusive start)
+    * @param end first index after the view (exclusive end)
+    * @return a shallow copy that is configured to only see the configured view.
+    */
   def view(start: Int, end: Int): MorselExecutionContext = {
     val view = shallowCopy()
     view.firstRow = start
     view.currentRow = start
-    view.validRows = end
+    view.validRows = end - start
     view
   }
 
