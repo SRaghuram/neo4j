@@ -8,7 +8,9 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Path
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs.InterpretedAndSlotted
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_4
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, Planners, TestConfiguration}
 
 class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -368,6 +370,124 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }, expectPlansToFail = Configs.RulePlanner))
+  }
+
+  private def setupEvilCustomerGraph(): Unit = {
+    val setup =
+      """
+        |CREATE (e1:DEPART:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"DEPART" })<-[:EST_ETAT_DE]-(ee1:EtatElementHTA {acr:"ACR",idSitr:"idSitrDep", codeGdo:"gdoDepart", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e1)<-[:ETAT_COURANT]-(ee1)
+        |
+        |CREATE (e2:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"TRONCON" })<-[:EST_ETAT_DE]-(ee2:EtatElementHTA {acr:"ACR",idSitr:"idSitrTroncon1", codeGdo:"gdoTroncon1", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e2)<-[:ETAT_COURANT]-(ee2)
+        |
+        |CREATE (e3:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"ETOILEMENT" })<-[:EST_ETAT_DE]-(ee3:EtatElementHTA {acr:"ACR",idSitr:"idSitrEtoilement", codeGdo:"gdoEtoilement", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e3)<-[:ETAT_COURANT]-(ee3)
+        |
+        |CREATE (e4:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"COUPUREISOLEE" })<-[:EST_ETAT_DE]-(ee4:EtatElementHTA {acr:"ACR",idSitr:"idSitrCoupure1", codeGdo:"gdoCoupure1", dateDebut:0, dateFin:9223372036854775807, positionSchemaNormal: '0'})
+        |CREATE (e4)<-[:ETAT_COURANT]-(ee4)
+        |
+        |CREATE (e5:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"JEUDEBARRE" })<-[:EST_ETAT_DE]-(ee5:EtatElementHTA {acr:"ACR",idSitr:"idSitrJdb1", codeGdo:"gdoJdb1", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e5)<-[:ETAT_COURANT]-(ee5)
+        |
+        |CREATE (e6:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"COUPURESIMPLE" })<-[:EST_ETAT_DE]-(ee6:EtatElementHTA {acr:"ACR",idSitr:"idSitrCoupure2", codeGdo:"gdoCoupure2", dateDebut:0, dateFin:9223372036854775807, positionSchemaNormal: '0'})
+        |CREATE (e6)<-[:ETAT_COURANT]-(ee6)
+        |
+        |CREATE (e7:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"TRONCON" })<-[:EST_ETAT_DE]-(ee7:EtatElementHTA {acr:"ACR",idSitr:"idSitrTroncon2", codeGdo:"gdoTroncon2", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e7)<-[:ETAT_COURANT]-(ee7)
+        |
+        |CREATE (e8:ElementHTA {acr:"ACR", dateDebut:0, dateFin:9223372036854775807, type:"JEUDEBARRE" })<-[:EST_ETAT_DE]-(ee8:EtatElementHTA {acr:"ACR",idSitr:"idSitrJdb2", codeGdo:"gdoJdb2", dateDebut:0, dateFin:9223372036854775807})
+        |CREATE (e8)<-[:ETAT_COURANT]-(ee8)
+        |
+        |CREATE (e1)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e2)
+        |CREATE (e2)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e3)
+        |CREATE (e3)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e4)
+        |CREATE (e4)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e5)
+        |CREATE (e5)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e6)
+        |CREATE (e6)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e7)
+        |CREATE (e7)-[:EST_CONNECTE_A { dateDebut:0, dateFin:9223372036854775807 }]->(e8)
+        |
+        |create (p1:Position {acr:"ACR", dateDebut:0, dateEnregistrement:1562163748909, dateFin:9223372036854775807, passant:true, raison:"1"})-[:EST_POSITION_DE]->(e1)
+        |create (p1)-[:EST_POSITION_DE_COURANT]->(e1)
+        |
+        |create (p6:Position {acr:"ACR", dateDebut:1, dateEnregistrement:1562163748909, dateFin:9223372036854775807, passant:true, raison:"1"})-[:EST_POSITION_DE]->(e6)
+        |create (p6)-[:EST_POSITION_DE_COURANT]->(e6)
+        |
+        |create (ea1:EtatAlimentation {acr:"ACR", dateDebut:1, dateEnregistrement:1562163748909, dateFin:9223372036854775807, estAlimente:true})-[:ETAT_ALIMENTATION]->(e1)
+        |create (ea1)-[:ETAT_ALIMENTATION_COURANT]->(e1);
+      """.stripMargin
+
+    executeSingle(setup)
+  }
+
+  test("Var expand should plan NestedPlanExpressions for inner predicates, not RollUpApply") {
+    setupEvilCustomerGraph()
+
+    val query =
+      """
+        |MATCH (ee1:EtatElementHTA {acr:'ACR', idSitr:'idSitrDep'})-[:EST_ETAT_DE]->(e1:ElementHTA)
+        |WITH e1
+        |MATCH path = ( (e1) -[r1:EST_CONNECTE_A*0..]- (element:ElementHTA) )
+        |WHERE
+        |    ALL(noeud in nodes(path) WHERE
+        |      head( [ (noeud)<-[r2:EST_POSITION_DE]-(pos:Position) | pos.passant ] ) = true
+        |    )
+        |RETURN path
+      """.stripMargin
+
+    val config = Configs.InterpretedAndSlotted - TestConfiguration(V3_4, Planners.all, Slotted) - Configs.Version2_3 - Configs.Rule3_1
+    val result = executeWith(config, query,
+      planComparisonStrategy =
+      ComparePlansWithAssertion( plan => {
+        plan shouldNot includeSomewhere.aPlan("RollUpApply")
+      }, expectPlansToFail = Configs.RulePlanner))
+
+    result.toList should have size 1
+  }
+
+  test("Var expand should honour the predicate also for the first node: with GetDregree") {
+    setupEvilCustomerGraph()
+    val query =
+      """
+        |WITH 'ACR' AS laacr, 'idSitrDep' AS leIdSitr, 1562144482517 AS ladate
+        |MATCH (elementDepartPropagation:ElementHTA)
+        |WITH elementDepartPropagation, ladate
+        |MATCH path = ( (elementDepartPropagation) -[:EST_CONNECTE_A*0..]- (element:ElementHTA) )
+        |WHERE
+        |    ALL(noeud in nodes(path) WHERE
+        |      noeud.dateDebut <= ladate < noeud.dateFin
+        |      AND length( (noeud)<--() ) = 1
+        |    )
+        |AND
+        |    ALL(r in relationships(path)
+        |        WHERE r.dateDebut <= ladate < r.dateFin)
+        |OPTIONAL MATCH (ge:AnnotationProvisoire:GroupeElectrogene) -[:ANNOTE]-> (element)
+        |  WHERE ge.dateDebut <= ladate < ge.dateFin
+        |WITH element, ge, ladate
+        |MATCH (etat:EtatElementHTA) -[:EST_ETAT_DE]-> (element)
+        |RETURN element""".stripMargin
+
+    val result = executeWith(
+      Configs.InterpretedAndSlotted - TestConfiguration(V3_4, Planners.all, Slotted),
+      query,
+      expectedDifferentResults = Configs.Cost3_1)
+
+    result.toList shouldBe empty
+  }
+
+  test("Var expand should honour the predicate also for the first node") {
+    createLabeledNode(Map("bar" -> 2), "Foo")
+    val query =
+      """
+        |MATCH (a:Foo)
+        |MATCH path = ( (a)-[:REL*0..]-() )
+        |WHERE ALL(n in nodes(path) WHERE n.bar = 1)
+        |RETURN path
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, expectedDifferentResults = Configs.Cost3_1)
+
+    result.toList shouldBe empty
   }
 
   private def setUp(startLabel: String) {
