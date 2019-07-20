@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -18,6 +19,7 @@ object OperatorExpressionCompiler {
   class LocalVariableSlotMapper(slots: SlotConfiguration) {
     val longSlotToLocal = new Array[String](slots.numberOfLongs)
     val refSlotToLocal = new Array[String](slots.numberOfReferences)
+    val cachedProperties = ArrayBuffer.empty[(Int, String)]
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -31,6 +33,12 @@ object OperatorExpressionCompiler {
       local
     }
 
+    def addCachedProperty(offset: Int): String = {
+      val refslot = addLocalForRefSlot(offset)
+      cachedProperties.append(offset -> refslot)
+      refslot
+    }
+
     def getLocalForLongSlot(offset: Int): String = longSlotToLocal(offset)
 
     def getLocalForRefSlot(offset: Int): String = refSlotToLocal(offset)
@@ -40,6 +48,8 @@ object OperatorExpressionCompiler {
 
     def getAllLocalsForRefSlots: Seq[(Int, String)] =
       getAllLocalsFor(refSlotToLocal)
+
+    def getAllLocalsForCachedProperties: Seq[(Int, String)] = cachedProperties
 
     private def getAllLocalsFor(slotToLocal: Array[String]): Seq[(Int, String)] = {
       val locals = new ArrayBuffer[(Int, String)](slotToLocal.length)
@@ -101,6 +111,31 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNa
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
+    }
+    assign(local, value)
+  }
+
+
+  override def getCachedPropertyAt(offset: Int): IntermediateRepresentation = {
+    var local = locals.getLocalForRefSlot(offset)
+    val loadOp =
+      if (local == null) {
+        local = locals.addCachedProperty(offset)
+        block(
+          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+          load(local)
+          )
+      } else {
+        load(local)
+      }
+    cast[Value](loadOp)
+  }
+
+  override def setCachedPropertyAt(offset: Int,
+                                   value: IntermediateRepresentation): IntermediateRepresentation = {
+    var local = locals.getLocalForRefSlot(offset)
+    if (local == null) {
+      local = locals.addCachedProperty(offset)
     }
     assign(local, value)
   }

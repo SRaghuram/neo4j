@@ -503,13 +503,9 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       noop()
   }
 
-  def resetLocalVariables: IntermediateRepresentation = {
+  def resetCachedPropertyVariables: IntermediateRepresentation = {
     block(
-      codeGen.locals.getAllLocalsForLongSlots.map {
-        case (_, name) =>
-          assign(name, constant(-1L))
-      } ++
-        codeGen.locals.getAllLocalsForRefSlots.map {
+        codeGen.locals.getAllLocalsForCachedProperties.map {
           case (_, name) =>
             assign(name, constant(null))
         } :_*)

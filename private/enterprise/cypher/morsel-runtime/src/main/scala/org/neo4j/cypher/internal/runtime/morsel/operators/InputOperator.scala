@@ -178,7 +178,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
           profileRow(id),
           inner.genOperateWithExpressions,
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
-          innermost.resetLocalVariables
+          innermost.resetCachedPropertyVariables
           )
         ),
       innermost.onExit

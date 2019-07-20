@@ -174,7 +174,8 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
             )
           )( //else
             INPUT_ROW_MOVE_TO_NEXT
-          )
+          ),
+          innermost.resetCachedPropertyVariables
           )
       ),
       innermost.onExit
@@ -213,5 +214,9 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     */
   protected def genCloseInnerLoop: IntermediateRepresentation
 
-  protected def endInnerLoop: IntermediateRepresentation = innermost.resetLocalVariables
+  /**
+    * Closes the inner loop, allows the input loop to update variables before going
+    * into next iteration of inner loop
+    */
+  protected def endInnerLoop: IntermediateRepresentation = innermost.resetCachedPropertyVariables
 }
