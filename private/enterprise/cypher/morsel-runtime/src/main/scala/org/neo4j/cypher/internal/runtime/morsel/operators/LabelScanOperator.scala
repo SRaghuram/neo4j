@@ -156,7 +156,6 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
               setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
-              endInnerLoop
               )
           },
           load(hasInnerLoop)
@@ -186,7 +185,8 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
         profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField)))
+        setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
+        endInnerLoop
       )
     )
   }
