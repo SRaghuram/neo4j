@@ -63,6 +63,10 @@ public class MetricsSettings implements LoadableConfig
     public static final Setting<Boolean> neoCountsEnabled = buildSetting(
             "metrics.neo4j.counts.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 
+    @Description( "Enable reporting metrics about number of entities in the database." )
+    public static final Setting<Boolean> databaseCountsEnabled = buildSetting(
+            "metrics.neo4j.data.counts.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+
     @Description( "Enable reporting metrics about the network usage." )
     public static final Setting<Boolean> neoNetworkEnabled = buildSetting(
             "metrics.neo4j.network.enabled", BOOLEAN ).inherits( neoEnabled ).build();

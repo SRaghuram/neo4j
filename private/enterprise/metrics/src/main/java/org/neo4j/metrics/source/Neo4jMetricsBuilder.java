@@ -35,6 +35,7 @@ import org.neo4j.metrics.source.cluster.NetworkMetrics;
 import org.neo4j.metrics.source.db.BoltMetrics;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
+import org.neo4j.metrics.source.db.DatabaseCountMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.LogRotationMetrics;
 import org.neo4j.metrics.source.db.PageCacheMetrics;
@@ -118,6 +119,16 @@ public class Neo4jMetricsBuilder
                     kernelContext.databaseInfo().edition != Edition.unknown )
             {
                 life.add( new EntityCountMetrics( registry, databaseDependencySupplier( StoreEntityCounters.class ) ) );
+                result = true;
+            }
+        }
+
+        if ( config.get( MetricsSettings.databaseCountsEnabled ) )
+        {
+            if ( kernelContext.databaseInfo().edition != Edition.community &&
+                    kernelContext.databaseInfo().edition != Edition.unknown )
+            {
+                life.add( new DatabaseCountMetrics( registry, databaseDependencySupplier( StoreEntityCounters.class ) ) );
                 result = true;
             }
         }

@@ -5,12 +5,8 @@
  */
 package org.neo4j.metrics;
 
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
 import org.junit.Rule;
@@ -22,9 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
 import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -37,7 +31,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
-import org.neo4j.kernel.api.ResourceManager;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.StubResourceManager;
 import org.neo4j.kernel.builtinprocs.JmxQueryProcedure;
@@ -53,21 +46,18 @@ import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.test.ha.ClusterRule;
-import org.neo4j.test.mockito.matcher.CollectionMatcher;
 
 import static java.lang.System.currentTimeMillis;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.helpers.collection.Iterators.asList;
-import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
 import static org.neo4j.metrics.MetricsSettings.csvEnabled;
@@ -77,9 +67,13 @@ import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_DURATION;
 import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_EVENTS;
 import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_TOTAL_TIME;
+import static org.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_NODE;
+import static org.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_RELATIONSHIP;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class MetricsKernelExtensionFactoryIT
 {
@@ -251,6 +245,19 @@ public class MetricsKernelExtensionFactoryIT
     }
 
     @Test
+    public void countNodesAndRelationships() throws Throwable
+    {
+        for ( int i = 0; i < 5; i++ )
+        {
+            connectTwoNodes();
+        }
+
+        // 10 nodes created in this test and 1 in setup
+        assertMetrics( "Should get correct number of nodes from count store", COUNTS_NODE, equalTo( 11L ) );
+        assertMetrics( "Should get correct number of relationships from count store", COUNTS_RELATIONSHIP, equalTo( 5L ) );
+    }
+
+    @Test
     public void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
@@ -301,6 +308,22 @@ public class MetricsKernelExtensionFactoryIT
                 tx.success();
             }
         }
+    }
+
+    private void connectTwoNodes()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node1 = db.createNode();
+            Node node2 = db.createNode();
+            node1.createRelationshipTo( node2, withName( "any" ) );
+            tx.success();
+        }
+    }
+
+    private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
+    {
+        assertEventually( message, () -> readLongGaugeValue( metricsCsv( outputPath, metricName ) ), matcher, 5, TimeUnit.MINUTES );
     }
 
     private static class MetricsRecordMatcher extends TypeSafeMatcher<Object[]>
