@@ -190,16 +190,21 @@ class InitMagicMessageHandlingIT
         assertEventually( "Server did not drop the connection", clientChannel::isActive, is( false ), 1, MINUTES );
     }
 
-    private void assertReadTimeoutLogged( Class<?> logClass )
+    private void assertReadTimeoutLogged( Class<?> logClass ) throws InterruptedException
     {
-        logProvider.assertAtLeastOnce( inLog( logClass ).error(
-                containsString( "Exception in inbound" ), instanceOf( ReadTimeoutException.class ) ) );
+        var readTimeoutLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ), instanceOf( ReadTimeoutException.class ) );
+
+        assertEventually( ignore -> "Read timeout error did not get logged:\n" + logProvider.serialize(),
+                () -> logProvider.containsMatchingLogCall( readTimeoutLogMatcher ), is( true ), 1, MINUTES );
     }
 
-    private void assertWrongMagicValueLogged( Class<?> logClass )
+    private void assertWrongMagicValueLogged( Class<?> logClass ) throws InterruptedException
     {
-        logProvider.assertAtLeastOnce( inLog( logClass ).error( containsString( "Exception in inbound" ),
-                throwableWithMessage( DecoderException.class, containsString( "Wrong magic value" ) ) ) );
+        var wrongMagicMessageLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ),
+                throwableWithMessage( DecoderException.class, containsString( "Wrong magic value" ) ) );
+
+        assertEventually( ignore -> "Wrong magic value did not get logged:\n" + logProvider.serialize(),
+                () -> logProvider.containsMatchingLogCall( wrongMagicMessageLogMatcher ), is( true ), 1, MINUTES );
     }
 
     private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler ) throws InterruptedException
