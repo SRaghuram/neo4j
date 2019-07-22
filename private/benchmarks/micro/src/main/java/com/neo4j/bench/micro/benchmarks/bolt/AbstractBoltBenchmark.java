@@ -36,6 +36,8 @@ import org.neo4j.bolt.runtime.BoltStateMachineFactoryImpl;
 import org.neo4j.bolt.runtime.Neo4jError;
 import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
+import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
 import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.packstream.PackOutput;
@@ -46,6 +48,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.values.AnyValue;
@@ -64,7 +67,9 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
 
         SystemNanoClock clock = Clocks.nanoClock();
-        BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService, clock );
+        ReconciledTransactionTracker reconciledTxTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
+        BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService,
+                reconciledTxTracker, new Monitors(), clock );
         return new BoltStateMachineFactoryImpl( databaseManagementService,
                 authentication,
                 clock,

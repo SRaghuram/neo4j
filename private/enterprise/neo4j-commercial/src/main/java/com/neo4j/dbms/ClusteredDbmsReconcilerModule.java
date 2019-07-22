@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
@@ -18,9 +19,9 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     private final ClusterInternalDbmsOperator internalOperator;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager, TransactionEventService txEventService,
-            ClusterInternalDbmsOperator internalOperator, DatabaseIdRepository databaseIdRepository )
+            ClusterInternalDbmsOperator internalOperator, DatabaseIdRepository databaseIdRepository, ReconciledTransactionTracker reconciledTxTracker )
     {
-        super( globalModule, databaseManager, databaseIdRepository );
+        super( globalModule, databaseManager, databaseIdRepository, reconciledTxTracker );
         this.txEventService = txEventService;
         this.internalOperator = internalOperator;
         //TODO: don't need if we do end up injecting

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.dbms;
+package com.neo4j.bolt.txtracking;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.util.Map;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -38,7 +39,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
-class ClusterReconciledTransactionIdTrackerIT
+class ClusterReconciledTransactionTrackerIT
 {
     @Inject
     private ClusterFactory clusterFactory;
@@ -121,7 +122,7 @@ class ClusterReconciledTransactionIdTrackerIT
     {
         var systemDb = member.systemDatabase();
         assertAvailable( systemDb );
-        return resolve( systemDb, ReconciledTransactionIdTracker.class ).getLastReconciledTransactionId();
+        return resolve( systemDb, ReconciledTransactionTracker.class ).getLastReconciledTransactionId();
     }
 
     private static void assertAvailable( GraphDatabaseAPI db )

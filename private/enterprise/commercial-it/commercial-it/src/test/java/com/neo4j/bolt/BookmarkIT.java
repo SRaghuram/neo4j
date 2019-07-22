@@ -5,16 +5,23 @@
  */
 package com.neo4j.bolt;
 
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.bolt.txtracking.WaitTrackingMonitor;
+import com.neo4j.commercial.edition.CommercialEditionModule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.txtracking.TransactionIdTrackerMonitor;
+import org.neo4j.bolt.v4.runtime.bookmarking.BookmarkWithDatabaseId;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -24,49 +31,70 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.exceptions.TransientException;
+import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.IOUtils;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
+import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
+import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout;
+import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class BookmarkIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class BookmarkIT
 {
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory directory;
 
     private Driver driver;
     private GraphDatabaseAPI db;
     private DatabaseManagementService managementService;
+    private ExecutorService executor;
 
-    @After
-    public void tearDown() throws Exception
+    @AfterEach
+    void afterEach()
     {
         IOUtils.closeAllSilently( driver );
+        if ( executor != null )
+        {
+            executor.shutdownNow();
+        }
         if ( managementService != null )
         {
             managementService.shutdown();
@@ -74,7 +102,7 @@ public class BookmarkIT
     }
 
     @Test
-    public void shouldReturnUpToDateBookmarkWhenSomeTransactionIsCommitting() throws Exception
+    void shouldReturnUpToDateBookmarkWhenSomeTransactionIsCommitting() throws Exception
     {
         CommitBlocker commitBlocker = new CommitBlocker();
         db = createDb( commitBlocker );
@@ -103,7 +131,7 @@ public class BookmarkIT
     }
 
     @Test
-    public void shouldReturnBookmarkInNewFormat() throws Exception
+    void shouldReturnBookmarkInNewFormat() throws Exception
     {
         db = createDb();
         driver = graphDatabaseDriver( boltAddress( db ) );
@@ -113,22 +141,109 @@ public class BookmarkIT
         assertThat( split, arrayWithSize( 2 ) );
     }
 
+    @Test
+    void shouldFailForUnreachableSystemDatabaseBookmark()
+    {
+        db = createDb();
+        driver = graphDatabaseDriver( boltAddress( db ) );
+
+        var unreachableSystemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + 9999 );
+
+        var error = assertThrows( TransientException.class,
+                () -> createDatabase( "bar", unreachableSystemDbBookmark ) );
+
+        assertEquals( BookmarkTimeout.code().serialize(), error.code() );
+    }
+
+    @Test
+    void shouldWaitForSystemDatabaseBookmark( TestInfo testInfo ) throws Exception
+    {
+        var waitTrackingMonitor = new WaitTrackingMonitor();
+        db = createDb( waitTrackingMonitor );
+        driver = graphDatabaseDriver( boltAddress( db ) );
+        executor = newSingleThreadExecutor( daemon( "thread-" + testInfo.getDisplayName() ) );
+
+        var txCount = 5;
+        var systemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + txCount );
+
+        var future = executor.submit( () -> createDatabase( "foo", systemDbBookmark ) );
+
+        waitTrackingMonitor.clearWaiting();
+        assertFalse( future.isDone() );
+        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 1, MINUTES );
+
+        createDatabase( "bar" );
+        waitTrackingMonitor.clearWaiting();
+        assertFalse( future.isDone() );
+        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 1, MINUTES );
+
+        for ( var i = 0; i < txCount; i++ )
+        {
+            createDatabase( "baz" + i );
+        }
+
+        assertEventually( future::isDone, equalTo( true ), 1, MINUTES );
+
+        var databaseNames = managementService.listDatabases();
+        assertThat( databaseNames, hasItem( "foo" ) );
+        assertThat( databaseNames, hasItem( "bar" ) );
+        for ( var i = 0; i < txCount; i++ )
+        {
+            assertThat( databaseNames, hasItem( "baz" + i ) );
+        }
+    }
+
     private GraphDatabaseAPI createDb( CommitBlocker commitBlocker )
     {
-        return createDb( globalModule -> new CustomCommunityEditionModule( globalModule, commitBlocker ) );
+        return createDb( globalModule -> new CustomCommercialEditionModule( globalModule, commitBlocker ) );
+    }
+
+    private GraphDatabaseAPI createDb( TransactionIdTrackerMonitor monitor )
+    {
+        return createDb( globalModule -> new CommercialEditionModuleWithMonitor( globalModule, monitor ) );
     }
 
     private GraphDatabaseAPI createDb()
     {
-        return createDb( CommunityEditionModule::new );
+        return createDb( CommercialEditionModule::new );
     }
 
     private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
-        DatabaseManagementServiceFactory facadeFactory = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
-        managementService = facadeFactory.build( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
-        return (GraphDatabaseAPI) managementService.database(
-                GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        var factory = new DatabaseManagementServiceFactory( COMMERCIAL, editionModuleFactory );
+        managementService = factory.build( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
+        return (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    }
+
+    private long lastCommittedSystemDatabaseTxId()
+    {
+        var db = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
+        return db.getDependencyResolver().resolveDependency( TransactionIdStore.class ).getLastCommittedTransactionId();
+    }
+
+    private String systemDatabaseBookmark( long txId )
+    {
+        var db = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
+        var databaseId = db.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        return new BookmarkWithDatabaseId( txId, databaseId ).toString();
+    }
+
+    private void createDatabase( String databaseName )
+    {
+        createDatabase( databaseName, null );
+    }
+
+    private void createDatabase( String databaseName, String systemDatabaseBookmark )
+    {
+        var sessionConfig = SessionConfig.builder()
+                .withDatabase( SYSTEM_DATABASE_NAME )
+                .withBookmarks( systemDatabaseBookmark == null ? List.of() : List.of( systemDatabaseBookmark ) )
+                .build();
+
+        try ( var session = driver.session( sessionConfig ) )
+        {
+            session.run( "CREATE DATABASE " + databaseName ).consume();
+        }
     }
 
     private static String createNode( Driver driver )
@@ -159,9 +274,18 @@ public class BookmarkIT
         return "bolt://" + portRegister.getLocalAddress( "bolt" );
     }
 
-    private static class CustomCommunityEditionModule extends CommunityEditionModule
+    private static class CommercialEditionModuleWithMonitor extends CommercialEditionModule
     {
-        CustomCommunityEditionModule( GlobalModule globalModule, CommitBlocker commitBlocker )
+        CommercialEditionModuleWithMonitor( GlobalModule globalModule, TransactionIdTrackerMonitor monitor )
+        {
+            super( globalModule );
+            globalModule.getGlobalMonitors().addMonitorListener( monitor );
+        }
+    }
+
+    private static class CustomCommercialEditionModule extends CommercialEditionModule
+    {
+        CustomCommercialEditionModule( GlobalModule globalModule, CommitBlocker commitBlocker )
         {
             super( globalModule );
             commitProcessFactory = new CustomCommitProcessFactory( commitBlocker );

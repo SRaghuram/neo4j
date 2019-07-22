@@ -3,12 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.dbms;
+package com.neo4j.bolt.txtracking;
 
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -22,18 +23,18 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @CommercialDbmsExtension
-class StandaloneReconciledTransactionIdTrackerIT
+class StandaloneReconciledTransactionTrackerIT
 {
     @Inject
     private DatabaseManagementService dbService;
 
-    private ReconciledTransactionIdTracker tracker;
+    private ReconciledTransactionTracker tracker;
     private TransactionIdStore txIdStore;
 
     @BeforeEach
     void beforeEach()
     {
-        tracker = resolveFromSystemDb( ReconciledTransactionIdTracker.class );
+        tracker = resolveFromSystemDb( ReconciledTransactionTracker.class );
         txIdStore = resolveFromSystemDb( TransactionIdStore.class );
     }
 

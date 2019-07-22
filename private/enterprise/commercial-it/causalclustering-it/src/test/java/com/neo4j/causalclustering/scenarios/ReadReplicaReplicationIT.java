@@ -35,18 +35,20 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
+import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.internal.index.label.LabelScanStore;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -354,7 +356,8 @@ class ReadReplicaReplicationIT
         // given
         var cluster = startClusterWithDefaultConfig();
 
-        var readReplicaGraphDatabase = cluster.findAnyReadReplica().defaultDatabase();
+        var readReplica = cluster.findAnyReadReplica();
+        var readReplicaGraphDatabase = readReplica.defaultDatabase();
         var pollingClient = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
         pollingClient.stop();
 
@@ -364,23 +367,29 @@ class ReadReplicaReplicationIT
             transaction.success();
         } );
 
-        var leaderDatabase = cluster.awaitLeader().defaultDatabase();
-        var transactionVisibleOnLeader = transactionIdTracker( leaderDatabase ).newestEncounteredTxId();
+        var leader = cluster.awaitLeader();
+        var databaseId = defaultDatabaseId( leader );
+        var transactionVisibleOnLeader = transactionIdTracker( leader ).newestTransactionId( databaseId );
 
         // when the poller is paused, transaction doesn't make it to the read replica
-        assertThrows( TransactionFailureException.class,
-                () -> transactionIdTracker( readReplicaGraphDatabase ).awaitUpToDate( transactionVisibleOnLeader, ofSeconds( 15 ) ) );
+        assertThrows( TransactionIdTrackerException.class,
+                () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
         pollingClient.start();
-        transactionIdTracker( readReplicaGraphDatabase ).awaitUpToDate( transactionVisibleOnLeader, ofSeconds( 15 ) );
+        transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) );
     }
 
-    private static TransactionIdTracker transactionIdTracker( GraphDatabaseAPI database )
+    private static TransactionIdTracker transactionIdTracker( ClusterMember member )
     {
-        var transactionIdStore = database.getDependencyResolver().provideDependency( TransactionIdStore.class );
-        var databaseAvailabilityGuard = database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
-        return new TransactionIdTracker( transactionIdStore, databaseAvailabilityGuard, Clocks.nanoClock() );
+        var reconciledTxTracker = member.systemDatabase().getDependencyResolver().resolveDependency( ReconciledTransactionTracker.class );
+        return new TransactionIdTracker( member.managementService(), reconciledTxTracker, new Monitors(), Clocks.nanoClock() );
+    }
+
+    private static DatabaseId defaultDatabaseId( ClusterMember member )
+    {
+        var dbApi = (GraphDatabaseAPI) member.managementService().database( DEFAULT_DATABASE_NAME );
+        return dbApi.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
     }
 
     private static LogFiles physicalLogFiles( ClusterMember clusterMember )

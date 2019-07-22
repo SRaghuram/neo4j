@@ -9,6 +9,7 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
@@ -29,10 +30,11 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final SystemGraphDbmsModel dbmsModel;
     private final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
-    private final ReconciledTransactionIdTracker reconciledTxIdTracker;
+    private final ReconciledTransactionTracker reconciledTxTracker;
     protected final DatabaseIdRepository databaseIdRepository;
 
-    public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, DatabaseIdRepository databaseIdRepository )
+    public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, DatabaseIdRepository databaseIdRepository,
+            ReconciledTransactionTracker reconciledTxTracker )
     {
         var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
         var txBridge = globalModule.getThreadToTransactionBridge();
@@ -41,9 +43,9 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         this.databaseManager = databaseManager;
         this.databaseIdRepository = databaseIdRepository;
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
-        this.reconciledTxIdTracker = new ReconciledTransactionIdTracker( internalLogProvider );
+        this.reconciledTxTracker = reconciledTxTracker;
         this.dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
-        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository, txBridge, reconciledTxIdTracker, internalLogProvider );
+        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, databaseIdRepository, txBridge, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, databaseIdRepository );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
@@ -76,7 +78,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         systemOperator.updateDesiredStates();
         systemOperator.trigger( false ).awaitAll();
 
-        initializeReconciledTxIdTracker( systemDatabase );
+        initializeReconciledTxTracker( systemDatabase );
     }
 
     /**
@@ -92,11 +94,6 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     public void stop()
     {
         stopAllDatabases();
-    }
-
-    public ReconciledTransactionIdTracker reconciledTxIdTracker()
-    {
-        return reconciledTxIdTracker;
     }
 
     protected Stream<DbmsOperator> operators()
@@ -127,10 +124,10 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
                 globalModule.getJobScheduler() );
     }
 
-    private void initializeReconciledTxIdTracker( GraphDatabaseAPI systemDb )
+    private void initializeReconciledTxTracker( GraphDatabaseAPI systemDb )
     {
         var resolver = systemDb.getDependencyResolver();
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
-        reconciledTxIdTracker.initialize( txIdStore.getLastClosedTransactionId() );
+        reconciledTxTracker.initialize( txIdStore.getLastClosedTransactionId() );
     }
 }

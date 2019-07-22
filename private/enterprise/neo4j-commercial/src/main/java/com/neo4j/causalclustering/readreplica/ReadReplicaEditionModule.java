@@ -85,6 +85,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
     {
+        super( globalModule );
+
         this.globalModule = globalModule;
         this.discoveryServiceFactory = discoveryServiceFactory;
         this.globalHealth = globalModule.getGlobalHealthService();
@@ -171,9 +173,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository,
+                reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
-        globalModule.getGlobalDependencies().satisfyDependency( reconcilerModule.reconciledTxIdTracker() );
+        globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
         return databaseManager;
     }

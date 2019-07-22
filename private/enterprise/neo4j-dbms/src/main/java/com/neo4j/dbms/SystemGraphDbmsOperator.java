@@ -8,6 +8,7 @@ package com.neo4j.dbms;
 import java.util.Collection;
 import java.util.Map;
 
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -27,15 +28,15 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
 {
     private final SystemGraphDbmsModel dbmsModel;
     private final ThreadToStatementContextBridge txBridge;
-    private final ReconciledTransactionIdTracker reconciledTxIdTracker;
+    private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
     SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, DatabaseIdRepository databaseIdRepository, ThreadToStatementContextBridge txBridge,
-            ReconciledTransactionIdTracker reconciledTxIdTracker, LogProvider logProvider )
+            ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;
-        this.reconciledTxIdTracker = reconciledTxIdTracker;
+        this.reconciledTxTracker = reconciledTxTracker;
         this.desired.put( databaseIdRepository.systemDatabase(), STARTED );
         this.log = logProvider.getLog( getClass() );
     }
@@ -101,7 +102,7 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
     {
         try
         {
-            reconciledTxIdTracker.setLastReconciledTransactionId( txId );
+            reconciledTxTracker.setLastReconciledTransactionId( txId );
         }
         catch ( Throwable t )
         {

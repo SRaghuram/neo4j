@@ -74,7 +74,6 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -135,6 +134,8 @@ public class CoreEditionModule extends ClusteringEditionModule
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
+        super( globalModule );
+
         final Dependencies globalDependencies = globalModule.getGlobalDependencies();
         final LogService logService = globalModule.getLogService();
         final LifeSupport globalLife = globalModule.getGlobalLife();
@@ -322,9 +323,10 @@ public class CoreEditionModule extends ClusteringEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, databaseIdRepository,
+                reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
-        globalModule.getGlobalDependencies().satisfyDependency( reconcilerModule.reconciledTxIdTracker() );
+        globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
         return databaseManager;
     }

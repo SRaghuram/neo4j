@@ -28,9 +28,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
+import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
+import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
+import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
@@ -52,7 +57,9 @@ import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenHolders;
 
@@ -65,12 +72,14 @@ import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 public class CommercialEditionModule extends CommunityEditionModule
 {
     private final GlobalModule globalModule;
+    private final ReconciledTransactionTracker reconciledTxTracker;
 
     public CommercialEditionModule( GlobalModule globalModule )
     {
         super( globalModule );
         this.globalModule = globalModule;
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
+        reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
     }
 
     @Override
@@ -135,9 +144,9 @@ public class CommercialEditionModule extends CommunityEditionModule
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository() );
+        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, databaseIdRepository(), reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
-        globalModule.getGlobalDependencies().satisfyDependency( reconcilerModule.reconciledTxIdTracker() );
+        globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 
         return databaseManager;
     }
@@ -171,6 +180,13 @@ public class CommercialEditionModule extends CommunityEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    @Override
+    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( DatabaseManagementService managementService,
+            Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
+        return new BoltKernelDatabaseManagementServiceProvider( managementService, reconciledTxTracker, monitors, clock );
     }
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )
