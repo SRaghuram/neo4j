@@ -33,6 +33,7 @@ import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
 import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -89,7 +90,6 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
-import static org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket.DEFAULT_CONNECTOR_KEY;
 import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
@@ -627,7 +627,7 @@ public abstract class ProcedureInteractionTestBase<S>
     TransportConnection startBoltSession( String username, String password ) throws Exception
     {
         TransportConnection connection = new SocketConnection();
-        HostnamePort address = neo.lookupConnector( DEFAULT_CONNECTOR_KEY );
+        HostnamePort address = neo.lookupConnector( BoltConnector.NAME );
         Map<String,Object> authToken = map( "principal", username, "credentials", password, "scheme", "basic" );
 
         connection.connect( address ).send( util.acceptedVersions( 1, 0, 0, 0 ) )

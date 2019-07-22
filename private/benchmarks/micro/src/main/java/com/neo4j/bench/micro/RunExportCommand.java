@@ -44,6 +44,7 @@ import java.util.List;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
@@ -228,9 +229,9 @@ public class RunExportCommand implements Runnable
     private String triggeredBy;
 
     static final Neo4jConfig ADDITIONAL_CONFIG = Neo4jConfigBuilder.empty()
-                                                                   .withSetting( BoltConnector.group( "bolt" ).enabled, FALSE )
-                                                                   .withSetting( HttpConnector.group( "http" ).enabled, FALSE )
-                                                                   .withSetting( HttpConnector.group( "https" ).enabled, FALSE )
+                                                                   .withSetting( BoltConnector.enabled, FALSE )
+                                                                   .withSetting( HttpConnector.enabled, FALSE )
+                                                                   .withSetting( HttpsConnector.enabled, FALSE )
                                                                    .build();
 
     @Override

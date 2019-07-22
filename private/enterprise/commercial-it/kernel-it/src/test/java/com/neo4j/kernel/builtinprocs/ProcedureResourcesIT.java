@@ -50,10 +50,9 @@ class ProcedureResourcesIT
     @ExtensionCallback
     static void enableBolt( TestDatabaseManagementServiceBuilder builder )
     {
-        var connector = BoltConnector.group( "bolt" );
 
-        builder.setConfig( connector.enabled, TRUE )
-                .setConfig( connector.listen_address, "localhost:0" );
+        builder.setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" );
     }
 
     @AfterAll

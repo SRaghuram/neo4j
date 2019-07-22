@@ -68,16 +68,16 @@ public class ClusterRuleIT
             portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.transaction_listen_address ) );
             portsUsed.add( getPortFromSetting( coreClusterMember, CausalClusteringSettings.raft_listen_address ) );
             portsUsed.add( getPortFromSetting( coreClusterMember, OnlineBackupSettings.online_backup_listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, BoltConnector.group( "bolt" ).listen_address ) );
-            portsUsed.add( getPortFromSetting( coreClusterMember, HttpConnector.group( "http" ).listen_address ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, BoltConnector.listen_address ) );
+            portsUsed.add( getPortFromSetting( coreClusterMember, HttpConnector.listen_address ) );
         }
 
         for ( ReadReplica readReplica : cluster.readReplicas() )
         {
             portsUsed.add( getPortFromSetting( readReplica, CausalClusteringSettings.transaction_listen_address ) );
             portsUsed.add( getPortFromSetting( readReplica, OnlineBackupSettings.online_backup_listen_address ) );
-            portsUsed.add( getPortFromSetting( readReplica, BoltConnector.group( "bolt" ).listen_address ) );
-            portsUsed.add( getPortFromSetting( readReplica, HttpConnector.group( "http" ).listen_address ) );
+            portsUsed.add( getPortFromSetting( readReplica, BoltConnector.listen_address ) );
+            portsUsed.add( getPortFromSetting( readReplica, HttpConnector.listen_address ) );
         }
         return portsUsed;
     }

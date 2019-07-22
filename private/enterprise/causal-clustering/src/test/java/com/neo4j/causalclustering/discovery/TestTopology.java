@@ -59,8 +59,8 @@ public class TestTopology
         return Config.newBuilder()
                 .set( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer().toString() )
                 .set( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer().toString() )
-                .set( BoltConnector.group("bolt").listen_address, coreServerInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.group("bolt").enabled, String.valueOf( true ) )
+                .set( BoltConnector.listen_address, coreServerInfo.connectors().boltAddress().toString() )
+                .set( BoltConnector.enabled, String.valueOf( true ) )
                 .set( CausalClusteringSettings.server_groups, String.join( ",", coreServerInfo.groups() ) )
                 .set( CausalClusteringSettings.refuse_to_be_leader, String.valueOf( coreServerInfo.refusesToBeLeader() ) )
                 .build();
@@ -69,8 +69,8 @@ public class TestTopology
     public static Config configFor( ReadReplicaInfo readReplicaInfo )
     {
         return Config.newBuilder()
-                .set( BoltConnector.group("bolt").listen_address, readReplicaInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.group("bolt").enabled, String.valueOf( true ) )
+                .set( BoltConnector.listen_address, readReplicaInfo.connectors().boltAddress().toString() )
+                .set( BoltConnector.enabled, String.valueOf( true ) )
                 .set( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer().toString() )
                 .set( CausalClusteringSettings.server_groups, String.join( ",", readReplicaInfo.groups() ) )
                 .build();

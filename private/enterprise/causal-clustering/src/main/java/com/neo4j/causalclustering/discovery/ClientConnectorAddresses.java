@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -20,8 +19,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.configuration.helpers.SocketAddressParser;
 import org.neo4j.io.fs.ReadableChannel;
@@ -44,20 +44,22 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
     {
         List<ConnectorUri> connectorUris = new ArrayList<>();
 
-        Collection<BoltConnector> boltConnectors = ConfigUtils.getEnabledBoltConnectors( config );
-
-        if ( boltConnectors.isEmpty() )
+        if ( !config.get( BoltConnector.enabled ) )
         {
-            throw new IllegalArgumentException( "A Bolt connector must be configured to run a cluster" );
+            throw new IllegalArgumentException( "The Bolt connector must be configured to run a cluster" );
         }
 
-        boltConnectors.forEach( c -> connectorUris.add( new ConnectorUri( bolt, config.get( c.advertised_address ) ) ) );
+        connectorUris.add( new ConnectorUri( bolt, config.get( BoltConnector.advertised_address ) ) );
 
-        ConfigUtils.getEnabledHttpConnectors( config )
-                .forEach( c -> connectorUris.add( new ConnectorUri( http, config.get( c.advertised_address ) ) ) );
+        if ( config.get( HttpConnector.enabled ) )
+        {
+            connectorUris.add( new ConnectorUri( http, config.get( HttpConnector.advertised_address ) ) );
+        }
 
-        ConfigUtils.getEnabledHttpsConnectors( config )
-                .forEach( c -> connectorUris.add( new ConnectorUri( https, config.get( c.advertised_address ) ) ) );
+        if ( config.get( HttpsConnector.enabled ) )
+        {
+            connectorUris.add( new ConnectorUri( https, config.get( HttpsConnector.advertised_address ) ) );
+        }
 
         return new ClientConnectorAddresses( connectorUris );
     }

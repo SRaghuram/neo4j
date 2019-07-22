@@ -79,8 +79,8 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
         builder = builder
-                .withProperty( BoltConnector.group( "bolt" ).enabled.name(), TRUE )
-                .withProperty( BoltConnector.group( "bolt" ).encryption_level.name(), OPTIONAL.name() )
+                .withProperty( BoltConnector.enabled.name(), TRUE )
+                .withProperty( BoltConnector.encryption_level.name(), OPTIONAL.name() )
                 .withProperty( GraphDatabaseSettings.tls_key_file.name(),
                         NeoInteractionLevel.tempPath( "key", ".key" ) )
                 .withProperty( GraphDatabaseSettings.tls_certificate_file.name(),

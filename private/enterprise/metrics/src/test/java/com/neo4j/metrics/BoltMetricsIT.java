@@ -55,8 +55,8 @@ class BoltMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         metricsFolder = testDirectory.directory( "metrics" );
-        builder.setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-            .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+        builder.setConfig( BoltConnector.enabled, TRUE )
+            .setConfig( BoltConnector.listen_address, "localhost:0" )
             .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
             .setConfig( MetricsSettings.metricsEnabled, TRUE )
             .setConfig( MetricsSettings.boltMessagesEnabled, TRUE )

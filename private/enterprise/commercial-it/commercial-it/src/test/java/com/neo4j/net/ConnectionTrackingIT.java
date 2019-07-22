@@ -100,8 +100,8 @@ public class ConnectionTrackingIT
     @ClassRule
     public static final Neo4jRule neo4j = new CommercialNeo4jRule()
             .withConfig( auth_enabled, TRUE )
-            .withConfig( HttpConnector.group( "http" ).enabled, TRUE )
-            .withConfig( HttpsConnector.group( "https" ).enabled, TRUE )
+            .withConfig( HttpConnector.enabled, TRUE )
+            .withConfig( HttpsConnector.enabled, TRUE )
             .withConfig( webserver_max_threads, "50" ) // higher than the amount of concurrent requests tests execute
             .withConfig( online_backup_enabled, FALSE );
 

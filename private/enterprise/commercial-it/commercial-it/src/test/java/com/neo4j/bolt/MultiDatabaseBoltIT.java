@@ -90,8 +90,8 @@ class MultiDatabaseBoltIT
     private DatabaseManagementService createManagementService()
     {
         return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" )
                 .build();
     }
 }

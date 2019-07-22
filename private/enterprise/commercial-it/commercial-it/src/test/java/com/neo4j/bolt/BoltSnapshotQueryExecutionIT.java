@@ -79,8 +79,8 @@ class BoltSnapshotQueryExecutionIT
     {
         managementService =
                 new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) )
-                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();

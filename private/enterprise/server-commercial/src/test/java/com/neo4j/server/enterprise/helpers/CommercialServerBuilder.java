@@ -40,7 +40,7 @@ public class CommercialServerBuilder extends CommunityServerBuilder
     {
         CommercialServerBuilder server = server();
         server.onRandomPorts();
-        server.withProperty( BoltConnector.group( "bolt" ).listen_address.name(), "localhost:0" );
+        server.withProperty( BoltConnector.listen_address.name(), "localhost:0" );
         server.withProperty( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         server.withProperty( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
         return server;

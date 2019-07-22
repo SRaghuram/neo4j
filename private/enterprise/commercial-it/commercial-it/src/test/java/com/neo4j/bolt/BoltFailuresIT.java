@@ -190,8 +190,8 @@ public class BoltFailuresIT
     private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )
     {
         managementService = dbFactory
-                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );

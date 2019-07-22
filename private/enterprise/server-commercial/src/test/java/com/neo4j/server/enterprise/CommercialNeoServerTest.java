@@ -15,6 +15,8 @@ import java.nio.file.Paths;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLogProvider;
@@ -38,9 +40,9 @@ class CommercialNeoServerTest
         Config config = Config.newBuilder().set( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, Mode.SINGLE.name() )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().getAbsolutePath() )
-                .set( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "http" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "https" ).listen_address, "localhost:0" )
+                .set( BoltConnector.listen_address, "localhost:0" )
+                .set( HttpConnector.listen_address, "localhost:0" )
+                .set( HttpsConnector.listen_address, "localhost:0" )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         CommercialNeoServer server = new CommercialNeoServer( config, dependencies );

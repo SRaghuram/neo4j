@@ -41,8 +41,6 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.O
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 {
-    private static final String CONNECTOR_NAME = "my_bolt";
-
     @Inject
     private TestDirectory testDirectory;
 
@@ -106,7 +104,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     private String boltAddress()
     {
         ConnectorPortRegister portRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
-        HostnamePort address = portRegister.getLocalAddress( CONNECTOR_NAME );
+        HostnamePort address = portRegister.getLocalAddress( BoltConnector.NAME );
         assertNotNull( address );
         return address.toString();
     }
@@ -118,16 +116,15 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 
     private GraphDatabaseAPI startDb( SocketAddress advertisedBoltAddress )
     {
-        BoltConnector connector = BoltConnector.group( CONNECTOR_NAME );
 
         DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
-        builder.setConfig( connector.enabled, TRUE );
-        builder.setConfig( connector.encryption_level, OPTIONAL.toString() );
-        builder.setConfig( connector.listen_address, "localhost:0" );
+        builder.setConfig( BoltConnector.enabled, TRUE );
+        builder.setConfig( BoltConnector.encryption_level, OPTIONAL.toString() );
+        builder.setConfig( BoltConnector.listen_address, "localhost:0" );
         if ( advertisedBoltAddress != null )
         {
-            builder.setConfig( connector.advertised_address, advertisedBoltAddress.toString() );
+            builder.setConfig( BoltConnector.advertised_address, advertisedBoltAddress.toString() );
         }
         managementService = builder.build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

@@ -53,7 +53,6 @@ public class BoltTlsIT
     private GraphDatabaseAPI db;
     private SslResource sslResource;
 
-    private BoltConnector bolt = BoltConnector.group( "bolt" );
     private DatabaseManagementService managementService;
 
     @Before
@@ -114,8 +113,8 @@ public class BoltTlsIT
     private void createAndStartDb()
     {
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
-                .setConfig( bolt.enabled, TRUE )
-                .setConfig( bolt.listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
                 .setConfig( sslPolicy.allow_key_generation, TRUE )
                 .setConfig( sslPolicy.base_directory, "certificates" )

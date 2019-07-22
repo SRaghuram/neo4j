@@ -12,8 +12,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GroupSettingValidator;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.config.Setting;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
@@ -60,7 +60,7 @@ public class CausalClusterConfigurationValidator implements GroupSettingValidato
 
     private void validateBoltConnector( Config config )
     {
-        if ( ConfigUtils.getEnabledBoltConnectors( config ).isEmpty() )
+        if ( !config.get( BoltConnector.enabled ) )
         {
             throw new IllegalArgumentException( "A Bolt connector must be configured to run a cluster" );
         }

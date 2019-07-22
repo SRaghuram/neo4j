@@ -351,17 +351,17 @@ public class CausalClusterInProcessBuilder
 
         private static void configureConnectors( int boltPort, int httpPort, int httpsPort, Neo4jBuilder builder )
         {
-            builder.withConfig( BoltConnector.group( "bolt" ).enabled.name(), TRUE );
-            builder.withConfig( BoltConnector.group( "bolt" ).listen_address.name(), specifyPortOnly( boltPort ) );
-            builder.withConfig( BoltConnector.group( "bolt" ).advertised_address.name(), specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.enabled.name(), TRUE );
+            builder.withConfig( BoltConnector.listen_address.name(), specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.advertised_address.name(), specifyPortOnly( boltPort ) );
 
-            builder.withConfig( HttpConnector.group( "http" ).enabled.name(), TRUE );
-            builder.withConfig( HttpConnector.group( "http" ).listen_address.name(), specifyPortOnly( httpPort ) );
-            builder.withConfig( HttpConnector.group( "http" ).advertised_address.name(), specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.enabled.name(), TRUE );
+            builder.withConfig( HttpConnector.listen_address.name(), specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.advertised_address.name(), specifyPortOnly( httpPort ) );
 
-            builder.withConfig( HttpsConnector.group( "https" ).enabled.name(), TRUE );
-            builder.withConfig( HttpsConnector.group( "https" ).listen_address.name(), specifyPortOnly( httpsPort ) );
-            builder.withConfig( HttpsConnector.group( "https" ).advertised_address.name(), specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.enabled.name(), TRUE );
+            builder.withConfig( HttpsConnector.listen_address.name(), specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.advertised_address.name(), specifyPortOnly( httpsPort ) );
         }
 
         public List<InProcessNeo4j> getCoreNeo4j()

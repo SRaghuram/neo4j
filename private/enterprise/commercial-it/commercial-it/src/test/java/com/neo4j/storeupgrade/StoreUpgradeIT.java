@@ -198,10 +198,10 @@ public class StoreUpgradeIT
             props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( allow_upgrade.name(), TRUE );
             props.setProperty( pagecache_memory.name(), "8m" );
-            props.setProperty( HttpConnector.group( "http" ).enabled.name(), TRUE );
-            props.setProperty( HttpConnector.group( "http" ).listen_address.name(), "localhost:0" );
-            props.setProperty( HttpsConnector.group( "https" ).enabled.name(), FALSE );
-            props.setProperty( BoltConnector.group( "bolt" ).enabled.name(), FALSE );
+            props.setProperty( HttpConnector.enabled.name(), TRUE );
+            props.setProperty( HttpConnector.listen_address.name(), "localhost:0" );
+            props.setProperty( HttpsConnector.enabled.name(), FALSE );
+            props.setProperty( BoltConnector.enabled.name(), FALSE );
             try ( FileWriter writer = new FileWriter( configFile ) )
             {
                 props.store( writer, "" );

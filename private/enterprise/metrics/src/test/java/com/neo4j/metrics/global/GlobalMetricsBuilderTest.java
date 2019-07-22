@@ -72,7 +72,7 @@ class GlobalMetricsBuilderTest
     private static Config configWithServerMetrics( boolean enabled )
     {
         return Config.newBuilder()
-                .set( HttpConnector.group( "http" ).enabled, Boolean.toString( enabled ) )
+                .set( HttpConnector.enabled, Boolean.toString( enabled ) )
                 .set( MetricsSettings.neoServerEnabled, TRUE )
                 .build();
     }

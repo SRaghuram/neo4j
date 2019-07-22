@@ -29,14 +29,13 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -107,13 +106,13 @@ public class ReadReplica implements ClusterMember
             config.put( entry.getKey(), entry.getValue().apply( serverId ) );
         }
 
-        config.put( BoltConnector.group( "bolt" ).enabled.name(), TRUE );
-        config.put( BoltConnector.group( "bolt" ).listen_address.name(), format( listenAddress, boltPort ) );
-        config.put( BoltConnector.group( "bolt" ).advertised_address.name(), boltSocketAddress );
-        config.put( BoltConnector.group( "bolt" ).encryption_level.name(), DISABLED.name() );
-        config.put( HttpConnector.group( "http" ).enabled.name(), TRUE );
-        config.put( HttpConnector.group( "http" ).listen_address.name(), format( listenAddress, httpPort ) );
-        config.put( HttpConnector.group( "http" ).advertised_address.name(), format( advertisedAddress, httpPort ) );
+        config.put( BoltConnector.enabled.name(), TRUE );
+        config.put( BoltConnector.listen_address.name(), format( listenAddress, boltPort ) );
+        config.put( BoltConnector.advertised_address.name(), boltSocketAddress );
+        config.put( BoltConnector.encryption_level.name(), DISABLED.name() );
+        config.put( HttpConnector.enabled.name(), TRUE );
+        config.put( HttpConnector.listen_address.name(), format( listenAddress, httpPort ) );
+        config.put( HttpConnector.advertised_address.name(), format( advertisedAddress, httpPort ) );
 
         this.neo4jHome = new File( parentDir, "read-replica-" + serverId );
         config.put( GraphDatabaseSettings.neo4j_home.name(), neo4jHome.getAbsolutePath() );

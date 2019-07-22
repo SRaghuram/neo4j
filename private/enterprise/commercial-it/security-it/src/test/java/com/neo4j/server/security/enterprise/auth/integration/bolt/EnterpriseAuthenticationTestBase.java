@@ -75,9 +75,9 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     {
         String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, TRUE )
-              .withSetting( BoltConnector.group( "bolt" ).enabled, TRUE )
-              .withSetting( BoltConnector.group( "bolt" ).encryption_level, OPTIONAL.name() )
-              .withSetting( BoltConnector.group( "bolt" ).listen_address, host );
+              .withSetting( BoltConnector.enabled, TRUE )
+              .withSetting( BoltConnector.encryption_level, OPTIONAL.name() )
+              .withSetting( BoltConnector.listen_address, host );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );

@@ -476,14 +476,9 @@ public class Neo4jDb extends Db
     public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
-                .setConfig( Neo4jDb.boltConnector().enabled, TRUE )
-                .setConfig( Neo4jDb.boltConnector().encryption_level, BoltConnector.EncryptionLevel.DISABLED.name() )
-                .setConfig( Neo4jDb.boltConnector().listen_address, uriString + ":" + port );
-    }
-
-    private static BoltConnector boltConnector()
-    {
-        return BoltConnector.group( "bolt" );
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name() )
+                .setConfig( BoltConnector.listen_address, uriString + ":" + port );
     }
 
     public static String configToString( File configFile )

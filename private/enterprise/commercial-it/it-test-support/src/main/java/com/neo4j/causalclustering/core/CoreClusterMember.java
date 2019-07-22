@@ -44,7 +44,6 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static java.util.stream.Collectors.joining;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -120,13 +119,13 @@ public class CoreClusterMember implements ClusterMember
         config.put( CausalClusteringSettings.raft_messages_log_enable.name(), TRUE );
         config.put( GraphDatabaseSettings.store_internal_log_level.name(), Level.DEBUG.name() );
         config.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        config.put( BoltConnector.group( "bolt" ).enabled.name(), TRUE );
-        config.put( BoltConnector.group( "bolt" ).listen_address.name(), format( listenAddress, boltPort ) );
-        config.put( BoltConnector.group( "bolt" ).advertised_address.name(), boltSocketAddress );
-        config.put( BoltConnector.group( "bolt" ).encryption_level.name(), DISABLED.name() );
-        config.put( HttpConnector.group( "http").enabled.name(), TRUE );
-        config.put( HttpConnector.group( "http").listen_address.name(), format( listenAddress, httpPort ) );
-        config.put( HttpConnector.group( "http").advertised_address.name(), format( advertisedAddress, httpPort ) );
+        config.put( BoltConnector.enabled.name(), TRUE );
+        config.put( BoltConnector.listen_address.name(), format( listenAddress, boltPort ) );
+        config.put( BoltConnector.advertised_address.name(), boltSocketAddress );
+        config.put( BoltConnector.encryption_level.name(), DISABLED.name() );
+        config.put( HttpConnector.enabled.name(), TRUE );
+        config.put( HttpConnector.listen_address.name(), format( listenAddress, httpPort ) );
+        config.put( HttpConnector.advertised_address.name(), format( advertisedAddress, httpPort ) );
         config.put( OnlineBackupSettings.online_backup_listen_address.name(), format( listenAddress, backupPort ) );
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
         config.put( GraphDatabaseSettings.auth_store.name(), new File( parentDir, "auth" ).getAbsolutePath() );

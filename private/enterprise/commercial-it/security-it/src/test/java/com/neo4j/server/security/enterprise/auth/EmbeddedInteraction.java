@@ -52,9 +52,9 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
     private void init( DatabaseManagementServiceBuilder builder, Map<Setting<?>,String> config ) throws Throwable
     {
-        builder.setConfig( BoltConnector.group( "bolt" ).enabled, TRUE );
-        builder.setConfig( BoltConnector.group( "bolt" ).encryption_level, OPTIONAL.name() );
-        builder.setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" );
+        builder.setConfig( BoltConnector.enabled, TRUE );
+        builder.setConfig( BoltConnector.encryption_level, OPTIONAL.name() );
+        builder.setConfig( BoltConnector.listen_address, "localhost:0" );
         builder.setConfig( GraphDatabaseSettings.tls_key_file, NeoInteractionLevel.tempPath( "key", ".key" ) );
         builder.setConfig( GraphDatabaseSettings.tls_certificate_file, NeoInteractionLevel.tempPath( "cert", ".cert" ) );
         builder.setConfig( GraphDatabaseSettings.auth_enabled, TRUE );

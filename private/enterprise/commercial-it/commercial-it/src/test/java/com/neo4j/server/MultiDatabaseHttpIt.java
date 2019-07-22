@@ -16,6 +16,8 @@ import java.io.IOException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -90,9 +92,9 @@ class MultiDatabaseHttpIt
                 .set( mode, CommercialEditionSettings.Mode.SINGLE.name() )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().getAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, FALSE )
-                .set( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "http" ).listen_address, "localhost:0" )
-                .set( BoltConnector.group( "https" ).listen_address, "localhost:0" )
+                .set( BoltConnector.listen_address, "localhost:0" )
+                .set( HttpConnector.listen_address, "localhost:0" )
+                .set( HttpsConnector.listen_address, "localhost:0" )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         CommercialNeoServer server = new CommercialNeoServer( config, dependencies );

@@ -95,8 +95,6 @@ public class TransactionGuardIT
     @Rule
     public final PageCacheRule pageCacheRule = new PageCacheRule();
 
-    private static final String BOLT_CONNECTOR_KEY = "bolt";
-
     private static final FakeClock fakeClock = Clocks.fakeClock();
     private static GraphDatabaseAPI databaseWithTimeout;
     private static GraphDatabaseAPI databaseWithoutTimeout;
@@ -436,7 +434,7 @@ public class TransactionGuardIT
     {
         ConnectorPortRegister connectorPortRegister = databaseAPI.getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class );
-        return connectorPortRegister.getLocalAddress( BOLT_CONNECTOR_KEY ).getPort();
+        return connectorPortRegister.getLocalAddress( BoltConnector.NAME ).getPort();
     }
 
     private GraphDatabaseAPI startDatabaseWithoutTimeout()
@@ -462,12 +460,11 @@ public class TransactionGuardIT
         if ( neoServer == null )
         {
             GuardingServerBuilder serverBuilder = new GuardingServerBuilder( databaseManagementService );
-            BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
-            serverBuilder.withProperty( boltConnector.enabled.name(), TRUE )
-                    .withProperty( boltConnector.encryption_level.name(),
+            serverBuilder.withProperty( BoltConnector.enabled.name(), TRUE )
+                    .withProperty( BoltConnector.encryption_level.name(),
                             BoltConnector.EncryptionLevel.DISABLED.name() )
                     .withProperty( GraphDatabaseSettings.auth_enabled.name(), FALSE );
-            serverBuilder.withProperty( HttpConnector.group( "http" ).listen_address.name(), "localhost:0" );
+            serverBuilder.withProperty( HttpConnector.listen_address.name(), "localhost:0" );
             neoServer = serverBuilder.build();
             cleanupRule.add( neoServer );
             neoServer.start();
@@ -477,12 +474,11 @@ public class TransactionGuardIT
 
     private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
     {
-        BoltConnector boltConnector = BoltConnector.group( BOLT_CONNECTOR_KEY );
         return MapUtil.genericMap(
                 transaction_timeout, DEFAULT_TIMEOUT,
-                boltConnector.advertised_address, "localhost:0",
-                boltConnector.enabled, TRUE,
-                boltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
+                BoltConnector.advertised_address, "localhost:0",
+                BoltConnector.enabled, TRUE,
+                BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
                 OnlineBackupSettings.online_backup_enabled, FALSE,
                 GraphDatabaseSettings.auth_enabled, FALSE );
     }

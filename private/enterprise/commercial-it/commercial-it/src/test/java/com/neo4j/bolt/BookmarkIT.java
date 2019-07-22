@@ -147,8 +147,8 @@ public class BookmarkIT
     private static Config configWithBoltEnabled()
     {
         return Config.newBuilder()
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .set( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
+                .set( BoltConnector.enabled, TRUE )
+                .set( BoltConnector.listen_address, "localhost:0" )
                 .build();
     }
 

@@ -221,15 +221,14 @@ public class AkkaCoreTopologyDowningIT
                 .mapToObj( port -> "localhost:" + port )
                 .collect( Collectors.joining( "," ) );
 
-        BoltConnector boltConnector = BoltConnector.group( "bolt" );
         SocketAddress boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
 
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.discovery_listen_address, "localhost:" + myPort )
                 .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
-                .set( boltConnector.enabled, TRUE )
-                .set( boltConnector.listen_address, boltAddress.toString() )
-                .set( boltConnector.advertised_address, boltAddress.toString() )
+                .set( BoltConnector.enabled, TRUE )
+                .set( BoltConnector.listen_address, boltAddress.toString() )
+                .set( BoltConnector.advertised_address, boltAddress.toString() )
                 .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
                 .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG.toString() )
                 .build();

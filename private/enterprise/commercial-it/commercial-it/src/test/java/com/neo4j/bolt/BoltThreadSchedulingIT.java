@@ -146,10 +146,10 @@ public class BoltThreadSchedulingIT
     {
         DatabaseManagementServiceBuilder dbFactory = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() );
         managementService = dbFactory
-                .setConfig( BoltConnector.group( "bolt" ).enabled, TRUE )
-                .setConfig( BoltConnector.group( "bolt" ).listen_address, "localhost:0" )
-                .setConfig( BoltConnector.group( "bolt" ).thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
-                .setConfig( BoltConnector.group( "bolt" ).thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
+                .setConfig( BoltConnector.enabled, TRUE )
+                .setConfig( BoltConnector.listen_address, "localhost:0" )
+                .setConfig( BoltConnector.thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
+                .setConfig( BoltConnector.thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
                 .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );

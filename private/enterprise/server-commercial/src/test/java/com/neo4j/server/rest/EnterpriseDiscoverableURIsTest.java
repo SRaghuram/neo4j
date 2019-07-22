@@ -27,10 +27,9 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeBoltRoutingIfCore()
     {
         // Given
-        BoltConnector bolt = BoltConnector.group( "honestJakesBoltConnector" );
         Config config = Config.newBuilder()
                 .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( bolt.enabled, TRUE )
+                .set( BoltConnector.enabled, TRUE )
                 .build();
 
         // When
@@ -45,14 +44,13 @@ class EnterpriseDiscoverableURIsTest
     void shouldGrabPortFromRegisterIfSetTo0()
     {
         // Given
-        BoltConnector bolt = BoltConnector.group( "honestJakesBoltConnector" );
         Config config = Config.newBuilder()
                 .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( bolt.enabled, TRUE )
-                .set( bolt.listen_address, ":0" )
+                .set( BoltConnector.enabled, TRUE )
+                .set( BoltConnector.listen_address, ":0" )
                 .build();
         ConnectorPortRegister ports = new ConnectorPortRegister();
-        ports.register( bolt.name(), new InetSocketAddress( 1337 ) );
+        ports.register( BoltConnector.NAME, new InetSocketAddress( 1337 ) );
 
         // When
         Map<String,Object> asd = toMap(

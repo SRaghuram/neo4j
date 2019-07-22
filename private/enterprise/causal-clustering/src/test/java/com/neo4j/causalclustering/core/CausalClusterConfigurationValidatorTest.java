@@ -66,7 +66,7 @@ public class CausalClusterConfigurationValidatorTest
         Config config = Config.newBuilder()
                 .set( CommercialEditionSettings.mode, Mode.SINGLE.name() )
                 .set( initial_discovery_members, "localhost:99,remotehost:2" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .set( BoltConnector.enabled, TRUE )
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
 
@@ -85,7 +85,7 @@ public class CausalClusterConfigurationValidatorTest
                 .set( discovery_type, DiscoveryType.K8S.name() )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( kubernetes_service_port_name, "default" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .set( BoltConnector.enabled, TRUE )
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
 
@@ -166,7 +166,7 @@ public class CausalClusterConfigurationValidatorTest
                 .set( CommercialEditionSettings.mode, mode.name() )
                 .set( discovery_type, DiscoveryType.K8S.name() )
                 .set( kubernetes_service_port_name, "default" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .set( BoltConnector.enabled, TRUE )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
     }
 
@@ -184,7 +184,7 @@ public class CausalClusterConfigurationValidatorTest
                 .set( CommercialEditionSettings.mode, mode.name() )
                 .set( discovery_type, DiscoveryType.K8S.name() )
                 .set( kubernetes_label_selector, "waldo=fred" )
-                .set( BoltConnector.group( "bolt" ).enabled, TRUE )
+                .set( BoltConnector.enabled, TRUE )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
     }
 }
