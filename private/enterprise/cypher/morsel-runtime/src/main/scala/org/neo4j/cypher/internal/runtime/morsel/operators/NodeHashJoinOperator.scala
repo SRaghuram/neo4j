@@ -143,7 +143,9 @@ object NodeHashJoinOperator {
       table.get(nodeIds).iterator()
 
 
-    override def estimatedHeapUsage: Long = table.valuesView().toList.collectLong(_.estimatedHeapUsage).sum
+    override def estimatedHeapUsage: Long =
+      lhsOffsets.length * java.lang.Long.BYTES * table.size() // keys
+    + table.valuesView().toList.collectLong(_.estimatedHeapUsage).sum // values
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
