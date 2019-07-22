@@ -12,7 +12,7 @@ public class VolumetricCheckPointThreshold extends AbstractCheckPointThreshold
 {
     private final LogPruning logPruning;
 
-    public VolumetricCheckPointThreshold( LogPruning logPruning )
+    VolumetricCheckPointThreshold( LogPruning logPruning )
     {
         super( "volumetric checkpoint threshold, based on log pruning strategy" );
         this.logPruning = logPruning;

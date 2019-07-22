@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 
+import static java.util.Objects.requireNonNull;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 
@@ -70,7 +71,7 @@ public class TransactionLogUtils
     {
         StoreChannel fileChannel = fileSystem.read( file );
         LogHeader logHeader = readLogHeader( ByteBuffer.allocate( LOG_HEADER_SIZE ), fileChannel, true, file );
-        PhysicalLogVersionedStoreChannel channel = new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.logVersion, logHeader.logFormatVersion, file );
-        return channel;
+        requireNonNull( logHeader, "There is no log header in log file '" + file + "', so it is likely a pre-allocated empty log file." );
+        return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.logVersion, logHeader.logFormatVersion, file );
     }
 }
