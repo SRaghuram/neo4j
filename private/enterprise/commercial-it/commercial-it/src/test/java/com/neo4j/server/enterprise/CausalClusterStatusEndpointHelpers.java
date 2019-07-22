@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.PortAuthorityPortPickingStrategy;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
+import static java.util.Collections.emptyMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
@@ -128,6 +130,10 @@ class CausalClusterStatusEndpointHelpers
     @SuppressWarnings( "unchecked" )
     static Map<String,Object> getStatus( String address )
     {
+        if ( StringUtils.isBlank( address ) )
+        {
+            return emptyMap();
+        }
         try
         {
             String raw = getStatusRaw( address );
