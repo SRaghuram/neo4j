@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
+import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.single;
 
 public class CypherExecutingRunner extends QueryRunner
@@ -47,7 +48,7 @@ public class CypherExecutingRunner extends QueryRunner
                             database,
                             pidParameters,
                             pidProfilers,
-                            query.copyWith( EXECUTE ).warmupQueryString(),
+                            !query.isSingleShot() ? query.copyWith( EXECUTE ).warmupQueryString() : query.copyWith( PLAN ).queryString(),
                             query.copyWith( EXECUTE ).queryString(),
                             query.benchmarkGroup(),
                             query.benchmark(),
