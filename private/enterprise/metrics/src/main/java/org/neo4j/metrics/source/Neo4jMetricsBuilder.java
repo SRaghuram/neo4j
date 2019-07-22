@@ -41,6 +41,7 @@ import org.neo4j.metrics.source.db.LogRotationMetrics;
 import org.neo4j.metrics.source.db.PageCacheMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.GCMetrics;
+import org.neo4j.metrics.source.jvm.HeapMetrics;
 import org.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
 import org.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
@@ -157,6 +158,12 @@ public class Neo4jMetricsBuilder
         if ( config.get( MetricsSettings.jvmGcEnabled ) )
         {
             life.add( new GCMetrics( registry ) );
+            result = true;
+        }
+
+        if ( config.get( MetricsSettings.jvmHeapEnabled ) )
+        {
+            life.add( new HeapMetrics( registry ) );
             result = true;
         }
 

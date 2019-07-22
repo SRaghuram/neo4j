@@ -101,6 +101,10 @@ public class MetricsSettings implements LoadableConfig
     public static final Setting<Boolean> jvmGcEnabled =
             buildSetting( "metrics.jvm.gc.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 
+    @Description( "Enable reporting metrics about the heap memory usage." )
+    public static final Setting<Boolean> jvmHeapEnabled =
+            buildSetting( "metrics.jvm.heap.enabled", BOOLEAN ).inherits( neoEnabled ).build();
+
     @Description( "Enable reporting metrics about the memory usage." )
     public static final Setting<Boolean> jvmMemoryEnabled = buildSetting( "metrics.jvm.memory.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 

@@ -13,6 +13,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import org.neo4j.metrics.source.cluster.ClusterMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
+import org.neo4j.metrics.source.jvm.HeapMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.test.ha.ClusterRule;
 
@@ -242,6 +244,23 @@ public class MetricsKernelExtensionFactoryIT
         // THEN
         assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );
         assertThat( threadCountResult, greaterThanOrEqualTo( 0L ) );
+    }
+
+    @Test
+    public void reportHeapUsageMetrics() throws InterruptedException, IOException
+    {
+        File heapCommittedFile = metricsCsv( outputPath, HeapMetrics.HEAP_COMMITTED );
+        File heapMaxFile = metricsCsv( outputPath, HeapMetrics.HEAP_MAX );
+        File heapUsedFile = metricsCsv( outputPath, HeapMetrics.HEAP_USED );
+
+        long heapCommittedResult = readLongGaugeAndAssert( heapCommittedFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long heapUsedResult = readLongGaugeAndAssert( heapUsedFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long heapMaxResult = readLongGaugeAndAssert( heapMaxFile, ( newValue, currentValue ) -> newValue >= 0 );
+
+        // THEN
+        assertThat( heapCommittedResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( heapUsedResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( heapMaxResult, greaterThanOrEqualTo( 0L ) );
     }
 
     @Test
