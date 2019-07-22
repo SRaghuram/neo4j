@@ -48,6 +48,7 @@ public class CypherExecutingRunner extends QueryRunner
                             database,
                             pidParameters,
                             pidProfilers,
+                            // run at least one 'EXPLAIN' query to populate query caches
                             !query.isSingleShot() ? query.copyWith( EXECUTE ).warmupQueryString() : query.copyWith( PLAN ).queryString(),
                             query.copyWith( EXECUTE ).queryString(),
                             query.benchmarkGroup(),
