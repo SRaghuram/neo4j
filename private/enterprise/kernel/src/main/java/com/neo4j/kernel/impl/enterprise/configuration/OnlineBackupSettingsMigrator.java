@@ -18,13 +18,13 @@ public class OnlineBackupSettingsMigrator implements SettingMigrator
     private static final String NEW_SETTING = OnlineBackupSettings.online_backup_listen_address.name();
 
     @Override
-    public void migrate( Map<String,String> input, Log log )
+    public void migrate( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
-        String value = input.remove( OLD_SETTING );
+        String value = values.remove( OLD_SETTING );
         if ( value != null )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", OLD_SETTING, NEW_SETTING );
-            input.putIfAbsent( NEW_SETTING, value );
+            values.putIfAbsent( NEW_SETTING, value );
         }
     }
 }

@@ -101,7 +101,7 @@ class CausalClusteringSettingsMigratorTest
     }
 
     @Test
-    void testConnectorAddressesMigration()
+    void testAddressesMigration()
     {
         var settings = Map.of( transaction_listen_address, transaction_advertised_address,
                                raft_listen_address, raft_advertised_address,

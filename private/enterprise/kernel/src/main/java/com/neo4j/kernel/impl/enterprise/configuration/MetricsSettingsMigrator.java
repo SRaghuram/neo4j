@@ -18,13 +18,13 @@ public class MetricsSettingsMigrator implements SettingMigrator
     private static final String NEW_LOG_METRICS_SETTING_NAME = MetricsSettings.neoTransactionLogsEnabled.name();
 
     @Override
-    public void migrate( Map<String,String> input, Log log )
+    public void migrate( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
-        String oldSettingValue = input.remove( OLD_LOGS_METRICS_SETTING_NAME );
+        String oldSettingValue = values.remove( OLD_LOGS_METRICS_SETTING_NAME );
         if ( oldSettingValue != null )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", OLD_LOGS_METRICS_SETTING_NAME, NEW_LOG_METRICS_SETTING_NAME );
-            input.putIfAbsent( NEW_LOG_METRICS_SETTING_NAME, oldSettingValue );
+            values.putIfAbsent( NEW_LOG_METRICS_SETTING_NAME, oldSettingValue );
         }
     }
 }

@@ -31,36 +31,36 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 public class CausalClusteringSettingsMigrator implements SettingMigrator
 {
     @Override
-    public void migrate( Map<String,String> input, Log log )
+    public void migrate( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
-        migrateRoutingTtl( input, log );
-        migrateDisableMiddlewareLogging( input, log );
-        migrateMiddlewareLoggingLevelSetting( input, log );
-        migrateMiddlewareLoggingLevelValue( input, log );
-        migrateAdvertisedAddresses( input, log );
+        migrateRoutingTtl( values, log );
+        migrateDisableMiddlewareLogging( values, log );
+        migrateMiddlewareLoggingLevelSetting( values, log );
+        migrateMiddlewareLoggingLevelValue( values, log );
+        migrateAdvertisedAddresses( values, defaultValues, log );
     }
 
-    private void migrateRoutingTtl( Map<String,String> input, Log log )
+    private void migrateRoutingTtl( Map<String,String> values, Log log )
     {
         String oldSetting = "causal_clustering.cluster_routing_ttl";
         String newSetting = routing_ttl.name();
-        String value = input.remove( oldSetting );
+        String value = values.remove( oldSetting );
         if ( StringUtils.isNotEmpty( value ) )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
-            input.putIfAbsent( newSetting, value );
+            values.putIfAbsent( newSetting, value );
         }
     }
 
-    private void migrateDisableMiddlewareLogging( Map<String,String> input, Log log )
+    private void migrateDisableMiddlewareLogging( Map<String,String> values, Log log )
     {
         String oldSetting = "causal_clustering.disable_middleware_logging";
         String newSetting = middleware_logging_level.name();
-        String value = input.remove( oldSetting );
+        String value = values.remove( oldSetting );
         if ( Objects.equals( TRUE, value ) )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
-            input.put( newSetting, Level.NONE.toString() );
+            values.put( newSetting, Level.NONE.toString() );
         }
     }
 
@@ -76,15 +76,15 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         }
     }
 
-    private void migrateMiddlewareLoggingLevelValue( Map<String,String> input, Log log )
+    private void migrateMiddlewareLoggingLevelValue( Map<String,String> values, Log log )
     {
         String setting = middleware_logging_level.name();
-        String value = input.get( setting );
+        String value = values.get( setting );
         if ( StringUtils.isNotEmpty( value ) && NumberUtils.isParsable( value ) )
         {
             String level = parseLevel( value ).toString();
             log.warn( "Old value format in %s used. %s migrated to %s", setting, value, level );
-            input.put( setting, level );
+            values.put( setting, level );
         }
     }
 
@@ -113,10 +113,10 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         }
     }
 
-    private void migrateAdvertisedAddresses( Map<String,String> input, Log log )
+    private void migrateAdvertisedAddresses( Map<String,String> values, Map<String,String> defaultValues,  Log log )
     {
-        migrateAdvertisedAddressInheritanceChange( input, log, transaction_listen_address.name(), transaction_advertised_address.name() );
-        migrateAdvertisedAddressInheritanceChange( input, log, raft_listen_address.name(), raft_advertised_address.name() );
-        migrateAdvertisedAddressInheritanceChange( input, log, discovery_listen_address.name(), discovery_advertised_address.name() );
+        migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, transaction_listen_address.name(), transaction_advertised_address.name() );
+        migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, raft_listen_address.name(), raft_advertised_address.name() );
+        migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, discovery_listen_address.name(), discovery_advertised_address.name() );
     }
 }
