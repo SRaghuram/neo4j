@@ -63,13 +63,13 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession],
+                                         resources.expressionVariables(state.nExpressionSlots),
+                                         state.subscriber,
+                                         NoMemoryTracker)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       ids = nodeIdsExpr.expressions(initExecutionContext, queryState).iterator()
       true

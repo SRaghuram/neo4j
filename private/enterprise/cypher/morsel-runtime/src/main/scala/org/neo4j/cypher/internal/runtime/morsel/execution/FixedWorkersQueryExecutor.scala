@@ -10,7 +10,7 @@ import java.util.concurrent.{ThreadFactory, TimeUnit}
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, MemoryTrackingConcurrentStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManager}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
@@ -92,11 +92,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
-    val stateFactory =  if (executionGraphDefinition.transactionMaxMemory == 0) {
-      new ConcurrentStateFactory
-    } else {
-      new MemoryTrackingConcurrentStateFactory(executionGraphDefinition.transactionMaxMemory)
-    }
+    // We currently don't track memory in parallel
+    val stateFactory = new ConcurrentStateFactory
 
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)

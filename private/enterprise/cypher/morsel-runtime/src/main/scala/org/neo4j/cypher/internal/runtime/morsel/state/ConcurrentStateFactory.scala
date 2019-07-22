@@ -37,10 +37,3 @@ class ConcurrentStateFactory extends StateFactory {
 
   override val memoryTracker: MemoryTracker = NoMemoryTracker
 }
-
-// We currently don't track memory in parallel
-class MemoryTrackingConcurrentStateFactory(transactionMaxMemory: Long) extends ConcurrentStateFactory {
-  override def newBuffer[T <: Sized](): Buffer[T] = new ConcurrentBuffer[T]
-
-  override val memoryTracker: MemoryTracker = NoMemoryTracker
-}
