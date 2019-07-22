@@ -9,13 +9,28 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.v4_0.util.TransactionOutOfMemoryException
+import org.neo4j.kernel.impl.util.ValueUtils
 
-trait SlottedMemoryManagementTestBase {
+trait WithSlotsMemoryManagementTestBase {
+  self: MemoryManagementTestBase[EnterpriseRuntimeContext] =>
+
+  override protected def estimateSize(data: ValueToEstimate): Long = {
+    data match {
+      case E_INT => ValueUtils.of(0).estimatedHeapUsage()
+      case E_LIST_IN_DISTINCT => ValueUtils.of(0).estimatedHeapUsage()
+      case E_NODE_PRIMITIVE => 8 // Just a long in slotted
+      case E_NODE_VALUE => 64 // Size of a NodeValue
+    }
+  }
+
+}
+
+trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase {
   self: MemoryManagementTestBase[EnterpriseRuntimeContext] =>
 
   test("should kill primitive grouping aggregation query before it runs out of memory") {
     // given
-    val input = infiniteNodeInput()
+    val input = infiniteNodeInput(estimateSize(E_INT))
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)

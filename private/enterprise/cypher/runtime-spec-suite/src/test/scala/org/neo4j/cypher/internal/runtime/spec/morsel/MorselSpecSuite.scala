@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.MORSEL
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{SINGLE_THREADED, SINGLE_THREADED_NO_FUSING}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
+import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
 
@@ -125,7 +126,9 @@ class MorselMiscTest extends MiscTestBase(SINGLE_THREADED, MORSEL)
 class MorselMiscNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
 class MorselMemoryManagementTest extends MemoryManagementTestBase(SINGLE_THREADED, MORSEL)
+                                 with WithSlotsMemoryManagementTestBase
 class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
+                                         with WithSlotsMemoryManagementTestBase
 class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(SINGLE_THREADED, MORSEL)
 
 // WORKLOAD
