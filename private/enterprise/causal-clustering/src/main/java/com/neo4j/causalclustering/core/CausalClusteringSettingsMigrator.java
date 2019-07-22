@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import java.util.Map;
@@ -23,6 +22,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_adve
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_listen_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_listen_address;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingMigrators.migrateAdvertisedAddressInheritanceChange;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -45,7 +45,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         String oldSetting = "causal_clustering.cluster_routing_ttl";
         String newSetting = routing_ttl.name();
         String value = values.remove( oldSetting );
-        if ( StringUtils.isNotEmpty( value ) )
+        if ( isNotBlank( value ) )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
             values.putIfAbsent( newSetting, value );
@@ -69,7 +69,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         String oldSetting = "causal_clustering.middleware_logging.level";
         String newSetting = middleware_logging_level.name();
         String value = input.remove( oldSetting );
-        if ( StringUtils.isNotEmpty( value ) && NumberUtils.isParsable( value ) )
+        if ( isNotBlank( value ) && NumberUtils.isParsable( value ) )
         {
             log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
             input.put( newSetting, value );
@@ -80,7 +80,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
     {
         String setting = middleware_logging_level.name();
         String value = values.get( setting );
-        if ( StringUtils.isNotEmpty( value ) && NumberUtils.isParsable( value ) )
+        if ( isNotBlank( value ) && NumberUtils.isParsable( value ) )
         {
             String level = parseLevel( value ).toString();
             log.warn( "Old value format in %s used. %s migrated to %s", setting, value, level );
