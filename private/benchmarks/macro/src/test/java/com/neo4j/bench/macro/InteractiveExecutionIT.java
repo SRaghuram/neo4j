@@ -8,6 +8,7 @@ package com.neo4j.bench.macro;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
@@ -36,14 +37,14 @@ public class InteractiveExecutionIT
     @Test
     public void executeWorkloadInteractivelyWithEmbedded() throws Exception
     {
-        executeWorkloadInteractively( WORKLOAD, Neo4jDeployment.embedded() );
+        executeWorkloadInteractively( WORKLOAD, Neo4jDeployment.from( Deployment.embedded() ) );
     }
 
-    private void executeWorkloadInteractively( String workloadName, Neo4jDeployment deployment ) throws Exception
+    private void executeWorkloadInteractively( String workloadName, Neo4jDeployment neo4jDeployment ) throws Exception
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
+            Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.deployment() );
             Store store = createEmptyStoreFor( workload );
 
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
@@ -55,7 +56,7 @@ public class InteractiveExecutionIT
                     .withMeasurementCount( 1 )
                     .withMaxDuration( Duration.ofSeconds( 10 ) )
                     .withUnit( TimeUnit.MICROSECONDS )
-                    .withNeo4jDeployment( deployment );
+                    .withNeo4jDeployment( neo4jDeployment );
 
             for ( Query query : workload.queries() )
             {

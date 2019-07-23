@@ -37,5 +37,77 @@ AWS Batch is deployed using CloudFormation. Here is easy one liner to deploy/upd
 
 The best way to develop and debug worker is to do it through docker container
 
-	docker run -v $HOME/.aws:/root/.aws 535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:latest /work/bootstrap-worker.sh --workspacePath /work/run --workerArtifactUri s3://benchmarking.neo4j.com/artifacts/benchmark-infra-worker.jar run-worker accesscontrol accesscontrol 1000 1000 ENTERPRISE /usr/lib/jvm/java-8-oracle/bin/java GC 1 results_execute.json MICROSECONDS bolt+routing://e605d648.databases.neo4j.io:7687 client [result store password] f3fb07ec92527f740e527e4d128c5c1faf12b8a9 3.4.14 3.4 neo4j f3fb07ec92527f740e527e4d128c5c1faf12b8a9 neo-technology 3.4 5531608 5519409 EXECUTE -Xmx4g false DEFAULT DEFAULT new_infra REPORT_THEN_FAIL embedded
-	
+	docker run -v $HOME/.aws:/root/.aws 535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:latest /work/bootstrap-worker.sh \
+
+    --worker-artifact-uri  \
+    s3://benchmarking.neo4j.com/artifacts/benchmark-infra-worker.jar \
+
+    run-worker,
+
+    --workload \
+    accesscontrol \
+    --db-edition \
+    ENTERPRISE \
+    --jvm \
+    /usr/lib/jvm/java-8-oracle/bin/java \
+    --profilers \
+    GC \
+    --warmup-count \
+    1000 \
+    --measurement-count \
+    1000 \
+    --forks \
+    1 \
+    --time-unit \
+    MICROSECONDS \
+    --runtime \
+    DEFAULT \
+    --planner \
+    DEFAULT \
+    --execution-mode \
+    EXECUTE \
+    --error-policy \
+    REPORT_THEN_FAIL \
+    --jvm-args \
+    -Xmx4g \
+    --neo4j-deployment \
+    embedded \
+
+    --neo4j-commit \
+    f3fb07ec92527f740e527e4d128c5c1faf12b8a9 \
+    --neo4j-version \
+    3.4.14 \
+    --neo4j-branch \
+    3.4 \
+    --neo4j-branch-owner \
+    neo4j \
+    --tool-commit \
+    f3fb07ec92527f740e527e4d128c5c1faf12b8a9 \
+    --tool-branch-owner \
+    neo4j \
+    --tool-branch \
+    3.4 \
+    --teamcity-build \
+    5531608 \
+    --parent-teamcity-build \
+    5519409 \
+    --triggered-by \
+    new_infra \
+
+    --workspace-dir \
+    /work/run \
+    --aws-secret \
+    [aws secret] \
+    --aws-key \
+    [aws key] \
+    --aws-region \
+    [aws region] \
+    --db-name \
+    accesscontrol \
+
+    --results_store_user \
+    client \
+    --results_store_pass \
+    [result store password] \
+    --results_store_uri \
+    bolt+routing://e605d648.databases.neo4j.io:7687

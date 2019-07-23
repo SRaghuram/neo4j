@@ -17,6 +17,7 @@ import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.QueryRunner;
@@ -31,8 +32,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 
 @Command( name = "run-single-server", description = "runs one query in a new process for a single workload" )
 public class RunSingleServerCommand implements Runnable
@@ -182,7 +181,7 @@ public class RunSingleServerCommand implements Runnable
                                       minMeasurementSeconds,
                                       maxMeasurementSeconds,
                                       measurementCount,
-                                      DeploymentMode.SERVER,
+                                      Deployment.server(),
                                       workDir.toPath() );
     }
 

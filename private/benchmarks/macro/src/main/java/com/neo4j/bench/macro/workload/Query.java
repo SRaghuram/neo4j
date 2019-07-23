@@ -10,8 +10,8 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,11 +58,11 @@ public class Query
     private final boolean isSingleShot;
     private final boolean isMutating;
     private final Parameters parameters;
-    private final DeploymentMode deployment;
+    private final DeploymentMode mode;
 
     // TODO write detailed comments about interplay between: has warmup, is single shot, periodic commit, is mutating
 
-    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode deployment )
+    public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode mode )
     {
         try
         {
@@ -91,7 +91,7 @@ public class Query
                     (boolean) configEntry.getOrDefault( HAS_WARMUP, DEFAULT_HAS_WARMUP ),
                     (boolean) configEntry.getOrDefault( IS_MUTATING, DEFAULT_IS_MUTATING ),
                     parameters,
-                    deployment );
+                    mode );
         }
         catch ( WorkloadConfigException we )
         {
@@ -149,7 +149,7 @@ public class Query
            boolean hasWarmup,
            boolean isMutating,
            Parameters parameters,
-           DeploymentMode deployment )
+           DeploymentMode mode )
     {
         this.group = group;
         this.name = name;
@@ -160,7 +160,7 @@ public class Query
         this.isSingleShot = isSingleShot;
         this.hasWarmup = hasWarmup;
         this.isMutating = isMutating;
-        this.deployment = deployment;
+        this.mode = mode;
     }
 
     public BenchmarkGroup benchmarkGroup()
@@ -175,7 +175,7 @@ public class Query
         params.put( "planner", queryString.planner().name() );
         params.put( "runtime", queryString.runtime().name() );
         params.put( "execution_mode", queryString.executionMode().name() );
-        params.put( "deployment", deployment.name() );
+        params.put( "deployment", mode.name() );
         return Benchmark.benchmarkFor( description, simpleName, Benchmark.Mode.LATENCY, params, queryString.stableValue() );
     }
 
@@ -225,7 +225,7 @@ public class Query
                           hasWarmup,
                           isMutating,
                           parameters,
-                          deployment );
+                          mode );
     }
 
     public Query copyWith( Runtime newRuntime )
@@ -239,7 +239,7 @@ public class Query
                           hasWarmup,
                           isMutating,
                           parameters,
-                          deployment );
+                          mode );
     }
 
     public Query copyWith( ExecutionMode newExecutionMode )
@@ -253,7 +253,7 @@ public class Query
                           hasWarmup,
                           isMutating,
                           parameters,
-                          deployment );
+                          mode );
     }
 
     public Parameters parameters()
@@ -285,6 +285,6 @@ public class Query
                "\thas warmup      : " + hasWarmup + "\n" +
                "\tis mutating     : " + isMutating + "\n" +
                "\tparameters      : " + parameters + "\n" +
-               "\tdeployment      : " + deployment;
+               "\tdeployment      : " + mode;
     }
 }

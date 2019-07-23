@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.macro.workload;
 
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import org.junit.Rule;
@@ -21,7 +22,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,7 +44,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
+            Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources, Deployment.embedded() ).stream()
                                                                  .collect( Collectors.groupingBy( Workload::name ) );
 
             List<String> duplicateWorkloadNames = workloadsByName.keySet().stream()
@@ -75,7 +75,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
+            Workload.allWorkloads( resources, Deployment.embedded() )
                     .forEach( workload ->
                               {
                                   String expectedWorkloadName =
@@ -98,7 +98,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
+            Workload.allWorkloads( resources, Deployment.embedded() ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
         }
     }
 
@@ -107,7 +107,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
+            Workload.allWorkloads( resources, Deployment.embedded() ).stream()
                     .flatMap( workload -> workload.queries().stream() )
                     .forEach( query ->
                               {
@@ -129,7 +129,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED ).stream()
+            Workload.allWorkloads( resources, Deployment.embedded() ).stream()
                     .flatMap( workload -> workload.queries().stream() )
                     .forEach( query ->
                               {
@@ -144,7 +144,7 @@ public class WorkloadTest
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload.allWorkloads( resources, DeploymentMode.EMBEDDED )
+            Workload.allWorkloads( resources, Deployment.embedded() )
                     .forEach( workload ->
                               {
                                   for ( Query query : workload.queries() )
@@ -178,7 +178,7 @@ public class WorkloadTest
         {
             Path workloadDir = resources.getResourceFile( "/test_workloads/test" );
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
-            Workload workload = Workload.fromFile( validWorkloadConfig, DeploymentMode.EMBEDDED );
+            Workload workload = Workload.fromFile( validWorkloadConfig, Deployment.embedded() );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
             assertThat( String.format( "Workload with config: %s%n" +
                                        "Should have name: %s%n" +
@@ -270,7 +270,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_empty_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.EMPTY_QUERIES ) );
         }
     }
@@ -282,7 +282,7 @@ public class WorkloadTest
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_parameters_file.json" );
 
-            for ( Query query : Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ).queries() )
+            for ( Query query : Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ).queries() )
             {
                 WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
                                                                            () -> query.parameters().create() );
@@ -299,7 +299,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.QUERY_FILE_NOT_FOUND ) );
         }
     }
@@ -312,7 +312,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_schema_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.SCHEMA_FILE_NOT_FOUND ) );
         }
     }
@@ -325,7 +325,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_parameters_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_PARAM_FILE ) );
         }
     }
@@ -338,7 +338,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_queries.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERIES ) );
         }
     }
@@ -351,7 +351,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_file.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERY_FILE ) );
         }
     }
@@ -364,7 +364,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_QUERY_NAME ) );
         }
     }
@@ -377,7 +377,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_schema.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_SCHEMA ) );
         }
     }
@@ -390,7 +390,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_workload_name.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.NO_WORKLOAD_NAME ) );
         }
     }
@@ -403,7 +403,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_query_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_QUERY_FIELD ) );
         }
     }
@@ -416,7 +416,7 @@ public class WorkloadTest
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_workload_key.json" );
 
             WorkloadConfigException e = BenchmarkUtil.assertException( WorkloadConfigException.class,
-                                                                       () -> Workload.fromFile( workloadConfigurationFile, DeploymentMode.EMBEDDED ) );
+                                                                       () -> Workload.fromFile( workloadConfigurationFile, Deployment.embedded() ) );
             assertThat( e.error(), equalTo( WorkloadConfigError.INVALID_WORKLOAD_FIELD ) );
         }
     }

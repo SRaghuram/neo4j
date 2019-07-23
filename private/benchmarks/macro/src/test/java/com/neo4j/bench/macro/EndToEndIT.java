@@ -22,6 +22,7 @@ import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
@@ -53,7 +54,6 @@ import org.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -142,7 +142,7 @@ public class EndToEndIT
         Path resultsPath = temporaryFolder.newFile( "results.json" ).toPath();
         Path workPath = temporaryFolder.newFolder( "work" ).toPath();
 
-        Neo4jDeployment deployment = Neo4jDeployment.embedded();
+        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( Deployment.embedded() );
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                                                                     // workload
@@ -199,7 +199,7 @@ public class EndToEndIT
                                                                     // error_policy
                                                                     ErrorPolicy.FAIL.name(),
                                                                     // embedded OR server:<path>
-                                                                    deployment.toString(),
+                                                                    neo4jDeployment.toString(),
                                                                     // AWS endpoint URL
                                                                     endpointUrl ) )
                 .directory( baseDir.toFile() )
@@ -215,7 +215,7 @@ public class EndToEndIT
         }
         assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
         assertStoreSchema();
-        assertRecordingFilesExist( s3Path, profilers, deployment.mode() );
+        assertRecordingFilesExist( s3Path, profilers, neo4jDeployment.deployment() );
     }
 
     private void assertStoreSchema()
@@ -246,7 +246,7 @@ public class EndToEndIT
 
     private void assertRecordingFilesExist( Path s3Path,
                                             List<ProfilerType> profilers,
-                                            DeploymentMode deployment ) throws IOException
+                                            Deployment deployment ) throws IOException
     {
         Path recordingsBasePath = s3Path.resolve( "benchmarking.neo4j.com/recordings" );
         List<Path> recordingDirs = Files

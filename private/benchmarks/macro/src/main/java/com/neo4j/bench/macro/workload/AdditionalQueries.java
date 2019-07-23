@@ -6,7 +6,7 @@
 package com.neo4j.bench.macro.workload;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
+import com.neo4j.bench.common.tool.macro.DeploymentMode;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,7 +35,7 @@ class AdditionalQueries
         return queries;
     }
 
-    private static List<Query> generatedQueries( DeploymentMode deployment )
+    private static List<Query> generatedQueries( DeploymentMode mode )
     {
         return Arrays.asList(
                 newQuery(
@@ -44,38 +44,38 @@ class AdditionalQueries
                         ChangingQueryString.atDefaults(
                                 new IncrementingString( "MATCH (p:Person)\n" +
                                                         "RETURN p.prop%s" ) ),
-                        deployment ),
+                        mode ),
                 newQuery(
                         "generated_queries",
                         "project varying relationship type - short pattern",
                         ChangingQueryString.atDefaults(
                                 new IncrementingString( "MATCH (p1:Person)-[:REL%s]-(p2:Person)\n" +
                                                         "RETURN p1.name=p2.name" ) ),
-                        deployment ),
+                        mode ),
                 newQuery(
                         "generated_queries",
                         "project varying relationship type - long pattern",
                         ChangingQueryString.atDefaults(
                                 new IncrementingString( "MATCH (p1:Person)-[:R%s]-(:Person)-[:KNOWS]-(:Person)-[:KNOWS]-(:Person)-[:KNOWS]-(p2:Person)\n" +
                                                         "RETURN p1.name=p2.name" ) ),
-                        deployment )
+                        mode )
         );
     }
 
-    private static List<AdditionalQueries> additionalWorkloadQueries( DeploymentMode deployment )
+    private static List<AdditionalQueries> additionalWorkloadQueries( DeploymentMode mode )
     {
         return Lists.newArrayList(
-                new AdditionalQueries( "generated_queries", generatedQueries( deployment ) )
+                new AdditionalQueries( "generated_queries", generatedQueries( mode ) )
         );
     }
 
-    static List<Query> queriesFor( String workloadName, DeploymentMode deployment )
+    static List<Query> queriesFor( String workloadName, DeploymentMode mode )
     {
-        return additionalWorkloadQueries( deployment ).stream()
-                                                      .filter( queries -> queries.workloadName().equalsIgnoreCase( workloadName ) )
-                                                      .map( AdditionalQueries::queries )
-                                                      .flatMap( Collection::stream )
-                                                      .collect( toList() );
+        return additionalWorkloadQueries( mode ).stream()
+                                                .filter( queries -> queries.workloadName().equalsIgnoreCase( workloadName ) )
+                                                .map( AdditionalQueries::queries )
+                                                .flatMap( Collection::stream )
+                                                .collect( toList() );
     }
 
     private static class IncrementingString implements ChangingQueryString.ValueSupplier
@@ -101,7 +101,7 @@ class AdditionalQueries
         }
     }
 
-    private static Query newQuery( String group, String name, QueryString queryString, DeploymentMode deployment )
+    private static Query newQuery( String group, String name, QueryString queryString, DeploymentMode mode )
     {
         return new Query( group,
                           name,
@@ -112,6 +112,6 @@ class AdditionalQueries
                           true,
                           false,
                           Parameters.empty(),
-                          deployment );
+                          mode );
     }
 }

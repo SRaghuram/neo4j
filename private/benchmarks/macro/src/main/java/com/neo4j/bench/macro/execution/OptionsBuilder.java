@@ -10,6 +10,7 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -23,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 public class OptionsBuilder
 {
-    private Neo4jDeployment neo4jDeployment = Neo4jDeployment.embedded();
+    private Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( Deployment.embedded() );
     private Query query;
     private List<ProfilerType> profilers = new ArrayList<>();
     private List<String> jvmArgs = new ArrayList<>();

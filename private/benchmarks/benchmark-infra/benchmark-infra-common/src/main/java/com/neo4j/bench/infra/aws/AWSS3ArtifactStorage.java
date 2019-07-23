@@ -75,8 +75,8 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     {
         LOG.debug( "connecting to Amazon S3" );
         return AmazonS3Client.builder()
-                .withCredentials( credentialsProvider )
-                .withPathStyleAccessEnabled( true );
+                             .withCredentials( credentialsProvider )
+                             .withPathStyleAccessEnabled( true );
     }
 
     private final AmazonS3 amazonS3;
@@ -104,7 +104,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 objectMetadata.setContentLength( Files.size( artifact ) );
                 LOG.info( "upload artifact {} with build id {}", artifact.toString(), buildID );
                 PutObjectResult result = amazonS3.putObject( BENCHMARKING_BUCKET_NAME, key,
-                        Files.newInputStream( artifact ), objectMetadata );
+                                                             Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
                 // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
             }
@@ -121,7 +121,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     public void downloadBuildArtifacts( Path baseDir, String buildID ) throws ArtifactStoreException
     {
         String keyPrefix = createBuildArtifactPrefix( buildID );
-        LOG.info( "downloading build artifacts for build {} from bucket {} at key prefix {}", buildID,  BENCHMARKING_BUCKET_NAME, keyPrefix );
+        LOG.info( "downloading build artifacts for build {} from bucket {} at key prefix {}", buildID, BENCHMARKING_BUCKET_NAME, keyPrefix );
 
         ObjectListing objectListing = amazonS3.listObjects( BENCHMARKING_BUCKET_NAME, keyPrefix );
         try
@@ -141,7 +141,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         {
             throw new ArtifactStoreException( e );
         }
-
     }
 
     @Override
@@ -175,8 +174,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 .orElseGet( () -> new BucketLifecycleConfiguration.Rule().withId( RULE_ID ) );
 
         // enforce rule update
-        rule
-            .withExpirationInDays( EXPIRATION_IN_DAYS )
+        rule.withExpirationInDays( EXPIRATION_IN_DAYS )
             .withFilter( new LifecycleFilter( new LifecyclePrefixPredicate( ARTIFACTS_PREFIX + "/" ) ) )
             .withStatus( BucketLifecycleConfiguration.ENABLED );
 
@@ -188,5 +186,4 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     {
         return String.format( "%s/%s/%s", ARTIFACTS_PREFIX, buildID, artifact.toString() );
     }
-
 }
