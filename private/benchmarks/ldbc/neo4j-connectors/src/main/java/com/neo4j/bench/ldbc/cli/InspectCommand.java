@@ -5,17 +5,17 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.utils.Utils;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.io.File;
-
-import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
 
@@ -28,16 +28,15 @@ public class InspectCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
             description = "Target Neo4j database directory",
-            title = "DB Directory",
-            required = true )
+            title = "DB Directory" )
+    @Required
     private File dbDir;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CONFIG},
             description = "Database configuration file",
-            title = "DB Config",
-            required = false )
+            title = "DB Config" )
     private File dbConfigurationFile;
 
     @Override

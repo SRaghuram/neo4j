@@ -5,34 +5,32 @@
  */
 package com.neo4j.bench.infra;
 
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 
 public abstract class InfraCommand implements Runnable
 {
 
     @Option( type = OptionType.GLOBAL,
              name = "--workspacePath",
-             arity = 1,
-             required = true )
+             arity = 1 )
+    @Required
     protected String workspacePath;
 
     @Option( type = OptionType.GLOBAL,
              name = "--awsKey",
-             arity = 1,
-             required = false )
+             arity = 1 )
     protected String awsKey;
 
     @Option( type = OptionType.GLOBAL,
              name = "--awsSecret",
-             arity = 1,
-             required = false )
+             arity = 1 )
     protected String awsSecret;
 
     @Option( type = OptionType.GLOBAL,
              name = "--awsRegion",
-             arity = 1,
-             required = false )
+             arity = 1 )
     protected String awsRegion = "eu-north-1";
 
 }

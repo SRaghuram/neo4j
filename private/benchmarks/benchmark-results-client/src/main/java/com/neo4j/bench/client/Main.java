@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.client;
 
-import io.airlift.airline.Cli;
-import io.airlift.airline.Help;
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.help.Help;
 
 public class Main
 {

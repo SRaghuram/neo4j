@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.micro;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.util.List;
 import java.util.Map;
@@ -21,8 +21,7 @@ public class ListCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {"-v", "--verbose"},
             description = "Print benchmark names, in addition to group names",
-            title = "Verbose",
-            required = false )
+            title = "Verbose" )
     protected boolean verbose;
 
     @Override

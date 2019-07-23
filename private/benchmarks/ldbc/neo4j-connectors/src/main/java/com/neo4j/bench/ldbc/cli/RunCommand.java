@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.ldbc.driver.Client;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
@@ -21,22 +25,17 @@ import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import com.neo4j.bench.ldbc.utils.Utils;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.io.File;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.util.ClassLoaderHelper.loadClass;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
-
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
@@ -54,56 +53,50 @@ public class RunCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_LDBC_CONFIG},
             description = "LDBC driver configuration file - see:  neo4j-connectors/src/main/resources/ldbc/",
-            title = "LDBC Config",
-            required = true )
+            title = "LDBC Config" )
+    @Required
     private File ldbcConfigFile;
 
     public static final String CMD_WRITES = "--writes";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WRITES},
             description = "Write query parameters directory - see: s3://quality.neotechnology.com/ldbc/csv/",
-            title = "Write Parameters",
-            required = false )
+            title = "Write Parameters" )
     private File writeParams;
 
     public static final String CMD_READS = "--reads";
     @Option( type = OptionType.COMMAND,
             name = {CMD_READS},
             description = "Read query parameters directory - see: s3://quality.neotechnology.com/ldbc/csv/",
-            title = "Read Parameters",
-            required = false )
+            title = "Read Parameters" )
     private File readParams;
 
     public static final String CMD_RESULTS_DIR = "--results";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_DIR},
             description = "Benchmark results directory (will be created if does not exist)",
-            title = "Results directory",
-            required = false )
+            title = "Results directory" )
     private File resultsDir;
 
     public static final String CMD_READ_THREADS = "--read-threads";
     @Option( type = OptionType.COMMAND,
             name = {CMD_READ_THREADS},
             description = "Number of threads for executing read queries (write thread count is function of dataset)",
-            title = "Read thread count",
-            required = false )
+            title = "Read thread count" )
     private Integer readThreads;
 
     public static final String CMD_WARMUP_COUNT = "--warmup-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WARMUP_COUNT},
             description = "Number of operations to run during warmup phase",
-            title = "Warmup operation count",
-            required = false )
+            title = "Warmup operation count" )
     private Long warmupCount;
 
     public static final String CMD_RUN_COUNT = "--run-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RUN_COUNT},
             description = "Number of operations to run during measurement phase",
-            title = "Run operation count",
-            required = false )
+            title = "Run operation count" )
     private Long runCount;
 
     // ===================================================
@@ -114,48 +107,42 @@ public class RunCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_CONFIG},
             description = "Neo4j configuration file - see:  neo4j-connectors/src/main/resources/neo4j/",
-            title = "Neo4j Config",
-            required = false )
+            title = "Neo4j Config" )
     private File neo4jConfig;
 
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
             description = "Target Neo4j database directory - see: s3://quality.neotechnology.com/ldbc/db/",
-            title = "Database Directory",
-            required = false )
+            title = "Database Directory" )
     private File neo4jDir;
 
     public static final String CMD_NEO4J_API = "--neo4j-api";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_API},
             description = "Neo4j surface API: EMBEDDED_CORE, EMBEDDED_CYPHER, REMOTE_CYPHER",
-            title = "Neo4j API",
-            required = false )
+            title = "Neo4j API" )
     private Neo4jApi neo4jApi;
 
     public static final String CMD_CYPHER_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_PLANNER},
             description = "Cypher Planner: DEFAULT, RULE, COST",
-            title = "Cypher Planner",
-            required = false )
+            title = "Cypher Planner" )
     private PlannerType planner = PlannerType.DEFAULT;
 
     public static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
             description = "Cypher Runtime",
-            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
-            required = false )
+            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED" )
     private RuntimeType runtime = RuntimeType.DEFAULT;
 
     public static final String CMD_WAIT_FOR_FILE = "--wait-for-file";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WAIT_FOR_FILE},
             description = "If set, process will not exit until it finds this file",
-            title = "Wait on file",
-            required = false )
+            title = "Wait on file" )
     private File waitForFile;
 
     @Override

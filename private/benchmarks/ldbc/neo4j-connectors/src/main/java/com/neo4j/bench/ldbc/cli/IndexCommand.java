@@ -5,20 +5,20 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
 import com.neo4j.bench.ldbc.utils.Utils;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
-
-import org.neo4j.graphdb.GraphDatabaseService;
 
 import static java.lang.String.format;
 
@@ -31,48 +31,43 @@ public class IndexCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
             description = "Target Neo4j database directory",
-            title = "DB Directory",
-            required = true )
+            title = "DB Directory" )
+    @Required
     private File dbDir;
 
     public static final String CMD_WITH_UNIQUE = "--with-unique";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WITH_UNIQUE},
             description = "Create unique constraints for properties that should have unique values",
-            title = "Create Unique Constraints",
-            required = false )
+            title = "Create Unique Constraints" )
     private boolean withUnique;
 
     public static final String CMD_WITH_MANDATORY = "--with-mandatory";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WITH_MANDATORY},
             description = "Create mandatory constraints for required properties",
-            title = "Create Mandatory Constraints",
-            required = false )
+            title = "Create Mandatory Constraints" )
     private boolean withMandatory;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CONFIG},
             description = "Database configuration file",
-            title = "DB Config",
-            required = false )
+            title = "DB Config" )
     private File dbConfigurationFile;
 
     public static final String CMD_NEO4J_SCHEMA = "--neo4j-schema";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_SCHEMA},
             description = "(Optional - can be inferred) Schema of Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
-            title = "Neo4j Schema",
-            required = false )
+            title = "Neo4j Schema" )
     private String neo4jSchemaString;
 
     public static final String CMD_DROP_FIRST = "--drop-first";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DROP_FIRST},
             description = "Drop existing indexes & constraints before creating new ones",
-            title = "Drop Any Existing Indexes/Constraints",
-            required = false )
+            title = "Drop Any Existing Indexes/Constraints" )
     private boolean dropFirst;
 
     @Override

@@ -15,7 +15,6 @@
         <jmh.version>1.21</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
         <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
-        <airline.version>0.7</airline.version>
         <metrics.version>3.1.2</metrics.version>
         <scala.version>2.11.8</scala.version>
         <scalatest.version>2.2.5</scalatest.version>
@@ -96,10 +95,10 @@
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
+            <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
-            <version>${airline.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>

@@ -6,6 +6,11 @@
 package com.neo4j.bench.infra.scheduler;
 
 import com.amazonaws.SdkClientException;
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkArgs;
 import com.neo4j.bench.infra.InfraCommand;
@@ -15,10 +20,6 @@ import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -38,19 +39,22 @@ public class ScheduleMacro extends InfraCommand
 
     private static final Logger LOG = LoggerFactory.getLogger( ScheduleMacro.class );
 
-    @Option( type = OptionType.COMMAND, name = "--workloads", required = true )
+    @Option( type = OptionType.COMMAND, name = "--workloads" )
+    @Required
     private String workloads;
 
-    @Option( type = OptionType.COMMAND, name = "--dbs", required = true )
+    @Option( type = OptionType.COMMAND, name = "--dbs" )
+    @Required
     private String dbs;
 
-    @Option( type = OptionType.COMMAND, name = "--workerArtifactUri", required = true )
+    @Option( type = OptionType.COMMAND, name = "--workerArtifactUri" )
+    @Required
     private String workerArtifactUri;
 
-    @Option( type = OptionType.COMMAND, name = "--jobQueue", arity = 1, required = false )
+    @Option( type = OptionType.COMMAND, name = "--jobQueue", arity = 1 )
     private String jobQueue = "macro-benchnmark-run-queue";
 
-    @Option( type = OptionType.COMMAND, name = "--jobDefinition", required = false )
+    @Option( type = OptionType.COMMAND, name = "--jobDefinition" )
     private String jobDefinition = "macro-benchmark-job-definition";
 
     @Arguments
