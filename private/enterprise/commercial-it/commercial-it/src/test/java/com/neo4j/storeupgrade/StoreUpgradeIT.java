@@ -31,7 +31,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
-import org.neo4j.counts.CountsAccessor;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -43,6 +42,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -52,7 +52,6 @@ import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -557,7 +556,8 @@ public class StoreUpgradeIT
                     .resolveDependency( ThreadToStatementContextBridge.class )
                     .getKernelTransactionBoundToThisThread( true ).acquireStatement() )
             {
-                long countsTxId = ((CountsTracker) db.getDependencyResolver().resolveDependency( CountsAccessor.class )).txId();
+                long countsTxId = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
+                        .testAccessCountsStore().txId();
                 assertEquals( lastCommittedTxId, countsTxId );
                 assertThat( lastCommittedTxId, is( store.lastTxId ) );
             }
