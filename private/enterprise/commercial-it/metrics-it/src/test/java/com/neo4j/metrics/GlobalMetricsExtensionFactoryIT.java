@@ -7,6 +7,7 @@ package com.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.Description;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.UUID;
@@ -98,6 +100,23 @@ class GlobalMetricsExtensionFactoryIT
         // THEN
         assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );
         assertThat( threadCountResult, greaterThanOrEqualTo( 0L ) );
+    }
+
+    @Test
+    void reportHeapUsageMetrics() throws InterruptedException, IOException
+    {
+        File heapCommittedFile = metricsCsv( outputPath, HeapMetrics.HEAP_COMMITTED );
+        File heapMaxFile = metricsCsv( outputPath, HeapMetrics.HEAP_MAX );
+        File heapUsedFile = metricsCsv( outputPath, HeapMetrics.HEAP_USED );
+
+        long heapCommittedResult = readLongGaugeAndAssert( heapCommittedFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long heapUsedResult = readLongGaugeAndAssert( heapUsedFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long heapMaxResult = readLongGaugeAndAssert( heapMaxFile, ( newValue, currentValue ) -> newValue >= 0 );
+
+        // THEN
+        assertThat( heapCommittedResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( heapUsedResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( heapMaxResult, greaterThanOrEqualTo( 0L ) );
     }
 
     @Test

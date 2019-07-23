@@ -12,6 +12,7 @@ import com.neo4j.metrics.source.db.BoltMetrics;
 import com.neo4j.metrics.source.db.PageCacheMetrics;
 import com.neo4j.metrics.source.jvm.FileDescriptorMetrics;
 import com.neo4j.metrics.source.jvm.GCMetrics;
+import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
 import com.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import com.neo4j.metrics.source.jvm.ThreadMetrics;
@@ -54,6 +55,11 @@ public class GlobalMetricsExporter
         if ( config.get( MetricsSettings.jvmGcEnabled ) )
         {
             life.add( new GCMetrics( globalMetricsPrefix, registry ) );
+        }
+
+        if ( config.get( MetricsSettings.jvmHeapEnabled ) )
+        {
+            life.add( new HeapMetrics( registry ) );
         }
 
         if ( config.get( MetricsSettings.jvmThreadsEnabled ) )

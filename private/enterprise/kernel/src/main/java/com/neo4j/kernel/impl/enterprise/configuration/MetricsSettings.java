@@ -68,6 +68,9 @@ public class MetricsSettings implements SettingsDeclaration
     @Description( "Enable reporting metrics about the duration of garbage collections" )
     public static final Setting<Boolean> jvmGcEnabled = newBuilder( "metrics.jvm.gc.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics about the heap memory usage." )
+    public static final Setting<Boolean> jvmHeapEnabled = newBuilder( "metrics.jvm.heap.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about the memory usage." )
     public static final Setting<Boolean> jvmMemoryEnabled = newBuilder( "metrics.jvm.memory.enabled", BOOL, true ).build();
 
