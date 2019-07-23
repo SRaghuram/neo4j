@@ -245,7 +245,7 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public StoreEntityCounters storeEntityCounters()
+        public Supplier<StoreEntityCounters> storeEntityCounters()
         {
             return null;
         }

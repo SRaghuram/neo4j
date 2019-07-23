@@ -48,7 +48,7 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
 
         TransactionCounters transactionCounters();
 
-        StoreEntityCounters storeEntityCounters();
+        Supplier<StoreEntityCounters> storeEntityCounters();
 
         Supplier<CoreMetaData> coreMetadataSupplier();
 
