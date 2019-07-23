@@ -26,17 +26,16 @@ import com.neo4j.bench.common.model.Plan;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.options.Edition;
-import com.neo4j.bench.common.options.Planner;
-import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -56,292 +55,81 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
-import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_DB_PATH;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_CONFIG;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_RESULTS_JSON;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WORK_DIR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
-public class RunWorkloadCommand implements Runnable
+public class RunWorkloadCommand extends BaseRunWorkloadCommand
 {
-    private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKLOAD},
-            description = "Name of workload to run",
-            title = "Workload" )
-    @Required
-    private String workloadName;
-
-    private static final String CMD_DB = "--db";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory" )
+             name = {CMD_DB_PATH},
+             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+             title = "Store directory" )
     @Required
     private File storeDir;
 
-    private static final String CMD_EDITION = "--db-edition";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_EDITION},
-             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-             title = "Neo4j edition" )
-    private Edition neo4jEdition = Edition.ENTERPRISE;
-
-    private static final String CMD_JVM_PATH = "--jvm";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_PATH},
-            description = "Path to JVM -- will also be used when launching fork processes",
-            title = "Path to JVM" )
-    @Required
-    private File jvmFile;
-
-    private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEO4J_CONFIG},
              description = "Neo4j configuration file",
              title = "Neo4j configuration file" )
+    @Required
     private File neo4jConfigFile;
 
-    private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_WORK_DIR},
              description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
              title = "Work directory" )
-    private File workDir = new File( System.getProperty( "user.dir" ) );
-
-    private static final String CMD_PROFILERS = "--profilers";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILERS},
-             description = "Comma separated list of profilers to run with",
-             title = "Profilers" )
-    private String profilerNames = "";
-
-    private static final String CMD_WARMUP = "--warmup-count";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_WARMUP},
-            title = "Warmup execution count" )
     @Required
-    private int warmupCount;
+    private File workDir;
 
-    private static final String CMD_MEASUREMENT = "--measurement-count";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_MEASUREMENT},
-            title = "Measurement execution count" )
-    @Required
-    private int measurementCount;
-
-    private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_MIN_MEASUREMENT_SECONDS},
-             title = "Min measurement execution duration, in seconds" )
-    private int minMeasurementSeconds = 30; // 30 seconds
-
-    private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_MAX_MEASUREMENT_SECONDS},
-             title = "Max measurement execution duration, in seconds" )
-    private int maxMeasurementSeconds = 10 * 60; // 10 minutes
-
-    private static final String CMD_FORKS = "--forks";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_FORKS},
-             title = "Fork count" )
-    private int measurementForkCount = 1;
-
-    private static final String CMD_RESULTS_JSON = "--results";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_JSON},
-             description = "Path to where the results file will be written",
-             title = "Results path" )
-    private File resultsPath = new File( workDir, "results.json" );
-
-    private static final String CMD_TIME_UNIT = "--time-unit";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TIME_UNIT},
-             description = "Time unit to report results in",
-             title = "Time unit" )
-    private TimeUnit unit = TimeUnit.MICROSECONDS;
-
-    private static final String CMD_RUNTIME = "--runtime";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RUNTIME},
-             description = "Cypher runtime",
-             title = "Cypher runtime" )
-    private Runtime runtime = Runtime.DEFAULT;
-
-    private static final String CMD_PLANNER = "--planner";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_PLANNER},
-             description = "Cypher planner",
-             title = "Cypher planner" )
-    private Planner planner = Planner.DEFAULT;
-
-    private static final String CMD_EXECUTION_MODE = "--execution-mode";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_EXECUTION_MODE},
-             description = "How to execute: run VS plan",
-             title = "Run vs Plan" )
-    private ExecutionMode executionMode = ExecutionMode.EXECUTE;
-
-    private static final String CMD_ERROR_POLICY = "--error-policy";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_ERROR_POLICY},
-             description = "Specify if execution should terminate on error, or skip and continue",
-             title = "Error handling policy" )
-    private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
-
-    private static final String CMD_NEO4J_COMMIT = "--neo4j-commit";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_COMMIT},
-            description = "Commit of Neo4j that benchmark is run against",
-            title = "Neo4j Commit" )
+             description = "Name of file where results will be written. Result file will be written into top level of the working directory",
+             title = "Results filename" )
     @Required
-    private String neo4jCommit;
+    private File resultsJson;
 
-    private static final String CMD_NEO4J_VERSION = "--neo4j-version";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_VERSION},
-            description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-            title = "Neo4j Version" )
-    @Required
-    private String neo4jVersion;
-
-    private static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_BRANCH},
-            description = "Neo4j branch name",
-            title = "Neo4j Branch" )
-    @Required
-    private String neo4jBranch;
-
-    private static final String CMD_NEO4J_OWNER = "--neo4j-branch-owner";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_OWNER},
-            description = "Owner of repository containing Neo4j branch",
-            title = "Branch Owner" )
-    @Required
-    private String neo4jBranchOwner;
-
-    private static final String CMD_TOOL_COMMIT = "--tool-commit";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_COMMIT},
-            description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    private static final String CMD_TOOL_OWNER = "--tool-branch-owner";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_OWNER},
-            description = "Owner of repository containing the benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Owner" )
-    @Required
-    private String toolOwner = "neo-technology";
-
-    private static final String CMD_TOOL_BRANCH = "--tool-branch";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH},
-            description = "Branch of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Branch" )
-    @Required
-    private String toolBranch;
-
-    private static final String CMD_TEAMCITY_BUILD = "--teamcity-build";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TEAMCITY_BUILD},
-            description = "Build number of the TeamCity build that ran the benchmarks",
-            title = "TeamCity Build Number" )
-    @Required
-    private Long teamcityBuild;
-
-    private static final String CMD_PARENT_TEAMCITY_BUILD = "--parent-teamcity-build";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_PARENT_TEAMCITY_BUILD},
-            description = "Build number of the TeamCity parent build, e.g., Packaging",
-            title = "Parent TeamCity Build Number" )
-    @Required
-    private Long parentBuild;
-
-    private static final String CMD_JVM_ARGS = "--jvm-args";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_JVM_ARGS},
-             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
-             title = "JVM Args" )
-    private String jvmArgs = "";
-
-    private static final String CMD_RECREATE_SCHEMA = "--recreate-schema";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_RECREATE_SCHEMA},
-             description = "Drop indexes and constraints, delete index directories (and transaction logs), then recreate indexes and constraints",
-             title = "Recreate Schema" )
-    private boolean recreateSchema;
-
-    private static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_PROFILER_RECORDINGS_DIR},
-             description = "Where to collect profiler recordings for executed benchmarks",
+             description = "Directory where profiler recordings will be collected",
              title = "Profile recordings output directory" )
-    private File profilerRecordingsOutput = workDir.toPath().resolve( "profiler_recordings" ).toFile();
-
-    private static final String CMD_SKIP_FLAMEGRAPHS = "--skip-flamegraphs";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_SKIP_FLAMEGRAPHS},
-             description = "Skip FlameGraph generation",
-             title = "Skip FlameGraph generation" )
-    private boolean skipFlameGraphs;
-
-    private static final String CMD_TRIGGERED_BY = "--triggered-by";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TRIGGERED_BY},
-            description = "Specifies user that triggered this build",
-            title = "Specifies user that triggered this build" )
     @Required
-    private String triggeredBy;
+    private File profilerRecordingsOutputDir;
 
-    private static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_DEPLOYMENT},
-            description = "Valid values: 'embedded' or 'server:<path_to_neo4j_server>'",
-            title = "Deployment mode" )
-    @Required
-    private String deploymentMode;
-
-    @Override
-    public void run()
+    protected void doRun( RunWorkloadParams params )
     {
-        Neo4jDeployment neo4jDeployment = Neo4jDeployment.parse( deploymentMode );
+        for ( ProfilerType profiler : params.profilers() )
+        {
+            boolean errorOnMissingFlameGraphDependencies = !params.isSkipFlameGraphs();
+            profiler.assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
+        }
+
+        Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment() );
+        Jvm jvm = Jvm.bestEffortOrFail( params.jvm() );
 
         try ( Resources resources = new Resources( workDir.toPath() ) )
         {
-            List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
-            for ( ProfilerType profiler : profilers )
-            {
-                boolean errorOnMissingFlameGraphDependencies = !skipFlameGraphs;
-                profiler.assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
-            }
-
-            Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.mode() );
+            Workload workload = Workload.fromName( params.workloadName(), resources, neo4jDeployment.deployment() );
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir.toPath(), workload.benchmarkGroup() );
-            Jvm jvm = Jvm.bestEffort( this.jvmFile );
-            List<String> jvmArgsList = jvmArgsFromString( this.jvmArgs );
 
-            printDetails( jvm, jvmArgsList, workload, groupDir, profilers );
+            System.out.println( params );
 
-            Path neo4jConfigPath = (null == neo4jConfigFile) ? null : neo4jConfigFile.toPath();
-            if ( neo4jConfigPath != null )
-            {
-                BenchmarkUtil.assertFileNotEmpty( neo4jConfigPath );
-            }
+            BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
-                                                                      .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigPath ).build() )
+                                                                      .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile.toPath() ).build() )
                                                                       .withSetting( GraphDatabaseSettings.cypher_hints_error, TRUE )
                                                                       .removeSetting( load_csv_file_url_root );
-            if ( executionMode.equals( ExecutionMode.PLAN ) )
+            if ( params.executionMode().equals( ExecutionMode.PLAN ) )
             {
                 neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
             }
@@ -352,44 +140,44 @@ public class RunWorkloadCommand implements Runnable
             System.out.println( "Verifying store..." );
             try ( Store store = Store.createFrom( storeDir.toPath() ) )
             {
-                EmbeddedDatabase.verifySchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
-                if ( recreateSchema )
+                EmbeddedDatabase.verifySchema( store, params.neo4jEdition(), neo4jConfigFile.toPath(), workload.expectedSchema() );
+                if ( params.isRecreateSchema() )
                 {
                     System.out.println( "Preparing to recreate schema..." );
-                    EmbeddedDatabase.recreateSchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
+                    EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfigFile.toPath(), workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
                 EmbeddedDatabase.verifyStoreFormat( store );
             }
 
-            ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
+            ErrorReporter errorReporter = new ErrorReporter( params.errorPolicy() );
             BenchmarkGroupBenchmarkMetrics results = new BenchmarkGroupBenchmarkMetrics();
             List<BenchmarkPlan> resultPlans = new ArrayList<>();
             BenchmarkGroupBenchmarkMetricsPrinter conciseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( false );
             Instant start = Instant.now();
-            for ( Query query : workload.queries().stream().map( query -> query.copyWith( runtime )
-                                                                               .copyWith( planner )
-                                                                               .copyWith( executionMode ) ).collect( toList() ) )
+            for ( Query query : workload.queries().stream().map( query -> query.copyWith( params.runtime() )
+                                                                               .copyWith( params.planner() )
+                                                                               .copyWith( params.executionMode() ) ).collect( toList() ) )
             {
                 try
                 {
-                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment.launcherFor( neo4jEdition,
-                                                                                                           warmupCount,
-                                                                                                           measurementCount,
-                                                                                                           Duration.ofSeconds( minMeasurementSeconds ),
-                                                                                                           Duration.ofSeconds( maxMeasurementSeconds ),
+                    BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( neo4jDeployment.launcherFor( params.neo4jEdition(),
+                                                                                                           params.warmupCount(),
+                                                                                                           params.measurementCount(),
+                                                                                                           params.minMeasurementDuration(),
+                                                                                                           params.maxMeasurementDuration(),
                                                                                                            jvm ),
                                                                               groupDir,
                                                                               query,
                                                                               Store.createFrom( storeDir.toPath().toAbsolutePath() ),
-                                                                              neo4jEdition,
+                                                                              params.neo4jEdition(),
                                                                               neo4jConfig,
-                                                                              profilers,
+                                                                              params.profilers(),
                                                                               jvm,
-                                                                              measurementForkCount,
-                                                                              unit,
+                                                                              params.measurementForkCount(),
+                                                                              params.unit(),
                                                                               conciseMetricsPrinter,
-                                                                              jvmArgsList,
+                                                                              params.jvmArgs(),
                                                                               resources );
 
                     BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
@@ -432,19 +220,22 @@ public class RunWorkloadCommand implements Runnable
                     testRunId,
                     Duration.between( start, finish ).toMillis(),
                     start.toEpochMilli(),
-                    teamcityBuild,
-                    parentBuild,
-                    triggeredBy );
+                    params.parentBuild(),
+                    params.parentBuild(),
+                    params.triggeredBy() );
 
-            BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, toolCommit, toolOwner, toolBranch );
+            BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
 
             BenchmarkConfig benchmarkConfig = new BenchmarkConfig( new HashMap<>() );
-            Java java = Java.current( jvmArgs );
-            neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
+            Java java = Java.current( JvmArgs.jvmArgsToString( params.jvmArgs() ) );
             TestRunReport testRunReport = new TestRunReport(
                     testRun,
                     benchmarkConfig,
-                    Sets.newHashSet( new Neo4j( neo4jCommit, neo4jVersion, neo4jEdition, neo4jBranch, neo4jBranchOwner ) ),
+                    Sets.newHashSet( new Neo4j( params.neo4jCommit(),
+                                                BranchAndVersion.toSanitizeVersion( Repository.NEO4J, params.neo4jVersion() ),
+                                                params.neo4jEdition(),
+                                                params.neo4jBranch(),
+                                                params.neo4jBranchOwner() ) ),
                     neo4jConfig,
                     Environment.current(),
                     results,
@@ -455,11 +246,12 @@ public class RunWorkloadCommand implements Runnable
 
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             System.out.println( verboseMetricsPrinter.toPrettyString( results, errorReporter.errors() ) );
-            System.out.println( "Exporting results as JSON to: " + resultsPath.getAbsolutePath() );
-            JsonUtil.serializeJson( resultsPath.toPath(), testRunReport );
+            System.out.println( "Exporting results as JSON to: " + resultsJson.toPath().toAbsolutePath() );
+            JsonUtil.serializeJson( resultsJson.toPath(), testRunReport );
 
-            System.out.println( "Copying profiler recordings to: " + profilerRecordingsOutput.getAbsolutePath() );
-            groupDir.copyProfilerRecordings( profilerRecordingsOutput.toPath() );
+            Path profilerRecordingsOutputFile = workDir.toPath().resolve( profilerRecordingsOutputDir.toPath() );
+            System.out.println( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
+            groupDir.copyProfilerRecordings( profilerRecordingsOutputFile );
         }
     }
 
@@ -476,168 +268,26 @@ public class RunWorkloadCommand implements Runnable
         }
     }
 
-    private void printDetails( Jvm jvm,
-                               List<String> jvmArgsList,
-                               Workload workload,
-                               BenchmarkGroupDirectory groupDir,
-                               List<ProfilerType> profilerTypes )
+    public static List<String> argsFor( Path storeDir,
+                                        Path neo4jConfigFile,
+                                        Path workDir,
+                                        Path resultsJson,
+                                        Path profilerRecordingsDir,
+                                        RunWorkloadParams params )
     {
-        System.out.println( String.format( "Java             : %s\n" +
-                                           "JVM args         : %s\n" +
-                                           "Workload         : %s\n" +
-                                           "Store            : %s\n" +
-                                           "Recreate Schema  : %s\n" +
-                                           "Edition          : %s\n" +
-                                           "Work Dir         : %s\n" +
-                                           "Config           : %s\n" +
-                                           "Profilers        : %s\n" +
-                                           "Planner          : %s\n" +
-                                           "Runtime          : %s\n" +
-                                           "Mode             : %s\n" +
-                                           "Forks            : %s\n" +
-                                           "Queries          : %s\n" +
-                                           "Warmup           : %s\n" +
-                                           "Measure          : %s\n",
-                                           jvm,
-                                           jvmArgsList,
-                                           workload.name(),
-                                           storeDir.getAbsolutePath(),
-                                           recreateSchema,
-                                           neo4jEdition,
-                                           groupDir.toAbsolutePath(),
-                                           (null == neo4jConfigFile) ? "n/a" : neo4jConfigFile.getAbsolutePath(),
-                                           profilerTypes,
-                                           planner,
-                                           runtime,
-                                           executionMode,
-                                           measurementForkCount,
-                                           workload.queries().size(),
-                                           warmupCount,
-                                           measurementCount ) );
-    }
-
-    public static List<String> argsFor(
-            Runtime runtime,
-            Planner planner,
-            ExecutionMode executionMode,
-            String workloadName,
-            Store store,
-            Path neo4jConfig,
-            String neo4jVersion,
-            String neo4jBranch,
-            String neo4jCommit,
-            String neo4jBranchOwner,
-            String toolBranch,
-            String toolCommit,
-            String toolBranchOwner,
-            Path workDir,
-            List<ProfilerType> profilers,
-            Edition edition,
-            Jvm jvm,
-            int warmupCount,
-            int measurementCount,
-            int measurementForkCount,
-            Duration minMeasurementDuration,
-            Duration maxMeasurementDuration,
-            Path resultsJson,
-            TimeUnit unit,
-            ErrorPolicy errorPolicy,
-            long parentTeamcityBuild,
-            long teamcityBuild,
-            String jvmArgs,
-            boolean recreateSchema,
-            Path profilerRecordingsOutput,
-            boolean skipFlameGraphs,
-            Neo4jDeployment neo4jDeployment,
-            String triggeredBy )
-    {
-        ArrayList<String> args = Lists.newArrayList(
+        List<String> args = Lists.newArrayList(
                 "run-workload",
-                CMD_WORKLOAD,
-                workloadName,
-                CMD_DB,
-                store.topLevelDirectory().toAbsolutePath().toString(),
-                CMD_PROFILERS,
-                ProfilerType.serializeProfilers( profilers ),
-                CMD_EDITION,
-                edition.name(),
-                CMD_WARMUP,
-                Integer.toString( warmupCount ),
-                CMD_MEASUREMENT,
-                Integer.toString( measurementCount ),
-                CMD_MIN_MEASUREMENT_SECONDS,
-                Long.toString( minMeasurementDuration.getSeconds() ),
-                CMD_MAX_MEASUREMENT_SECONDS,
-                Long.toString( maxMeasurementDuration.getSeconds() ),
-                CMD_FORKS,
-                Integer.toString( measurementForkCount ),
-                CMD_TIME_UNIT,
-                unit.name(),
-                CMD_RUNTIME,
-                runtime.name(),
-                CMD_PLANNER,
-                planner.name(),
-                CMD_EXECUTION_MODE,
-                executionMode.name(),
-                CMD_ERROR_POLICY,
-                errorPolicy.name(),
-                CMD_NEO4J_VERSION,
-                neo4jVersion,
-                CMD_NEO4J_BRANCH,
-                neo4jBranch,
-                CMD_NEO4J_COMMIT,
-                neo4jCommit,
-                CMD_NEO4J_OWNER,
-                neo4jBranchOwner,
-                CMD_TOOL_COMMIT,
-                toolCommit,
-                CMD_TOOL_BRANCH,
-                toolBranch,
-                CMD_TOOL_OWNER,
-                toolBranchOwner,
-                CMD_PARENT_TEAMCITY_BUILD,
-                Long.toString( parentTeamcityBuild ),
-                CMD_TEAMCITY_BUILD,
-                Long.toString( teamcityBuild ),
-                CMD_JVM_ARGS,
-                jvmArgs,
-                CMD_NEO4J_DEPLOYMENT,
-                neo4jDeployment.toString(),
-                CMD_TRIGGERED_BY,
-                triggeredBy );
-        if ( recreateSchema )
-        {
-            args.add( CMD_RECREATE_SCHEMA );
-        }
-        if ( skipFlameGraphs )
-        {
-            args.add( CMD_SKIP_FLAMEGRAPHS );
-        }
-        if ( null != workDir )
-        {
-            args.add( CMD_WORK_DIR );
-            args.add( workDir.toAbsolutePath().toString() );
-        }
-        if ( null != neo4jConfig )
-        {
-            args.add( CMD_NEO4J_CONFIG );
-            args.add( neo4jConfig.toAbsolutePath().toString() );
-        }
-        if ( jvm.hasPath() )
-        {
-            args.add( CMD_JVM_PATH );
-            args.add( jvm.launchJava() );
-        }
-        if ( null != resultsJson )
-        {
-            args.add( CMD_RESULTS_JSON );
-            args.add( resultsJson.toAbsolutePath().toString() );
-        }
-        if ( null != profilerRecordingsOutput )
-        {
-            args.add( CMD_PROFILER_RECORDINGS_DIR );
-            args.add( profilerRecordingsOutput.toAbsolutePath().toString() );
-        }
+                CMD_DB_PATH,
+                storeDir.toAbsolutePath().toString(),
+                CMD_NEO4J_CONFIG,
+                neo4jConfigFile.toAbsolutePath().toString(),
+                CMD_WORK_DIR,
+                workDir.toAbsolutePath().toString(),
+                CMD_RESULTS_JSON,
+                resultsJson.toAbsolutePath().toString(),
+                CMD_PROFILER_RECORDINGS_DIR,
+                profilerRecordingsDir.toAbsolutePath().toString() );
+        args.addAll( params.asArgs() );
         return args;
     }
 }

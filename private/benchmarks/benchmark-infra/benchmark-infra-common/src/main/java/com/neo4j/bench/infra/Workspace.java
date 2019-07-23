@@ -5,22 +5,13 @@
  */
 package com.neo4j.bench.infra;
 
-import com.amazonaws.util.IOUtils;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.compress.archivers.ArchiveInputStream;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import com.neo4j.bench.common.options.Edition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
-import java.io.IOError;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,18 +21,27 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 
 /**
- * Describes structure of benchmarking workspace,
- * which contains build artifacts.
- * Workspace has a base dir and set of build artifacts
- * (like benchmarks jar or run scripts).
- *
+ * Describes structure of benchmarking workspace, which contains build artifacts.
+ * Workspace has a base directory and a set of build artifacts (e.g., benchmarks jar or run scripts).
  */
 public class Workspace
 {
+    public static Workspace assertMacroWorkspace( Path workspaceDir, Edition neo4jEdition, String neo4jVersion )
+    {
+        return Workspace
+                .create( workspaceDir.toAbsolutePath() )
+                .withArtifacts(
+                        // required artifacts
+                        Paths.get( "neo4j.conf" ),
+                        Paths.get( "benchmark-infra-scheduler.jar" ),
+                        Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion ) ),
+                        Paths.get( "macro/target/macro.jar" ),
+                        Paths.get( "macro/run-report-benchmarks.sh" )
+                ).build();
+    }
 
     public static class Builder
     {
-
         private final Path baseDir;
         private final List<Path> artifacts = new ArrayList<>();
 
@@ -60,18 +60,18 @@ public class Workspace
         public Workspace build()
         {
             List<Path> allArtifacts = artifacts.stream()
-                    .map( artifact -> baseDir.resolve( artifact ) )
-                    .map( Path::toAbsolutePath )
-                    .collect( Collectors.toList() );
+                                               .map( baseDir::resolve )
+                                               .map( Path::toAbsolutePath )
+                                               .collect( Collectors.toList() );
 
             List<Path> invalidArtifacts = allArtifacts.stream()
-                    .filter( artifact -> !Files.isRegularFile( artifact ) )
-                    .collect( Collectors.toList() );
+                                                      .filter( artifact -> !Files.isRegularFile( artifact ) )
+                                                      .collect( Collectors.toList() );
 
             if ( !invalidArtifacts.isEmpty() )
             {
                 String missingArtifacts = invalidArtifacts.stream().map( Path::toString ).collect( Collectors.joining( "," ) );
-                throw new IllegalStateException( String.format( "missing artifacts: %s\n", missingArtifacts ) );
+                throw new IllegalStateException( format( "missing artifacts: %s\n", missingArtifacts ) );
             }
 
             return new Workspace( baseDir, allArtifacts );
@@ -119,44 +119,8 @@ public class Workspace
     public boolean isValid( Path anotherBaseDir )
     {
         return allArtifacts.stream()
-            .map( artifact -> baseDir.relativize( artifact) )
-            .map( artifact -> anotherBaseDir.resolve( artifact ) )
-            .filter( artifact -> !Files.isRegularFile( artifact ) )
-            .count() == 0;
-    }
-
-    public void extractNeo4jConfig( String neo4jVersion, Path neo4jConfig )
-    {
-        Path productArchive = baseDir.resolve( format( "neo4j-enterprise-%s-unix.tar.gz", neo4jVersion ) );
-        if ( !Files.isRegularFile( productArchive ) )
-        {
-            throw new IllegalStateException( format( "cannot find product archive at %s", productArchive ) );
-        }
-        try ( InputStream objectContent = new BufferedInputStream( Files.newInputStream( productArchive ) );
-              InputStream compressorInput = new CompressorStreamFactory()
-                      .createCompressorInputStream( CompressorStreamFactory.GZIP, objectContent );
-              ArchiveInputStream archiveInput =
-                      new ArchiveStreamFactory().createArchiveInputStream( ArchiveStreamFactory.TAR, compressorInput ) )
-        {
-            ArchiveEntry entry = null;
-            while ( (entry = archiveInput.getNextEntry()) != null )
-            {
-                if ( !archiveInput.canReadEntryData( entry ) )
-                {
-                    LOG.warn( "cannot read archive entry {} from archive {}", entry,productArchive );
-                    continue;
-                }
-                if ( !entry.isDirectory() && entry.getName().endsWith( "neo4j.conf" ) )
-                {
-                    IOUtils.copy( archiveInput, Files.newOutputStream( neo4jConfig ) );
-                    return;
-                }
-            }
-        }
-        catch ( IOException | CompressorException | ArchiveException e )
-        {
-            throw new IOError( e );
-        }
-        throw new RuntimeException( format( "neo4j.conf not found in %s", productArchive ) );
+                           .map( baseDir::relativize )
+                           .map( anotherBaseDir::resolve )
+                           .allMatch( Files::isRegularFile );
     }
 }

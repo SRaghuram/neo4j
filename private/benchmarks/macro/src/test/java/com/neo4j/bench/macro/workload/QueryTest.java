@@ -7,10 +7,10 @@ package com.neo4j.bench.macro.workload;
 
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import org.junit.jupiter.api.Test;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class QueryTest
@@ -26,7 +26,7 @@ class QueryTest
             true,
             false,
             Parameters.empty(),
-            DeploymentMode.EMBEDDED
+            Deployment.embedded()
     );
 
     @Test

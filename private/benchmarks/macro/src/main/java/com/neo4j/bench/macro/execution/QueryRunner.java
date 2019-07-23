@@ -12,6 +12,7 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.compositeOf;
 import static java.util.stream.Collectors.toList;
 

@@ -21,6 +21,7 @@ import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -46,25 +47,25 @@ public class RunSingleEmbeddedCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKLOAD},
-            description = "Path to workload configuration file",
-            title = "Workload configuration" )
+             name = {CMD_WORKLOAD},
+             description = "Path to workload configuration file",
+             title = "Workload configuration" )
     @Required
     private String workloadName;
 
     private static final String CMD_QUERY = "--query";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_QUERY},
-            description = "Name of query, in the Workload configuration",
-            title = "Query name" )
+             name = {CMD_QUERY},
+             description = "Name of query, in the Workload configuration",
+             title = "Query name" )
     @Required
     private String queryName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory" )
+             name = {CMD_DB},
+             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+             title = "Store directory" )
     @Required
     private File storeDir;
 
@@ -83,9 +84,9 @@ public class RunSingleEmbeddedCommand implements Runnable
 
     private static final String CMD_OUTPUT = "--output";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_OUTPUT},
-            description = "Output directory: where result will be written",
-            title = "Output directory" )
+             name = {CMD_OUTPUT},
+             description = "Output directory: where result will be written",
+             title = "Output directory" )
     @Required
     private File outputDir;
 
@@ -117,15 +118,15 @@ public class RunSingleEmbeddedCommand implements Runnable
 
     private static final String CMD_WARMUP_COUNT = "--warmup-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WARMUP_COUNT},
-            title = "Warmup execution count" )
+             name = {CMD_WARMUP_COUNT},
+             title = "Warmup execution count" )
     @Required
     private int warmupCount;
 
     private static final String CMD_MEASUREMENT_COUNT = "--measurement-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MEASUREMENT_COUNT},
-            title = "Measurement execution count" )
+             name = {CMD_MEASUREMENT_COUNT},
+             title = "Measurement execution count" )
     @Required
     private int measurementCount;
 
@@ -143,17 +144,17 @@ public class RunSingleEmbeddedCommand implements Runnable
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_PATH},
-            description = "Path to JVM with which this process was launched",
-            title = "Path to JVM" )
+             name = {CMD_JVM_PATH},
+             description = "Path to JVM with which this process was launched",
+             title = "Path to JVM" )
     @Required
     private File jvmFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORK_DIR},
-            description = "Work directory",
-            title = "Work directory" )
+             name = {CMD_WORK_DIR},
+             description = "Work directory",
+             title = "Work directory" )
     @Required
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
@@ -187,7 +188,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                                           minMeasurementSeconds,
                                           maxMeasurementSeconds,
                                           measurementCount,
-                                          DeploymentMode.EMBEDDED,
+                                          Deployment.embedded(),
                                           workDir.toPath() );
         }
     }

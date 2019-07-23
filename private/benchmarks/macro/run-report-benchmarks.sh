@@ -118,7 +118,7 @@ function runExport {
             -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
             -jar "${jar_path}" run-workload  \
             --workload "${workload}" \
-            --db "${db}" \
+            --db-dir "${db}" \
             --warmup-count "${warmup_count}" \
             --measurement-count "${measurement_count}" \
             --db-edition "${db_edition}" \

@@ -22,6 +22,7 @@ import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
@@ -66,7 +67,6 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -165,10 +165,10 @@ class EndToEndIT
             String endpointUrl = String.format( "http://localhost:%d", s3Port );
             EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "us-west-2" );
             client = AmazonS3ClientBuilder.standard()
-                                                   .withPathStyleAccessEnabled( true )
-                                                   .withEndpointConfiguration( endpoint )
-                                                   .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
-                                                   .build();
+                                          .withPathStyleAccessEnabled( true )
+                                          .withEndpointConfiguration( endpoint )
+                                          .withCredentials( new AWSStaticCredentialsProvider( new AnonymousAWSCredentials() ) )
+                                          .build();
             client.createBucket( "benchmarking.neo4j.com" );
 
             // prepare neo4j config file
@@ -183,7 +183,7 @@ class EndToEndIT
 
             Path workPath = temporaryFolder.directory( "work" ).toPath();
 
-            Neo4jDeployment deployment = Neo4jDeployment.embedded();
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( Deployment.embedded() );
 
             ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                                                                         // workload
@@ -240,7 +240,7 @@ class EndToEndIT
                                                                         // error_policy
                                                                         ErrorPolicy.FAIL.name(),
                                                                         // embedded OR server:<path>
-                                                                        deployment.toString(),
+                                                                        neo4jDeployment.toString(),
                                                                         // AWS endpoint URL
                                                                         endpointUrl ) )
                     .directory( baseDir.toFile() )
@@ -256,7 +256,7 @@ class EndToEndIT
             }
             assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
             assertStoreSchema();
-            assertRecordingFilesExist( s3Path, profilers, deployment.mode() );
+            assertRecordingFilesExist( s3Path, profilers, neo4jDeployment.deployment() );
         }
         finally
         {
@@ -296,7 +296,7 @@ class EndToEndIT
 
     private void assertRecordingFilesExist( Path s3Path,
                                             List<ProfilerType> profilers,
-                                            DeploymentMode deployment ) throws IOException
+                                            Deployment deployment ) throws IOException
     {
         Path recordingsBasePath = s3Path.resolve( "benchmarking.neo4j.com/recordings" );
         List<Path> recordingDirs = Files

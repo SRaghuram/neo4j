@@ -6,22 +6,16 @@
 package com.neo4j.bench.infra.worker;
 
 import com.github.rvesse.airline.Cli;
-import com.neo4j.bench.infra.InfraCommand;
 
-/**
- *
- */
 public class Main
 {
     public static void main( String[] args )
     {
 
-        Cli<InfraCommand> cli = Cli.<InfraCommand>builder( "run-bench" )
-                .withCommand( RunWorker.class )
+        Cli<Runnable> cli = Cli.<Runnable>builder( "run-bench" )
+                .withCommand( RunWorkerCommand.class )
                 .build();
-        InfraCommand command = cli.parse( args );
+        Runnable command = cli.parse( args );
         command.run();
-
     }
-
 }

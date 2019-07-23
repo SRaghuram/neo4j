@@ -14,13 +14,14 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
-import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
@@ -66,7 +67,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    READ_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -78,7 +79,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    WRITE_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -90,7 +91,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    LOAD_CSV_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -104,7 +105,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -116,7 +117,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -128,7 +129,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
                                    profilers,
                                    profilers.size() );
@@ -141,7 +142,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    READ_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -154,7 +155,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    WRITE_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -167,7 +168,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.embedded(),
+                                   Deployment.embedded(),
                                    LOAD_CSV_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -182,7 +183,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -195,7 +196,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -208,7 +209,7 @@ class RunWorkloadCommandIT
     {
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
-                                   Neo4jDeployment.server( getNeo4jDir() ),
+                                   Deployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
                                    profilers,
                                    // expect no recordings when running in-process, as both JFR & GC are external profilers
@@ -216,7 +217,7 @@ class RunWorkloadCommandIT
     }
 
     private void executeWorkloadViaCommand( int measurementForks,
-                                            Neo4jDeployment deployment,
+                                            Deployment deployment,
                                             String workloadName,
                                             ArrayList<ProfilerType> profilers,
                                             int minimumExpectedProfilerRecordingCount ) throws Exception
@@ -224,14 +225,15 @@ class RunWorkloadCommandIT
         try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
-            Workload workload = Workload.fromName( workloadName, resources, deployment.mode() );
-            Path neo4jConfiguration = createTempFilePath( temporaryFolder.absolutePath() );
-            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfiguration );
-            Store store = createEmptyStoreFor( workload, neo4jConfiguration );
+            Workload workload = Workload.fromName( workloadName, resources, deployment );
+            Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
+            Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
+            Store store = createEmptyStoreFor( workload, neo4jConfigFile );
             Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );
             boolean skipFlameGraphs = true;
+            boolean recreateSchema = false;
 
             String neo4jVersion = "1.2.3";
             String neo4jBranch = "1.2";
@@ -252,40 +254,44 @@ class RunWorkloadCommandIT
             Duration minMeasurementDuration = Duration.ofSeconds( 10 );
             Duration maxMeasurementDuration = Duration.ofSeconds( 10 );
 
+            Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
+
             List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
-                    Runtime.DEFAULT,
-                    Planner.DEFAULT,
-                    ExecutionMode.EXECUTE,
-                    workload.name(),
-                    store,
-                    neo4jConfiguration,
-                    neo4jVersion,
-                    neo4jBranch,
-                    neo4jCommit,
-                    neo4jBranchOwner,
-                    toolBranch,
-                    toolCommit,
-                    toolBranchOwner,
+                    store.topLevelDirectory(),
+                    neo4jConfigFile,
                     outputDir,
-                    profilers,
-                    Edition.ENTERPRISE,
-                    Jvm.defaultJvm(),
-                    warmupCount,
-                    measurementCount,
-                    measurementForks,
-                    minMeasurementDuration,
-                    maxMeasurementDuration,
                     resultsJson,
-                    TimeUnit.MICROSECONDS,
-                    ErrorPolicy.FAIL,
-                    parentTeamcityBuild,
-                    teamcityBuild,
-                    "-Xms4g -Xmx4g",
-                    false,
                     profilerRecordingsDir,
-                    skipFlameGraphs,
-                    deployment,
-                    triggeredBy );
+                    new RunWorkloadParams(
+                            workload.name(),
+                            Edition.ENTERPRISE,
+                            jvmPath,
+                            profilers,
+                            warmupCount,
+                            measurementCount,
+                            minMeasurementDuration,
+                            maxMeasurementDuration,
+                            measurementForks,
+                            TimeUnit.MICROSECONDS,
+                            Runtime.DEFAULT,
+                            Planner.DEFAULT,
+                            ExecutionMode.EXECUTE,
+                            ErrorPolicy.FAIL,
+                            Lists.newArrayList( "-Xms4g", "-Xmx4g" ),
+                            recreateSchema,
+                            skipFlameGraphs,
+                            deployment,
+                            neo4jCommit,
+                            neo4jVersion,
+                            neo4jBranch,
+                            neo4jBranchOwner,
+                            toolCommit,
+                            toolBranchOwner,
+                            toolBranch,
+                            teamcityBuild,
+                            parentTeamcityBuild,
+                            triggeredBy ) );
+
             Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
 
             // should find at least one recording per profiler per benchmark -- there may be more, due to secondary recordings
@@ -316,11 +322,11 @@ class RunWorkloadCommandIT
     }
 
     // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload, Path neo4jConfiguration ) throws IOException
+    private Store createEmptyStoreFor( Workload workload, Path neo4jConfigFile ) throws IOException
     {
         Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ), neo4jConfiguration );
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfiguration, schema );
+        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ), neo4jConfigFile );
+        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
         return store;
     }
 

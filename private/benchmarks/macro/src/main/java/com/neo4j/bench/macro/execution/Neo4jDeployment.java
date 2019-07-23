@@ -6,57 +6,46 @@
 package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.options.Edition;
-import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Arrays;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode.EMBEDDED;
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode.SERVER;
-
-public abstract class Neo4jDeployment
+public abstract class Neo4jDeployment<DEPLOYMENT extends Deployment>
 {
-    public enum DeploymentMode
+    public static Neo4jDeployment from( Deployment deployment )
     {
-        EMBEDDED,
-        SERVER
-    }
-
-    private static final String SERVER_PREFIX = SERVER.name() + ":";
-
-    public static Neo4jDeployment parse( String value )
-    {
-        if ( value.equalsIgnoreCase( EMBEDDED.name() ) )
+        if ( deployment instanceof Deployment.Embedded )
         {
-            return new EmbeddedNeo4jDeployment();
+            return new EmbeddedNeo4jDeployment( (Deployment.Embedded) deployment );
         }
-        else if ( value.toUpperCase().startsWith( SERVER_PREFIX ) )
+        else if ( deployment instanceof Deployment.Server )
         {
-            String neo4jDirString = value.substring( SERVER_PREFIX.length() );
-            Path neo4jDir = Paths.get( neo4jDirString );
-            BenchmarkUtil.assertDirectoryExists( neo4jDir );
-            return new ServerNeo4jDeployment( neo4jDir );
+            return new ServerNeo4jDeployment( (Deployment.Server) deployment );
         }
         else
         {
-            throw new RuntimeException( "Invalid deployment mode value: '" + value + "'\n" +
-                                        "Expected one of: " + Arrays.toString( DeploymentMode.values() ) );
+            throw new RuntimeException( "Invalid deployment mode value: " + deployment.getClass().getName() + " (" + deployment.toString() + ")" );
         }
     }
 
-    public static Neo4jDeployment server( Path neo4jDir )
+    private final DEPLOYMENT deployment;
+
+    private Neo4jDeployment( DEPLOYMENT deployment )
     {
-        BenchmarkUtil.assertDirectoryExists( neo4jDir );
-        return new ServerNeo4jDeployment( neo4jDir );
+        this.deployment = deployment;
     }
 
-    public static Neo4jDeployment embedded()
+    public final DEPLOYMENT deployment()
     {
-        return new EmbeddedNeo4jDeployment();
+        return deployment;
+    }
+
+    @Override
+    public String toString()
+    {
+        return deployment().toString();
     }
 
     public abstract DatabaseLauncher<?> launcherFor( Edition edition,
@@ -66,10 +55,13 @@ public abstract class Neo4jDeployment
                                                      Duration maxMeasurementDuration,
                                                      Jvm jvm );
 
-    public abstract DeploymentMode mode();
-
-    private static class EmbeddedNeo4jDeployment extends Neo4jDeployment
+    private static class EmbeddedNeo4jDeployment extends Neo4jDeployment<Deployment.Embedded>
     {
+        private EmbeddedNeo4jDeployment( Deployment.Embedded deployment )
+        {
+            super( deployment );
+        }
+
         @Override
         public DatabaseLauncher<?> launcherFor( Edition edition,
                                                 int warmupCount,
@@ -85,27 +77,13 @@ public abstract class Neo4jDeployment
                                                           maxMeasurementDuration,
                                                           jvm );
         }
-
-        @Override
-        public DeploymentMode mode()
-        {
-            return EMBEDDED;
-        }
-
-        @Override
-        public String toString()
-        {
-            return EMBEDDED.name();
-        }
     }
 
-    private static class ServerNeo4jDeployment extends Neo4jDeployment
+    private static class ServerNeo4jDeployment extends Neo4jDeployment<Deployment.Server>
     {
-        private final Path neo4jDir;
-
-        private ServerNeo4jDeployment( Path neo4jDir )
+        private ServerNeo4jDeployment( Deployment.Server deployment )
         {
-            this.neo4jDir = neo4jDir;
+            super( deployment );
         }
 
         @Override
@@ -116,24 +94,12 @@ public abstract class Neo4jDeployment
                                                 Duration maxMeasurementDuration,
                                                 Jvm jvm )
         {
-            return new DatabaseLauncher.ServerLauncher( neo4jDir,
+            return new DatabaseLauncher.ServerLauncher( deployment().path(),
                                                         warmupCount,
                                                         measurementCount,
                                                         minMeasurementDuration,
                                                         maxMeasurementDuration,
                                                         jvm );
-        }
-
-        @Override
-        public DeploymentMode mode()
-        {
-            return SERVER;
-        }
-
-        @Override
-        public String toString()
-        {
-            return SERVER_PREFIX + neo4jDir.toAbsolutePath().toString();
         }
     }
 }
