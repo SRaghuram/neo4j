@@ -58,7 +58,7 @@ public class PageCacheMetrics extends LifecycleAdapter
         registry.register( PC_HITS, new MetricsCounter( pageCacheCounters::hits ) );
         registry.register( PC_FLUSHES, new MetricsCounter( pageCacheCounters::flushes ) );
         registry.register( PC_EVICTION_EXCEPTIONS, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
-        registry.register( PC_HIT_RATIO, (Gauge<Double>) pageCacheCounters::hitRatio );
+        registry.register( PC_HIT_RATIO, new PageCacheHitRatioGauge( pageCacheCounters ) );
         registry.register( PC_USAGE_RATIO, (Gauge<Double>) pageCacheCounters::usageRatio );
     }
 
