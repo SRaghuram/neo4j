@@ -472,31 +472,6 @@ public class AuthIT extends AuthTestBase
         }
     }
 
-    @Test
-    public void shouldNotFailOnUpdatingSecurityCommandsOnSystemDb()
-    {
-        assumeTrue( createUsers );
-
-        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
-        {
-            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
-            {
-                session.run( "CREATE DATABASE foo" ).consume();
-                session.run( "CREATE ROLE fooRole" ).consume();
-                session.run( "CALL dbms.security.createUser('fooUser', 'fooPassword')" ).consume();
-                session.run( "GRANT MATCH (foo) ON GRAPH * NODES * TO fooRole" ).consume();
-                session.run( "GRANT TRAVERSE ON GRAPH foo TO fooRole" ).consume();
-            }
-            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
-            {
-                List<Record> records = session.run( "SHOW ROLE fooRole PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 4 ) );
-                List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(foo)" ) ).collect( Collectors.toList() );
-                assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
-            }
-        }
-    }
-
     private static String getLdapServerUri( boolean secureLdap, String host )
     {
         LdapServer ldapServer = ldapServerRule.getLdapServer();
