@@ -216,5 +216,9 @@
             <artifactId>scalacheck_${scala.binary.version}</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+        </dependency>
     </dependencies>
 </project>

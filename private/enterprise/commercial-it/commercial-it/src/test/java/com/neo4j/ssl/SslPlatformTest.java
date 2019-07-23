@@ -6,50 +6,58 @@
 package com.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.SslProvider;
-import org.apache.commons.lang3.SystemUtils;
-import org.junit.Rule;
-import org.junit.Test;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.neo4j.ssl.SslResource;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.ssl.SecureServer.RESPONSE;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.oneOf;
-import static org.junit.Assume.assumeThat;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.condition.OS.LINUX;
+import static org.junit.jupiter.api.condition.OS.MAC;
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
+import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
-@SuppressWarnings( "FieldCanBeLocal" )
-public class SslPlatformTest
+/**
+ * This test depends on the statically linked uber-jar with boring ssl: http://netty.io/wiki/forked-tomcat-native.html.
+ * The uber-jar comes from io.netty:netty-tcnative-boringssl-static maven dependency;
+ */
+@ExtendWith( TestDirectoryExtension.class )
+class SslPlatformTest
 {
     private static final byte[] REQUEST = {1, 2, 3, 4};
 
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
 
     private SecureServer server;
     private SecureClient client;
     private ByteBuf expected;
 
-    @Test
-    public void shouldSupportOpenSSLOnSupportedPlatforms() throws Exception
+    @AfterEach
+    void afterEach() throws Exception
     {
-        // depends on the statically linked uber-jar with boring ssl: http://netty.io/wiki/forked-tomcat-native.html
-        assumeTrue( SystemUtils.IS_OS_WINDOWS || SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC_OSX );
-        assumeThat( System.getProperty( "os.arch" ), equalTo( "x86_64" ) );
-        assumeThat( SystemUtils.JAVA_VENDOR, is( oneOf( "Oracle Corporation", "Sun Microsystems Inc." ) ) );
+        executeAll(
+                this::stopClient,
+                this::stopServer,
+                () -> ReferenceCountUtil.release( expected ) );
+    }
 
+    @Test
+    @EnabledOnOs( {LINUX, MAC, WINDOWS} )
+    void shouldSupportOpenSSLOnSupportedPlatforms() throws Exception
+    {
         // given
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
+        var sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDirectory.directory( "server" ) );
+        var sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directory( "client" ) );
 
         server = new SecureServer( SslContextFactory.makeSslPolicy( sslServerResource, SslProvider.OPENSSL ) );
 
@@ -58,12 +66,28 @@ public class SslPlatformTest
         client.connect( server.port() );
 
         // when
-        ByteBuf request = ByteBufAllocator.DEFAULT.buffer().writeBytes( REQUEST );
+        var request = Unpooled.wrappedBuffer( REQUEST );
         client.channel().writeAndFlush( request );
 
         // then
-        expected = ByteBufAllocator.DEFAULT.buffer().writeBytes( SecureServer.RESPONSE );
+        expected = Unpooled.wrappedBuffer( RESPONSE );
         client.sslHandshakeFuture().get( 1, MINUTES );
         client.assertResponse( expected );
+    }
+
+    private void stopClient()
+    {
+        if ( client != null )
+        {
+            client.disconnect();
+        }
+    }
+
+    private void stopServer()
+    {
+        if ( server != null )
+        {
+            server.stop();
+        }
     }
 }
