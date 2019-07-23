@@ -36,6 +36,16 @@
             <artifactId>jmh-benchmark-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-results-client</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
 
         <dependency>
           <groupId>org.junit.jupiter</groupId>
@@ -57,13 +67,6 @@
           <artifactId>junit-jupiter-engine</artifactId>
           <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-results-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>java-hamcrest</artifactId>

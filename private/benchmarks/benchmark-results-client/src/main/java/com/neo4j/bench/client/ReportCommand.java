@@ -5,13 +5,14 @@
  */
 package com.neo4j.bench.client;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.queries.SubmitTestRun;
 import com.neo4j.bench.common.model.TestRunError;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.util.JsonUtil;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.net.URI;
@@ -26,32 +27,31 @@ public class ReportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_USER},
             description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username",
-            required = true )
+            title = "Results Store Username" )
+    @Required
     private String resultsStoreUsername;
 
     public static final String CMD_RESULTS_STORE_PASSWORD = "--results_store_pass";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_PASSWORD},
             description = "Password for Neo4j database server that stores benchmarking results",
-            title = "Results Store Password",
-            required = true )
+            title = "Results Store Password" )
+    @Required
     private String resultsStorePassword;
 
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_URI},
             description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store",
-            required = true )
+            title = "Results Store" )
+    @Required
     private URI resultsStoreUri;
 
     public static final String CMD_TEST_RUN_RESULTS = "--test_run_results";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TEST_RUN_RESULTS},
             description = "JSON file containing Test Run results",
-            title = "JSON file containing Test Run results",
-            required = false )
+            title = "JSON file containing Test Run results" )
     private File testRunResultsJson;
 
     public enum ErrorReportingPolicy
@@ -68,8 +68,8 @@ public class ReportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_ERROR_POLICY},
             description = "Error policy",
-            title = "Error policy",
-            required = false )
+            title = "Error policy" )
+    @Required
     private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
 
     @Override

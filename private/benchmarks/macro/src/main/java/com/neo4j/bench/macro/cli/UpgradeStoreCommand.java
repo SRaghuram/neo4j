@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.macro.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
@@ -12,9 +16,6 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -32,39 +33,38 @@ public class UpgradeStoreCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_ORIGINAL_DB},
             description = "Neo4j database that needs to be upgraded. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Original Neo4j DB ",
-            required = true )
+            title = "Original Neo4j DB " )
+    @Required
     private File originalDbDir;
 
     private static final String CMD_UPGRADED_DB = "--upgraded-db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_UPGRADED_DB},
             description = "Neo4j database to copy into working directory. E.g. 'new_accesscontrol/' not 'new_accesscontrol/graph.db/'",
-            title = "Upgraded Neo4j database",
-            required = true )
+            title = "Upgraded Neo4j database" )
+    @Required
     private File upgradedDbDir;
 
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORKLOAD},
             description = "Path to workload configuration file",
-            title = "Workload configuration",
-            required = true )
+            title = "Workload configuration" )
+    @Required
     private String workloadName;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
             name = {CMD_EDITION},
             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-            title = "Neo4j edition",
-            required = true )
+            title = "Neo4j edition" )
+    @Required
     private Edition edition;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_CONFIG},
-            title = "Neo4j configuration file",
-            required = false )
+            title = "Neo4j configuration file" )
     private File neo4jConfigFile;
 
     @Override

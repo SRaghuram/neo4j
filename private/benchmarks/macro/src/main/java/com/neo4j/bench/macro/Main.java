@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.macro;
 
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
+import com.github.rvesse.airline.help.Help;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.options.Edition;
@@ -20,9 +23,6 @@ import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
-import io.airlift.airline.Cli;
-import io.airlift.airline.Cli.CliBuilder;
-import io.airlift.airline.Help;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
