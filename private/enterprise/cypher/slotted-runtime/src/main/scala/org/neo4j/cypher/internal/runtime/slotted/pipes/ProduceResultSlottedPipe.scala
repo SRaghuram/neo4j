@@ -39,7 +39,7 @@ case class ProduceResultSlottedPipe(source: Pipe, columns: Seq[(String, Expressi
     val subscriber = state.subscriber
     var i = 0
     subscriber.onRecord()
-    while (i < columns.length) {
+    while (i < columnExpressionArray.length) {
       val value = columnExpressionArray(i)(original, state)
       ValuePopulation.populate(value)
       subscriber.onField(i, value)
@@ -52,7 +52,7 @@ case class ProduceResultSlottedPipe(source: Pipe, columns: Seq[(String, Expressi
     val subscriber = state.subscriber
     var i = 0
     subscriber.onRecord()
-    while (i < columns.length) {
+    while (i < columnExpressionArray.length) {
       subscriber.onField(i, columnExpressionArray(i)(original, state))
       i += 1
     }
