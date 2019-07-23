@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.{AssertionRunner, InternalException}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
@@ -128,9 +128,14 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
               setCachedPropertyAt(propertyRefSLot.offset, null)
             }
           case None =>
+            // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
+            AssertionRunner.runUnderAssertion {
+              throw new IllegalStateException(s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
+            }
         }
     }
   }
+
   override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
     slots.foreachCachedSlot {
       case (crp, propertyRefSLot) =>
@@ -144,6 +149,10 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
               setCachedPropertyAt(propertyRefSLot.offset, null)
             }
           case None =>
+            // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
+            AssertionRunner.runUnderAssertion {
+              throw new IllegalStateException(s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+            }
         }
     }
   }

@@ -630,8 +630,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     }
 
   private def addGroupingSlots(groupingExpressions: Map[String, Expression],
-                             incoming: SlotConfiguration,
-                             outgoing: SlotConfiguration): Unit = {
+                               incoming: SlotConfiguration,
+                               outgoing: SlotConfiguration): Unit = {
     groupingExpressions foreach {
       case (key, parserAst.Variable(ident)) =>
         val slotInfo = incoming(ident)
@@ -644,9 +644,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case (key, _) =>
         outgoing.newReference(key, nullable = true, CTAny)
     }
-
-    val renames: Map[String, String] = groupingExpressions.collect { case (name, v: Variable)  => (v.name, name) }
-    outgoing.addCachedPropertiesOf(incoming, renames)
   }
 
   private def allocateShortestPathPattern(shortestPathPattern: ShortestPathPattern,

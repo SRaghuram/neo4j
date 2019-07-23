@@ -282,11 +282,28 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(config, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
-          .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+          .withDBHits()) and
+        includeSomewhere.aPlan("NodeIndexSeek")
           .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
         expectPlansToFail = Configs.Compiled))
 
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
+  }
+
+  test("should not pass cached properties through aggregations") {
+    val config = Configs.InterpretedAndSlotted
+    // SET is necessary to force runtime to invalidate cached properties, which would fail if we copy slots during allocation but do not copy values at runtime
+    val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH collect(n.prop1) AS ns MATCH (n:Awesome) SET n.prop1 = 0"
+    val result = executeWith(config, query, executeBefore = createSomeNodes)
+
+    val description = result.executionPlanDescription()
+
+    // cached properties are not passed through aggregation
+    description should
+      not(includeSomewhere.aPlan("EagerAggregation")
+        .containingVariables("cached[n.prop1]"))
+
+    result.toList should be(empty)
   }
 
   test("should pass cached property through distinct with two renamed nodes") {
