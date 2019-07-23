@@ -255,7 +255,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         public boolean allowsTraverseLabel( long label )
         {
             // Note: we do not check blacklistTraverseLabels.contains(label) because this should be a first check
-            // to be followed by the explicit blacklist check in disallowsTraverLabel
+            // to be followed by the explicit blacklist check in disallowsTraverseLabel
             if ( disallowsTraverseAllLabels || blacklistTraverseLabels.notEmpty() )
             {
                 return false;
