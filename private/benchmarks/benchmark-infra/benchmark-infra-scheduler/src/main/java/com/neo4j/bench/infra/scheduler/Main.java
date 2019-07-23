@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.infra.scheduler;
 
+import com.github.rvesse.airline.Cli;
 import com.neo4j.bench.infra.InfraCommand;
-import io.airlift.airline.Cli;
 
 /**
  *

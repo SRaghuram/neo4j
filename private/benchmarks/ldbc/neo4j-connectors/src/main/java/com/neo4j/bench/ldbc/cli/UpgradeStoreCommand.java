@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.util.MapUtils;
@@ -12,9 +16,6 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,34 +41,32 @@ public class UpgradeStoreCommand implements Runnable
 {
     public static final String CMD_ORIGINAL_DB = "--original-db";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_ORIGINAL_DB},
-             description = "Neo4j database that needs to be upgraded. E.g., db_sf001_p006_regular_utc_36ce/graph.db/",
-             title = "Original Neo4j DB ",
-             required = true )
+            name = {CMD_ORIGINAL_DB},
+            description = "Neo4j database that needs to be upgraded. E.g., db_sf001_p006_regular_utc_36ce/graph.db/",
+            title = "Original Neo4j DB " )
+    @Required
     private File originalDbDir;
 
     public static final String CMD_UPGRADED_DB = "--upgraded-db";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_UPGRADED_DB},
-             description = "Neo4j database to copy into working directory. E.g., db_sf001_p006_regular_utc_40ce/graph.db/",
-             title = "Upgraded Neo4j database",
-             required = true )
+            name = {CMD_UPGRADED_DB},
+            description = "Neo4j database to copy into working directory. E.g., db_sf001_p006_regular_utc_40ce/graph.db/",
+            title = "Upgraded Neo4j database" )
+    @Required
     private File upgradedDbDir;
 
     public static final String CMD_RECREATE_INDEXES = "--recreate-indexes";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RECREATE_INDEXES},
              description = "Forces indexes to be recreated",
-             title = "Forces indexes to be recreated",
-             required = false )
+             title = "Forces indexes to be recreated" )
     private boolean recreateIndexes;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
              name = {CMD_CONFIG},
              description = "Neo4j configuration file",
-             title = "Neo4j Config",
-             required = false )
+             title = "Neo4j Config" )
     private File neo4jConfigFile;
 
     @Override

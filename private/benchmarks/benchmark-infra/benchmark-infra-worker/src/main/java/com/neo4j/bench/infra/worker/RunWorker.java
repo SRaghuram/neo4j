@@ -6,13 +6,13 @@ package com.neo4j.bench.infra.worker;
  */
 
 import com.amazonaws.SdkClientException;
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.InfraCommand;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -5,6 +5,12 @@
  */
 package com.neo4j.bench.imports;
 
+import com.github.rvesse.airline.SingleCommand;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
@@ -25,10 +31,6 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Edition;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
-import io.airlift.airline.SingleCommand;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,52 +73,52 @@ public class Main
     @Option( type = OptionType.COMMAND,
              name = {"--results_store_user"},
              description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username",
-             required = true )
+             title = "Results Store Username" )
+    @Required
     private String resultsStoreUsername;
     @Option( type = OptionType.COMMAND,
              name = {"--results_store_pass"},
              description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password",
-             required = true )
+             title = "Results Store Password" )
+    @Required
     private String resultsStorePassword;
     @Option( type = OptionType.COMMAND,
              name = {"--results_store_uri"},
              description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store",
-             required = true )
+             title = "Results Store" )
+    @Required
     private URI resultsStoreUri;
     @Option( type = OptionType.COMMAND,
              name = {"--neo4j_commit"},
              description = "Commit of Neo4j that benchmark is run against",
-             title = "Neo4j Commit",
-             required = true )
+             title = "Neo4j Commit" )
+    @Required
     private String neo4jCommit;
     @Option( type = OptionType.COMMAND,
              name = {"--neo4j_version"},
              description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-             title = "Neo4j Version",
-             required = true )
+             title = "Neo4j Version" )
+    @Required
     private String neo4jVersion;
     @Option( type = OptionType.COMMAND,
              name = {"--neo4j_edition"},
              description = "Edition of Neo4j that benchmark is run against",
-             title = "Neo4j Edition",
-             allowedValues = {NEO4J_COMMUNITY, NEO4J_ENTERPRISE} )
+             title = "Neo4j Edition" )
+    @AllowedEnumValues( Edition.class )
     private Edition neo4jEdition = Edition.ENTERPRISE;
 
     @Option( type = OptionType.COMMAND,
              name = {ARG_NEO4J_BRANCH},
              description = "Neo4j branch name",
-             title = "Neo4j Branch",
-             required = true )
+             title = "Neo4j Branch" )
+    @Required
     private String neo4jBranch;
 
     @Option( type = OptionType.COMMAND,
              name = {ARG_BRANCH_OWNER},
              description = "Owner of repository containing Neo4j branch",
-             title = "Branch Owner",
-             required = true )
+             title = "Branch Owner" )
+    @Required
     private String neo4jBranchOwner;
 
     @Option( type = OptionType.COMMAND,
@@ -128,22 +130,22 @@ public class Main
     @Option( type = OptionType.COMMAND,
              name = {"--tool_commit"},
              description = "Commit of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Commit",
-             required = true )
+             title = "Benchmark Tool Commit" )
+    @Required
     private String toolCommit;
 
     @Option( type = OptionType.COMMAND,
              name = {"--teamcity_parent_build"},
              description = "Build number of the TeamCity parent build that ran the packaging",
-             title = "TeamCity Parent Build Number",
-             required = true )
+             title = "TeamCity Parent Build Number" )
+    @Required
     private Long parentBuild;
 
     @Option( type = OptionType.COMMAND,
              name = {"--teamcity_build"},
              description = "Build number of the TeamCity build that ran the benchmarks",
-             title = "TeamCity Build Number",
-             required = true )
+             title = "TeamCity Build Number" )
+    @Required
     private Long build;
 
     @Option( type = OptionType.COMMAND,

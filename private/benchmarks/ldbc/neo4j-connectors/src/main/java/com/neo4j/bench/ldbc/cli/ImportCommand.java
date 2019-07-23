@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
@@ -12,9 +17,6 @@ import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.utils.Utils;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.util.Arrays;
@@ -30,72 +32,69 @@ public class ImportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
              name = {CMD_IMPORTER},
              description = "Neo4j importer to use: BATCH, PARALLEL",
-             title = "Importer",
-             required = false )
+             title = "Importer" )
     private String neo4jImporterString = Neo4jImporter.defaultImporter().name();
 
     public static final String CMD_CSV_SCHEMA = "--csv-schema";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_CSV_SCHEMA},
-             description = "Format of source CSV files: CSV_REGULAR, CSV_MERGE",
-             title = "CSV Schema",
-             required = true )
+            name = {CMD_CSV_SCHEMA},
+            description = "Format of source CSV files: CSV_REGULAR, CSV_MERGE",
+            title = "CSV Schema" )
+    @Required
     private String csvSchemaString;
 
     public static final String CMD_NEO4J_SCHEMA = "--neo4j-schema";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_NEO4J_SCHEMA},
-             description = "Desired schema of target Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
-             title = "Neo4j Schema",
-             required = true )
+            name = {CMD_NEO4J_SCHEMA},
+            description = "Desired schema of target Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
+            title = "Neo4j Schema" )
+    @Required
     private String neo4jSchemaString;
 
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_DB},
-             description = "Target Neo4j database directory",
-             title = "Database Directory",
-             required = true )
+            name = {CMD_DB},
+            description = "Target Neo4j database directory",
+            title = "Database Directory" )
+    @Required
     private File dbDir;
 
     public static final String CMD_CSV = "--csv";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_CSV},
-             description = "Source CSV dataset directory",
-             title = "CSV Dir",
-             required = true )
+            name = {CMD_CSV},
+            description = "Source CSV dataset directory",
+            title = "CSV Dir" )
+    @Required
     private File csvDir;
 
     public static final String CMD_WITH_UNIQUE = "--with-unique";
     @Option( type = OptionType.COMMAND,
              name = {CMD_WITH_UNIQUE},
              description = "Create unique constraints for properties that should have unique values",
-             title = "Create Unique Constraints",
-             required = false )
+             title = "Create Unique Constraints" )
     private boolean withUnique;
 
     public static final String CMD_WITH_MANDATORY = "--with-mandatory";
     @Option( type = OptionType.COMMAND,
              name = {CMD_WITH_MANDATORY},
              description = "Create mandatory constraints for required properties",
-             title = "Create Mandatory Constraints",
-             required = false )
+             title = "Create Mandatory Constraints" )
     private boolean withMandatory;
 
     public static final String CMD_SOURCE_DATE = "--source-date";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_SOURCE_DATE},
-             description = "Format of date values in source CSV files: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
-             title = "Source Date Format",
-             required = true )
+            name = {CMD_SOURCE_DATE},
+            description = "Format of date values in source CSV files: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+            title = "Source Date Format" )
+    @Required
     private LdbcDateCodec.Format fromCsvFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
 
     public static final String CMD_TARGET_DATE = "--target-date";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_TARGET_DATE},
-             description = "Format to store date in, in Neo4j database: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
-             title = "Target Date Format",
-             required = true )
+            name = {CMD_TARGET_DATE},
+            description = "Format to store date in, in Neo4j database: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+            title = "Target Date Format" )
+    @Required
     private LdbcDateCodec.Format toNeo4JFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
 
     public static final String CMD_TIMESTAMP_RESOLUTION = "--timestamp-resolution";
@@ -103,16 +102,14 @@ public class ImportCommand implements Runnable
              name = {CMD_TIMESTAMP_RESOLUTION},
              description = "Resolution of timestamp to append to 'dense' relationship types: " +
                            "NOT_APPLICABLE, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND",
-             title = "Timestamp Resolution",
-             required = false )
+             title = "Timestamp Resolution" )
     private LdbcDateCodec.Resolution timestampResolution = LdbcDateCodec.Resolution.NOT_APPLICABLE;
 
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
              name = {CMD_CONFIG},
              description = "Import configuration file (only applicable to Batch Inserter importer variants)",
-             title = "Importer Config",
-             required = false )
+             title = "Importer Config" )
     private File importerConfigurationFile;
 
     @Override

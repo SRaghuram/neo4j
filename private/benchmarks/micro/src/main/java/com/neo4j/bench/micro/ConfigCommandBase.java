@@ -5,11 +5,12 @@
  */
 package com.neo4j.bench.micro;
 
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 
@@ -20,22 +21,20 @@ abstract class ConfigCommandBase implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {"--path"},
             description = "Path to export the generated benchmark configuration file to",
-            title = "Configuration Path",
-            required = true )
+            title = "Configuration Path" )
+    @Required
     protected File benchConfigFile;
 
     @Option( type = OptionType.COMMAND,
             name = {"-v", "--verbose"},
             description = "Write benchmark parameters to config file, in addition to enable/disable info",
-            title = "Verbose",
-            required = false )
+            title = "Verbose" )
     protected boolean verbose;
 
     @Option( type = OptionType.COMMAND,
             name = {"-w", "--with-disabled"},
             description = "Write disabled benchmarks, in addition to the enabled",
-            title = "Verbose",
-            required = false )
+            title = "Verbose" )
     protected boolean withDisabled;
 
     protected String baseOptionString()

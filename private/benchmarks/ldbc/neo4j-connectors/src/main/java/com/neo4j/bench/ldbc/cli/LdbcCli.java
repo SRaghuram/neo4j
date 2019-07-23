@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.help.Help;
 import com.google.common.base.Charsets;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.neo4j.bench.common.database.Store;
@@ -16,8 +18,6 @@ import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import io.airlift.airline.Cli;
-import io.airlift.airline.Help;
 
 import java.io.File;
 import java.nio.charset.Charset;
