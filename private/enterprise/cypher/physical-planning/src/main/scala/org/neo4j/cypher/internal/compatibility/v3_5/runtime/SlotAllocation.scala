@@ -306,12 +306,13 @@ object SlotAllocation {
 
       case Distinct(_, groupingExpressions) =>
         val result = argumentSlots.copy()
-        addGroupingSlots(groupingExpressions, source, result)
+        addGroupingSlots(groupingExpressions, source, result, copyCachedProperties = true)
         result
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
         val result = argumentSlots.copy()
-        addGroupingSlots(groupingExpressions, source, result)
+        // cached properties are not copied through aggregation at runtime, so no need to copy slots
+        addGroupingSlots(groupingExpressions, source, result, copyCachedProperties = false)
 
         aggregationExpressions foreach {
           case (key, _) =>
@@ -677,7 +678,8 @@ object SlotAllocation {
 
   private def addGroupingSlots(groupingExpressions: Map[String, Expression],
                                incoming: SlotConfiguration,
-                               outgoing: SlotConfiguration): Unit = {
+                               outgoing: SlotConfiguration,
+                               copyCachedProperties: Boolean): Unit = {
 
     groupingExpressions foreach {
       case (key, parserAst.Variable(ident)) =>
@@ -691,9 +693,10 @@ object SlotAllocation {
       case (key, _) =>
         outgoing.newReference(key, nullable = true, CTAny)
     }
-
-    val renames: Map[String, String] = groupingExpressions.collect { case (name, v: Variable)  => (v.name, name) }
-    outgoing.addCachedPropertiesOf(incoming, renames)
+    if (copyCachedProperties) {
+      val renames: Map[String, String] = groupingExpressions.collect { case (name, v: Variable) => (v.name, name) }
+      outgoing.addCachedPropertiesOf(incoming, renames)
+    }
   }
 
   private def isAnApplyPlan(current: LogicalPlan): Boolean = current match {
