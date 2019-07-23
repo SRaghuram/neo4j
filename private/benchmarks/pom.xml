@@ -19,6 +19,7 @@
     <properties>
         <airline.version>2.7.1</airline.version>
         <junit.version>5.2.0</junit.version>
+        <guava.version>28.0-jre</guava.version>
         <junit.platform.version>1.2.0</junit.platform.version>
         <neo4j-java-driver.version>1.7.3</neo4j-java-driver.version>
         <license-text.header>build/license-header.txt</license-text.header>
@@ -51,6 +52,11 @@
                 <version>${neo4j-java-driver.version}</version>
                 <scope>compile</scope>
             </dependency>
+          <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+          </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-api</artifactId>
