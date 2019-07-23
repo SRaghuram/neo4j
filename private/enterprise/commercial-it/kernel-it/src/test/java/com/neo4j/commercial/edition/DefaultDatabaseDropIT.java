@@ -5,7 +5,7 @@
  */
 package com.neo4j.commercial.edition;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +60,6 @@ class DefaultDatabaseDropIT
 
     private DatabaseManagementService createManagementService()
     {
-        return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
     }
 }
