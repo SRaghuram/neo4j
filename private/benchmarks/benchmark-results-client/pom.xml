@@ -57,16 +57,14 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>${guava.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.airlift</groupId>
+            <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
-            <version>${airline.version}</version>
         </dependency>
 
         <dependency>

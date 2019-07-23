@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.macro.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
@@ -43,9 +47,7 @@ import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -56,8 +58,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
@@ -71,259 +71,242 @@ public class RunWorkloadCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORKLOAD},
             description = "Name of workload to run",
-            title = "Workload",
-            required = true )
+            title = "Workload" )
+    @Required
     private String workloadName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory",
-            required = true )
+            title = "Store directory" )
+    @Required
     private File storeDir;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
             name = {CMD_EDITION},
             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-            title = "Neo4j edition",
-            required = false )
+            title = "Neo4j edition" )
     private Edition neo4jEdition = Edition.ENTERPRISE;
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
             name = {CMD_JVM_PATH},
             description = "Path to JVM -- will also be used when launching fork processes",
-            title = "Path to JVM",
-            required = true )
+            title = "Path to JVM" )
+    @Required
     private File jvmFile;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_CONFIG},
             description = "Neo4j configuration file",
-            title = "Neo4j configuration file",
-            required = false )
+            title = "Neo4j configuration file" )
     private File neo4jConfigFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORK_DIR},
             description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
-            title = "Work directory",
-            required = false )
+            title = "Work directory" )
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
     private static final String CMD_PROFILERS = "--profilers";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILERS},
             description = "Comma separated list of profilers to run with",
-            title = "Profilers",
-            required = false )
+            title = "Profilers" )
     private String profilerNames = "";
 
     private static final String CMD_WARMUP = "--warmup-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WARMUP},
-            title = "Warmup execution count",
-            required = true )
+            title = "Warmup execution count" )
+    @Required
     private int warmupCount;
 
     private static final String CMD_MEASUREMENT = "--measurement-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MEASUREMENT},
-            title = "Measurement execution count",
-            required = true )
+            title = "Measurement execution count" )
+    @Required
     private int measurementCount;
 
     private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MIN_MEASUREMENT_SECONDS},
-            title = "Min measurement execution duration, in seconds",
-            required = false )
+            title = "Min measurement execution duration, in seconds" )
     private int minMeasurementSeconds = 30; // 30 seconds
 
     private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MAX_MEASUREMENT_SECONDS},
-            title = "Max measurement execution duration, in seconds",
-            required = false )
+            title = "Max measurement execution duration, in seconds" )
     private int maxMeasurementSeconds = 10 * 60; // 10 minutes
 
     private static final String CMD_FORKS = "--forks";
     @Option( type = OptionType.COMMAND,
             name = {CMD_FORKS},
-            title = "Fork count",
-            required = false )
+            title = "Fork count" )
     private int measurementForkCount = 1;
 
     private static final String CMD_RESULTS_JSON = "--results";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_JSON},
             description = "Path to where the results file will be written",
-            title = "Results path",
-            required = false )
+            title = "Results path" )
     private File resultsPath = new File( workDir, "results.json" );
 
     private static final String CMD_TIME_UNIT = "--time-unit";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TIME_UNIT},
             description = "Time unit to report results in",
-            title = "Time unit",
-            required = false )
+            title = "Time unit" )
     private TimeUnit unit = TimeUnit.MICROSECONDS;
 
     private static final String CMD_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RUNTIME},
             description = "Cypher runtime",
-            title = "Cypher runtime",
-            required = false )
+            title = "Cypher runtime" )
     private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PLANNER},
             description = "Cypher planner",
-            title = "Cypher planner",
-            required = false )
+            title = "Cypher planner" )
     private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_EXECUTION_MODE = "--execution-mode";
     @Option( type = OptionType.COMMAND,
             name = {CMD_EXECUTION_MODE},
             description = "How to execute: run VS plan",
-            title = "Run vs Plan",
-            required = false )
+            title = "Run vs Plan" )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
     private static final String CMD_ERROR_POLICY = "--error-policy";
     @Option( type = OptionType.COMMAND,
             name = {CMD_ERROR_POLICY},
             description = "Specify if execution should terminate on error, or skip and continue",
-            title = "Error handling policy",
-            required = false )
+            title = "Error handling policy" )
     private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
 
     private static final String CMD_NEO4J_COMMIT = "--neo4j-commit";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_COMMIT},
             description = "Commit of Neo4j that benchmark is run against",
-            title = "Neo4j Commit",
-            required = true )
+            title = "Neo4j Commit" )
+    @Required
     private String neo4jCommit;
 
     private static final String CMD_NEO4J_VERSION = "--neo4j-version";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_VERSION},
             description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-            title = "Neo4j Version",
-            required = true )
+            title = "Neo4j Version" )
+    @Required
     private String neo4jVersion;
 
     private static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_BRANCH},
             description = "Neo4j branch name",
-            title = "Neo4j Branch",
-            required = true )
+            title = "Neo4j Branch" )
+    @Required
     private String neo4jBranch;
 
     private static final String CMD_NEO4J_OWNER = "--neo4j-branch-owner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_OWNER},
             description = "Owner of repository containing Neo4j branch",
-            title = "Branch Owner",
-            required = true )
+            title = "Branch Owner" )
+    @Required
     private String neo4jBranchOwner;
 
     private static final String CMD_TOOL_COMMIT = "--tool-commit";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_COMMIT},
             description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit",
-            required = true )
+            title = "Benchmark Tool Commit" )
+    @Required
     private String toolCommit;
 
     private static final String CMD_TOOL_OWNER = "--tool-branch-owner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_OWNER},
             description = "Owner of repository containing the benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Owner",
-            required = true )
+            title = "Benchmark Tool Owner" )
+    @Required
     private String toolOwner = "neo-technology";
 
     private static final String CMD_TOOL_BRANCH = "--tool-branch";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_BRANCH},
             description = "Branch of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Branch",
-            required = true )
+            title = "Benchmark Tool Branch" )
+    @Required
     private String toolBranch;
 
     private static final String CMD_TEAMCITY_BUILD = "--teamcity-build";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TEAMCITY_BUILD},
             description = "Build number of the TeamCity build that ran the benchmarks",
-            title = "TeamCity Build Number",
-            required = true )
+            title = "TeamCity Build Number" )
+    @Required
     private Long teamcityBuild;
 
     private static final String CMD_PARENT_TEAMCITY_BUILD = "--parent-teamcity-build";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PARENT_TEAMCITY_BUILD},
             description = "Build number of the TeamCity parent build, e.g., Packaging",
-            title = "Parent TeamCity Build Number",
-            required = true )
+            title = "Parent TeamCity Build Number" )
+    @Required
     private Long parentBuild;
 
     private static final String CMD_JVM_ARGS = "--jvm-args";
     @Option( type = OptionType.COMMAND,
             name = {CMD_JVM_ARGS},
             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
-            title = "JVM Args",
-            required = false )
+            title = "JVM Args" )
     private String jvmArgs = "";
 
     private static final String CMD_RECREATE_SCHEMA = "--recreate-schema";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RECREATE_SCHEMA},
             description = "Drop indexes and constraints, delete index directories (and transaction logs), then recreate indexes and constraints",
-            title = "Recreate Schema",
-            required = false )
+            title = "Recreate Schema" )
     private boolean recreateSchema;
 
     private static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILER_RECORDINGS_DIR},
             description = "Where to collect profiler recordings for executed benchmarks",
-            title = "Profile recordings output directory",
-            required = false )
+            title = "Profile recordings output directory" )
     private File profilerRecordingsOutput = workDir.toPath().resolve( "profiler_recordings" ).toFile();
 
     private static final String CMD_SKIP_FLAMEGRAPHS = "--skip-flamegraphs";
     @Option( type = OptionType.COMMAND,
             name = {CMD_SKIP_FLAMEGRAPHS},
             description = "Skip FlameGraph generation",
-            title = "Skip FlameGraph generation",
-            required = false )
+            title = "Skip FlameGraph generation" )
     private boolean skipFlameGraphs;
 
     private static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TRIGGERED_BY},
             description = "Specifies user that triggered this build",
-            title = "Specifies user that triggered this build",
-            required = true )
+            title = "Specifies user that triggered this build" )
+    @Required
     private String triggeredBy;
 
     private static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_DEPLOYMENT},
             description = "Valid values: 'embedded' or 'server:<path_to_neo4j_server>'",
-            title = "Deployment mode",
-            required = true )
+            title = "Deployment mode" )
+    @Required
     private String deploymentMode;
 
     @Override

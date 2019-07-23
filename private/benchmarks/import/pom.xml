@@ -15,7 +15,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <uberjar.name>import-benchmarks</uberjar.name>
-        <airline.version>0.7</airline.version>
+        <airline.version>2.7.1</airline.version>
         <scala.version>2.11.12</scala.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -50,9 +50,8 @@
 			<type>test-jar</type>
 		</dependency>
 		<dependency>
-			<groupId>io.airlift</groupId>
+			<groupId>com.github.rvesse</groupId>
 			<artifactId>airline</artifactId>
-			<version>${airline.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.neo4j.bench</groupId>

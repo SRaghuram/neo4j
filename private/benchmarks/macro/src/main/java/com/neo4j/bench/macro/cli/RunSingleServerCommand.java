@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.macro.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.options.Planner;
@@ -18,9 +22,6 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.net.URI;
@@ -40,122 +41,115 @@ public class RunSingleServerCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORKLOAD},
             description = "Path to workload configuration file",
-            title = "Workload configuration",
-            required = true )
+            title = "Workload configuration" )
+    @Required
     private String workloadName;
 
     private static final String CMD_QUERY = "--query";
     @Option( type = OptionType.COMMAND,
             name = {CMD_QUERY},
             description = "Name of query, in the Workload configuration",
-            title = "Query name",
-            required = true )
+            title = "Query name" )
+    @Required
     private String queryName;
 
     private static final String CMD_BOLT_URI = "--bolt-uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_BOLT_URI},
             description = "Server Bolt URI, E.g., 'bolt:// 127.0.0.1:7687'",
-            title = "Bolt URI",
-            required = true )
+            title = "Bolt URI" )
+    @Required
     private URI boltUri;
 
     private static final String CMD_NEO4J_PID = "--neo4j-pid";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_PID},
             description = "PID of Neo4j Server process",
-            title = "Neo4j PID",
-            required = true )
+            title = "Neo4j PID" )
+    @Required
     private long neo4jPid;
 
     private static final String CMD_OUTPUT = "--output";
     @Option( type = OptionType.COMMAND,
             name = {CMD_OUTPUT},
             description = "Output directory: where result will be written",
-            title = "Output directory",
-            required = true )
+            title = "Output directory" )
+    @Required
     private File outputDir;
 
     private static final String CMD_CLIENT_PROFILERS = "--client-profilers";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CLIENT_PROFILERS},
             description = "Comma separated list of profilers to profile client process with",
-            title = "Client profilers",
-            required = false )
+            title = "Client profilers" )
     private String clientProfilerNames = "";
 
     private static final String CMD_SERVER_PROFILERS = "--server-profilers";
     @Option( type = OptionType.COMMAND,
             name = {CMD_SERVER_PROFILERS},
             description = "Comma separated list of profilers to profile server process with",
-            title = "Server profilers",
-            required = false )
+            title = "Server profilers" )
     private String serverProfilerNames = "";
 
     private static final String CMD_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PLANNER},
-            title = "Cypher planner",
-            required = false )
+            title = "Cypher planner" )
     private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RUNTIME},
-            title = "Cypher runtime",
-            required = false )
+            title = "Cypher runtime" )
     private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_MODE = "--mode";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MODE},
             description = "Execution mode: EXECUTE (latency), PLAN (latency)",
-            title = "Execution mode",
-            required = false )
+            title = "Execution mode" )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
     private static final String CMD_WARMUP_COUNT = "--warmup-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WARMUP_COUNT},
-            title = "Warmup execution count",
-            required = true )
+            title = "Warmup execution count" )
+    @Required
     private int warmupCount;
 
     private static final String CMD_MEASUREMENT_COUNT = "--measurement-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MEASUREMENT_COUNT},
-            title = "Measurement execution count",
-            required = true )
+            title = "Measurement execution count" )
+    @Required
     private int measurementCount;
 
     private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MIN_MEASUREMENT_SECONDS},
-            title = "Min measurement execution duration, in seconds",
-            required = false )
+            title = "Min measurement execution duration, in seconds" )
     private int minMeasurementSeconds = 30; // 30 seconds
 
     private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
     @Option( type = OptionType.COMMAND,
             name = {CMD_MAX_MEASUREMENT_SECONDS},
-            title = "Max measurement execution duration, in seconds",
-            required = false )
+            title = "Max measurement execution duration, in seconds" )
     private int maxMeasurementSeconds = 10 * 60; // 10 minutes
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
             name = {CMD_JVM_PATH},
             description = "Path to JVM with which this process was launched",
-            title = "Path to JVM",
-            required = true )
+            title = "Path to JVM" )
+    @Required
     private File jvmFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORK_DIR},
             description = "Work directory",
-            title = "Work directory",
-            required = true )
+            title = "Work directory" )
+    @Required
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
     @Override

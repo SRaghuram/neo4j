@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.micro;
 
+import com.github.rvesse.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
+import com.github.rvesse.airline.help.Help;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -14,9 +17,6 @@ import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
-import io.airlift.airline.Cli;
-import io.airlift.airline.Cli.CliBuilder;
-import io.airlift.airline.Help;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.nio.file.Files;

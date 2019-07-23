@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.ldbc.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ldbc.driver.Operation;
@@ -59,9 +63,6 @@ import com.neo4j.bench.ldbc.utils.Neo4jArchive;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import com.neo4j.bench.ldbc.utils.StoreFormat;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.io.IOException;
@@ -109,8 +110,8 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_JSON_OUTPUT},
             description = "Path specifying where to export JSON-formatted results",
-            title = "JSON output",
-            required = true )
+            title = "JSON output" )
+    @Required
     private File jsonOutput;
 
     // ===================================================
@@ -121,48 +122,47 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_COMMIT},
             description = "Commit of Neo4j that benchmark is run against",
-            title = "Neo4j Commit",
-            required = true )
+            title = "Neo4j Commit" )
+    @Required
     private String neo4jCommit;
 
     private static final String CMD_NEO4J_VERSION = "--neo4j-version";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_VERSION},
             description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-            title = "Neo4j Version",
-            required = true )
+            title = "Neo4j Version" )
+    @Required
     private String neo4jVersion;
 
     private static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_BRANCH},
             description = "Neo4j branch name",
-            title = "Neo4j Branch",
-            required = true )
+            title = "Neo4j Branch" )
+    @Required
     private String neo4jBranch;
 
     private static final String CMD_BRANCH_OWNER = "--neo4j-branch-owner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_BRANCH_OWNER},
             description = "Owner of repository containing Neo4j branch",
-            title = "Neo4j Branch Owner",
-            required = false )
+            title = "Neo4j Branch Owner" )
     private String neo4jBranchOwner = "neo4j";
 
     private static final String CMD_TEAMCITY_BUILD = "--teamcity_build";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TEAMCITY_BUILD},
             description = "Build number of the TeamCity build that ran the benchmarks",
-            title = "TeamCity Build Number",
-            required = true )
+            title = "TeamCity Build Number" )
+    @Required
     private Long build;
 
     private static final String CMD_TEAMCITY_PARENT_BUILD = "--teamcity_parent_build";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TEAMCITY_PARENT_BUILD},
             description = "Build number of the TeamCity parent build, e.g., Packaging",
-            title = "TeamCity Parent Build Number",
-            required = true )
+            title = "TeamCity Parent Build Number" )
+    @Required
     private Long parentBuild;
 
     // ===================================================
@@ -173,24 +173,24 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_COMMIT},
             description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit",
-            required = true )
+            title = "Benchmark Tool Commit" )
+    @Required
     private String toolCommit;
 
     private static final String CMD_TOOL_BRANCH = "--tool-branch";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_BRANCH},
             description = "Tool branch name",
-            title = "Tool Branch",
-            required = true )
+            title = "Tool Branch" )
+    @Required
     private String toolBranch;
 
     private static final String CMD_TOOL_BRANCH_OWNER = "--tool-branch-owner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TOOL_BRANCH_OWNER},
             description = "Owner of repository containing Tool branch",
-            title = "Tool Branch Owner",
-            required = true )
+            title = "Tool Branch Owner" )
+    @Required
     private String toolBranchOwner = "neo4j";
 
     // ===================================================
@@ -201,64 +201,59 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_LDBC_CONFIG},
             description = "LDBC driver configuration file",
-            title = "LDBC Config",
-            required = true )
+            title = "LDBC Config" )
+    @Required
     private File ldbcConfigFile;
 
     private static final String CMD_WRITES = "--writes";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WRITES},
             description = "Write query parameters directory (only required for write workload)",
-            title = "Write Parameters",
-            required = false )
+            title = "Write Parameters" )
     private File writeParams;
 
     private static final String CMD_READS = "--reads";
     @Option( type = OptionType.COMMAND,
             name = {CMD_READS},
             description = "Read query parameters directory",
-            title = "Read Parameters",
-            required = false )
+            title = "Read Parameters" )
     private File readParams;
 
     private static final String CMD_RESULTS_DIR = "--results";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_DIR},
             description = "Benchmark results directory (will be created if does not exist)",
-            title = "Results directory",
-            required = false )
+            title = "Results directory" )
     private File resultsDir;
 
     private static final String CMD_READ_THREADS = "--read-threads";
     @Option( type = OptionType.COMMAND,
             name = {CMD_READ_THREADS},
             description = "Number of threads for executing read queries (write thread count is function of dataset)",
-            title = "Read thread count",
-            required = true )
+            title = "Read thread count" )
+    @Required
     private int readThreads = 1;
 
     private static final String CMD_WARMUP_COUNT = "--warmup-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WARMUP_COUNT},
             description = "Number of operations to run during warmup phase (can be set in LDBC config)",
-            title = "Warmup operation count",
-            required = false )
+            title = "Warmup operation count" )
     private Long warmupCount;
 
     private static final String CMD_RUN_COUNT = "--run-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RUN_COUNT},
             description = "Number of operations to run during measurement phase (can be set in LDBC config)",
-            title = "Run operation count",
-            required = false )
+            title = "Run operation count" )
     private Long runCount;
 
     static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TRIGGERED_BY},
             description = "Specifies user that triggered this build",
-            title = "Specifies user that triggered this build",
-            required = true )
+            title = "Specifies user that triggered this build" )
+    @Required
     private String triggeredBy;
 
     // ===================================================
@@ -269,40 +264,38 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_CONFIG},
             description = "Default Neo4j Configuration",
-            title = "Default Neo4j Configuration",
-            required = true )
+            title = "Default Neo4j Configuration" )
+    @Required
     private File neo4jConfigFile;
 
     private static final String CMD_NEO4J_BENCHMARK_CONFIG = "--neo4j-benchmark-config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_BENCHMARK_CONFIG},
             description = "Benchmark Neo4j Configuration",
-            title = "Benchmark Neo4j Configuration",
-            required = true )
+            title = "Benchmark Neo4j Configuration" )
+    @Required
     private File neo4jBenchmarkConfigFile;
 
     static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
             name = {CMD_JVM_PATH},
             description = "Path to JVM -- will also be used when launching fork processes",
-            title = "Path to JVM",
-            required = true )
+            title = "Path to JVM" )
+    @Required
     private File jvmFile;
 
     private static final String CMD_JVM_ARGS = "--jvm-args";
     @Option( type = OptionType.COMMAND,
             name = {CMD_JVM_ARGS},
             description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
-            title = "JVM Args",
-            required = false )
+            title = "JVM Args" )
     private String jvmArgs = "";
 
     private static final String CMD_NEO4J_PACKAGE_FOR_JVM_ARGS = "--neo4j-package-for-jvm-args";
     @Option( type = OptionType.COMMAND,
             name = {CMD_NEO4J_PACKAGE_FOR_JVM_ARGS},
             description = "Extract default product JVM args from Neo4j tar.gz package",
-            title = "Neo4j package containing JVM args",
-            required = false )
+            title = "Neo4j package containing JVM args" )
     private File neo4jPackageForJvmArgs;
 
     private static final String CMD_DB = "--db";
@@ -310,24 +303,22 @@ public class RunExportCommand implements Runnable
             name = {CMD_DB},
             description = "Neo4j database (graph.db) to copy into working directory," +
                           "E.g. 'db_sf001_p064_regular_utc_40ce/' not 'store/db_sf001_p064_regular_utc_40ce/'",
-            title = "Neo4j database",
-            required = true )
+            title = "Neo4j database" )
+    @Required
     private File sourceDbDir;
 
     private static final String CMD_CYPHER_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_PLANNER},
             description = "Cypher Planner: DEFAULT, RULE, COST",
-            title = "Cypher Planner",
-            required = false )
+            title = "Cypher Planner" )
     private PlannerType planner = PlannerType.DEFAULT;
 
     private static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
             description = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
-            title = "Cypher Runtime",
-            required = false )
+            title = "Cypher Runtime" )
     private RuntimeType runtime = RuntimeType.DEFAULT;
 
     private static final String CMD_NEO4J_API = "--neo4j-api";
@@ -337,8 +328,7 @@ public class RunExportCommand implements Runnable
                           "\tEMBEDDED_CORE,\n" +
                           "\tEMBEDDED_CYPHER,\n" +
                           "\tREMOTE_CYPHER",
-            title = "Neo4j API",
-            required = false )
+            title = "Neo4j API" )
     private Neo4jApi neo4jApi = Neo4jApi.EMBEDDED_CORE;
 
     // ===================================================
@@ -349,80 +339,74 @@ public class RunExportCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_LDBC_JAR},
             description = "Neo4j LDBC executable .jar file",
-            title = "Executable .jar",
-            required = true )
+            title = "Executable .jar" )
+    @Required
     private File neo4jLdbcJar;
 
     private static final String CMD_REPETITION_COUNT = "--repetition-count";
     @Option( type = OptionType.COMMAND,
             name = {CMD_REPETITION_COUNT},
             description = "Number of complete benchmark executions to perform, to average results over",
-            title = "Repetition count",
-            required = true )
+            title = "Repetition count" )
+    @Required
     private int repetitionCount = 1;
 
     private static final String CMD_PREFIX = "--prefix";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PREFIX},
             description = "Command line prefix",
-            title = "Command line prefix",
-            required = false )
+            title = "Command line prefix" )
     private String cliPrefix = "";
 
     private static final String CMD_REUSE_DB = "--reuse-db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_REUSE_DB},
             description = "Reuse same database for every repetition, otherwise copy new database for each repetition",
-            title = "Reuse database",
-            required = false )
+            title = "Reuse database" )
     private ReusePolicy reuseDb = ReusePolicy.REUSE;
 
     private static final String CMD_WORKING_DIR = "--working-dir";
     @Option( type = OptionType.COMMAND,
             name = {CMD_WORKING_DIR},
             description = "Working directory into which database will be copied",
-            title = "Working directory",
-            required = true )
+            title = "Working directory" )
+    @Required
     private File workingDir;
 
     private static final String CMD_TRACE = "--trace";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TRACE},
             description = "Run with various monitoring tools: vmstat, iostat, mpstat, etc.",
-            title = "Run with various monitoring tools",
-            required = false )
+            title = "Run with various monitoring tools" )
     private boolean doTrace;
 
     private static final String CMD_PROFILE_JFR = "--profile-jfr";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILE_JFR},
             description = "Run with JFR profiler",
-            title = "Run with JFR profiler",
-            required = false )
+            title = "Run with JFR profiler" )
     private boolean doJfrProfile;
 
     private static final String CMD_PROFILE_ASYNC = "--profile-async";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILE_ASYNC},
             description = "Run with Async profiler",
-            title = "Run with Async profiler",
-            required = false )
+            title = "Run with Async profiler" )
     private boolean doAsyncProfile;
 
     private static final String CMD_PROFILE_GC = "--profile-gc";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILE_GC},
             description = "Run with GC logging",
-            title = "Run with GC logging",
-            required = false )
+            title = "Run with GC logging" )
     private boolean doGcProfile;
 
     private static final String CMD_PROFILES_DIR = "--profiles-dir";
     @Option( type = OptionType.COMMAND,
             name = {CMD_PROFILES_DIR},
             description = "Top level output directory for profiled forks",
-            title = "Profiling output directory",
-            required = true )
+            title = "Profiling output directory" )
+    @Required
     private File profilesDir;
 
     private static final String LDBC_FORK_NAME = "ldbc-fork";

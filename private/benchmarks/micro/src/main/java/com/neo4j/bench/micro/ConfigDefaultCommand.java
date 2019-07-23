@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
-import io.airlift.airline.Command;
 
 import java.util.Set;
 
