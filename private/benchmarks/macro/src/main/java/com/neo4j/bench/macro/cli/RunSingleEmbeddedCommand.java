@@ -21,6 +21,7 @@ import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -45,114 +46,114 @@ public class RunSingleEmbeddedCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKLOAD},
-            description = "Path to workload configuration file",
-            title = "Workload configuration" )
+             name = {CMD_WORKLOAD},
+             description = "Path to workload configuration file",
+             title = "Workload configuration" )
     @Required
     private String workloadName;
 
     private static final String CMD_QUERY = "--query";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_QUERY},
-            description = "Name of query, in the Workload configuration",
-            title = "Query name" )
+             name = {CMD_QUERY},
+             description = "Name of query, in the Workload configuration",
+             title = "Query name" )
     @Required
     private String queryName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory" )
+             name = {CMD_DB},
+             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+             title = "Store directory" )
     @Required
     private File storeDir;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_EDITION},
-            description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-            title = "Neo4j edition" )
+             name = {CMD_EDITION},
+             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
+             title = "Neo4j edition" )
     private Edition edition = Edition.ENTERPRISE;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_CONFIG},
-            title = "Neo4j configuration file" )
+             name = {CMD_NEO4J_CONFIG},
+             title = "Neo4j configuration file" )
     private File neo4jConfigFile;
 
     private static final String CMD_OUTPUT = "--output";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_OUTPUT},
-            description = "Output directory: where result will be written",
-            title = "Output directory" )
+             name = {CMD_OUTPUT},
+             description = "Output directory: where result will be written",
+             title = "Output directory" )
     @Required
     private File outputDir;
 
     private static final String CMD_PROFILERS = "--profilers";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILERS},
-            description = "Comma separated list of profilers to run with",
-            title = "Profilers" )
+             name = {CMD_PROFILERS},
+             description = "Comma separated list of profilers to run with",
+             title = "Profilers" )
     private String profilerNames = "";
 
     private static final String CMD_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PLANNER},
-            title = "Cypher planner" )
+             name = {CMD_PLANNER},
+             title = "Cypher planner" )
     private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RUNTIME},
-            title = "Cypher runtime" )
+             name = {CMD_RUNTIME},
+             title = "Cypher runtime" )
     private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_MODE = "--mode";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MODE},
-            description = "Execution mode: EXECUTE (latency), PLAN (latency)",
-            title = "Execution mode" )
+             name = {CMD_MODE},
+             description = "Execution mode: EXECUTE (latency), PLAN (latency)",
+             title = "Execution mode" )
     private ExecutionMode executionMode = ExecutionMode.EXECUTE;
 
     private static final String CMD_WARMUP_COUNT = "--warmup-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WARMUP_COUNT},
-            title = "Warmup execution count" )
+             name = {CMD_WARMUP_COUNT},
+             title = "Warmup execution count" )
     @Required
     private int warmupCount;
 
     private static final String CMD_MEASUREMENT_COUNT = "--measurement-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MEASUREMENT_COUNT},
-            title = "Measurement execution count" )
+             name = {CMD_MEASUREMENT_COUNT},
+             title = "Measurement execution count" )
     @Required
     private int measurementCount;
 
     private static final String CMD_MIN_MEASUREMENT_SECONDS = "--min-measurement-seconds";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MIN_MEASUREMENT_SECONDS},
-            title = "Min measurement execution duration, in seconds" )
+             name = {CMD_MIN_MEASUREMENT_SECONDS},
+             title = "Min measurement execution duration, in seconds" )
     private int minMeasurementSeconds = 30; // 30 seconds
 
     private static final String CMD_MAX_MEASUREMENT_SECONDS = "--max-measurement-seconds";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_MAX_MEASUREMENT_SECONDS},
-            title = "Max measurement execution duration, in seconds" )
+             name = {CMD_MAX_MEASUREMENT_SECONDS},
+             title = "Max measurement execution duration, in seconds" )
     private int maxMeasurementSeconds = 10 * 60; // 10 minutes
 
     private static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_PATH},
-            description = "Path to JVM with which this process was launched",
-            title = "Path to JVM" )
+             name = {CMD_JVM_PATH},
+             description = "Path to JVM with which this process was launched",
+             title = "Path to JVM" )
     @Required
     private File jvmFile;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORK_DIR},
-            description = "Work directory",
-            title = "Work directory" )
+             name = {CMD_WORK_DIR},
+             description = "Work directory",
+             title = "Work directory" )
     @Required
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
@@ -186,7 +187,7 @@ public class RunSingleEmbeddedCommand implements Runnable
                                           minMeasurementSeconds,
                                           maxMeasurementSeconds,
                                           measurementCount,
-                                          DeploymentMode.EMBEDDED,
+                                          Deployment.embedded(),
                                           workDir.toPath() );
         }
     }

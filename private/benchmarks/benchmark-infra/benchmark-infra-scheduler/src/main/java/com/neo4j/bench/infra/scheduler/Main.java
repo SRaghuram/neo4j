@@ -6,22 +6,15 @@
 package com.neo4j.bench.infra.scheduler;
 
 import com.github.rvesse.airline.Cli;
-import com.neo4j.bench.infra.InfraCommand;
 
-/**
- *
- */
 public class Main
 {
     public static void main( String[] args )
     {
-
-        Cli<InfraCommand> cli = Cli.<InfraCommand>builder( "run-bench" )
-                .withCommand( ScheduleMacro.class )
+        Cli<Runnable> cli = Cli.<Runnable>builder( "run-bench" )
+                .withCommand( ScheduleMacroCommand.class )
                 .build();
-        InfraCommand command = cli.parse( args );
+        Runnable command = cli.parse( args );
         command.run();
-
     }
-
 }

@@ -8,97 +8,165 @@ package com.neo4j.bench.infra.aws;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import com.neo4j.bench.infra.BenchmarkArgs;
+import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.infra.JobId;
-import org.junit.jupiter.api.Test;
+import com.neo4j.bench.infra.commands.InfraParams;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import static java.util.Collections.emptyMap;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import static java.util.Arrays.asList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
-
-class AWSBatchJobSchedulerTest
+public class AWSBatchJobSchedulerTest
 {
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
-    void scheduleJob()
+    public void scheduleJob() throws IOException
     {
         // given
         AWSBatch awsBatch = mock( AWSBatch.class );
         when( awsBatch.submitJob( Mockito.any() ) ).thenReturn( new SubmitJobResult().withJobId( "1" ) );
         AWSBatchJobScheduler jobScheduler = new AWSBatchJobScheduler( awsBatch, "job-queue", "job-definition" );
-        List<String> parameters = Arrays.asList(
-                "warmup_count",
-                "measurement_count",
-                "db_edition",
-                "jvm",
-                "profilers",
-                "forks",
-                "results_path",
-                "time_unit",
-                "results_store_uri",
-                "results_store_user",
-                "results_store_password",
-                "neo4j_commit",
-                "neo4j_version",
-                "neo4j_branch",
-                "neo4j_branch_owner",
-                "tool_commit",
-                "tool_branch_owner",
-                "tool_branch",
-                "teamcity_build",
-                "parent_teamcity_build",
-                "execution_mode",
-                "jvm_args",
-                "recreate_schema",
-                "planner",
-                "runtime",
-                "triggered_by",
-                "error_policy",
-                "deployment"
-                );
+
+        Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
+
+        RunWorkloadParams runWorkloadParams = new RunWorkloadParams(
+                "musicbrainz",
+                Edition.ENTERPRISE,
+                jvmPath,
+                Lists.newArrayList( ProfilerType.GC, ProfilerType.ASYNC ),
+                1,//warmup count
+                1, // measurement count
+                Duration.ofSeconds( 10 ), // min duration
+                Duration.ofSeconds( 10 ), // max duration
+                1, // measurement forks
+                TimeUnit.MICROSECONDS,
+                Runtime.DEFAULT,
+                Planner.DEFAULT,
+                ExecutionMode.EXECUTE,
+                ErrorReporter.ErrorPolicy.FAIL,
+                Lists.newArrayList( "-Xms4g", "-Xmx4g" ),
+                false,// recreate schema
+                false, // skip flame graphs
+                Deployment.embedded(),
+                "1234567", // neo4j commit
+                "3.2.1",// neo4j version
+                "3.2", // neo4j branch
+                "neo4j", // neo4j branch owner
+                "1234567", // tool commit
+                "neo4j", // tool branch owner
+                "3.2", // tool branch
+                1L, // build
+                2L, // parent build
+                "teamcity" // triggered by
+        );
+
+        Path workspaceDir = temporaryFolder.newFolder().toPath();
+        String awsSecret = null;
+        String awsKey = null;
+        String awsRegion = "eu-north-1";
+        String storeName = "musicbrainz";
+        String resultsStoreUsername = "user";
+        String resultsStorePassword = "password";
+        URI resultsStoreUri = URI.create( "https://store.place" );
+
+        InfraParams infraParams = new InfraParams(
+                workspaceDir,
+                awsSecret,
+                awsKey,
+                awsRegion,
+                storeName,
+                resultsStoreUsername,
+                resultsStorePassword,
+                resultsStoreUri );
+
+        Map<String,String> expectedParams = new HashMap<>();
+        expectedParams.putAll( runWorkloadParams.asMap() );
+        expectedParams.putAll( infraParams.asMap() );
+
+        URI workerArtifactUri = URI.create( "s3://benchmarking.neohq.net/worker.jar" );
+        expectedParams.put( InfraParams.CMD_WORKER_ARTIFACT_URI, workerArtifactUri.toString() );
 
         // when
-        List<JobId> jobIds = jobScheduler.schedule(
-                "musicbrainz",
-                "musicbrainz",
-                new BenchmarkArgs( parameters, URI.create( "s3://benchmarking.neohq.net/worker.jar" ) ) );
+        JobId jobId = jobScheduler.schedule(
+                workerArtifactUri,
+                infraParams,
+                runWorkloadParams );
 
         // then
-        assertEquals( asList( new JobId( "1" ) ), jobIds, "invalid job id in submit job request response" );
+        assertEquals( new JobId( "1" ), jobId, "invalid job id in submit job request response" );
 
-        ArgumentCaptor<SubmitJobRequest> captor = ArgumentCaptor.forClass( SubmitJobRequest.class );
-        verify( awsBatch ).submitJob( captor.capture() );
-        SubmitJobRequest submittedJobRequest = captor.getValue();
-        Map<String,String> submittedJobParameters = submittedJobRequest.getParameters();
+        ArgumentCaptor<SubmitJobRequest> jobRequestCaptor = ArgumentCaptor.forClass( SubmitJobRequest.class );
+        verify( awsBatch ).submitJob( jobRequestCaptor.capture() );
+        SubmitJobRequest jobRequest = jobRequestCaptor.getValue();
+        Map<String,String> jobRequestParameters = jobRequest.getParameters();
 
-        assertEquals( "job-queue", submittedJobRequest.getJobQueue());
-        assertEquals( "job-definition", submittedJobRequest.getJobDefinition());
-        assertEquals( "macro-musicbrainz", submittedJobRequest.getJobName());
+        assertEquals( "job-queue", jobRequest.getJobQueue() );
+        assertEquals( "job-definition", jobRequest.getJobDefinition() );
+        assertEquals( "macro-musicbrainz", jobRequest.getJobName() );
 
         MapDifference<String,String> entriesDiffering = Maps.difference(
-                        submittedJobParameters,
-                        parameters.stream().collect( toMap( identity(), identity()) )
-                        );
+                jobRequestParameters,     // left
+                expectedParams            // right
+        );
 
-        assertTrue( entriesDiffering.entriesDiffering().isEmpty(), "not all job parameters were passed to submit job request" );
-        assertTrue( ImmutableMap.of(
-                "workerArtifactUri", "s3://benchmarking.neohq.net/worker.jar",
-                "workload", "musicbrainz",
-                "db", "musicbrainz").equals( entriesDiffering.entriesOnlyOnLeft()));
+        assertThat( mapDifferenceString( entriesDiffering ),
+                    entriesDiffering.entriesDiffering(),
+                    equalTo( emptyMap() ) );
+        assertThat( mapDifferenceString( entriesDiffering ),
+                    entriesDiffering.entriesOnlyOnRight(),
+                    equalTo( emptyMap() ) );
+        assertThat( mapDifferenceString( entriesDiffering ),
+                    entriesDiffering.entriesOnlyOnLeft(),
+                    equalTo( emptyMap() ) );
+    }
+
+    private String mapDifferenceString( MapDifference<String,String> entriesDiffering )
+    {
+        return (entriesDiffering.entriesDiffering().isEmpty()
+                ? ""
+                : "\nDiffering:\n" +
+                  BenchmarkUtil.prettyPrint( entriesDiffering.entriesDiffering() ) + "\n") +
+
+               (entriesDiffering.entriesOnlyOnLeft().isEmpty()
+                ? "" :
+                "Left Only:\n" +
+                BenchmarkUtil.prettyPrint( entriesDiffering.entriesOnlyOnLeft() ) + "\n") +
+
+               (entriesDiffering.entriesOnlyOnRight().isEmpty()
+                ? ""
+                : "Right Only:\n" +
+                  BenchmarkUtil.prettyPrint( entriesDiffering.entriesOnlyOnRight() ));
     }
 }

@@ -5,30 +5,33 @@
  */
 package com.neo4j.bench.infra;
 
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.infra.commands.InfraParams;
+
+import java.net.URI;
 import java.util.List;
 
 /**
- * Job scheduler, which can schedule benchmarks runs.
- *
+ * Scheduler of benchmark runs
  */
 public interface JobScheduler
 {
 
     /**
-     * Schedules a benchmarking run.
+     * Schedules a benchmark run
      *
-     * @param workloads
-     * @param dbs
-     * @param args
-     * @return IDs of scheduled jobs.
+     * @param workerArtifactUri
+     * @param infraParams
+     * @param runWorkloadParams
+     * @return ID of scheduled job
      */
-    List<JobId> schedule( String workloads, String dbs, BenchmarkArgs args );
+    JobId schedule( URI workerArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams );
 
     /**
-     * Fetches statues of scheduled jobs.
+     * Fetches status of scheduled job
      *
      * @param jobIds
-     * @return job statuses
+     * @return job status
      */
     List<JobStatus> jobsStatuses( List<JobId> jobIds );
 }
