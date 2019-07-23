@@ -56,7 +56,7 @@ public class HeapMetrics extends JvmMetrics
     private static class MemoryUsageSupplier
     {
         private final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-        private volatile MemoryUsage lastMemoryUsage = new MemoryUsage( 0, 0, 0, 0 );
+        private volatile MemoryUsage lastMemoryUsage = memoryMXBean.getHeapMemoryUsage();
 
         private long getCommitted()
         {
