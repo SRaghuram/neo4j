@@ -14,7 +14,9 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
@@ -31,13 +33,13 @@ import org.junit.rules.TemporaryFolder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
-import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
 
 public class ConvenientLocalExecutionIT
@@ -46,7 +48,7 @@ public class ConvenientLocalExecutionIT
     private static final Path STORE_DIR = null; // e.g. /Users/you/stores/3.5/ldbc_sf001_data/ not /Users/you/stores/3.5/ldbc_sf001_data/graph.db/
     private static final Path RESULT_DIR = null; // e.g. /Users/you/results/
     private static final String WORKLOAD_NAME = null; // e.g. "ldbc_sf001"
-    private static final Neo4jDeployment DEPLOYMENT = Neo4jDeployment.embedded();
+    private static final Deployment DEPLOYMENT = Deployment.embedded();
 
     // Optional fields
     private static final boolean SKIP_FLAME_GRAPHS = false;
@@ -57,7 +59,7 @@ public class ConvenientLocalExecutionIT
     private static final int MEASUREMENT_COUNT = 1;
     private static final List<ProfilerType> PROFILERS = Lists.newArrayList( ProfilerType.JFR );
     private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
-    private static final String JVM_ARGS = "-Xms4g -Xmx4g";
+    private static final List<String> JVM_ARGS = Lists.newArrayList( "-Xms4g", "-Xmx4g" );
     private static final boolean RECREATE_SCHEMA = false;
     private static final Edition EDITION = Edition.ENTERPRISE;
     private static final Planner PLANNER = Planner.DEFAULT;
@@ -85,41 +87,46 @@ public class ConvenientLocalExecutionIT
 
             Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
             Files.createDirectories( profilerRecordingsDir );
+
             Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
+            Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
+
             List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
-                    RUNTIME,
-                    PLANNER,
-                    EXECUTION_MODE,
-                    WORKLOAD_NAME,
-                    store,
+                    store.topLevelDirectory(),
                     neo4jConfigFile(),
-                    neo4jVersion,
-                    neo4jBranch,
-                    neo4jCommit,
-                    neo4jBranchOwner,
-                    toolBranch,
-                    toolCommit,
-                    toolBranchOwner,
                     RESULT_DIR,
-                    PROFILERS,
-                    EDITION,
-                    Jvm.defaultJvm(),
-                    WARMUP_COUNT,
-                    MEASUREMENT_COUNT,
-                    FORK_COUNT,
-                    Duration.ofSeconds( 0 ),
-                    Duration.ofMinutes( 10 ),
                     resultsJson,
-                    TimeUnit.MICROSECONDS,
-                    ErrorPolicy.FAIL,
-                    parentTeamcityBuild,
-                    teamcityBuild,
-                    JVM_ARGS,
-                    RECREATE_SCHEMA,
                     profilerRecordingsDir,
-                    SKIP_FLAME_GRAPHS,
-                    DEPLOYMENT,
-                    triggeredBy );
+                    new RunWorkloadParams(
+                            WORKLOAD_NAME,
+                            EDITION,
+                            jvmPath,
+                            PROFILERS,
+                            WARMUP_COUNT,
+                            MEASUREMENT_COUNT,
+                            Duration.ofSeconds( 0 ),
+                            Duration.ofMinutes( 10 ),
+                            FORK_COUNT,
+                            TimeUnit.MICROSECONDS,
+                            RUNTIME,
+                            PLANNER,
+                            EXECUTION_MODE,
+                            ErrorPolicy.FAIL,
+                            JVM_ARGS,
+                            RECREATE_SCHEMA,
+                            SKIP_FLAME_GRAPHS,
+                            DEPLOYMENT,
+                            neo4jCommit,
+                            neo4jVersion,
+                            neo4jBranch,
+                            neo4jBranchOwner,
+                            toolCommit,
+                            toolBranchOwner,
+                            toolBranch,
+                            teamcityBuild,
+                            parentTeamcityBuild,
+                            triggeredBy ) );
+
             Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
         }
     }
@@ -133,7 +140,7 @@ public class ConvenientLocalExecutionIT
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
-            Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT.mode() );
+            Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT );
             Query query = workload.queries()
                                   .stream()
                                   .filter( q -> q.name().equals( QUERY_NAME ) )
@@ -143,12 +150,13 @@ public class ConvenientLocalExecutionIT
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( RESULT_DIR, workload.benchmarkGroup() );
             BenchmarkGroupBenchmarkMetricsPrinter printer = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             Jvm jvm = Jvm.bestEffort( JDK_DIR );
-            ForkRunner.runForksFor( DEPLOYMENT.launcherFor( Edition.ENTERPRISE,
-                                                            WARMUP_COUNT,
-                                                            MEASUREMENT_COUNT,
-                                                            Duration.ofSeconds( 30 ),
-                                                            Duration.ofMinutes( 10 ),
-                                                            jvm ),
+            Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( DEPLOYMENT );
+            ForkRunner.runForksFor( neo4jDeployment.launcherFor( Edition.ENTERPRISE,
+                                                                 WARMUP_COUNT,
+                                                                 MEASUREMENT_COUNT,
+                                                                 Duration.ofSeconds( 30 ),
+                                                                 Duration.ofMinutes( 10 ),
+                                                                 jvm ),
                                     groupDir,
                                     query.copyWith( PLANNER ).copyWith( RUNTIME ),
                                     Store.createFrom( STORE_DIR ),
@@ -159,7 +167,7 @@ public class ConvenientLocalExecutionIT
                                     FORK_COUNT,
                                     TimeUnit.MILLISECONDS,
                                     printer,
-                                    jvmArgsFromString( JVM_ARGS ),
+                                    JVM_ARGS,
                                     resources );
         }
     }

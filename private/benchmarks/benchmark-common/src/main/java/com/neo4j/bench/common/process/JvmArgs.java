@@ -38,4 +38,9 @@ public class JvmArgs
     {
         return Arrays.asList( splitArgs( jvmArgs, " " ) );
     }
+
+    public static String jvmArgsToString( List<String> jvmArgs )
+    {
+        return String.join( " ", jvmArgs );
+    }
 }

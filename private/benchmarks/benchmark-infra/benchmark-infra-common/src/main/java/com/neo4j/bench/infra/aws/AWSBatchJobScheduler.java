@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.infra.aws;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.batch.AWSBatch;
@@ -13,16 +14,18 @@ import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
-import com.google.common.collect.Streams;
-import com.neo4j.bench.infra.BenchmarkArgs;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
+import com.neo4j.bench.infra.commands.InfraParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
+import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -31,20 +34,19 @@ import static java.util.stream.Collectors.toList;
 
 public class AWSBatchJobScheduler implements JobScheduler
 {
-
     private static final Logger LOG = LoggerFactory.getLogger( AWSBatchJobScheduler.class );
 
     public static JobScheduler create( String region, String awsKey, String awsSecret, String jobQueue, String jobDefinition )
     {
         Objects.requireNonNull( awsKey );
         Objects.requireNonNull( awsSecret );
+        AWSCredentialsProvider credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
         return new AWSBatchJobScheduler( AWSBatchClientBuilder.standard()
-                    .withCredentials( new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) ) )
-                    .withRegion( region )
-                    .build(),
-                    jobQueue,
-                    jobDefinition
-                );
+                                                              .withCredentials( credentials )
+                                                              .withRegion( region )
+                                                              .build(),
+                                         jobQueue,
+                                         jobDefinition );
     }
 
     private final AWSBatch awsBatch;
@@ -59,20 +61,23 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public List<JobId> schedule(
-            String workloads,
-            String dbs,
-            BenchmarkArgs args )
+    public JobId schedule( URI workerArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams )
     {
-        List<WorkloadAndDb> workloadsAndDbs = Streams
-                .zip(
-                        Arrays.stream( workloads.split( "," ) ).map( String::trim ),
-                        Arrays.stream( dbs.split( "," ) ).map( String::trim ),
-                        WorkloadAndDb::new
-                )
-                .collect( toList() );
+        Map<String,String> paramsMap = new HashMap<>();
+        paramsMap.putAll( infraParams.asMap() );
+        paramsMap.putAll( runWorkloadParams.asMap() );
+        // not a common infra command arg, but required by bootstrap-worker.sh to retrieve jar and launch run-worker command
+        paramsMap.put( InfraParams.CMD_WORKER_ARTIFACT_URI, workerArtifactUri.toString() );
 
-        return schedule( toSubmitJobRequest( workloadsAndDbs, args ) );
+        String jobName = getJobName( runWorkloadParams.workloadName() );
+        SubmitJobRequest submitJobRequest = new SubmitJobRequest()
+                .withJobDefinition( jobDefinition )
+                .withJobQueue( jobQueue )
+                .withJobName( jobName )
+                .withParameters( paramsMap );
+
+        SubmitJobResult submitJobResult = awsBatch.submitJob( submitJobRequest );
+        return new JobId( submitJobResult.getJobId() );
     }
 
     @Override
@@ -80,37 +85,12 @@ public class AWSBatchJobScheduler implements JobScheduler
     {
         List<String> jobIdsAsStrings = jobIds.stream().map( JobId::id ).collect( toList() );
         List<JobStatus> jobsStatuses = awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIdsAsStrings ) )
-            .getJobs()
-            .stream()
-            .map(AWSBatchJobScheduler::jobStatus)
-            .collect( Collectors.toList() );
-        LOG.info( "current jobs statuses:\n{}", jobsStatuses.stream().map(Object::toString).collect( joining( "\n" ) ) );
+                                               .getJobs()
+                                               .stream()
+                                               .map( AWSBatchJobScheduler::jobStatus )
+                                               .collect( Collectors.toList() );
+        LOG.info( "current jobs statuses:\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
         return jobsStatuses;
-    }
-
-    private List<JobId> schedule( List<SubmitJobRequest> submitJobRequests )
-    {
-        return submitJobRequests.stream()
-                .map( awsBatch::submitJob )
-                .map( SubmitJobResult::getJobId )
-                .map( JobId::new )
-                .collect( toList() );
-    }
-
-    private List<SubmitJobRequest> toSubmitJobRequest(
-            List<WorkloadAndDb> workloadsAndDbs,
-            BenchmarkArgs args )
-    {
-        return workloadsAndDbs.stream()
-        .map(workloadAndDb ->
-        {
-            String jobName = getJobName(workloadAndDb.workload);
-            return new SubmitJobRequest()
-                       .withJobDefinition( jobDefinition )
-                       .withJobQueue( jobQueue )
-                       .withJobName( jobName )
-                       .withParameters( args.toJobParameters( workloadAndDb.workload, workloadAndDb.db ) );
-        }).collect( toList() );
     }
 
     private static String getJobName( String workload )
@@ -121,18 +101,5 @@ public class AWSBatchJobScheduler implements JobScheduler
     private static JobStatus jobStatus( JobDetail jobDetail )
     {
         return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus() );
-    }
-
-    private class WorkloadAndDb
-    {
-        private final String workload;
-        private final String db;
-
-        WorkloadAndDb( String workload, String db )
-        {
-            super();
-            this.workload = workload;
-            this.db = db;
-        }
     }
 }

@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
@@ -21,7 +22,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -82,7 +82,7 @@ public class UpgradeStoreCommand implements Runnable
         try ( Store originalStore = Store.createFrom( originalDbDir.toPath() );
               Resources resources = new Resources( workDir ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources, DeploymentMode.EMBEDDED );
+            Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
 
             Path neo4jConfigPath = (null == neo4jConfigFile) ? null : neo4jConfigFile.toPath();
             if ( neo4jConfigPath != null )
