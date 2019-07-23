@@ -21,7 +21,6 @@ import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -79,12 +78,6 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     public Function<DatabaseLayout,DatabaseLayoutWatcher> getWatcherServiceFactory()
     {
         return editionModule.getWatcherServiceFactory();
-    }
-
-    @Override
-    public AccessCapability getAccessCapability()
-    {
-        return editionModule.getAccessCapability();
     }
 
     @Override

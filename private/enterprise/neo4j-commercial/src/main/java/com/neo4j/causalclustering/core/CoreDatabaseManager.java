@@ -30,7 +30,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
@@ -65,7 +64,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext(
                 databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService );
 
-        var databaseConfig = DatabaseConfig.from( config, databaseId );
+        var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()

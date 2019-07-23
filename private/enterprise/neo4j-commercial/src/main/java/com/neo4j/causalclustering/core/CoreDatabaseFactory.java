@@ -280,7 +280,7 @@ class CoreDatabaseFactory
 
         AccessCapability accessCapability = new LeaderCanWrite( raftGroup.raftMachine() );
 
-        return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines, accessCapability );
+        return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines );
     }
 
     CoreDatabaseLife createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,

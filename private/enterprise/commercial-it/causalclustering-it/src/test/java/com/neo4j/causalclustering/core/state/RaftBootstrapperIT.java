@@ -5,12 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
@@ -25,6 +19,12 @@ import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -303,7 +303,7 @@ class RaftBootstrapperIT
         for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get );
-            if ( DatabaseId.isSystemDatabase( databaseEntry.getKey() ) )
+            if ( databaseEntry.getKey().isSystemDatabase() )
             {
                 verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
             }

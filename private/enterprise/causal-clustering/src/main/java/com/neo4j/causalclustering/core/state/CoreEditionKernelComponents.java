@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
-import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.token.TokenHolders;
 
@@ -20,17 +19,15 @@ public class CoreEditionKernelComponents
     private final TokenHolders tokenHolders;
     private final DatabaseIdContext idContext;
     private final CoreStateMachines stateMachines;
-    private final AccessCapability accessCapability;
 
     public CoreEditionKernelComponents( CommitProcessFactory commitProcessFactory, Locks lockManager, TokenHolders tokenHolders, DatabaseIdContext idContext,
-            CoreStateMachines stateMachines, AccessCapability accessCapability )
+            CoreStateMachines stateMachines )
     {
         this.commitProcessFactory = commitProcessFactory;
         this.lockManager = lockManager;
         this.tokenHolders = tokenHolders;
         this.idContext = idContext;
         this.stateMachines = stateMachines;
-        this.accessCapability = accessCapability;
     }
 
     public DatabaseIdContext idContext()
@@ -56,10 +53,5 @@ public class CoreEditionKernelComponents
     public CoreStateMachines stateMachines()
     {
         return stateMachines;
-    }
-
-    public AccessCapability accessCapability()
-    {
-        return accessCapability;
     }
 }

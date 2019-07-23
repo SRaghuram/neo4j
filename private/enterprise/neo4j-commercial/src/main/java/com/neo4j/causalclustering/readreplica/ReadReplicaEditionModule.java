@@ -51,7 +51,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -106,8 +105,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalDependencies.satisfyDependencies( panicService );
 
         LifeSupport globalLife = globalModule.getGlobalLife();
-
-        this.accessCapability = new ReadOnly();
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 

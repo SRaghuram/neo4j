@@ -18,7 +18,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -58,12 +57,6 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     public Function<DatabaseLayout,DatabaseLayoutWatcher> getWatcherServiceFactory()
     {
         return editionModule.getWatcherServiceFactory();
-    }
-
-    @Override
-    public AccessCapability getAccessCapability()
-    {
-        return kernelComponents.accessCapability();
     }
 
     @Override
