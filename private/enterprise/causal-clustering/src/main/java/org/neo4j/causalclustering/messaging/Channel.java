@@ -18,4 +18,8 @@ public interface Channel
     Future<Void> write( Object msg );
 
     Future<Void> writeAndFlush( Object msg );
+
+    void writeAndForget( Object msg );
+
+    void writeFlushAndForget( Object msg );
 }

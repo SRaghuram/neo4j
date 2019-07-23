@@ -55,6 +55,20 @@ public class SimpleNettyChannel implements Channel
         return channel.writeAndFlush( msg );
     }
 
+    @Override
+    public void writeAndForget( Object msg )
+    {
+        checkDisposed();
+        channel.write( msg, channel.voidPromise() );
+    }
+
+    @Override
+    public void writeFlushAndForget( Object msg )
+    {
+        checkDisposed();
+        channel.writeAndFlush( msg, channel.voidPromise() );
+    }
+
     private void checkDisposed()
     {
         if ( disposed )

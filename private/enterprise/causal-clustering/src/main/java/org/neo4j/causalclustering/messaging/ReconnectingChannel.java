@@ -8,9 +8,11 @@ package org.neo4j.causalclustering.messaging;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Promise;
 
+import java.net.InetSocketAddress;
 import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -76,7 +78,7 @@ public class ReconnectingChannel implements Channel
             return;
         }
 
-        fChannel = bootstrap.connect( destination.socketAddress() );
+        fChannel = connect( destination.socketAddress() );
         channel = fChannel.channel();
 
         fChannel.addListener( ( ChannelFuture f ) ->
@@ -101,6 +103,11 @@ public class ReconnectingChannel implements Channel
         } );
     }
 
+    protected ChannelFuture connect( InetSocketAddress to )
+    {
+        return bootstrap.connect( to );
+    }
+
     @Override
     public synchronized void dispose()
     {
@@ -123,16 +130,28 @@ public class ReconnectingChannel implements Channel
     @Override
     public Future<Void> write( Object msg )
     {
-        return write( msg, false );
+        return write( msg, false, false );
     }
 
     @Override
     public Future<Void> writeAndFlush( Object msg )
     {
-        return write( msg, true );
+        return write( msg, true, false );
     }
 
-    private Future<Void> write( Object msg, boolean flush )
+    @Override
+    public void writeAndForget( Object msg )
+    {
+        write( msg, false, true );
+    }
+
+    @Override
+    public void writeFlushAndForget( Object msg )
+    {
+        write( msg, true, true );
+    }
+
+    private Future<Void> write( Object msg, boolean flush, boolean voidPromise )
     {
         if ( disposed )
         {
@@ -141,20 +160,20 @@ public class ReconnectingChannel implements Channel
 
         if ( channel.isActive() )
         {
+            ChannelPromise promise = voidPromise ? channel.voidPromise() : channel.newPromise();
             if ( flush )
             {
-                return channel.writeAndFlush( msg );
+                return channel.writeAndFlush( msg, promise );
             }
             else
             {
-                return channel.write( msg );
+                return channel.write( msg, promise );
             }
         }
         else
         {
-            Promise<Void> promise = eventLoop.newPromise();
             BiConsumer<io.netty.channel.Channel,Object> writer;
-
+            Promise<Void> promise = voidPromise ? channel.voidPromise() : eventLoop.newPromise();
             if ( flush )
             {
                 writer = ( channel, message ) -> chain( channel.writeAndFlush( msg ), promise );

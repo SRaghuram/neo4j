@@ -11,6 +11,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -51,7 +53,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        Future<Void> future;
+        Future<Void> future = null;
         serviceLock.readLock().lock();
         try
         {
@@ -60,14 +62,21 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
                 return;
             }
 
-            future = channel( to ).writeAndFlush( message );
+            if ( block )
+            {
+                future = channel( to ).writeAndFlush( message );
+            }
+            else
+            {
+                channel( to ).writeFlushAndForget( message );
+            }
         }
         finally
         {
             serviceLock.readLock().unlock();
         }
 
-        if ( block )
+        if ( future != null )
         {
             try
             {
@@ -79,12 +88,12 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
             }
             catch ( InterruptedException e )
             {
-                log.info( "Interrupted while sending", e );
+                log.error( "Interrupted while sending", e );
             }
         }
     }
 
-    private Channel channel( AdvertisedSocketAddress destination )
+    private ReconnectingChannel channel( AdvertisedSocketAddress destination )
     {
         ReconnectingChannel channel = channels.get( destination );
 

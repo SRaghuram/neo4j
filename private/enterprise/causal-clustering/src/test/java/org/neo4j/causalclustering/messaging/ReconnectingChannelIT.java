@@ -12,7 +12,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -20,20 +23,36 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.SocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.causalclustering.net.Server;
+import org.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
+import org.neo4j.causalclustering.protocol.NettyPipelineBuilder;
+import org.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
+import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.isA;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class ReconnectingChannelIT
@@ -81,6 +100,47 @@ public class ReconnectingChannelIT
     {
         elg.shutdownGracefully( 0, DEFAULT_TIMEOUT_MS, MILLISECONDS ).awaitUninterruptibly();
         server.stop();
+    }
+
+    @Test
+    public void shouldLogErrorsProperly() throws Exception
+    {
+        // given
+        EmbeddedChannel channel = new EmbeddedChannel();
+        Bootstrap bootstrap = mock( Bootstrap.class );
+        when( bootstrap.connect( any() ) ).thenReturn( channel.newSucceededFuture() );
+
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        Log log = logProvider.getLog( getClass() );
+        ReconnectingChannel failingChannel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );
+        failingChannel.start();
+
+        ClientNettyPipelineBuilder pipelineBuilder = NettyPipelineBuilder.client( channel.pipeline(), log );
+
+        String message = "This is a bad handler!";
+        RuntimeException ex = new RuntimeException( message );
+        ChannelHandler badHandler = new ChannelOutboundHandlerAdapter()
+        {
+            @Override
+            public void write( ChannelHandlerContext ctx, Object msg, ChannelPromise promise )
+            {
+                throw ex;
+            }
+
+        };
+
+        pipelineBuilder
+                .add( "bad_handler", badHandler )
+                .install();
+
+        // when
+        failingChannel.writeFlushAndForget( "Hi" );
+
+        // then
+        ThrowingSupplier<Boolean,Exception> test = () -> logProvider.containsMatchingLogCall( inLog( getClass() )
+                .error( startsWith( "Exception in outbound" ), equalTo( ex ) ) );
+        assertEventually( ignore -> String.format( "Logs did not contain expected message. Logs: %n %s", logProvider.serialize() ),
+                test, is( true  ), 10, SECONDS );
     }
 
     @Test

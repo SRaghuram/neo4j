@@ -8,14 +8,16 @@ package org.neo4j.causalclustering.messaging;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,18 +46,24 @@ import org.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.CoreMatchers.isA;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@RunWith( Parameterized.class )
 public class SenderServiceIT
 {
     private final LogProvider logProvider = NullLogProvider.getInstance();
@@ -69,16 +77,9 @@ public class SenderServiceIT
     private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
-    @Parameterized.Parameter
-    public boolean blocking;
-
-    @Parameterized.Parameter( 1 )
-    public ApplicationProtocols clientProtocol;
-
-    @Parameterized.Parameters( name = "blocking={0} protocol={1}" )
-    public static Iterable<Object[]> params()
+    public static Stream<Arguments> params()
     {
-        return clientRepositories().stream().flatMap( r -> Stream.of( new Object[]{true, r}, new Object[]{false, r} ) ).collect( Collectors.toList() );
+        return clientRepositories().stream().flatMap( r -> Stream.of( Arguments.of( true, r ), Arguments.of( false, r ) ) );
     }
 
     private static Collection<ApplicationProtocols> clientRepositories()
@@ -86,8 +87,9 @@ public class SenderServiceIT
         return Arrays.asList( ApplicationProtocols.RAFT_1, ApplicationProtocols.RAFT_2 );
     }
 
-    @Test
-    public void shouldSendAndReceive() throws Throwable
+    @ParameterizedTest( name = "blocking={0}, protocol={1}" )
+    @MethodSource( "params" )
+    void shouldSendAndReceive( boolean blocking, ApplicationProtocols clientProtocol ) throws Throwable
     {
         // given: raft server handler
         int port = PortAuthority.allocatePort();
@@ -125,6 +127,50 @@ public class SenderServiceIT
         raftServer.stop();
     }
 
+    @Test
+    void shouldLogErrors() throws Throwable
+    {
+        // given: raft server handler
+        int port = PortAuthority.allocatePort();
+        Semaphore messageReceived = new Semaphore( 0 );
+        ChannelInboundHandler nettyHandler = new ChannelInboundHandlerAdapter()
+        {
+            @Override
+            public void channelRead( ChannelHandlerContext ctx, Object msg )
+            {
+                messageReceived.release();
+            }
+        };
+        Server raftServer = raftServer( nettyHandler, port );
+        raftServer.start();
+
+        // given: raft messaging service
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+
+        SenderService sender = raftSender( logProvider );
+        sender.start();
+
+        AdvertisedSocketAddress to = new AdvertisedSocketAddress( "localhost", port );
+        MemberId memberId = new MemberId( UUID.randomUUID() );
+        ClusterId clusterId = new ClusterId( UUID.randomUUID() );
+
+        // when
+        RaftMessages.NewEntry.Request newEntryMessage = new RaftMessages.NewEntry.Request( memberId, new MemberIdSet( asSet( memberId ) ) );
+        RaftMessages.ClusterIdAwareMessage<?> message = RaftMessages.ClusterIdAwareMessage.of( clusterId, newEntryMessage );
+
+        raftServer.stop();
+        sender.send( to, message, true );
+
+        // then
+        AssertableLogProvider.LogMatcher logMatcher = inLog( SenderService.class )
+                .error( startsWith( "Exception while sending to" ), isA( ExecutionException.class ) );
+        assertEventually( ignored -> format( "Did not containg expected Log call. All logs: %n%s", logProvider.serialize() ),
+                () -> logProvider.containsMatchingLogCall( logMatcher ), is( true ), 10, SECONDS );
+
+        // cleanup
+        sender.stop();
+    }
+
     private Server raftServer( ChannelInboundHandler nettyHandler, int port )
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
@@ -144,6 +190,11 @@ public class SenderServiceIT
     }
 
     private SenderService raftSender()
+    {
+        return raftSender( logProvider );
+    }
+
+    private SenderService raftSender( LogProvider logProvider )
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 

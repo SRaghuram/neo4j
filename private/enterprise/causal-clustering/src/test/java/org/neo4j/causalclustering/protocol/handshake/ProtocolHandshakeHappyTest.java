@@ -322,6 +322,18 @@ public class ProtocolHandshakeHappyTest
         {
             return closed;
         }
+
+        @Override
+        public void writeAndForget( Object msg )
+        {
+            write( msg );
+        }
+
+        @Override
+        public void writeFlushAndForget( Object msg )
+        {
+            writeAndFlush( msg );
+        }
     }
 
     static class FakeServerChannel extends FakeChannelWrapper
