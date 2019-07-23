@@ -370,6 +370,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         s"""
           |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
           |coalesce(d.name, '*') AS graph, segment, r.name AS role
+          |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
       val (grantee: Value, query) = scope match {
