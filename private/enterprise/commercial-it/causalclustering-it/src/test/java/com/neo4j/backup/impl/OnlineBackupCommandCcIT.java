@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,7 +29,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
@@ -68,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -491,12 +490,7 @@ class OnlineBackupCommandCcIT
 
     private static void writeConfigWithLogRotationThreshold( File conf, String value ) throws IOException
     {
-        Config config = Config.defaults( GraphDatabaseSettings.logical_log_rotation_threshold, value );
-
-        try ( BufferedWriter writer = Files.newBufferedWriter( conf.toPath() ) )
-        {
-            writer.write( config.toString( false ) );
-        }
+        Files.writeString( conf.toPath(), logical_log_rotation_threshold.name() + "=" + value );
     }
 
     private static void createIndexes( Cluster cluster ) throws Exception
