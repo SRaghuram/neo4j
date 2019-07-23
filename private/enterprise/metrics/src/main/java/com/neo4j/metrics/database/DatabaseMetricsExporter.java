@@ -13,6 +13,7 @@ import com.neo4j.metrics.source.causalclustering.CoreMetrics;
 import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import com.neo4j.metrics.source.db.CheckPointingMetrics;
 import com.neo4j.metrics.source.db.CypherMetrics;
+import com.neo4j.metrics.source.db.DatabaseCountMetrics;
 import com.neo4j.metrics.source.db.EntityCountMetrics;
 import com.neo4j.metrics.source.db.TransactionLogsMetrics;
 import com.neo4j.metrics.source.db.TransactionMetrics;
@@ -67,6 +68,15 @@ public class DatabaseMetricsExporter
             if ( context.databaseInfo().edition != Edition.COMMUNITY && context.databaseInfo().edition != Edition.UNKNOWN )
             {
                 life.add( new EntityCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters() ) );
+            }
+        }
+
+        if ( config.get( MetricsSettings.databaseCountsEnabled ) )
+        {
+            if ( context.databaseInfo().edition != Edition.COMMUNITY &&
+                    context.databaseInfo().edition != Edition.UNKNOWN )
+            {
+                life.add( new DatabaseCountMetrics( registry, dependencies.storeEntityCounters() ) );
             }
         }
 

@@ -9,6 +9,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.metrics.global.MetricsManager;
 import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,9 +40,13 @@ import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
+import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
+import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_NODE;
+import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_RELATIONSHIP;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -51,6 +56,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
@@ -93,6 +99,19 @@ class DatabaseMetricsExtensionIT
         File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
         assertEventually( "Metrics report should have correct number of checkpoints.",
                 () -> readLongCounterValue( checkpointsMetricsFile ), greaterThanOrEqualTo( 1L ), 1, MINUTES );
+    }
+
+    @Test
+    void countNodesAndRelationships() throws Throwable
+    {
+        for ( int i = 0; i < 5; i++ )
+        {
+            connectTwoNodes();
+        }
+
+        // 10 nodes created in this test and 1 in setup
+        assertMetrics( "Should get correct number of nodes from count store", COUNTS_NODE, equalTo( 11L ) );
+        assertMetrics( "Should get correct number of relationships from count store", COUNTS_RELATIONSHIP, equalTo( 5L ) );
     }
 
     @Test
@@ -235,6 +254,22 @@ class DatabaseMetricsExtensionIT
         databaseManager.stopDatabase( testDbName );
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
         databaseManager.dropDatabase( testDbName );
+    }
+
+    private void connectTwoNodes()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node1 = db.createNode();
+            Node node2 = db.createNode();
+            node1.createRelationshipTo( node2, withName( "any" ) );
+            tx.success();
+        }
+    }
+
+    private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
+    {
+        assertEventually( message, () -> readLongGaugeValue( metricsCsv( outputPath, metricName ) ), matcher, 5, TimeUnit.MINUTES );
     }
 
     private void addNodes( int numberOfNodes )
