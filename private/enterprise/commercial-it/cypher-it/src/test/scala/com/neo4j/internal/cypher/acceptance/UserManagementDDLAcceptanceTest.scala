@@ -19,6 +19,13 @@ import scala.collection.Map
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
+  test("GraphStatistics should tell us if a query was executed against system or not"){
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("MATCH (n) RETURN n").queryStatistics().ranOnSystemGraph() should be (false)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").queryStatistics().ranOnSystemGraph() should be (true)
+  }
+
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
@@ -34,7 +41,9 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN & THEN
     for (q <- queries) {
-      execute(q).queryStatistics().containsUpdates should be(false)
+      val statistics = execute(q).queryStatistics()
+      statistics.containsUpdates should be(false)
+      statistics.ranOnSystemGraph() should be (true)
     }
   }
 

@@ -32,7 +32,9 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // WHEN & THEN
     for (q <- queries) {
-      execute(q).queryStatistics().containsUpdates should be(false)
+      val statistics = execute(q).queryStatistics()
+      statistics.containsUpdates should be(false)
+      statistics.ranOnSystemGraph() should be (true)
     }
   }
 
