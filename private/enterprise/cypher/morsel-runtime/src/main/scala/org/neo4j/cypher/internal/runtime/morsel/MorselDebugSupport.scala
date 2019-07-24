@@ -47,8 +47,8 @@ object MorselDebugSupport {
   def prettyWork(morsel: MorselExecutionContext, workIdentity: WorkIdentity): Seq[String] = {
     prettyMorselWithHeader("OUTPUT:", morsel) ++
       Array(
-        "",
-        workIdentity.toString
+        workIdentity.toString,
+        ""
       )
   }
 
