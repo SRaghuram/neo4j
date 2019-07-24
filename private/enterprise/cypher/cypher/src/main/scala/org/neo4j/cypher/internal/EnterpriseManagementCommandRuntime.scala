@@ -370,6 +370,9 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
         s"""
           |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
           |coalesce(d.name, '*') AS graph, segment, r.name AS role
+        """.stripMargin
+      val orderBy =
+        s"""
           |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
@@ -380,6 +383,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
              |$privilegeMatch
              |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
+             |$orderBy
           """.stripMargin
         )
         case ast.ShowUserPrivileges(name) => (Values.stringValue(name),
@@ -388,6 +392,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
              |$privilegeMatch
              |WITH g, a, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
              |$returnColumns, u.name AS user
+             |$orderBy
           """.stripMargin
         )
         case ast.ShowAllPrivileges() => (Values.NO_VALUE,
@@ -396,6 +401,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
              |$privilegeMatch
              |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
+             |$orderBy
           """.stripMargin
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
