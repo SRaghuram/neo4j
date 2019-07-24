@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
+import org.neo4j.configuration.SettingMigrators;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 
@@ -42,14 +43,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
 
     private void migrateRoutingTtl( Map<String,String> values, Log log )
     {
-        String oldSetting = "causal_clustering.cluster_routing_ttl";
-        String newSetting = routing_ttl.name();
-        String value = values.remove( oldSetting );
-        if ( isNotBlank( value ) )
-        {
-            log.warn( "Use of deprecated setting %s. It is replaced by %s", oldSetting, newSetting );
-            values.putIfAbsent( newSetting, value );
-        }
+        SettingMigrators.migrateSettingNameChange( values, log, "causal_clustering.cluster_routing_ttl", routing_ttl );
     }
 
     private void migrateDisableMiddlewareLogging( Map<String,String> values, Log log )

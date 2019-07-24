@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -115,7 +114,7 @@ public class BoltTlsIT
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
                 .setConfig( BoltConnector.enabled, TRUE )
                 .setConfig( BoltConnector.listen_address, "localhost:0" )
-                .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
+                .setConfig( BoltConnector.ssl_policy, "bolt" )
                 .setConfig( sslPolicy.allow_key_generation, TRUE )
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )

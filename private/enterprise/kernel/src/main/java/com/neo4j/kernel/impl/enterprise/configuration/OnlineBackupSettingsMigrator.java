@@ -9,22 +9,17 @@ import java.util.Map;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
+import org.neo4j.configuration.SettingMigrators;
 import org.neo4j.logging.Log;
+
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 
 @ServiceProvider
 public class OnlineBackupSettingsMigrator implements SettingMigrator
 {
-    private static final String OLD_SETTING = "dbms.backup.address";
-    private static final String NEW_SETTING = OnlineBackupSettings.online_backup_listen_address.name();
-
     @Override
     public void migrate( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
-        String value = values.remove( OLD_SETTING );
-        if ( value != null )
-        {
-            log.warn( "Use of deprecated setting %s. It is replaced by %s", OLD_SETTING, NEW_SETTING );
-            values.putIfAbsent( NEW_SETTING, value );
-        }
+        SettingMigrators.migrateSettingNameChange( values, log, "dbms.backup.address", online_backup_listen_address );
     }
 }
