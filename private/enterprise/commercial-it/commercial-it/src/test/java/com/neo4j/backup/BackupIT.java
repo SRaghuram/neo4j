@@ -1106,8 +1106,8 @@ class BackupIT
     private DbRepresentation getBackupDbRepresentation()
     {
         Config config = Config.newBuilder()
-                .set( online_backup_enabled, FALSE )
-                .set( transaction_logs_root_path, backupsDir.getAbsolutePath() )
+                .set( online_backup_enabled, false )
+                .set( transaction_logs_root_path, backupsDir.toPath().toAbsolutePath() )
                 .build();
         return DbRepresentation.of( backupDatabaseLayout, config );
     }

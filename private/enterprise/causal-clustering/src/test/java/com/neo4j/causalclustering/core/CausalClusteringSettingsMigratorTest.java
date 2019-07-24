@@ -120,10 +120,10 @@ class CausalClusteringSettingsMigratorTest
     {
         Config config1 = Config.defaults( listenAddr, "foo:111" );
         Config config2 = Config.defaults( listenAddr, ":222" );
-        Config config3 = Config.newBuilder().set( listenAddr, ":333" ).set( advertisedAddr, "bar" ).build();
-        Config config4 = Config.newBuilder().set( listenAddr, "foo:444" ).set( advertisedAddr, ":555" ).build();
-        Config config5 = Config.newBuilder().set( listenAddr, "foo" ).set( listenAddr, "bar" ).build();
-        Config config6 = Config.newBuilder().set( listenAddr, "foo:666" ).set( advertisedAddr, "bar:777" ).build();
+        Config config3 = Config.newBuilder().set( listenAddr, new SocketAddress( 333 ) ).set( advertisedAddr, new SocketAddress( "bar" ) ).build();
+        Config config4 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo", 444 ) ).set( advertisedAddr, new SocketAddress( 555 ) ).build();
+        Config config5 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo" ) ).set( advertisedAddr, new SocketAddress( "bar" ) ).build();
+        Config config6 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo", 666 ) ).set( advertisedAddr, new SocketAddress( "bar", 777 ) ).build();
 
         var logProvider = new AssertableLogProvider();
         config1.setLogger( logProvider.getLog( Config.class ) );

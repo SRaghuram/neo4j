@@ -18,19 +18,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
-import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
+import static org.neo4j.test.ports.PortAuthority.allocatePort;
 
 class AkkaCoreTopologyServiceIT
 {
@@ -41,10 +43,10 @@ class AkkaCoreTopologyServiceIT
     void setUp()
     {
         // Random members that does not exists, discovery will never succeed
-        var initialHosts = "localhost:" + PortAuthority.allocatePort() + ",localhost:" + PortAuthority.allocatePort();
+        var initialHosts = List.of( new SocketAddress( "localhost", allocatePort() ), new SocketAddress( "localhost", allocatePort() ) );
         var config = Config.newBuilder()
                 .set( initial_discovery_members, initialHosts )
-                .set( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() )
+                .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", allocatePort() ) )
                 .build();
 
         var id = new MemberId( UUID.randomUUID() );

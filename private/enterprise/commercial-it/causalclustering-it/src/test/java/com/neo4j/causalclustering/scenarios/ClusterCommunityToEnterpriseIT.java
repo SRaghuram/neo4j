@@ -33,7 +33,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class ClusterCommunityToEnterpriseIT
@@ -78,8 +77,8 @@ public class ClusterCommunityToEnterpriseIT
         DatabaseLayout databaseLayout = database.databaseLayout();
         managementService.shutdown();
         Config config = Config.newBuilder()
-                .set( online_backup_enabled, FALSE )
-                .set( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() )
+                .set( online_backup_enabled, false )
+                .set( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().toPath().toAbsolutePath() )
                 .build();
         DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
 

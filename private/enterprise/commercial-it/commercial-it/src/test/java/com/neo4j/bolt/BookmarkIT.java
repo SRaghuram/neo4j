@@ -19,6 +19,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -51,7 +52,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class BookmarkIT
@@ -147,9 +147,9 @@ public class BookmarkIT
     private Config configWithBoltEnabled()
     {
         return Config.newBuilder()
-                .set( BoltConnector.enabled, TRUE )
-                .set( BoltConnector.listen_address, "localhost:0" )
-                .set( GraphDatabaseSettings.neo4j_home, directory.storeDir().getAbsolutePath() )
+                .set( BoltConnector.enabled, true )
+                .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .set( GraphDatabaseSettings.neo4j_home, directory.storeDir().toPath().toAbsolutePath() )
                 .build();
     }
 

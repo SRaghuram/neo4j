@@ -67,7 +67,7 @@ public class KubernetesResolverIT
     private final String testLabelSelector = "test-label-selector";
     private final String testAuthToken = "Oh go on then";
     private final Config config = Config.newBuilder()
-            .set( CausalClusteringSettings.kubernetes_address, "localhost:" + port )
+            .set( CausalClusteringSettings.kubernetes_address, new SocketAddress( "localhost", port ) )
             .set( CausalClusteringSettings.kubernetes_label_selector, testLabelSelector )
             .set( CausalClusteringSettings.kubernetes_service_port_name, testPortName )
             .build();

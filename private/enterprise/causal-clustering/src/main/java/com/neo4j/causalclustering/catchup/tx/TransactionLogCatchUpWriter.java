@@ -91,11 +91,11 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         Config.Builder builder = Config.newBuilder();
         if ( !keepTxLogsInStoreDir && original.isExplicitlySet( transaction_logs_root_path ) )
         {
-            builder.set( transaction_logs_root_path, original.get( transaction_logs_root_path ).toString() );
+            builder.set( transaction_logs_root_path, original.get( transaction_logs_root_path ) );
         }
         if ( forceTransactionRotations && original.isExplicitlySet( logical_log_rotation_threshold ) )
         {
-            builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ).toString() );
+            builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ) );
         }
         if ( asPartOfStoreCopy )
         {

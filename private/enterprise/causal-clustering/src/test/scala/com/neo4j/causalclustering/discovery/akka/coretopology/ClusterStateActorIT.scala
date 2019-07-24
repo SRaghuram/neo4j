@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import java.time.Duration
 import java.util
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -184,8 +185,8 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     val coreTopologyProbe = TestProbe("CoreTopology")
     val downingProbe = TestProbe("Downing")
     val config = Config.newBuilder()
-      .set(akka_failure_detector_heartbeat_interval, "1s")
-      .set(akka_failure_detector_acceptable_heartbeat_pause, "1s")
+      .set(akka_failure_detector_heartbeat_interval, Duration.ofSeconds( 1 ) )
+      .set(akka_failure_detector_acceptable_heartbeat_pause, Duration.ofSeconds( 1 ) )
       .build()
     val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, config, NullLogProvider.getInstance())
     val clusterStateRef = system.actorOf(props)

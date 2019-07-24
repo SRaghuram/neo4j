@@ -18,6 +18,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -32,7 +33,6 @@ import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.mode;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.server.http.cypher.integration.TransactionMatchers.hasErrors;
 import static org.neo4j.server.rest.AbstractRestFunctionalTestBase.txCommitUri;
 import static org.neo4j.test.server.HTTP.POST;
@@ -88,13 +88,13 @@ class MultiDatabaseHttpIt
     private CommercialNeoServer createService()
     {
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.SERVER_DEFAULTS )
-                .set( mode, CommercialEditionSettings.Mode.SINGLE.name() )
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().getAbsolutePath() )
-                .set( GraphDatabaseSettings.auth_enabled, FALSE )
-                .set( BoltConnector.listen_address, "localhost:0" )
-                .set( HttpConnector.listen_address, "localhost:0" )
-                .set( HttpsConnector.listen_address, "localhost:0" )
+                .setRaw( GraphDatabaseSettings.SERVER_DEFAULTS )
+                .set( mode, CommercialEditionSettings.Mode.SINGLE )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.auth_enabled, false )
+                .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         CommercialNeoServer server = new CommercialNeoServer( config, dependencies );

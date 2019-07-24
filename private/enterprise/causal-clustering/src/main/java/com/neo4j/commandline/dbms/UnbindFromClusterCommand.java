@@ -51,7 +51,7 @@ class UnbindFromClusterCommand extends AbstractCommand
     {
         return Config.newBuilder()
                 .fromFileNoThrow( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .set( GraphDatabaseSettings.neo4j_home, homeDir.toString() )
+                .set( GraphDatabaseSettings.neo4j_home, homeDir )
                 .build();
     }
 

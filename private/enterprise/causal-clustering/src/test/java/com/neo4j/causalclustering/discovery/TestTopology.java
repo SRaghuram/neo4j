@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -57,22 +58,22 @@ public class TestTopology
     public static Config configFor( CoreServerInfo coreServerInfo )
     {
         return Config.newBuilder()
-                .set( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer().toString() )
-                .set( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer().toString() )
-                .set( BoltConnector.listen_address, coreServerInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.enabled, String.valueOf( true ) )
-                .set( CausalClusteringSettings.server_groups, String.join( ",", coreServerInfo.groups() ) )
-                .set( CausalClusteringSettings.refuse_to_be_leader, String.valueOf( coreServerInfo.refusesToBeLeader() ) )
+                .set( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer() )
+                .set( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer() )
+                .set( BoltConnector.listen_address, coreServerInfo.connectors().boltAddress() )
+                .set( BoltConnector.enabled, true )
+                .set( CausalClusteringSettings.server_groups, new ArrayList<>( coreServerInfo.groups() ) )
+                .set( CausalClusteringSettings.refuse_to_be_leader, coreServerInfo.refusesToBeLeader() )
                 .build();
     }
 
     public static Config configFor( ReadReplicaInfo readReplicaInfo )
     {
         return Config.newBuilder()
-                .set( BoltConnector.listen_address, readReplicaInfo.connectors().boltAddress().toString() )
-                .set( BoltConnector.enabled, String.valueOf( true ) )
-                .set( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer().toString() )
-                .set( CausalClusteringSettings.server_groups, String.join( ",", readReplicaInfo.groups() ) )
+                .set( BoltConnector.listen_address, readReplicaInfo.connectors().boltAddress() )
+                .set( BoltConnector.enabled, true )
+                .set( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer() )
+                .set( CausalClusteringSettings.server_groups, new ArrayList<>( readReplicaInfo.groups() ) )
                 .build();
     }
 

@@ -190,7 +190,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       val myCoreServerConfig = TestTopology.configFor(readReplicaInfo)
       val conf = Config.newBuilder()
         .fromConfig(myCoreServerConfig)
-        .set(CausalClusteringSettings.cluster_topology_refresh, s"${refresh.toSeconds}s")
+        .set(CausalClusteringSettings.cluster_topology_refresh, java.time.Duration.ofSeconds( refresh.toSeconds ) )
         .build();
       conf
     }

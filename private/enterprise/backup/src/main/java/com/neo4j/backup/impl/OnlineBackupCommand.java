@@ -32,7 +32,6 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 
@@ -149,10 +148,10 @@ public class OnlineBackupCommand extends AbstractCommand
         Config cfg = Config.newBuilder()
                 .fromFileNoThrow( configFile.toFile() )
                 .fromFileNoThrow( additionalConfigFile )
-                .set( GraphDatabaseSettings.neo4j_home, backupDirectory.toString() )
+                .set( GraphDatabaseSettings.neo4j_home, backupDirectory )
                 .set( pagecache_memory, pagecacheMemory )
-                .set( pagecache_warmup_enabled, FALSE )
-                .set( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .set( pagecache_warmup_enabled, false )
+                .set( OnlineBackupSettings.online_backup_enabled, false )
                 .build();
         ConfigUtils.disableAllConnectors( cfg );
 

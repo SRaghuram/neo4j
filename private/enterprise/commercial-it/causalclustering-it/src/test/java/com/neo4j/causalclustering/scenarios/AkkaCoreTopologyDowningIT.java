@@ -46,7 +46,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
@@ -217,20 +216,20 @@ public class AkkaCoreTopologyDowningIT
 
     private TopologyServiceComponents createAndStart( Function<Config,RemoteMembersResolver> resolverFactory, int myPort, int... otherPorts ) throws Throwable
     {
-        String initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
-                .mapToObj( port -> "localhost:" + port )
-                .collect( Collectors.joining( "," ) );
+        List<SocketAddress> initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
+                .mapToObj( port -> new SocketAddress( "localhost", port ) )
+                .collect( Collectors.toList() );
 
         SocketAddress boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
 
         Config config = Config.newBuilder()
-                .set( CausalClusteringSettings.discovery_listen_address, "localhost:" + myPort )
+                .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", myPort ) )
                 .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
-                .set( BoltConnector.enabled, TRUE )
-                .set( BoltConnector.listen_address, boltAddress.toString() )
-                .set( BoltConnector.advertised_address, boltAddress.toString() )
-                .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
-                .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG.toString() )
+                .set( BoltConnector.enabled, true )
+                .set( BoltConnector.listen_address, boltAddress )
+                .set( BoltConnector.advertised_address, boltAddress )
+                .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG )
+                .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG )
                 .build();
 
         LogProvider logProvider = NullLogProvider.getInstance();

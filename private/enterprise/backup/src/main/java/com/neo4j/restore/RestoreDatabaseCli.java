@@ -43,7 +43,7 @@ class RestoreDatabaseCli extends AbstractCommand
     {
         Config cfg = Config.newBuilder()
                 .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
-                .set( GraphDatabaseSettings.neo4j_home, homeDir.toString() ).build();
+                .set( GraphDatabaseSettings.neo4j_home, homeDir ).build();
         ConfigUtils.disableAllConnectors( cfg );
         return cfg;
     }

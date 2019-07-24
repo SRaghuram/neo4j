@@ -182,8 +182,8 @@ class RaftBootstrapperIT
                 .build();
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() )
-                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toPath().toAbsolutePath() )
                 .build();
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
@@ -274,8 +274,8 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() )
-                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.getAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() )
+                .set( transaction_logs_root_path, customTransactionLogsRootDirectory.toPath().toAbsolutePath() )
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();

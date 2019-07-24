@@ -65,7 +65,7 @@ public class FilteringPolicyLoaderTest
         {
             String policyName = (String) row[0];
             String filterSpec = (String) row[1];
-            builder.set( LoadBalancingServerPoliciesGroup.group( policyName ).value, filterSpec );
+            builder.set( LoadBalancingServerPoliciesGroup.group( policyName ).value, FilterConfigParser.parse( filterSpec ) );
         }
         Config config = builder.build();
 

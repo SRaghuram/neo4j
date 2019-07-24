@@ -12,15 +12,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.util.List;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.ssl.PkiUtils;
 import org.neo4j.test.rule.TestDirectory;
-
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class HostnameVerificationHelper
 {
@@ -40,21 +39,21 @@ public class HostnameVerificationHelper
         revoked.mkdirs();
         PKI_UTILS.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
         return Config.newBuilder()
-                .set( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
-                .set( SSL_POLICY_CONFIG.trusted_dir, trusted.toString() )
-                .set( SSL_POLICY_CONFIG.revoked_dir, revoked.toString() )
-                .set( SSL_POLICY_CONFIG.private_key, validPrivateKeyPath.toString() )
-                .set( SSL_POLICY_CONFIG.public_certificate, validCertificatePath.toString() )
+                .set( SSL_POLICY_CONFIG.base_directory, baseDirectory.toPath() )
+                .set( SSL_POLICY_CONFIG.trusted_dir, trusted.toPath() )
+                .set( SSL_POLICY_CONFIG.revoked_dir, revoked.toPath() )
+                .set( SSL_POLICY_CONFIG.private_key, validPrivateKeyPath.toPath() )
+                .set( SSL_POLICY_CONFIG.public_certificate, validCertificatePath.toPath() )
 
-                .set( SSL_POLICY_CONFIG.tls_versions, "TLSv1.2" )
-                .set( SSL_POLICY_CONFIG.ciphers, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" )
+                .set( SSL_POLICY_CONFIG.tls_versions, List.of( "TLSv1.2" ) )
+                .set( SSL_POLICY_CONFIG.ciphers, List.of( "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" ) )
 
-                .set( SSL_POLICY_CONFIG.client_auth, "none" )
-                .set( SSL_POLICY_CONFIG.allow_key_generation, FALSE )
+                .set( SSL_POLICY_CONFIG.client_auth, ClientAuth.NONE )
+                .set( SSL_POLICY_CONFIG.allow_key_generation, false )
 
                 // Even if we trust all, certs should be rejected if don't match Common Name (CA) or Subject Alternative Name
-                .set( SSL_POLICY_CONFIG.trust_all, FALSE )
-                .set( SSL_POLICY_CONFIG.verify_hostname, TRUE )
+                .set( SSL_POLICY_CONFIG.trust_all, false )
+                .set( SSL_POLICY_CONFIG.verify_hostname, true )
                 .build();
     }
 

@@ -15,11 +15,11 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 class EnterpriseDiscoverableURIsTest
 {
@@ -28,8 +28,8 @@ class EnterpriseDiscoverableURIsTest
     {
         // Given
         Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( BoltConnector.enabled, TRUE )
+                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE )
+                .set( BoltConnector.enabled, true )
                 .build();
 
         // When
@@ -45,9 +45,9 @@ class EnterpriseDiscoverableURIsTest
     {
         // Given
         Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
-                .set( BoltConnector.enabled, TRUE )
-                .set( BoltConnector.listen_address, ":0" )
+                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE )
+                .set( BoltConnector.enabled, true )
+                .set( BoltConnector.listen_address, new SocketAddress( 0 ) )
                 .build();
         ConnectorPortRegister ports = new ConnectorPortRegister();
         ports.register( BoltConnector.NAME, new InetSocketAddress( 1337 ) );

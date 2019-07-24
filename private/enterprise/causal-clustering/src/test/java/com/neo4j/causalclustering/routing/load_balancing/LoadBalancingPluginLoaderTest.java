@@ -30,8 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class LoadBalancingPluginLoaderTest
 {
@@ -58,7 +56,7 @@ public class LoadBalancingPluginLoaderTest
         // given
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
-                .set( CausalClusteringSettings.load_balancing_shuffle, FALSE ).build();
+                .set( CausalClusteringSettings.load_balancing_shuffle, false ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -78,7 +76,7 @@ public class LoadBalancingPluginLoaderTest
         // given
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME )
-                .set( CausalClusteringSettings.load_balancing_shuffle, TRUE ).build();
+                .set( CausalClusteringSettings.load_balancing_shuffle, true ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -97,7 +95,7 @@ public class LoadBalancingPluginLoaderTest
         // given
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
-                .set( CausalClusteringSettings.load_balancing_shuffle, FALSE ).build();
+                .set( CausalClusteringSettings.load_balancing_shuffle, false ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -116,7 +114,7 @@ public class LoadBalancingPluginLoaderTest
         // given
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.load_balancing_plugin, ServerPoliciesPlugin.PLUGIN_NAME )
-                .set( CausalClusteringSettings.load_balancing_shuffle, TRUE ).build();
+                .set( CausalClusteringSettings.load_balancing_shuffle, true ).build();
 
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
@@ -141,8 +139,8 @@ public class LoadBalancingPluginLoaderTest
     void shouldNotAcceptInvalidSetting()
     {
         assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( GraphDatabaseSettings.strict_config_validation, TRUE )
-                .set( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), TRUE )
+                .set( GraphDatabaseSettings.strict_config_validation, true )
+                .set( settingFor( DUMMY_PLUGIN_NAME, DummyLoadBalancingPlugin.DO_NOT_USE_THIS_CONFIG ), true )
                 .set( CausalClusteringSettings.load_balancing_plugin, DUMMY_PLUGIN_NAME ).build() );
     }
 

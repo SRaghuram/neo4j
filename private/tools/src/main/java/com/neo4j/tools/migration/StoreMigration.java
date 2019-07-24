@@ -47,7 +47,6 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 
@@ -77,8 +76,8 @@ public class StoreMigration
     private static Config getMigrationConfig( File workingDirectory )
     {
         return Config.newBuilder()
-                .set( GraphDatabaseSettings.allow_upgrade, TRUE )
-                .set( logs_directory, workingDirectory.getAbsolutePath() )
+                .set( GraphDatabaseSettings.allow_upgrade, true )
+                .set( logs_directory, workingDirectory.toPath().toAbsolutePath() )
                 .build();
     }
 

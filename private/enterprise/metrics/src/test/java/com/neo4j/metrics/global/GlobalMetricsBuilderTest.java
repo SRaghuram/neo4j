@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -72,8 +71,8 @@ class GlobalMetricsBuilderTest
     private static Config configWithServerMetrics( boolean enabled )
     {
         return Config.newBuilder()
-                .set( HttpConnector.enabled, Boolean.toString( enabled ) )
-                .set( MetricsSettings.neoServerEnabled, TRUE )
+                .set( HttpConnector.enabled, enabled )
+                .set( MetricsSettings.neoServerEnabled, true )
                 .build();
     }
 }

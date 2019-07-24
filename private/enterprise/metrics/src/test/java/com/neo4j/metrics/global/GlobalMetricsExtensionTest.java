@@ -67,7 +67,7 @@ class GlobalMetricsExtensionTest
     void extensionCanBeStartedWhenMetricsDisabled()
     {
         Config config = Config.newBuilder()
-                .set( MetricsSettings.metricsEnabled, FALSE )
+                .set( MetricsSettings.metricsEnabled, false )
                 .build();
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
