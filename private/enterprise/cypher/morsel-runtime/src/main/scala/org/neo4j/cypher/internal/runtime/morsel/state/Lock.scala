@@ -20,11 +20,6 @@ trait Lock {
   def tryLock(): Boolean
 
   /**
-    * Acquire this lock. Will retry until successful.
-    */
-  def lock(): Unit
-
-  /**
     * Release this lock.
     */
   def unlock(): Unit
@@ -47,8 +42,6 @@ class NoLock(val id: String) extends Lock {
     DebugSupport.logLocks(s"Locked $name")
     isLocked
   }
-
-  override def lock(): Unit = tryLock()
 
   override def unlock(): Unit = {
     if (!isLocked)
@@ -74,9 +67,6 @@ class ConcurrentLock(val id: String) extends Lock {
     DebugSupport.logLocks(s"${Thread.currentThread().getId} tried locking $name. Success: $success")
     success
   }
-
-  override def lock(): Unit =
-    while (!isLocked.compareAndSet(false, true)) {}
 
   override def unlock(): Unit = {
     if (!isLocked.compareAndSet(true, false)) {
