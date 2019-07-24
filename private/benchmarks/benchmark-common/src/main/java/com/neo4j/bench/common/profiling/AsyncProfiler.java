@@ -257,7 +257,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + asyncRecording.toAbsolutePath(),
                         "-------------------------------" );
-
+            Thread.sleep( 1000 );
             ASYNC.maybeSecondaryRecordingCreator()
                  .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
         }
