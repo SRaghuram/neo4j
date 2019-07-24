@@ -27,22 +27,22 @@ trait QueryCompletionTracker extends FlowControl {
   /**
     * Increment the tracker count.
     */
-  def increment(): Long
+  def increment(): Unit
 
   /**
     * Increment by n
     */
-  def incrementBy(n: Long): Long
+  def incrementBy(n: Long): Unit
 
   /**
     * Decrement the tracker count.
     */
-  def decrement(): Long
+  def decrement(): Unit
 
   /**
     * Decrement by n
     */
-  def decrementBy(n: Long): Long
+  def decrementBy(n: Long): Unit
 
   /**
     * Error!
@@ -83,19 +83,19 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   private var demand = 0L
   private var cancelled = false
 
-  override def increment(): Long = {
+  override def increment(): Unit = {
     count += 1
     DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName}. New count: $count")
-    count
   }
 
-  override def incrementBy(n: Long): Long = {
-    count += n
-    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $count")
-    count
+  override def incrementBy(n: Long): Unit = {
+    if (n != 0) {
+      count += n
+      DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $count")
+    }
   }
 
-  override def decrement(): Long = {
+  override def decrement(): Unit = {
     count -= 1
     DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName}. New count: $count")
     if (count < 0) {
@@ -104,13 +104,15 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     postDecrement()
   }
 
-  override def decrementBy(n: Long): Long = {
-    count -= n
-    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $count")
-    postDecrement()
+  override def decrementBy(n: Long): Unit = {
+    if (n != 0) {
+      count -= n
+      DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $count")
+      postDecrement()
+    }
   }
 
-  private def postDecrement(): Long = {
+  private def postDecrement(): Unit = {
     if (count == 0) {
       try {
         if (throwable != null) {
@@ -123,7 +125,6 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
         tracer.stopQuery()
       }
     }
-    count
   }
 
   override def error(throwable: Throwable): Unit = {
@@ -205,7 +206,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   // The status of the query
   private val status = new AtomicReference[Status](Running)
 
-  override def increment(): Long = {
+  override def increment(): Unit = {
     AssertionRunner.runUnderAssertion { () =>
       status.get() match {
         case CountReachedZero =>
@@ -215,28 +216,30 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     }
     val newCount = count.incrementAndGet()
     DebugSupport.logTracker(s"Incremented $toString. New count: $newCount")
-    newCount
   }
 
-  override def incrementBy(n: Long): Long = {
-    val newCount = count.addAndGet(n)
-    DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $newCount")
-    newCount
+  override def incrementBy(n: Long): Unit = {
+    if (n != 0) {
+      val newCount = count.addAndGet(n)
+      DebugSupport.logTracker(s"Incremented ${getClass.getSimpleName} by $n. New count: $newCount")
+    }
   }
 
-  override def decrement(): Long = {
+  override def decrement(): Unit = {
     val newCount = count.decrementAndGet()
     DebugSupport.logTracker(s"Decremented $toString. New count: $newCount")
     postDecrement(newCount)
   }
 
-  override def decrementBy(n: Long): Long = {
-    val newCount = count.addAndGet(-n)
-    DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $newCount")
-    postDecrement(newCount)
+  override def decrementBy(n: Long): Unit = {
+    if (n != 0) {
+      val newCount = count.addAndGet(-n)
+      DebugSupport.logTracker(s"Decremented ${getClass.getSimpleName} by $n. New count: $newCount")
+      postDecrement(newCount)
+    }
   }
 
-  private def postDecrement(newCount: Long): Long = {
+  private def postDecrement(newCount: Long): Unit = {
     if (newCount == 0) {
       try {
         status.compareAndExchange(Running, CountReachedZero) match {
@@ -257,7 +260,6 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")
     }
-    newCount
   }
 
   override def error(throwable: Throwable): Unit = {
