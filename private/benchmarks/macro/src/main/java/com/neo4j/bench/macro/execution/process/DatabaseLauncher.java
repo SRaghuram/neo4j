@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.kernel.configuration.BoltConnector;
+import org.neo4j.kernel.configuration.HttpConnector;
 
 import static java.lang.ProcessBuilder.Redirect;
 
@@ -216,6 +217,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
             Redirect errorRedirect = Redirect.to( forkDirectory.pathFor( "neo4j-error.log" ).toFile() );
             Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                               .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
+                              .withSetting( new HttpConnector( "http" ).enabled, "true" )
                               .addJvmArgs( additionalJvmArgs )
                               .writeToFile( neo4jConfigFile );
             Path copyLogsToOnClose = Paths.get( forkDirectory.toAbsolutePath() );
