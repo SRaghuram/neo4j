@@ -8,6 +8,7 @@ package com.neo4j.bench.client;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.queries.SubmitTestRun;
 import com.neo4j.bench.common.model.TestRunError;
@@ -69,7 +70,7 @@ public class ReportCommand implements Runnable
             name = {CMD_ERROR_POLICY},
             description = "Error policy",
             title = "Error policy" )
-    @Required
+    @AllowedEnumValues( ErrorReportingPolicy.class )
     private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
 
     @Override
