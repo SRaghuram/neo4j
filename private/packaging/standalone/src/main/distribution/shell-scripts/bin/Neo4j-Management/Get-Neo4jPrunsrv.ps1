@@ -119,6 +119,7 @@ function Get-Neo4jPrunsrv
 
         $PrunArgs += @("`"--StartMode=jvm`"",
           "`"--StartMethod=start`"",
+          "`"--ServiceUser=LocalSystem`"",
           "`"--StartPath=$($Neo4jServer.Home)`"",
           "`"--StartParams=--config-dir=$($Neo4jServer.ConfDir)`"",
           "`"++StartParams=--home-dir=$($Neo4jServer.Home)`"",
