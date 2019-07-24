@@ -18,6 +18,26 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import scala.collection.Map
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
+
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    val queries = List(
+      "CREATE USER Bar SET PASSWORD 'neo'",
+      "ALTER USER Bar SET PASSWORD 'neo4j' CHANGE NOT REQUIRED",
+      "DROP USER Bar"
+    )
+
+    // WHEN & THEN
+    for (q <- queries) {
+      execute(q).queryStatistics().containsUpdates should be(false)
+    }
+  }
+
   // Tests for showing users
 
   test("should show default user") {

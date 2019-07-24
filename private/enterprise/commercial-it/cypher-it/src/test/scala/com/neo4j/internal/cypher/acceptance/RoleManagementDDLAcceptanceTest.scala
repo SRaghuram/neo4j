@@ -21,6 +21,27 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val foo = Map("role" -> "foo", "isBuiltIn" -> false)
   private val bar = Map("role" -> "bar", "isBuiltIn" -> false)
 
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    val queries = List(
+      "CREATE ROLE foo",
+      "GRANT ROLE foo TO Bar",
+      "REVOKE ROLE foo FROM Bar",
+      "DROP ROLE foo"
+    )
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+
+    // WHEN & THEN
+    for (q <- queries) {
+      execute(q).queryStatistics().containsUpdates should be(false)
+    }
+  }
+
   // Tests for showing roles
 
   test("should show all default roles") {

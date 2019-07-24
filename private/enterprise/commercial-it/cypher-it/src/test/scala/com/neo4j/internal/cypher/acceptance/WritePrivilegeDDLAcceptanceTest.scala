@@ -15,6 +15,27 @@ import scala.collection.Map
 
 class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    val queries = List(
+      "GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom",
+      "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom",
+      "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom",
+      "REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom"
+    )
+    execute("CREATE ROLE custom")
+
+    // WHEN & THEN
+    for (q <- queries) {
+      execute(q).queryStatistics().containsUpdates should be(false)
+    }
+  }
+
   Seq(
     ("grant", "GRANT", "GRANTED" ),
     ("deny", "DENY", "DENIED" ),

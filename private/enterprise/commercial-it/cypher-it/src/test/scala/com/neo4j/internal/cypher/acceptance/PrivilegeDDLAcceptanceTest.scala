@@ -13,6 +13,37 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    val queries = List(
+      "GRANT TRAVERSE ON GRAPH * NODES * TO custom",
+      "REVOKE GRANT TRAVERSE ON GRAPH * NODES * FROM custom",
+      "DENY TRAVERSE ON GRAPH * NODES * TO custom",
+      "REVOKE DENY TRAVERSE ON GRAPH * NODES * FROM custom",
+
+      "GRANT READ(prop) ON GRAPH * NODES * TO custom",
+      "REVOKE GRANT READ(prop) ON GRAPH * NODES * FROM custom",
+      "DENY READ(prop) ON GRAPH * NODES * TO custom",
+      "REVOKE DENY READ(prop) ON GRAPH * NODES * FROM custom",
+
+      "GRANT MATCH(prop) ON GRAPH * NODES * TO custom",
+      "REVOKE GRANT MATCH(prop) ON GRAPH * NODES * FROM custom",
+      "DENY MATCH(prop) ON GRAPH * NODES * TO custom",
+      "REVOKE DENY MATCH(prop) ON GRAPH * NODES * FROM custom"
+    )
+    execute("CREATE ROLE custom")
+
+    // WHEN & THEN
+    for (q <- queries) {
+      execute(q).queryStatistics().containsUpdates should be(false)
+    }
+  }
+
   // Tests for showing privileges
 
   test("should show privileges for users") {

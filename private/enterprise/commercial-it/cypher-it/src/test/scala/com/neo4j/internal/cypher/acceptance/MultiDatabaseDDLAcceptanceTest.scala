@@ -34,6 +34,26 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   private val defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
   private val databaseIdRepository = new TestDatabaseIdRepository()
 
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    setup(defaultConfig)
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    val queries = List(
+      "CREATE DATABASE foo",
+      "STOP DATABASE foo",
+      "START DATABASE foo",
+      "DROP DATABASE foo"
+    )
+
+    // WHEN & THEN
+    for (q <- queries) {
+      execute(q).queryStatistics().containsUpdates should be(false)
+    }
+  }
+
   test("should fail at startup when config setting for default database name is invalid") {
     // GIVEN
     val startOfError = "Error evaluating value for setting 'dbms.default_database'. "
