@@ -41,19 +41,12 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
 
     // Notice: They are executed in succession so they have to make sense in that order
-    val queries = List(
-      "CREATE DATABASE foo",
-      "STOP DATABASE foo",
-      "START DATABASE foo",
-      "DROP DATABASE foo"
-    )
-
-    // WHEN & THEN
-    for (q <- queries) {
-      val statistics = execute(q).queryStatistics()
-      statistics.containsUpdates should be(false)
-      statistics.ranOnSystemGraph() should be (true)
-    }
+    assertQueriesAndSubQueryCounts(List(
+      "CREATE DATABASE foo" -> 1,
+      "STOP DATABASE foo" -> 1,
+      "START DATABASE foo" -> 1,
+      "DROP DATABASE foo" -> 1
+    ))
   }
 
   test("should fail at startup when config setting for default database name is invalid") {

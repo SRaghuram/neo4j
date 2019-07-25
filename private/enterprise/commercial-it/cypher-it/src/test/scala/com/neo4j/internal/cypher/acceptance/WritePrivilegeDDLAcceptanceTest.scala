@@ -20,22 +20,15 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // Notice: They are executed in succession so they have to make sense in that order
-    val queries = List(
-      "GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom",
-      "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom",
-      "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom",
-      "REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom"
-    )
     execute("CREATE ROLE custom")
 
-    // WHEN & THEN
-    for (q <- queries) {
-      val statistics = execute(q).queryStatistics()
-      statistics.containsUpdates should be(false)
-      statistics.ranOnSystemGraph() should be (true)
-    }
+    // Notice: They are executed in succession so they have to make sense in that order
+    assertQueriesAndSubQueryCounts(List(
+      "GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom" -> 2,
+      "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom" -> 2
+    ))
   }
 
   Seq(

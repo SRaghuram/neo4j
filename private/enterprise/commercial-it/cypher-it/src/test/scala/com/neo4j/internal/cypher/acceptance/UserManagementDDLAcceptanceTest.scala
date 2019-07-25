@@ -19,11 +19,13 @@ import scala.collection.Map
 
 class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
-  test("GraphStatistics should tell us if a query was executed against system or not"){
+  test("GraphStatistics should tell us if a query contains system updates or not"){
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("MATCH (n) RETURN n").queryStatistics().ranOnSystemGraph() should be (false)
+    execute("CREATE (n) RETURN n").queryStatistics().containsUpdates() should be(true)
+    execute("CREATE (n) RETURN n").queryStatistics().containsSystemUpdates() should be(false)
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").queryStatistics().ranOnSystemGraph() should be (true)
+    execute("SHOW USERS").queryStatistics().containsSystemUpdates() should be(false)
+    execute("CREATE USER foo SET PASSWORD 'bar'").queryStatistics().containsSystemUpdates() should be(true)
   }
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -33,18 +35,11 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Notice: They are executed in succession so they have to make sense in that order
-    val queries = List(
-      "CREATE USER Bar SET PASSWORD 'neo'",
-      "ALTER USER Bar SET PASSWORD 'neo4j' CHANGE NOT REQUIRED",
-      "DROP USER Bar"
-    )
-
-    // WHEN & THEN
-    for (q <- queries) {
-      val statistics = execute(q).queryStatistics()
-      statistics.containsUpdates should be(false)
-      statistics.ranOnSystemGraph() should be (true)
-    }
+    assertQueriesAndSubQueryCounts(List(
+      "CREATE USER Bar SET PASSWORD 'neo'" -> 1,
+      "ALTER USER Bar SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" -> 1,
+      "DROP USER Bar" -> 1
+    ))
   }
 
   // Tests for showing users

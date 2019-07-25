@@ -514,7 +514,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
       if (dbName.equals(SYSTEM_DATABASE_NAME))
         throw new DatabaseManagementException(s"Not allowed to $action system database.")
 
-      UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
+      SystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
           |RETURN db.name as name""".stripMargin,
         VirtualValues.map(

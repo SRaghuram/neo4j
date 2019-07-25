@@ -18,32 +18,29 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    Seq("a", "b", "c").foreach(role => execute(s"CREATE ROLE $role"))
 
     // Notice: They are executed in succession so they have to make sense in that order
-    val queries = List(
-      "GRANT TRAVERSE ON GRAPH * NODES * TO custom",
-      "REVOKE GRANT TRAVERSE ON GRAPH * NODES * FROM custom",
-      "DENY TRAVERSE ON GRAPH * NODES * TO custom",
-      "REVOKE DENY TRAVERSE ON GRAPH * NODES * FROM custom",
+    assertQueriesAndSubQueryCounts(List(
+      "GRANT TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE GRANT TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
+      "DENY TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE DENY TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
 
-      "GRANT READ(prop) ON GRAPH * NODES * TO custom",
-      "REVOKE GRANT READ(prop) ON GRAPH * NODES * FROM custom",
-      "DENY READ(prop) ON GRAPH * NODES * TO custom",
-      "REVOKE DENY READ(prop) ON GRAPH * NODES * FROM custom",
+      "GRANT READ(prop) ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE GRANT READ(prop) ON GRAPH * NODES * FROM custom" -> 1,
+      "DENY READ(prop) ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE DENY READ(prop) ON GRAPH * NODES * FROM custom" -> 1,
 
-      "GRANT MATCH(prop) ON GRAPH * NODES * TO custom",
-      "REVOKE GRANT MATCH(prop) ON GRAPH * NODES * FROM custom",
-      "DENY MATCH(prop) ON GRAPH * NODES * TO custom",
-      "REVOKE DENY MATCH(prop) ON GRAPH * NODES * FROM custom"
-    )
-    execute("CREATE ROLE custom")
+      "GRANT MATCH(prop) ON GRAPH * NODES * TO custom" -> 2,
+      "REVOKE GRANT MATCH(prop) ON GRAPH * NODES * FROM custom" -> 1,
+      "DENY MATCH(prop) ON GRAPH * NODES * TO custom" -> 2,
+      "REVOKE DENY MATCH(prop) ON GRAPH * NODES * FROM custom" -> 1,
 
-    // WHEN & THEN
-    for (q <- queries) {
-      val statistics = execute(q).queryStatistics()
-      statistics.containsUpdates should be(false)
-      statistics.ranOnSystemGraph() should be (true)
-    }
+      "GRANT READ(a,b,c) ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
+    ))
   }
 
   // Tests for showing privileges

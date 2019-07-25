@@ -134,6 +134,18 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
     result should be(expected)
   }
 
+  def assertQueriesAndSubQueryCounts(queriesAndSubqueryCounts: Seq[(String, Int)]) {
+    for (qc <- queriesAndSubqueryCounts) qc match {
+      case (query, subqueryCount) =>
+        val statistics = execute(query).queryStatistics()
+        withClue(s"'$query': ") {
+          statistics.containsUpdates should be(false)
+          statistics.containsSystemUpdates should be(true)
+          statistics.systemUpdates should be(subqueryCount)
+        }
+    }
+  }
+
   def executeOnDefault(username: String, password: String, query: String,
                        params: util.Map[String, Object] = Collections.emptyMap(),
                        resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},

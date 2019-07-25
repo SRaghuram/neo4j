@@ -26,22 +26,18 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER Bar SET PASSWORD 'neo'")
+    Seq("x", "y", "z").foreach(user => execute(s"CREATE USER $user SET PASSWORD 'neo'"))
+    Seq("a", "b", "c").foreach(role => execute(s"CREATE ROLE $role"))
 
     // Notice: They are executed in succession so they have to make sense in that order
-    val queries = List(
-      "CREATE ROLE foo",
-      "GRANT ROLE foo TO Bar",
-      "REVOKE ROLE foo FROM Bar",
-      "DROP ROLE foo"
-    )
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-
-    // WHEN & THEN
-    for (q <- queries) {
-      val statistics = execute(q).queryStatistics()
-      statistics.containsUpdates should be(false)
-      statistics.ranOnSystemGraph() should be (true)
-    }
+    assertQueriesAndSubQueryCounts(List(
+      "CREATE ROLE foo" -> 1,
+      "GRANT ROLE foo TO Bar" -> 1,
+      "REVOKE ROLE foo FROM Bar" -> 1,
+      "DROP ROLE foo" -> 1,
+      "GRANT ROLE a,b,c TO x,y,z" -> 9
+    ))
   }
 
   // Tests for showing roles
