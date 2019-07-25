@@ -203,7 +203,7 @@ public class RunExportCommand implements Runnable
             name = {CMD_ERROR_POLICY},
             description = "Prescribes how to deal with errors",
             title = "Error Policy" )
-    @AllowedEnumValues( ErrorPolicy.class )
+    @AllowedEnumValues( ErrorReporter.ErrorPolicy.class )
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
 
     private static final String CMD_JVM_PATH = "--jvm";
