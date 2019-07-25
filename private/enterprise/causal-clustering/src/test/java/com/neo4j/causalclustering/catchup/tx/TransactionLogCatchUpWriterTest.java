@@ -52,7 +52,9 @@ import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static org.apache.commons.io.FileUtils.sizeOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -60,6 +62,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.Config.defaults;
+import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
@@ -142,6 +145,26 @@ public class TransactionLogCatchUpWriterTest
         assertNotEquals( logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
         verifyTransactionsInLog( logFiles, fromTxId, MANY_TRANSACTIONS );
         verifyCheckpointInLog( logFiles, partOfStoreCopy );
+    }
+
+    @Test
+    public void doNotPreallocateTxLogsDuringStoreCopy() throws IOException
+    {
+        Config config = defaults();
+        simulateStoreCopy();
+        try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true ) )
+        {
+            // empty
+        }
+        if ( partOfStoreCopy )
+        {
+            assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
+        }
+        else
+        {
+            assertThat(  sizeOf( databaseLayout.getTransactionLogsDirectory() ), greaterThanOrEqualTo( logical_log_rotation_threshold.defaultValue() ) );
+        }
     }
 
     @Test

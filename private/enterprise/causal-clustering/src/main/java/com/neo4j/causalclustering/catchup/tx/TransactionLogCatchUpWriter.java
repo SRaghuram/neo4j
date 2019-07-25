@@ -34,7 +34,9 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.LogPosition.start;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
@@ -68,7 +70,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
-                .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
+                .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations, asPartOfStoreCopy ) )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore )
                 .withLastClosedTransactionPositionSupplier( () -> start( metaDataStore.getCurrentLogVersion() ) );
@@ -84,7 +86,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         return Config.newBuilder().fromConfig( config ).set( GraphDatabaseSettings.record_format, null ).build();
     }
 
-    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
+    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations, boolean asPartOfStoreCopy )
     {
         Config.Builder builder = Config.newBuilder();
         if ( !keepTxLogsInStoreDir && original.isExplicitlySet( transaction_logs_root_path ) )
@@ -94,6 +96,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         if ( forceTransactionRotations && original.isExplicitlySet( logical_log_rotation_threshold ) )
         {
             builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ).toString() );
+        }
+        if ( asPartOfStoreCopy )
+        {
+            builder.set( preallocate_logical_logs, FALSE );
         }
         return builder.build();
     }
