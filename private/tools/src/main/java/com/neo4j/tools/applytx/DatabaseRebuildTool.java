@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,8 +21,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.SettingImpl;
-import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -147,15 +146,17 @@ public class DatabaseRebuildTool
     {
         DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir );
         builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
+        Map<String, String> rawCfgValues = new HashMap<>();
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {
             if ( entry.getKey().startsWith( "D" ) )
             {
                 String key = entry.getKey().substring( 1 );
                 String value = entry.getValue();
-                builder = builder.setConfig( SettingImpl.newBuilder( key, SettingValueParsers.STRING, null ).build(), value );
+                rawCfgValues.put( key, value );
             }
         }
+        builder.setConfigRaw( rawCfgValues );
         return builder;
     }
 

@@ -20,6 +20,7 @@ import java.util.stream.LongStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.collection.LongRange;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -113,14 +114,14 @@ public class TransactionLogCatchUpWriterTest
     @Test
     public void createTransactionLogWithCheckpointInCustomLocation() throws IOException
     {
-        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directory( "custom-tx-logs" ).getAbsolutePath() ), false );
+        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directory( "custom-tx-logs" ).toPath().toAbsolutePath() ), false );
     }
 
     @Test
     public void pullRotatesWhenThresholdCrossedAndExplicitlySet() throws IOException
     {
         // given
-        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
+        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );
 
         // and
         StoreId storeId = simulateStoreCopy();
@@ -171,7 +172,7 @@ public class TransactionLogCatchUpWriterTest
     public void pullDoesNotRotateWhenThresholdCrossedAndExplicitlyOff() throws IOException
     {
         // given
-        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
+        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );
 
         // and
         StoreId storeId = simulateStoreCopy();

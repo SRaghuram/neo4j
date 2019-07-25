@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -37,7 +38,6 @@ import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -56,11 +56,12 @@ class RotatableCsvOutputIT
     void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( csvPath, outputPath.getAbsolutePath() )
-                .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
-                .setConfig( csvInterval, "100ms" )
-                .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
+        managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( csvPath, outputPath.toPath().toAbsolutePath() )
+                .setConfig( csvRotationThreshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
+                .setConfig( csvInterval, Duration.ofMillis( 100 ) )
+                .setConfig( csvMaxArchives, MAX_ARCHIVES )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -51,7 +52,6 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.driver.AuthTokens.basic;
 import static org.neo4j.driver.AuthTokens.custom;
@@ -73,19 +73,18 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     @Before
     public void setup() throws Exception
     {
-        String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
-        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, TRUE )
-              .withSetting( BoltConnector.enabled, TRUE )
-              .withSetting( BoltConnector.encryption_level, OPTIONAL.name() )
-              .withSetting( BoltConnector.listen_address, host );
+        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
+              .withSetting( BoltConnector.enabled, true )
+              .withSetting( BoltConnector.encryption_level, OPTIONAL )
+              .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
     }
 
-    protected abstract Map<Setting<?>,String> getSettings();
+    protected abstract Map<Setting<?>,Object> getSettings();
 
-    void restartServerWithOverriddenSettings( Map<Setting<?>,String> configChanges ) throws IOException
+    void restartServerWithOverriddenSettings( Map<Setting<?>,Object> configChanges ) throws IOException
     {
         dbRule.restartDatabase( configChanges );
     }

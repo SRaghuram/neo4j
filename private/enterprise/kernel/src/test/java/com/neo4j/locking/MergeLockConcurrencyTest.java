@@ -20,7 +20,7 @@ import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.ConfigBuilder;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.ImpermanentDbmsRule;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
@@ -28,7 +28,6 @@ import org.neo4j.test.rule.concurrent.ThreadingRule;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
-import static org.neo4j.test.ConfigBuilder.configure;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.await;
 
 @RunWith( Parameterized.class )
@@ -43,14 +42,14 @@ public class MergeLockConcurrencyTest
     public static Iterable<Object[]> configurations()
     {
         return Arrays.asList(
-                configure( lock_manager, "community" ).asParameters(),
-                configure( lock_manager, "forseti" ).asParameters()
+                new Object[] { Map.of( lock_manager, "community" ) },
+                new Object[] { Map.of( lock_manager, "forseti" ) }
         );
     }
 
-    public MergeLockConcurrencyTest( ConfigBuilder config )
+    public MergeLockConcurrencyTest( Map<Setting<?>, Object> config )
     {
-        db.withSettings( config.configuration() );
+        db.withSettings( config );
     }
 
     @Test

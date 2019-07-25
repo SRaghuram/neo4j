@@ -31,6 +31,7 @@ import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
 import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
@@ -56,7 +57,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.AuthToken.BASIC_SCHEME;
 import static org.neo4j.kernel.api.security.AuthToken.CREDENTIALS;
@@ -89,7 +89,8 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
                 () -> fileSystem,
                 settings ->
                 {
-                    settings.put( GraphDatabaseSettings.auth_enabled, TRUE );
+                    settings.put( GraphDatabaseSettings.auth_enabled, true );
+                    config.forEach( ( setting, value ) -> settings.put( setting, ((SettingImpl<Object>) setting ).parse( value ) )  );
                     settings.putAll( config );
                 } );
         server.ensureDatabase( r ->

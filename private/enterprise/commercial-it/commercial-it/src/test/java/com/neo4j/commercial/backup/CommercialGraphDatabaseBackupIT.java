@@ -90,13 +90,13 @@ class CommercialGraphDatabaseBackupIT
     {
         File storeDir = databaseDirectory.getParentFile();
         managementService = defaultCommercialBuilder( storeDir, backupEnabled )
-                .setConfig( transaction_logs_root_path, storeDir.getAbsolutePath() ).build();
+                .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private static DatabaseManagementServiceBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
     {
-        return new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) );
+        return new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, backupEnabled );
     }
 
     private static void createNodes( GraphDatabaseService db, int count )

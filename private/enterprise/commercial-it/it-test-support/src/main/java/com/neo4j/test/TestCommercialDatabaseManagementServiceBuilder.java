@@ -127,22 +127,15 @@ public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
-    public TestCommercialDatabaseManagementServiceBuilder setConfig( String name, String value )
-    {
-        return (TestCommercialDatabaseManagementServiceBuilder) super.setConfig( name, value );
-    }
-
-    @Override
-    public TestCommercialDatabaseManagementServiceBuilder setConfig( Setting<?> setting, String value )
+    public <T> TestCommercialDatabaseManagementServiceBuilder setConfig( Setting<T> setting, T value )
     {
         return (TestCommercialDatabaseManagementServiceBuilder) super.setConfig( setting, value );
     }
 
     @Override
-    public TestCommercialDatabaseManagementServiceBuilder setConfig( Map<Setting<?>,String> config )
+    public TestCommercialDatabaseManagementServiceBuilder setConfig( Map<Setting<?>,Object> config )
     {
         return (TestCommercialDatabaseManagementServiceBuilder) super.setConfig( config );
     }
-
 }
 

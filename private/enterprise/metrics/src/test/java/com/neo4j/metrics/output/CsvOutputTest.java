@@ -13,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -34,8 +36,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
 class CsvOutputTest
@@ -61,11 +61,11 @@ class CsvOutputTest
     {
         // GIVEN
         File home = directory.absolutePath();
-        Config config = config(
-                MetricsSettings.csvEnabled.name(), TRUE,
-                MetricsSettings.csvInterval.name(), "10ms",
-                MetricsSettings.csvPath.name(), "the-metrics-dir",
-                GraphDatabaseSettings.neo4j_home.name(), home.getAbsolutePath() );
+        Config config = Config.newBuilder()
+                .set( MetricsSettings.csvEnabled, true )
+                .set( MetricsSettings.csvInterval, Duration.ofMillis( 10 ) )
+                .set( MetricsSettings.csvPath, Path.of( "the-metrics-dir" ) )
+                .set( GraphDatabaseSettings.neo4j_home, home.toPath().toAbsolutePath() ).build();
         life.add( createCsvOutput( config ) );
 
         // WHEN
@@ -80,10 +80,10 @@ class CsvOutputTest
     {
         // GIVEN
         File outputFPath = Files.createTempDirectory( "output" ).toFile();
-        Config config = config(
-                MetricsSettings.csvEnabled.name(), TRUE,
-                MetricsSettings.csvInterval.name(), "10ms",
-                MetricsSettings.csvPath.name(), outputFPath.getAbsolutePath() );
+        Config config = Config.newBuilder()
+                .set( MetricsSettings.csvEnabled, true )
+                .set( MetricsSettings.csvInterval, Duration.ofMillis( 10 ) )
+                .set( MetricsSettings.csvPath, outputFPath.toPath().toAbsolutePath() ).build();
         life.add( createCsvOutput( config ) );
 
         // WHEN
@@ -96,11 +96,6 @@ class CsvOutputTest
     private CsvOutput createCsvOutput( Config config )
     {
         return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystem, jobScheduler );
-    }
-
-    private Config config( String... keysValues )
-    {
-        return Config.defaults( stringMap( keysValues ) );
     }
 
     private void waitForFileToAppear( File file ) throws InterruptedException

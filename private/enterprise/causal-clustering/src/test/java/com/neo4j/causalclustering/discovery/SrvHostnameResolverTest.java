@@ -40,7 +40,7 @@ public class SrvHostnameResolverTest
 
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private final AssertableLogProvider userLogProvider = new AssertableLogProvider();
-    private final Config config = Config.defaults( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "2" );
+    private final Config config = Config.defaults( CausalClusteringSettings.minimum_core_cluster_size_at_formation, 2 );
 
     private final SrvHostnameResolver resolver = new SrvHostnameResolver( new SimpleLogService( userLogProvider, logProvider ), mockSrvRecordResolver,
             config, RetryStrategyTest.testRetryStrategy( 1 ) );

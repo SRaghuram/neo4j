@@ -20,6 +20,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -34,7 +35,6 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @CommercialDbmsExtension( configurationCallback = "enableBolt" )
 class ProcedureResourcesIT
@@ -51,8 +51,8 @@ class ProcedureResourcesIT
     static void enableBolt( TestDatabaseManagementServiceBuilder builder )
     {
 
-        builder.setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.listen_address, "localhost:0" );
+        builder.setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
     }
 
     @AfterAll

@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class UpstreamDatabaseStrategiesLoaderTest
     public void shouldReturnConfiguredClassesOnly()
     {
         // given
-        Config config = Config.defaults( upstream_selection_strategy, "dummy" );
+        Config config = Config.defaults( upstream_selection_strategy, List.of( "dummy" ) );
 
         UpstreamDatabaseStrategiesLoader strategies =
                 new UpstreamDatabaseStrategiesLoader( mock( TopologyService.class ), config, myself, NullLogProvider.getInstance() );
@@ -47,7 +48,7 @@ public class UpstreamDatabaseStrategiesLoaderTest
     public void shouldReturnTheFirstStrategyThatWorksFromThoseConfigured()
     {
         // given
-        Config config = Config.defaults( upstream_selection_strategy, "yet-another-dummy,dummy,another-dummy" );
+        Config config = Config.defaults( upstream_selection_strategy, List.of( "yet-another-dummy", "dummy", "another-dummy" ) );
 
         // when
         UpstreamDatabaseStrategiesLoader strategies =

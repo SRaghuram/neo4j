@@ -36,8 +36,6 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class BatchingNeoStoresIT
@@ -62,7 +60,7 @@ class BatchingNeoStoresIT
     @Test
     void startBatchingNeoStoreWithMetricsPluginEnabled() throws Exception
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, TRUE );
+        Config config = Config.defaults( MetricsSettings.metricsEnabled, true );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
@@ -85,7 +83,7 @@ class BatchingNeoStoresIT
         }
 
         DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( GraphDatabaseSettings.fail_on_missing_files, FALSE )
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, false )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

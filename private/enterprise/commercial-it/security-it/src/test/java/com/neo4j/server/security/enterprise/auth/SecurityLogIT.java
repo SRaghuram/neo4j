@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.Is.isA;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class SecurityLogIT
@@ -44,7 +43,7 @@ public class SecurityLogIT
 
         final DatabaseManagementServiceBuilder builder =
                 new TestCommercialDatabaseManagementServiceBuilder().setFileSystem( evilFileSystem ).setInternalLogProvider( logProvider ).impermanent()
-                        .setConfig( GraphDatabaseSettings.auth_enabled, TRUE );
+                        .setConfig( GraphDatabaseSettings.auth_enabled, true );
 
         // When
         RuntimeException runtimeException =

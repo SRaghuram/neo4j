@@ -49,10 +49,9 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
             .collect( joining( ", " ) );
 
     @Override
-    protected Map<Setting<?>,String> getSettings()
+    protected Map<Setting<?>,Object> getSettings()
     {
-        return Map.of( authentication_providers, DEFAULT_TEST_PLUGIN_REALMS,
-                authorization_providers, DEFAULT_TEST_PLUGIN_REALMS);
+        return Map.of( authentication_providers, List.of( DEFAULT_TEST_PLUGIN_REALMS ) );
     }
 
     @Test

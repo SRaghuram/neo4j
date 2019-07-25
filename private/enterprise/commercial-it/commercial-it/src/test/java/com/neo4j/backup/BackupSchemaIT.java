@@ -172,8 +172,8 @@ class BackupSchemaIT
 
     private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
     {
-        managementService = new TestCommercialDatabaseManagementServiceBuilder( dir ).setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) )
-                .setConfig( transaction_logs_root_path, dir.getAbsolutePath() ).build();
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( dir ).setConfig( online_backup_enabled, backupEnabled )
+                .setConfig( transaction_logs_root_path, dir.toPath().toAbsolutePath() ).build();
         return (GraphDatabaseAPI) managementService.database( DB_NAME );
     }
 

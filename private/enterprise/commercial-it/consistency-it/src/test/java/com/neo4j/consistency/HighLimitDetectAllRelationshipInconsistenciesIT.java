@@ -14,8 +14,6 @@ import java.util.Map;
 import org.neo4j.consistency.checking.full.DetectAllRelationshipInconsistenciesIT;
 import org.neo4j.graphdb.config.Setting;
 
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-
 public class HighLimitDetectAllRelationshipInconsistenciesIT extends DetectAllRelationshipInconsistenciesIT
 {
     @Override
@@ -25,10 +23,10 @@ public class HighLimitDetectAllRelationshipInconsistenciesIT extends DetectAllRe
     }
 
     @Override
-    protected Map<Setting<?>,String> getConfig()
+    protected Map<Setting<?>,Object> getConfig()
     {
-        Map<Setting<?>,String> cfg = new HashMap<>( super.getConfig() );
-        cfg.put( OnlineBackupSettings.online_backup_enabled, FALSE );
+        Map<Setting<?>,Object> cfg = new HashMap<>( super.getConfig() );
+        cfg.put( OnlineBackupSettings.online_backup_enabled, false );
         return cfg;
     }
 }

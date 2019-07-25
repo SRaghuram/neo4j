@@ -12,13 +12,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
+
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CausalClusterInProcessRunnerIT
@@ -68,9 +68,9 @@ class CausalClusterInProcessRunnerIT
                 .withReplicas( 3 )
                 .withLogger( NullLogProvider.getInstance() )
                 .atPath( clusterPath )
-                .withConfig( GraphDatabaseSettings.auth_enabled.name(), TRUE )
-                .withConfig( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
-                .withConfig( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
+                .withConfig( GraphDatabaseSettings.auth_enabled, true )
+                .withConfig( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
+                .withConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
                 .withOptionalPortsStrategy( portPickingStrategy )
                 .build();
 

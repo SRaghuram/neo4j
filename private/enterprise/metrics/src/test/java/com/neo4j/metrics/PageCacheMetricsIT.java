@@ -11,6 +11,7 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.time.Duration;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -32,8 +33,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @DbmsExtension( configurationCallback = "configure" )
@@ -51,12 +50,12 @@ class PageCacheMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         metricsDirectory = testDirectory.directory( "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, TRUE  )
-                .setConfig( MetricsSettings.neoPageCacheEnabled, TRUE  )
-                .setConfig( MetricsSettings.csvEnabled, TRUE )
-                .setConfig( MetricsSettings.csvInterval, "100ms" )
-                .setConfig( MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+        builder.setConfig( MetricsSettings.metricsEnabled, true  )
+                .setConfig( MetricsSettings.neoPageCacheEnabled, true  )
+                .setConfig( MetricsSettings.csvEnabled, true )
+                .setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 100 ) )
+                .setConfig( MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @Test

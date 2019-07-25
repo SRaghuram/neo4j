@@ -49,7 +49,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 public class BoltProceduresIT
@@ -57,7 +56,7 @@ public class BoltProceduresIT
     @ClassRule
     public static final Neo4jRule db = new Neo4jRule()
             .withProcedure( BoltTestProcedures.class )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
     private static Driver driver;
 

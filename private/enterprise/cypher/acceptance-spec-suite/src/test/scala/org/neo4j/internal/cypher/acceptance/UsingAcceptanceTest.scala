@@ -5,8 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.{FALSE, TRUE}
+
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, _}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{Node, QueryExecutionException}
@@ -14,7 +15,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 import org.neo4j.kernel.api.exceptions.Status
 
 class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
-  override def databaseConfig(): Map[Setting[_], String] = Map(GraphDatabaseSettings.cypher_hints_error -> TRUE)
+  override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.cypher_hints_error -> TRUE)
 
   test("should use index on literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")

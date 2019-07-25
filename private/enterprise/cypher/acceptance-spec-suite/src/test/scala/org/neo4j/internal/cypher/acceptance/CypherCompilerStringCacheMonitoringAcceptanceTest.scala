@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.time.Duration
+
 import org.hamcrest.Matchers
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -43,7 +45,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     }
   }
 
-  override def databaseConfig(): Map[Setting[_],String] = Map(GraphDatabaseSettings.cypher_min_replan_interval -> "0")
+  override def databaseConfig(): Map[Setting[_],Object] = Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO)
 
   test("should monitor cache miss") {
     // given

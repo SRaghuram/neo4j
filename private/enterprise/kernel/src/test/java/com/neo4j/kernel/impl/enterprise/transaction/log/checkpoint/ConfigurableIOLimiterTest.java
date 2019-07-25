@@ -8,7 +8,6 @@ package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 import org.junit.jupiter.api.Test;
 
 import java.io.Flushable;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ObjLongConsumer;
@@ -20,7 +19,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 class ConfigurableIOLimiterTest
 {
@@ -233,8 +231,7 @@ class ConfigurableIOLimiterTest
 
     private void createIOLimiter( int limit )
     {
-        Map<String,String> settings = stringMap( GraphDatabaseSettings.check_point_iops_limit.name(), "" + limit );
-        createIOLimiter( Config.defaults( settings ) );
+        createIOLimiter( Config.defaults( GraphDatabaseSettings.check_point_iops_limit, limit ) );
     }
 
     private void assertUnlimited()

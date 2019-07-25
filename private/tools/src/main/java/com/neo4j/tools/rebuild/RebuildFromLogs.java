@@ -61,7 +61,6 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
@@ -284,7 +283,7 @@ class RebuildFromLogs
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
         managementService = new CommercialDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setExternalDependencies( dependencies )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );

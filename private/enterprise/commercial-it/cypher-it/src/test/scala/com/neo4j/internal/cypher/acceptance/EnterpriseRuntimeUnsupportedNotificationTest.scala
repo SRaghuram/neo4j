@@ -5,6 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.TRUE
+
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineHelper._
@@ -24,7 +26,7 @@ class EnterpriseRuntimeUnsupportedNotificationTest extends ExecutionEngineFunSui
   }
 
   test("can also be configured to fail hard") {
-    restartWithConfig(Map(GraphDatabaseSettings.cypher_hints_error -> "true"))
+    restartWithConfig(Map(GraphDatabaseSettings.cypher_hints_error -> TRUE))
     eengine = createEngine(graph)
 
     val exception = intercept[RuntimeUnsupportedException](execute("CYPHER runtime=morsel EXPLAIN RETURN 1 SKIP 1"))

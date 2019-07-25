@@ -127,8 +127,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
@@ -445,8 +443,8 @@ class BackupIT
     @TestWithRecordFormats
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
-        String customTxLogsLocation = testDirectory.directory( "customLogLocation" ).getAbsolutePath();
-        Map<Setting<?>,String> settings = Maps.mutable.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
+        Path customTxLogsLocation = testDirectory.directory( "customLogLocation" ).toPath().toAbsolutePath();
+        Map<Setting<?>,Object> settings = Maps.mutable.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
         GraphDatabaseService db = startDb( serverStorePath, settings );
         createInitialDataSet( db );
 
@@ -825,7 +823,7 @@ class BackupIT
         addLotsOfData( db );
         managementService.shutdown();
 
-        db = startDb( serverStorePath, Maps.mutable.of( read_only, TRUE ) );
+        db = startDb( serverStorePath, Maps.mutable.of( read_only, true ) );
 
         executeBackup( db );
 
@@ -905,7 +903,7 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, FALSE ) );
+        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, false ) );
 
         createInitialDataSet( db );
         createIndex( db );
@@ -1075,27 +1073,24 @@ class BackupIT
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
-        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE,
+        Map<Setting<?>,Object> settings = Maps.mutable.of( online_backup_enabled, false,
                 record_format, record_format.defaultValue(),
-                transaction_logs_root_path, path.getAbsolutePath() );
+                transaction_logs_root_path, path.toPath().toAbsolutePath() );
         return startDb( path, settings );
     }
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )
     {
-        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE, record_format, recordFormatName );
+        Map<Setting<?>,Object> settings = Maps.mutable.of( online_backup_enabled, false, record_format, recordFormatName );
         return startDb( path, settings );
     }
 
-    private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
+    private GraphDatabaseService startDb( File path, Map<Setting<?>,Object> settings )
     {
         DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( path );
 
-        settings.putIfAbsent( online_backup_enabled, TRUE );
-        for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )
-        {
-            builder.setConfig( entry.getKey(), entry.getValue() );
-        }
+        settings.putIfAbsent( online_backup_enabled, true );
+        builder.setConfig( settings );
 
         managementService = builder.build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -1218,7 +1213,7 @@ class BackupIT
 
     private static boolean checkLogFileExistence( String directory )
     {
-        return Config.defaults( logs_directory, directory ).get( store_internal_log_path ).toFile().exists();
+        return Config.defaults( logs_directory, Path.of( directory ) ).get( store_internal_log_path ).toFile().exists();
     }
 
     private static long lastTxChecksumOf( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException

@@ -35,8 +35,10 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -129,23 +131,23 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Override
-    protected Map<Setting<?>,String> getSettings()
+    protected Map<Setting<?>,Object> getSettings()
     {
-        Map<Setting<?>,String> settings = new HashMap<>();
-        settings.put( SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME );
-        settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
+        Map<Setting<?>,Object> settings = new HashMap<>();
+        settings.put( SecuritySettings.authentication_providers, List.of( SecuritySettings.LDAP_REALM_NAME ) );
+        settings.put( SecuritySettings.authorization_providers, List.of( SecuritySettings.LDAP_REALM_NAME ) );
         settings.put( SecuritySettings.ldap_server, "0.0.0.0:" + ldapPort );
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
-        settings.put( SecuritySettings.ldap_authentication_cache_enabled, TRUE );
+        settings.put( SecuritySettings.ldap_authentication_cache_enabled, true );
         settings.put( SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system" );
-        settings.put( SecuritySettings.ldap_authorization_system_password, "secret" );
+        settings.put( SecuritySettings.ldap_authorization_system_password, new SecureString( "secret" ) );
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
-        settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "gidnumber" );
+        settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) );
         settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin" );
         settings.put( GraphDatabaseSettings.procedure_roles, "test.staticReadProcedure:role1" );
-        settings.put( SecuritySettings.ldap_read_timeout, "1s" );
-        settings.put( SecuritySettings.ldap_authorization_use_system_account, FALSE );
+        settings.put( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) );
+        settings.put( SecuritySettings.ldap_authorization_use_system_account, false );
         return settings;
     }
 

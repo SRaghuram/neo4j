@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.naming.NamingException;
@@ -33,8 +34,6 @@ import org.neo4j.server.security.auth.SecureHasher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest
@@ -61,11 +60,11 @@ class LdapCachingTest
 
     private static Config getLdapConfig()
     {
-        return Config.defaults( stringMap(
-                SecuritySettings.ldap_authorization_user_search_base.name(), "dc=example,dc=com",
-                SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "gidnumber",
-                SecuritySettings.ldap_authorization_use_system_account.name(), TRUE
-            ) );
+        return Config.newBuilder()
+                .set( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" )
+                .set( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) )
+                .set( SecuritySettings.ldap_authorization_use_system_account, true )
+                .build();
     }
 
     @Test

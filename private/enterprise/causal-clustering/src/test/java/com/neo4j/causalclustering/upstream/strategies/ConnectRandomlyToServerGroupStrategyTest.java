@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,11 +37,11 @@ class ConnectRandomlyToServerGroupStrategyTest
     void shouldConnectToGroupDefinedInStrategySpecificConfig()
     {
         // given
-        final String targetServerGroup = "target_server_group";
+        var targetServerGroup = List.of( "target_server_group" );
         Config configWithTargetServerGroup = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, targetServerGroup );
         MemberId[] targetGroupMemberIds = memberIDs( 10 );
         TopologyService topologyService =
-                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Collections.singletonList( targetServerGroup ), targetGroupMemberIds,
+                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( targetServerGroup, targetGroupMemberIds,
                         Collections.singletonList( "your_server_group" ) );
 
         ConnectRandomlyToServerGroupStrategy strategy = new ConnectRandomlyToServerGroupStrategy();
@@ -62,7 +63,7 @@ class ConnectRandomlyToServerGroupStrategyTest
 
         // and
         LogProvider logProvider = NullLogProvider.getInstance();
-        Config config = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, "firstGroup" );
+        Config config = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, List.of( "firstGroup" ) );
         TopologyService topologyService = new TopologyServiceThatPrioritisesItself( myself, "firstGroup" );
         connectRandomlyToServerGroupStrategy.inject( topologyService, config, logProvider, myself );
 

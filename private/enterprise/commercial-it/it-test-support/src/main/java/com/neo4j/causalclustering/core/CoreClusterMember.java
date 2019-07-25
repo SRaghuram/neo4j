@@ -18,6 +18,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -26,7 +28,6 @@ import java.util.function.IntFunction;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.SettingImpl;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -43,12 +44,9 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
-import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.LayoutConfig.of;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class CoreClusterMember implements ClusterMember
 {
@@ -62,7 +60,7 @@ public class CoreClusterMember implements ClusterMember
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final DatabaseLayout defaultDatabaseLayout;
     private final ClusterStateLayout clusterStateLayout;
-    private final Map<String,String> config = stringMap();
+    private final Config.Builder config = Config.newBuilder();
     private final int serverId;
     private final String boltSocketAddress;
     private final int discoveryPort;
@@ -100,52 +98,50 @@ public class CoreClusterMember implements ClusterMember
 
         this.discoveryPort = discoveryPort;
 
-        String initialMembers = addresses.stream().map( SocketAddress::toString ).collect( joining( "," ) );
         boltSocketAddress = format( advertisedAddress, boltPort );
         raftListenAddress = format( listenAddress, raftPort );
 
-        config.put( GraphDatabaseSettings.default_database.name(), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        config.put( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.CORE.name() );
-        config.put( GraphDatabaseSettings.default_advertised_address.name(), advertisedAddress );
-        config.put( CausalClusteringSettings.initial_discovery_members.name(), initialMembers );
-        config.put( CausalClusteringSettings.discovery_listen_address.name(), format( listenAddress, discoveryPort ) );
-        config.put( CausalClusteringSettings.discovery_advertised_address.name(), format( advertisedAddress, discoveryPort ) );
-        config.put( CausalClusteringSettings.transaction_listen_address.name(), format( listenAddress, txPort ) );
-        config.put( CausalClusteringSettings.raft_listen_address.name(), raftListenAddress );
-        config.put( CausalClusteringSettings.cluster_topology_refresh.name(), "1000ms" );
-        config.put( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), String.valueOf( clusterSize ) );
-        config.put( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), String.valueOf( clusterSize ) );
-        config.put( CausalClusteringSettings.leader_election_timeout.name(), "500ms" );
-        config.put( CausalClusteringSettings.raft_messages_log_enable.name(), TRUE );
-        config.put( GraphDatabaseSettings.store_internal_log_level.name(), Level.DEBUG.name() );
-        config.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        config.put( BoltConnector.enabled.name(), TRUE );
-        config.put( BoltConnector.listen_address.name(), format( listenAddress, boltPort ) );
-        config.put( BoltConnector.advertised_address.name(), boltSocketAddress );
-        config.put( BoltConnector.encryption_level.name(), DISABLED.name() );
-        config.put( HttpConnector.enabled.name(), TRUE );
-        config.put( HttpConnector.listen_address.name(), format( listenAddress, httpPort ) );
-        config.put( HttpConnector.advertised_address.name(), format( advertisedAddress, httpPort ) );
-        config.put( OnlineBackupSettings.online_backup_listen_address.name(), format( listenAddress, backupPort ) );
-        config.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
-        config.put( GraphDatabaseSettings.auth_store.name(), new File( parentDir, "auth" ).getAbsolutePath() );
-        config.putAll( extraParams );
+        config.set( GraphDatabaseSettings.default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        config.set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE );
+        config.set( GraphDatabaseSettings.default_advertised_address, new SocketAddress( advertisedAddress ) );
+        config.set( CausalClusteringSettings.initial_discovery_members, addresses );
+        config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );
+        config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedAddress, discoveryPort ) );
+        config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
+        config.set( CausalClusteringSettings.raft_listen_address, new SocketAddress( listenAddress, raftPort ) );
+        config.set( CausalClusteringSettings.cluster_topology_refresh, Duration.ofMillis( 1000 ) );
+        config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
+        config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );
+        config.set( CausalClusteringSettings.leader_election_timeout, Duration.ofMillis( 500 ) );
+        config.set( CausalClusteringSettings.raft_messages_log_enable, true );
+        config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
+        config.set( GraphDatabaseSettings.record_format, recordFormat );
+        config.set( BoltConnector.enabled, true );
+        config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
+        config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
+        config.set( BoltConnector.encryption_level, DISABLED );
+        config.set( HttpConnector.enabled, true );
+        config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
+        config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
+        config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
+        config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
+        config.set( GraphDatabaseSettings.auth_store, new File( parentDir, "auth" ).toPath().toAbsolutePath() );
+        config.setRaw( extraParams );
 
-        for ( Map.Entry<String, IntFunction<String>> entry : instanceExtraParams.entrySet() )
-        {
-            config.put( entry.getKey(), entry.getValue().apply( serverId ) );
-        }
+        Map<String,String> instanceExtras = new HashMap<>();
+        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
+        config.setRaw( instanceExtras );
 
         this.neo4jHome = new File( parentDir, "server-core-" + serverId );
-        config.put( GraphDatabaseSettings.neo4j_home.name(), neo4jHome.getAbsolutePath() );
-        config.put( GraphDatabaseSettings.logs_directory.name(), new File( neo4jHome, "logs" ).getAbsolutePath() );
-        config.put( GraphDatabaseSettings.transaction_logs_root_path.name(), new File( parentDir, "core-tx-logs-" + serverId ).getAbsolutePath() );
+        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( parentDir, "core-tx-logs-" + serverId ).toPath().toAbsolutePath() );
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDir = new File( neo4jHome, "data" );
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         databasesDirectory = new File( dataDir, "databases" );
-        memberConfig = Config.defaults( config );
+        memberConfig = config.build();
         this.databaseIdRepository = new PlaceholderDatabaseIdRepository( memberConfig );
 
         threadGroup = new ThreadGroup( toString() );
@@ -295,13 +291,13 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public ClientConnectorAddresses clientConnectorAddresses()
     {
-        return ClientConnectorAddresses.extractFromConfig( Config.defaults( this.config ) );
+        return ClientConnectorAddresses.extractFromConfig( config.build() );
     }
 
     @Override
     public <T> T settingValue( Setting<T> setting )
     {
-        return ((SettingImpl<T>) setting).parse( config.get( setting.name() ) );
+        return memberConfig.get( setting );
     }
 
     @Override

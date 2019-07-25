@@ -80,7 +80,7 @@ class CausalClusteringSettingsMigratorTest
     {
         var setting = middleware_logging_level;
 
-        var config = Config.defaults( Map.of( setting.name(), Level.INFO.toString() ) );
+        var config = Config.defaults( setting, Level.INFO );
 
         assertEquals( Level.INFO, config.get( setting ) );
 
@@ -118,12 +118,12 @@ class CausalClusteringSettingsMigratorTest
 
     private static void testAddrMigration( Setting<SocketAddress> listenAddr, Setting<SocketAddress> advertisedAddr )
     {
-        Config config1 = Config.defaults( listenAddr, "foo:111" );
-        Config config2 = Config.defaults( listenAddr, ":222" );
-        Config config3 = Config.newBuilder().set( listenAddr, new SocketAddress( 333 ) ).set( advertisedAddr, new SocketAddress( "bar" ) ).build();
-        Config config4 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo", 444 ) ).set( advertisedAddr, new SocketAddress( 555 ) ).build();
-        Config config5 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo" ) ).set( advertisedAddr, new SocketAddress( "bar" ) ).build();
-        Config config6 = Config.newBuilder().set( listenAddr, new SocketAddress( "foo", 666 ) ).set( advertisedAddr, new SocketAddress( "bar", 777 ) ).build();
+        Config config1 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), "foo:111" ) ).build();
+        Config config2 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), ":222" ) ).build();
+        Config config3 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), ":333", advertisedAddr.name(), "bar" ) ).build();
+        Config config4 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), "foo:444", advertisedAddr.name(), ":555" ) ).build();
+        Config config5 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), "foo", advertisedAddr.name(), "bar" ) ).build();
+        Config config6 = Config.newBuilder().setRaw( Map.of( listenAddr.name(), "foo:666", advertisedAddr.name(), "bar:777" ) ).build();
 
         var logProvider = new AssertableLogProvider();
         config1.setLogger( logProvider.getLog( Config.class ) );
@@ -137,7 +137,7 @@ class CausalClusteringSettingsMigratorTest
         assertEquals( new SocketAddress( "localhost", 222 ), config2.get( advertisedAddr ) );
         assertEquals( new SocketAddress( "bar", 333 ), config3.get( advertisedAddr ) );
         assertEquals( new SocketAddress( "localhost", 555 ), config4.get( advertisedAddr ) );
-        assertEquals( new SocketAddress( "bar", advertisedAddr.defaultValue().getPort() ), config5.get( listenAddr ) );
+        assertEquals( new SocketAddress( "bar", advertisedAddr.defaultValue().getPort() ), config5.get( advertisedAddr ) );
         assertEquals( new SocketAddress( "bar", 777 ), config6.get( advertisedAddr ) );
 
         String msg = "Use of deprecated setting port propagation. port %s is migrated from %s to %s.";
@@ -154,7 +154,7 @@ class CausalClusteringSettingsMigratorTest
     private static void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )
     {
         String setting = "causal_clustering.cluster_routing_ttl";
-        var config = Config.defaults( Map.of( setting, rawValue ) );
+        var config = Config.newBuilder().setRaw( Map.of( setting, rawValue ) ).build();
 
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );
@@ -173,7 +173,7 @@ class CausalClusteringSettingsMigratorTest
     {
         var setting = middleware_logging_level;
         var oldValue = String.valueOf( julLevel.intValue() );
-        var config = Config.defaults( setting, oldValue );
+        var config = Config.newBuilder().setRaw( Map.of( setting.name(), oldValue ) ).build();
 
         assertEquals( neo4jLevel, config.get( setting ) );
 
@@ -189,7 +189,7 @@ class CausalClusteringSettingsMigratorTest
     {
         var oldSettingName = "causal_clustering.middleware_logging.level";
         var oldValue = String.valueOf( julLevel.intValue() );
-        var config = Config.defaults( MapUtil.genericMap( oldSettingName, oldValue ) );
+        var config = Config.newBuilder().setRaw( MapUtil.genericMap( oldSettingName, oldValue ) ).build();
 
         assertThrows( IllegalArgumentException.class, () -> config.getSetting( oldSettingName ) );
         assertEquals( neo4jLevel, config.get( middleware_logging_level ) );
@@ -211,7 +211,7 @@ class CausalClusteringSettingsMigratorTest
         cfgMap.put( settingName, rawValue );
         cfgMap.put( middleware_logging_level.name(), configuredLevel.toString() );
 
-        var config = Config.defaults( cfgMap );
+        var config = Config.newBuilder().setRaw( cfgMap ).build();
 
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );

@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
@@ -29,8 +30,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_filename;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class BoltQueryLoggingIT
 {
@@ -39,17 +38,17 @@ public class BoltQueryLoggingIT
 
     public BoltQueryLoggingIT() throws IOException
     {
-        String tmpDir = ServerTestUtils.createTempDir().getAbsolutePath();
+        Path tmpDir = ServerTestUtils.createTempDir().toPath().toAbsolutePath();
         this.neo4j = new Neo4jRule()
-            .withConfig( ServerSettings.http_logging_enabled, TRUE )
-            .withConfig( GraphDatabaseSettings.legacy_certificates_directory.name(), tmpDir )
-            .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
+            .withConfig( ServerSettings.http_logging_enabled, true )
+            .withConfig( GraphDatabaseSettings.legacy_certificates_directory, tmpDir )
+            .withConfig( GraphDatabaseSettings.auth_enabled, false )
             .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
-            .withConfig( GraphDatabaseSettings.log_queries, TRUE)
-            .withConfig( BoltConnector.enabled, TRUE )
-            .withConfig( BoltConnector.advertised_address, "localhost:0" )
-            .withConfig( BoltConnector.encryption_level, "DISABLED" )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( GraphDatabaseSettings.log_queries, true)
+            .withConfig( BoltConnector.enabled, true )
+            .withConfig( BoltConnector.advertised_address, new SocketAddress( "localhost", 0 ) )
+            .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED )
+            .withConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @Test

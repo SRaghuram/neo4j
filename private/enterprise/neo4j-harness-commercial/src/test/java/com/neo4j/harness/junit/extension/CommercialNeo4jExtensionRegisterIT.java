@@ -35,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.legacy_certificates_directory;
 import static org.neo4j.server.ServerTestUtils.createTempDir;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
@@ -53,9 +54,8 @@ class CommercialNeo4jExtensionRegisterIT
             neo4jExtension = CommercialNeo4jExtension.builder()
                     .withFolder( createTempDirectory() )
                     .withFixture( "CREATE (u:User)" )
-                    .withConfig( GraphDatabaseSettings.db_timezone.name(), LogTimeZone.SYSTEM.toString() )
-                    .withConfig( GraphDatabaseSettings.legacy_certificates_directory,
-                            getRelativePath( createTempDir(), GraphDatabaseSettings.legacy_certificates_directory) )
+                    .withConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
+                    .withConfig( legacy_certificates_directory, getRelativePath( createTempDir(), legacy_certificates_directory ) )
                     .withFixture( graphDatabaseService ->
                     {
                         try ( Transaction tx = graphDatabaseService.beginTx() )

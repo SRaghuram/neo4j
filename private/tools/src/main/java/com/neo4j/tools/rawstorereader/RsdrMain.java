@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cursor.IOCursor;
-import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -37,7 +36,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -90,10 +88,9 @@ public class RsdrMain
 
     private static Config buildConfig()
     {
-        return Config.defaults( MapUtil.stringMap(
-                GraphDatabaseSettings.read_only.name(), TRUE,
-                GraphDatabaseSettings.pagecache_memory.name(), "64M"
-        ) );
+        return Config.newBuilder()
+                .set( GraphDatabaseSettings.read_only, true )
+                .set( GraphDatabaseSettings.pagecache_memory, "64M" ).build();
     }
 
     private static StoreFactory openStore( FileSystemAbstraction fileSystem, File storeDir, Config config,

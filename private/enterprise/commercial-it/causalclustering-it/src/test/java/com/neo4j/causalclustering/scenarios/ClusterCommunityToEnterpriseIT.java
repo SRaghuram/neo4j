@@ -33,7 +33,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class ClusterCommunityToEnterpriseIT
 {
@@ -69,9 +68,9 @@ public class ClusterCommunityToEnterpriseIT
     {
         // given
         DatabaseManagementService managementService = new DatabaseManagementServiceBuilder( testDir.storeDir() )
-                .setConfig( allow_upgrade, TRUE )
+                .setConfig( allow_upgrade, true )
                 .setConfig( record_format, HighLimit.NAME )
-                .setConfig( online_backup_enabled, Boolean.FALSE.toString() )
+                .setConfig( online_backup_enabled, false )
                 .build();
         GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         DatabaseLayout databaseLayout = database.databaseLayout();

@@ -29,7 +29,6 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.Values.parameters;
 
 @RunWith( Parameterized.class )
@@ -37,7 +36,7 @@ public class BoltDriverLargePropertiesIT
 {
     @ClassRule
     public static final Neo4jRule db = new Neo4jRule()
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
     private static Driver driver;
 

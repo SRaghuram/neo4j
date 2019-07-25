@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.Scanner;
 import java.util.TimeZone;
@@ -27,16 +28,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.array;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class SecurityLogTest
 {
     @Rule
     public EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
 
-    private Config config = Config.defaults(
-            stringMap( SecuritySettings.store_security_log_rotation_threshold.name(), "5",
-                    SecuritySettings.store_security_log_rotation_delay.name(), "1ms" ) );
+    private Config config = Config.newBuilder()
+            .set( SecuritySettings.store_security_log_rotation_threshold, 5L )
+            .set( SecuritySettings.store_security_log_rotation_delay, Duration.ofMillis( 1 ) ).build();
 
     @Test
     public void shouldRotateLog() throws IOException
@@ -77,7 +77,7 @@ public class SecurityLogTest
     private void checkLogTimeZone( int hoursShift, String timeZoneSuffix ) throws Exception
     {
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( hoursShift ) ) );
-        Config timeZoneConfig = Config.defaults( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM.name() );
+        Config timeZoneConfig = Config.defaults( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM );
         SecurityLog securityLog = new SecurityLog( timeZoneConfig, fileSystemRule.get(), Runnable::run );
         securityLog.info( "line 1" );
 
@@ -128,7 +128,7 @@ public class SecurityLogTest
     private SecurityLog withLogLevel( Level debug ) throws IOException
     {
         return new SecurityLog(
-                Config.defaults( SecuritySettings.security_log_level, debug.name() ),
+                Config.defaults( SecuritySettings.security_log_level, debug ),
                 fileSystemRule.get(),
                 Runnable::run
             );

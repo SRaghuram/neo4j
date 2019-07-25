@@ -6,9 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.PrintWriter
+import java.lang.Boolean.{FALSE, TRUE}
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.csv.reader.MissingEndQuoteException
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService

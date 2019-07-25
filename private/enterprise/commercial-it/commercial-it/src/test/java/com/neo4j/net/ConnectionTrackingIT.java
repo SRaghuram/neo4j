@@ -73,8 +73,6 @@ import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
@@ -99,11 +97,11 @@ public class ConnectionTrackingIT
 
     @ClassRule
     public static final Neo4jRule neo4j = new CommercialNeo4jRule()
-            .withConfig( auth_enabled, TRUE )
-            .withConfig( HttpConnector.enabled, TRUE )
-            .withConfig( HttpsConnector.enabled, TRUE )
-            .withConfig( webserver_max_threads, "50" ) // higher than the amount of concurrent requests tests execute
-            .withConfig( online_backup_enabled, FALSE );
+            .withConfig( auth_enabled, true )
+            .withConfig( HttpConnector.enabled, true )
+            .withConfig( HttpsConnector.enabled, true )
+            .withConfig( webserver_max_threads, 50 ) // higher than the amount of concurrent requests tests execute
+            .withConfig( online_backup_enabled, false );
 
     private static long dummyNodeId;
 

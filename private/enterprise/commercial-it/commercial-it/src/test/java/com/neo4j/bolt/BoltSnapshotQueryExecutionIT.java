@@ -18,6 +18,7 @@ import java.util.List;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -41,7 +42,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BoltSnapshotQueryExecutionIT
@@ -66,22 +66,22 @@ class BoltSnapshotQueryExecutionIT
     @Test
     void executeQueryWithSnapshotEngine()
     {
-        executeQuery( "withSnapshotEngine", "true" );
+        executeQuery( "withSnapshotEngine", true );
     }
 
     @Test
     void executeQueryWithoutSnapshotEngine()
     {
-        executeQuery( "withoutSnapshotEngine", "false" );
+        executeQuery( "withoutSnapshotEngine", false );
     }
 
-    private void executeQuery( String directory, String useSnapshotEngineSettingValue )
+    private void executeQuery( String directory, boolean useSnapshotEngineSetting )
     {
         managementService =
                 new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) )
-                .setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.listen_address, "localhost:0" )
-                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSettingValue ).build();
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSetting ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();
         connectDirver();

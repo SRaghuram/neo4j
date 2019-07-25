@@ -38,10 +38,8 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 /**
  * Just testing the {@link BatchInserter} in an enterprise setting, i.e. with all packages and extensions
@@ -70,10 +68,10 @@ public class BatchInsertEnterpriseIT
     {
         // GIVEN
         BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get(),
-                Config.defaults( stringMap( GraphDatabaseSettings.log_queries.name(), TRUE,
-                        GraphDatabaseSettings.record_format.name(), recordFormat,
-                        GraphDatabaseSettings.log_queries_filename.name(),
-                        directory.file( "query.log" ).getAbsolutePath() ) ) );
+                Config.newBuilder()
+                        .set( GraphDatabaseSettings.log_queries, true )
+                        .set( GraphDatabaseSettings.record_format, recordFormat )
+                        .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toPath().toAbsolutePath() ).build() );
         long node1Id;
         long node2Id;
         long relationshipId;

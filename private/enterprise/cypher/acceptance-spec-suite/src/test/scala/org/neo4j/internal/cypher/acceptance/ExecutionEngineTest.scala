@@ -6,11 +6,12 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.{File, PrintWriter}
+import java.lang.Boolean.TRUE
+import java.time.Duration
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -422,7 +423,7 @@ order by a.COL1""".format(a, b))
   test("createEngineWithSpecifiedParserVersion") {
     val managementService = new TestDatabaseManagementServiceBuilder()
       .impermanent()
-      .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
+      .setConfig(GraphDatabaseSettings.cypher_parser_version, GraphDatabaseSettings.CypherParserVersion.V_35)
       .build()
     val db: GraphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
     createEngine(db)
@@ -873,8 +874,8 @@ order by a.COL1""".format(a, b))
     result.asScala should have size 2
   }
 
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_min_replan_interval -> "0",
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+    GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
     GraphDatabaseSettings.cypher_compiler_tracing -> TRUE
   )
 

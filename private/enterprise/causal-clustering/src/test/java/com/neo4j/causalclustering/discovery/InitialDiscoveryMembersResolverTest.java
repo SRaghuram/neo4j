@@ -11,8 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -43,13 +42,13 @@ public class InitialDiscoveryMembersResolverTest
     private SocketAddress output2 = new SocketAddress( "b.b", 34 );
     private SocketAddress output3 = new SocketAddress( "c.b", 7 );
 
-    private String configString = Stream.of( input1, input2, input3 ).map( SocketAddress::toString ).collect( Collectors.joining( "," ) );
+    private List<SocketAddress> inputAddresses = List.of( input1, input2, input3 );
 
     @Test
     public void shouldReturnEmptyCollectionIfEmptyInitialMembers()
     {
         // given
-        Config config = Config.defaults( initial_discovery_members, "" );
+        Config config = Config.defaults( initial_discovery_members, List.of() );
 
         InitialDiscoveryMembersResolver
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
@@ -65,7 +64,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldResolveAndReturnAllConfiguredAddresses()
     {
         // given
-        Config config = Config.defaults( initial_discovery_members, configString );
+        Config config = Config.defaults( initial_discovery_members, inputAddresses );
 
         when( hostnameResolver.resolve( input1 ) ).thenReturn( asList( output1, output2 ) );
         when( hostnameResolver.resolve( input2 ) ).thenReturn( emptyList() );
@@ -85,7 +84,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldDeDupeConfiguredAddresses()
     {
         // given
-        Config config = Config.defaults( initial_discovery_members, configString );
+        Config config = Config.defaults( initial_discovery_members, inputAddresses );
 
         when( hostnameResolver.resolve( any() ) ).thenReturn( singletonList( output1 ) );
 
@@ -107,7 +106,7 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldReturnConfiguredAddressesInOrder()
     {
         // given
-        Config config = Config.defaults( initial_discovery_members, configString );
+        Config config = Config.defaults( initial_discovery_members, inputAddresses );
 
         when( hostnameResolver.resolve( any() ) )
                 .thenReturn( singletonList( output3 ) )
@@ -132,7 +131,7 @@ public class InitialDiscoveryMembersResolverTest
 
         SocketAddress output1 = new SocketAddress( "a.b", 3 );
 
-        Config config = Config.defaults( initial_discovery_members, input1.toString() );
+        Config config = Config.defaults( initial_discovery_members, List.of( input1 ) );
 
         when( hostnameResolver.resolve( input1 ) ).thenReturn( singletonList( output1 ) );
 

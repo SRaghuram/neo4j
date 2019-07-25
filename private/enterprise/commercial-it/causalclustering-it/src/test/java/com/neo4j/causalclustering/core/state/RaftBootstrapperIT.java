@@ -100,7 +100,7 @@ class RaftBootstrapperIT
         this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
         this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
-        this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toString() );
+        this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
     }
 

@@ -22,7 +22,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static com.neo4j.helper.StressTestingHelper.fromEnv;
 import static java.lang.Integer.parseInt;
-import static java.lang.String.valueOf;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
@@ -45,7 +44,7 @@ class MultiDatabaseCreationStressTesting
         ensureExistsAndEmpty( storeDirectory );
 
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDirectory )
-                .setConfig( CommercialEditionSettings.maxNumberOfDatabases, valueOf( Long.MAX_VALUE ) )
+                .setConfig( CommercialEditionSettings.maxNumberOfDatabases, Long.MAX_VALUE )
                 .build();
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
 

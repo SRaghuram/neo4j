@@ -46,7 +46,7 @@ class ForsetiServiceLoadingTest
         assertThat( cfg, instanceOf( CommunityLockManger.class ) );
     }
 
-    private Locks getDBLocksInstance( Map<Setting<?>,String> config )
+    private Locks getDBLocksInstance( Map<Setting<?>,Object> config )
     {
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( directory.databaseDir() ).setConfig( config ).build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );

@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -423,8 +423,7 @@ public class TransactionGuardIT
     {
         if ( databaseWithTimeout == null )
         {
-            Map<Setting<?>,String> configMap = getSettingsWithTimeoutAndBolt();
-            databaseWithTimeout = startCustomDatabase( testDirectory.directory( "dbWithTimeout" ), configMap );
+            databaseWithTimeout = startCustomDatabase( testDirectory.directory( "dbWithTimeout" ), getSettingsWithTimeoutAndBolt() );
             boltPortDatabaseWithTimeout = getBoltConnectorPort( databaseWithTimeout );
         }
         return databaseWithTimeout;
@@ -441,9 +440,7 @@ public class TransactionGuardIT
     {
         if ( databaseWithoutTimeout == null )
         {
-            Map<Setting<?>,String> configMap = getSettingsWithoutTransactionTimeout();
-            databaseWithoutTimeout = startCustomDatabase( testDirectory.directory( "dbWithoutTimeout" ),
-                    configMap );
+            databaseWithoutTimeout = startCustomDatabase( testDirectory.directory( "dbWithoutTimeout" ), getSettingsWithoutTransactionTimeout() );
         }
         return databaseWithoutTimeout;
     }
@@ -472,18 +469,18 @@ public class TransactionGuardIT
         return neoServer;
     }
 
-    private static Map<Setting<?>,String> getSettingsWithTimeoutAndBolt()
+    private static Map<Setting<?>,Object> getSettingsWithTimeoutAndBolt()
     {
         return MapUtil.genericMap(
-                transaction_timeout, DEFAULT_TIMEOUT,
-                BoltConnector.advertised_address, "localhost:0",
-                BoltConnector.enabled, TRUE,
-                BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
-                OnlineBackupSettings.online_backup_enabled, FALSE,
-                GraphDatabaseSettings.auth_enabled, FALSE );
+                transaction_timeout, SettingValueParsers.DURATION.parse( DEFAULT_TIMEOUT ),
+                BoltConnector.advertised_address, new org.neo4j.configuration.helpers.SocketAddress( "localhost", 0 ),
+                BoltConnector.enabled, true,
+                BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED,
+                OnlineBackupSettings.online_backup_enabled, false,
+                GraphDatabaseSettings.auth_enabled, false );
     }
 
-    private static Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
+    private static Map<Setting<?>,Object> getSettingsWithoutTransactionTimeout()
     {
         return MapUtil.genericMap();
     }
@@ -514,7 +511,7 @@ public class TransactionGuardIT
         }
     }
 
-    private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,String> configMap )
+    private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,Object> configMap )
     {
         // Inject IdContextFactory
         Dependencies dependencies = new Dependencies();
@@ -524,15 +521,15 @@ public class TransactionGuardIT
         DatabaseManagementServiceBuilder databaseBuilder =
                 new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
                         fileSystemRule ).impermanent();
-        configMap.forEach( databaseBuilder::setConfig );
+        databaseBuilder.setConfig( configMap );
 
         customManagementService = databaseBuilder.build();
         return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private IdContextFactory createIdContextFactory( Map<Setting<?>,String> configMap, FileSystemAbstraction fileSystem, PageCache pageCache )
+    private IdContextFactory createIdContextFactory( Map<Setting<?>,Object> configMap, FileSystemAbstraction fileSystem, PageCache pageCache )
     {
-        Config config = Config.defaults( configMap.entrySet().stream().collect( Collectors.toMap( e -> e.getKey().name(), Map.Entry::getValue ) ) );
+        Config config = Config.defaults( configMap );
 
         return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(

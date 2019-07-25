@@ -107,7 +107,7 @@ public class ProcedureIT
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).build();
+                .setConfig( plugin_dir, plugins.directory().toPath().toAbsolutePath() ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }
@@ -609,8 +609,8 @@ public class ProcedureIT
         managementService.shutdown();
         managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider(
                 logProvider ).impermanent()
-                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( procedure_unrestricted, "com.neo4j.procedure.*" ).build();
+                .setConfig( plugin_dir, plugins.directory().toPath().toAbsolutePath() )
+                .setConfig( procedure_unrestricted, List.of( "com.neo4j.procedure.*" ) ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When

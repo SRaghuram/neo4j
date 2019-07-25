@@ -15,7 +15,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures
 class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   // Need to override so that graph.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.default_schema_provider -> GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName
   )
 

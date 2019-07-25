@@ -30,6 +30,7 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
@@ -260,7 +262,7 @@ public class AuthIT extends AuthTestBase
     }
 
     private final String password;
-    private final Map<Setting<?>,String> configMap;
+    private final Map<Setting<?>,Object> configMap;
     private final boolean confidentialityRequired;
     private final boolean ldapWithAD;
     private final boolean createUsers;
@@ -275,14 +277,14 @@ public class AuthIT extends AuthTestBase
         boolean nativeEnabled = false;
         for ( int i = 0; i < settings.size() - 1; i += 2 )
         {
-            Setting<?> setting = (Setting<?>) settings.get( i );
+            SettingImpl<Object> setting = (SettingImpl<Object>) settings.get( i );
             String value = (String) settings.get( i + 1 );
             if ( (setting.equals( SecuritySettings.authentication_providers ) || setting.equals( SecuritySettings.authorization_providers )) &&
                     value.contains( SecuritySettings.NATIVE_REALM_NAME ) )
             {
                 nativeEnabled = true;
             }
-            configMap.put( setting, value );
+            configMap.put( setting, setting.parse( value ) );
         }
 
         createUsers = nativeEnabled;
@@ -320,18 +322,18 @@ public class AuthIT extends AuthTestBase
     }
 
     @Override
-    protected Map<Setting<?>, String> getSettings()
+    protected Map<Setting<?>, Object> getSettings()
     {
-        Map<Setting<?>, String> settings = new HashMap<>();
+        Map<Setting<?>, Object> settings = new HashMap<>();
 
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
-        settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "gidnumber" );
+        settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) );
         settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;505=role1" );
-        settings.put( SecuritySettings.ldap_authentication_cache_enabled, TRUE );
+        settings.put( SecuritySettings.ldap_authentication_cache_enabled, true );
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
         settings.put( GraphDatabaseSettings.procedure_roles, "test.staticReadProcedure:role1" );
-        settings.put( SecuritySettings.ldap_read_timeout, "1s" );
+        settings.put( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) );
         settings.putAll( configMap );
         return settings;
     }

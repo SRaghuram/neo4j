@@ -14,6 +14,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -55,7 +56,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
@@ -75,8 +75,8 @@ public class SessionResetIT
 
     private final VerboseTimeout timeout = VerboseTimeout.builder().withTimeout( 6, MINUTES ).build();
     private final Neo4jRule db = new CommercialNeo4jRule()
-            .withConfig( GraphDatabaseSettings.load_csv_file_url_root, "import" )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+            .withConfig( GraphDatabaseSettings.load_csv_file_url_root, Path.of( "import" ) )
+            .withConfig( OnlineBackupSettings.online_backup_enabled, false )
             .dumpLogsOnFailure( System.out );
 
     @Rule

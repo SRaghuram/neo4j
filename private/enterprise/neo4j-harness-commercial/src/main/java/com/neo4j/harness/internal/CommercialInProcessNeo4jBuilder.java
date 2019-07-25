@@ -13,6 +13,7 @@ import org.apache.commons.lang3.SystemUtils;
 import java.io.File;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.harness.internal.AbstractInProcessNeo4jBuilder;
 import org.neo4j.server.AbstractNeoServer;
@@ -28,7 +29,7 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
     public CommercialInProcessNeo4jBuilder( File workingDir )
     {
         withWorkingDir( workingDir );
-        withConfig( OnlineBackupSettings.online_backup_listen_address, "localhost:0" );
+        withConfig( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "localhost", 0 ) );
     }
 
     public CommercialInProcessNeo4jBuilder( File workingDir, String dataSubDir )

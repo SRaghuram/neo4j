@@ -8,8 +8,8 @@ package com.neo4j.ssl;
 import io.netty.handler.ssl.SslProvider;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
@@ -18,8 +18,6 @@ import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.ssl.config.SslSystemSettings;
-
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class SslContextFactory
 {
@@ -30,10 +28,10 @@ public class SslContextFactory
 
     public static class SslParameters implements Ciphers
     {
-        private String protocols;
-        private String ciphers;
+        private List<String> protocols;
+        private List<String> ciphers;
 
-        private SslParameters( String protocols, String ciphers )
+        private SslParameters( List<String> protocols, List<String> ciphers )
         {
             this.protocols = protocols;
             this.ciphers = ciphers;
@@ -41,22 +39,22 @@ public class SslContextFactory
 
         public static Ciphers protocols( String... protocols )
         {
-            return new SslParameters( joinOrNull( protocols ), null );
+            return new SslParameters( listOrNull( protocols ), null );
         }
 
         @Override
         public SslParameters ciphers( String... ciphers )
         {
-            this.ciphers = joinOrNull( ciphers );
+            this.ciphers = listOrNull( ciphers );
             return this;
         }
 
         /**
          * The low-level frameworks use null to signify that defaults shall be used, and so does our SSL framework.
          */
-        private static String joinOrNull( String[] parts )
+        private static List<String> listOrNull( String[] parts )
         {
-            return parts.length > 0 ? String.join( ",", parts ) : null;
+            return parts.length > 0 ? Arrays.asList( parts ) : null;
         }
 
         @Override
@@ -81,35 +79,35 @@ public class SslContextFactory
         return makeSslPolicy( sslResource, SslProvider.JDK, null, null );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, String protocols, String ciphers )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, List<String> protocols, List<String> ciphers )
     {
-        Map<String,String> config = new HashMap<>();
-        config.put( SslSystemSettings.netty_ssl_provider.name(), sslProvider.name() );
+        Config.Builder config = Config.newBuilder();
+        config.set( SslSystemSettings.netty_ssl_provider, sslProvider );
 
         PemSslPolicyConfig policyConfig = PemSslPolicyConfig.group( "default" );
         File baseDirectory = sslResource.privateKey().getParentFile();
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
 
-        config.put( policyConfig.base_directory.name(), baseDirectory.getPath() );
-        config.put( policyConfig.private_key.name(), sslResource.privateKey().getPath() );
-        config.put( policyConfig.public_certificate.name(), sslResource.publicCertificate().getPath() );
-        config.put( policyConfig.trusted_dir.name(), sslResource.trustedDirectory().getPath() );
-        config.put( policyConfig.revoked_dir.name(), sslResource.revokedDirectory().getPath() );
-        config.put( policyConfig.verify_hostname.name(), FALSE );
+        config.set( policyConfig.base_directory, baseDirectory.toPath() );
+        config.set( policyConfig.private_key, sslResource.privateKey().toPath() );
+        config.set( policyConfig.public_certificate, sslResource.publicCertificate().toPath() );
+        config.set( policyConfig.trusted_dir, sslResource.trustedDirectory().toPath() );
+        config.set( policyConfig.revoked_dir, sslResource.revokedDirectory().toPath() );
+        config.set( policyConfig.verify_hostname, false );
 
         if ( protocols != null )
         {
-            config.put( policyConfig.tls_versions.name(), protocols );
+            config.set( policyConfig.tls_versions, protocols );
         }
 
         if ( ciphers != null )
         {
-            config.put( policyConfig.ciphers.name(), ciphers );
+            config.set( policyConfig.ciphers, ciphers );
         }
 
         SslPolicyLoader sslPolicyFactory =
-                SslPolicyLoader.create( Config.defaults( config ), NullLogProvider.getInstance() );
+                SslPolicyLoader.create( config.build(), NullLogProvider.getInstance() );
 
         return sslPolicyFactory.getPolicy( "default" );
     }

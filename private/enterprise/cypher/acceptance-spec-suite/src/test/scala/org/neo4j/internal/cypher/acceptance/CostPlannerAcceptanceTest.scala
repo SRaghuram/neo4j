@@ -5,6 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Long
+
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
@@ -24,8 +26,8 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
 
   private var missCounter: MissCounter = _
 
-  override def databaseConfig(): Map[Setting[_], String] =
-    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10")
+  override def databaseConfig(): Map[Setting[_], Object] =
+    Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> Long.valueOf(10))
 
   override protected def initTest() {
     super.initTest()

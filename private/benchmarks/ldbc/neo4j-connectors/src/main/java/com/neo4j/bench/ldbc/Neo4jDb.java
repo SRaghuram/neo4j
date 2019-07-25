@@ -11,7 +11,6 @@ import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
-import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -41,6 +40,7 @@ import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.v1.AuthToken;
@@ -49,7 +49,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class Neo4jDb extends Db
 {
@@ -433,7 +432,7 @@ public class Neo4jDb extends Db
     {
         try
         {
-            Config importerConfig = Config.defaults( MapUtils.loadPropertiesToMap( importerPropertiesFile ) );
+            Config importerConfig = Config.newBuilder().fromFile( importerPropertiesFile ).build();
             File txLogsDir = new File( storeDir, "data/tx-logs/" );
             DatabaseLayout layout = DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
             return BatchInserters.inserter( layout, importerConfig );
@@ -476,9 +475,9 @@ public class Neo4jDb extends Db
     public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
     {
         return newDbBuilder( dbDir, configFile )
-                .setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name() )
-                .setConfig( BoltConnector.listen_address, uriString + ":" + port );
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( uriString, port ) );
     }
 
     public static String configToString( File configFile )

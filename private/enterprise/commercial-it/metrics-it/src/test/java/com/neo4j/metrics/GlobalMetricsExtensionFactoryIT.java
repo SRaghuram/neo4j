@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import javax.management.MBeanServer;
@@ -51,8 +52,6 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.api.ResourceManager.EMPTY_RESOURCE_MANAGER;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -72,14 +71,14 @@ class GlobalMetricsExtensionFactoryIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, TRUE );
-        builder.setConfig( MetricsSettings.jmxEnabled, TRUE );
-        builder.setConfig( MetricsSettings.csvEnabled, TRUE );
-        builder.setConfig( GraphDatabaseSettings.cypher_min_replan_interval, "0m" );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        builder.setConfig( GraphDatabaseSettings.check_point_interval_time, "100ms" );
-        builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+        builder.setConfig( MetricsSettings.metricsEnabled, true );
+        builder.setConfig( MetricsSettings.jmxEnabled, true );
+        builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( GraphDatabaseSettings.cypher_min_replan_interval, Duration.ofMillis( 0 ) );
+        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMillis( 100 ) );
+        builder.setConfig( MetricsSettings.graphiteInterval, Duration.ofSeconds( 1 ) );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @BeforeEach
@@ -132,11 +131,11 @@ class GlobalMetricsExtensionFactoryIT
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
 
         DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( disabledTracerDb )
-                .setConfig( MetricsSettings.metricsEnabled, TRUE )
-                .setConfig( MetricsSettings.csvEnabled, TRUE )
-                .setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() )
+                .setConfig( MetricsSettings.metricsEnabled, true )
+                .setConfig( MetricsSettings.csvEnabled, true )
+                .setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .build();
         // key point!
         GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );

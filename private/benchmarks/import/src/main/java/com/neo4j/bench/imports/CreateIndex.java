@@ -8,6 +8,7 @@ package com.neo4j.bench.imports;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -35,8 +36,8 @@ public class CreateIndex
     private void run( String storeDirString, String dbName, List<String> indexPatterns )
     {
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( new File( storeDirString ) )
-                .setConfig( neo4j_home, storeDirString )
-                .setConfig( databases_root_path, format( "%s/%s/%s", storeDirString, DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME ) )
+                .setConfig( neo4j_home, Path.of( storeDirString ) )
+                .setConfig( databases_root_path, Path.of( storeDirString, DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME ) )
                 .build();
         managementService.createDatabase( dbName );
         GraphDatabaseService db = managementService.database( dbName );

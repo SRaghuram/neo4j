@@ -39,7 +39,7 @@ class ExpressionEngineConfigurationTest
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";
-        GraphDatabaseService db = withEngineAndLimit( "DEFAULT", 1 );
+        GraphDatabaseService db = withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.DEFAULT, 1 );
 
         assertNotUsingCompiled( db, query );
 
@@ -49,13 +49,13 @@ class ExpressionEngineConfigurationTest
     @Test
     void shouldNotUseCompiledExpressionsFirstTimeWithJitEnabled()
     {
-        assertNotUsingCompiled( withEngineAndLimit( "ONLY_WHEN_HOT", 1 ), "RETURN sin(cos(sin(cos(rand()))))" );
+        assertNotUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.ONLY_WHEN_HOT, 1 ), "RETURN sin(cos(sin(cos(rand()))))" );
     }
 
     @Test
     void shouldUseCompiledExpressionsFirstTimeWhenLimitIsZero()
     {
-        assertUsingCompiled( withEngineAndLimit( "ONLY_WHEN_HOT", 0 ), "RETURN sin(cos(sin(cos(rand()))))" );
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.ONLY_WHEN_HOT, 0 ), "RETURN sin(cos(sin(cos(rand()))))" );
     }
 
     @Test
@@ -63,7 +63,7 @@ class ExpressionEngineConfigurationTest
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";
-        GraphDatabaseService db = withEngineAndLimit( "ONLY_WHEN_HOT", 3 );
+        GraphDatabaseService db = withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.ONLY_WHEN_HOT, 3 );
 
         // When
         db.execute( query );
@@ -77,20 +77,20 @@ class ExpressionEngineConfigurationTest
     @Test
     void shouldUseCompiledExpressionsFirstTimeWhenConfigured()
     {
-        assertUsingCompiled( withEngineAndLimit( "COMPILED", 42 ), "RETURN sin(cos(sin(cos(rand()))))" );
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.COMPILED, 42 ), "RETURN sin(cos(sin(cos(rand()))))" );
     }
 
     @Test
     void shouldUseCompiledExpressionsFirstTimeWhenExplicitlyAskedFor()
     {
-        assertUsingCompiled( withEngineAndLimit( "ONLY_WHEN_HOT", 42 ),
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.ONLY_WHEN_HOT, 42 ),
                 "CYPHER expressionEngine=COMPILED RETURN sin(cos(sin(cos(rand()))))" );
     }
 
     @Test
     void shouldNotUseCompiledExpressionsWhenExplicitlyAskingForInterpreted()
     {
-        assertNotUsingCompiled( withEngineAndLimit( "COMPILED", 42 ),
+        assertNotUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.COMPILED, 42 ),
                 "CYPHER expressionEngine=INTERPRETED RETURN sin(cos(sin(cos(rand()))))" );
     }
 
@@ -99,7 +99,7 @@ class ExpressionEngineConfigurationTest
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";
-        GraphDatabaseService db = withEngineAndLimit( "INTERPRETED", 0 );
+        GraphDatabaseService db = withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.INTERPRETED, 0 );
 
         // When
         db.execute( query );
@@ -108,14 +108,14 @@ class ExpressionEngineConfigurationTest
         assertUsingCompiled( db, "CYPHER expressionEngine=COMPILED " + query );
     }
 
-    private GraphDatabaseService withEngineAndLimit( String engine, int limit )
+    private GraphDatabaseService withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine engine, int limit )
     {
 
         managementService = new TestDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setInternalLogProvider( logProvider )
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )
-                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, Integer.toString( limit ) )
+                .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, limit )
                 .build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

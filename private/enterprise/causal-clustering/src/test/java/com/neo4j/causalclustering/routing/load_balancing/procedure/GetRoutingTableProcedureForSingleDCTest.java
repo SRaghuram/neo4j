@@ -74,8 +74,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.DefaultParameterValue.nullValue;
 import static org.neo4j.internal.kernel.api.procs.FieldSignature.inputField;
@@ -106,8 +104,8 @@ class GetRoutingTableProcedureForSingleDCTest
     private static Stream<Arguments> routingConfigs()
     {
         return Stream.of(
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, TRUE ) ),
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, FALSE ) )
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, true ) ),
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, false ) )
         );
     }
 

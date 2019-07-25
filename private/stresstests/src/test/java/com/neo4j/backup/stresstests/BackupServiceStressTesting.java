@@ -25,6 +25,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.utils.DumpUtils;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -41,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
@@ -69,11 +69,11 @@ class BackupServiceStressTesting
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
-                new CommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, TRUE )
-                        .setConfig( auth_enabled, TRUE )
-                .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
+                new CommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, true )
+                        .setConfig( auth_enabled, true )
+                .setConfig( online_backup_listen_address, new SocketAddress( backupHostname, backupPort ) )
                 .setConfig( keep_logical_logs, txPrune )
-                .setConfig( logical_log_rotation_threshold, "1M" );
+                .setConfig( logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );
 
         Control control = new Control( new Config() );
 

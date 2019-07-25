@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher
 
+import java.lang.Boolean.{FALSE, TRUE}
+
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.Status
@@ -39,14 +40,14 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should be able to override config") {
-    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> "4.0") {
+    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> GraphDatabaseSettings.CypherParserVersion.V_40) {
       db =>
         db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
     }
   }
 
   test("should be able to override config2") {
-    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> "3.5") {
+    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> GraphDatabaseSettings.CypherParserVersion.V_35) {
       db =>
         db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
     }
@@ -153,7 +154,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   test("should use settings without regard of case") {
-    runWithConfig(GraphDatabaseSettings.cypher_runtime -> "slotted") {
+    runWithConfig(GraphDatabaseSettings.cypher_runtime -> GraphDatabaseSettings.CypherRuntime.SLOTTED) {
       db =>
         db.execute(QUERY).getExecutionPlanDescription.toString should include("SLOTTED")
     }

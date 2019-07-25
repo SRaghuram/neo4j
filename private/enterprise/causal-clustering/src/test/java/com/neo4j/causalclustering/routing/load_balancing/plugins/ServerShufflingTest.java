@@ -43,7 +43,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 class ServerShufflingTest
 {
@@ -132,7 +131,7 @@ class ServerShufflingTest
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
 
         serverPoliciesPlugin.init( coreTopologyService, leaderService, new TestDatabaseIdRepository(), NullLogProvider.getInstance(),
-                Config.defaults( CausalClusteringSettings.load_balancing_shuffle, TRUE ) );
+                Config.defaults( CausalClusteringSettings.load_balancing_shuffle, true ) );
 
         var routers = coreMembers.values().stream().map( ClientConnector::boltAddress ).collect( toList() );
         var leader = coreMembers.get( leaderId );

@@ -77,7 +77,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
@@ -146,7 +145,7 @@ class BackupRetriesIT
         File databaseDirectory = testDirectory.storeDir();
         managementService = new TestCommercialDatabaseManagementServiceBuilder( databaseDirectory )
                 .setUserLogProvider( logProvider )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, true )
                 .build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );

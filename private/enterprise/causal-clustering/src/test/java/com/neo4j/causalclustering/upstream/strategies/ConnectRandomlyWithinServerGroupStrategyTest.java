@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,11 +36,11 @@ class ConnectRandomlyWithinServerGroupStrategyTest
     void shouldUseServerGroupsFromConfig()
     {
         // given
-        final String myServerGroup = "my_server_group";
+        var myServerGroup = List.of( "my_server_group" );
         Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
         MemberId[] myGroupMemberIds = memberIDs( 10 );
         TopologyService topologyService =
-                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Collections.singletonList( myServerGroup ), myGroupMemberIds,
+                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( myServerGroup, myGroupMemberIds,
                         Collections.singletonList( "your_server_group" ) );
 
         ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
@@ -57,7 +58,7 @@ class ConnectRandomlyWithinServerGroupStrategyTest
     {
         // given
         String groupName = "groupName";
-        Config config = Config.defaults(CausalClusteringSettings.server_groups, groupName );
+        Config config = Config.defaults( CausalClusteringSettings.server_groups, List.of( groupName ) );
 
         // and
         ConnectRandomlyWithinServerGroupStrategy connectRandomlyWithinServerGroupStrategy = new ConnectRandomlyWithinServerGroupStrategy();

@@ -5,10 +5,10 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.{FALSE, TRUE}
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.Result.ResultVisitor
@@ -105,20 +105,20 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
-  override def databaseConfig(): Map[Setting[_], String] = Map(
+  override def databaseConfig(): Map[Setting[_], Object] = Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> "0",
+    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
     GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
   )
 }
 
 class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
-  override def databaseConfig(): Map[Setting[_], String] = Map(
+  override def databaseConfig(): Map[Setting[_], Object] = Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> "1",
+    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
     GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
   )
 }

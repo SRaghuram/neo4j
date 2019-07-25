@@ -15,6 +15,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -31,12 +32,11 @@ import org.neo4j.function.Factory;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.string.SecureString;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgFailure;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 /*
@@ -58,17 +58,17 @@ public class ActiveDirectoryAuthenticationIT
     public Neo4jWithSocket server =
             new Neo4jWithSocket( getClass(), getTestGraphDatabaseFactory(), asSettings( getSettingsFunction() ) );
 
-    private void restartNeo4jServerWithOverriddenSettings( Consumer<Map<Setting<?>,String>> overrideSettingsFunction )
+    private void restartNeo4jServerWithOverriddenSettings( Consumer<Map<Setting<?>,Object>> overrideSettingsFunction )
     {
         server.shutdownDatabase();
         server.ensureDatabase( asSettings( overrideSettingsFunction ) );
     }
 
-    private Consumer<Map<Setting<?>,String>> asSettings( Consumer<Map<Setting<?>,String>> overrideSettingsFunction )
+    private Consumer<Map<Setting<?>,Object>> asSettings( Consumer<Map<Setting<?>,Object>> overrideSettingsFunction )
     {
         return settings ->
         {
-            Map<Setting<?>,String> o = new LinkedHashMap<>();
+            Map<Setting<?>,Object> o = new LinkedHashMap<>();
             overrideSettingsFunction.accept( o );
             for ( Setting key : o.keySet() )
             {
@@ -82,19 +82,19 @@ public class ActiveDirectoryAuthenticationIT
         return new TestCommercialDatabaseManagementServiceBuilder();
     }
 
-    protected Consumer<Map<Setting<?>,String>> getSettingsFunction()
+    protected Consumer<Map<Setting<?>,Object>> getSettingsFunction()
     {
         return settings ->
         {
-            settings.put( GraphDatabaseSettings.auth_enabled, TRUE );
-            settings.put( SecuritySettings.authentication_providers, SecuritySettings.LDAP_REALM_NAME );
-            settings.put( SecuritySettings.authorization_providers, SecuritySettings.LDAP_REALM_NAME );
+            settings.put( GraphDatabaseSettings.auth_enabled, true );
+            settings.put( SecuritySettings.authentication_providers, List.of( SecuritySettings.LDAP_REALM_NAME ) );
+            settings.put( SecuritySettings.authorization_providers, List.of( SecuritySettings.LDAP_REALM_NAME ) );
             settings.put( SecuritySettings.ldap_server, "activedirectory.neohq.net" );
             settings.put( SecuritySettings.ldap_authentication_user_dn_template, "CN={0},CN=Users,DC=neo4j,DC=com" );
-            settings.put( SecuritySettings.ldap_authorization_use_system_account, FALSE );
+            settings.put( SecuritySettings.ldap_authorization_use_system_account, false );
             settings.put( SecuritySettings.ldap_authorization_user_search_base, "cn=Users,dc=neo4j,dc=com" );
             settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(CN={0}))" );
-            settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "memberOf" );
+            settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "memberOf" ) );
             settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping,
                     "'CN=Neo4j Read Only,CN=Users,DC=neo4j,DC=com'=reader;" +
                     "CN=Neo4j Read-Write,CN=Users,DC=neo4j,DC=com=publisher;" +
@@ -103,11 +103,11 @@ public class ActiveDirectoryAuthenticationIT
         };
     }
 
-    private Consumer<Map<Setting<?>,String>> useSystemAccountSettings = settings ->
+    private Consumer<Map<Setting<?>,Object>> useSystemAccountSettings = settings ->
     {
-        settings.put( SecuritySettings.ldap_authorization_use_system_account, TRUE );
+        settings.put( SecuritySettings.ldap_authorization_use_system_account, true );
         settings.put( SecuritySettings.ldap_authorization_system_username, "Neo4j System" );
-        settings.put( SecuritySettings.ldap_authorization_system_password, "ProudListingsMedia1" );
+        settings.put( SecuritySettings.ldap_authorization_system_password, new SecureString( "ProudListingsMedia1" ) );
     };
 
     public Factory<TransportConnection> cf = SecureSocketConnection::new;
@@ -227,7 +227,7 @@ public class ActiveDirectoryAuthenticationIT
     public void shouldBeAbleToLoginAndAuthorizeReaderUsingStartTlsOnEC2() throws Throwable
     {
         restartNeo4jServerWithOverriddenSettings( useSystemAccountSettings
-                .andThen( settings -> settings.put( SecuritySettings.ldap_use_starttls, TRUE ) ) );
+                .andThen( settings -> settings.put( SecuritySettings.ldap_use_starttls, true ) ) );
 
         assertAuth( "neo", "ProudListingsMedia1" );
         assertReadSucceeds();
@@ -237,7 +237,7 @@ public class ActiveDirectoryAuthenticationIT
     @Test
     public void shouldBeAbleToLoginAndAuthorizeReaderWithUserLdapContextUsingStartTlsOnEC2() throws Throwable
     {
-        restartNeo4jServerWithOverriddenSettings( settings -> settings.put( SecuritySettings.ldap_use_starttls, TRUE ) );
+        restartNeo4jServerWithOverriddenSettings( settings -> settings.put( SecuritySettings.ldap_use_starttls, true ) );
 
         assertAuth( "neo", "ProudListingsMedia1" );
         assertReadSucceeds();

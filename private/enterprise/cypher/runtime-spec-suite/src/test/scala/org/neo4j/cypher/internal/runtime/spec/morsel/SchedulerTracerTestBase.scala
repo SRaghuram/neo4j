@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
+import java.lang.Boolean.TRUE
 import java.lang.management.ManagementFactory
 import java.nio.file.{Files, Path}
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
@@ -27,10 +27,10 @@ object SchedulerTracerTestBase {
 
 abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
   extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.PARALLEL_NO_FUSING.copyWith(
-    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
-    GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
+    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),
     GraphDatabaseSettings.enable_morsel_runtime_trace -> TRUE,
-    GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath.toString
+    GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
   ), runtime) {
 
   override def afterTest(): Unit = {

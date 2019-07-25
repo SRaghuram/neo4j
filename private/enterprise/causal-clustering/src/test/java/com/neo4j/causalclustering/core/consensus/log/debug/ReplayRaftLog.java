@@ -27,7 +27,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_reader_pool_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class ReplayRaftLog
@@ -46,7 +45,7 @@ public class ReplayRaftLog
         System.out.println( "To is " + to );
         File logDirectory = new File( from );
         System.out.println( "logDirectory = " + logDirectory );
-        Config config = Config.defaults( stringMap() );
+        Config config = Config.defaults();
 
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {

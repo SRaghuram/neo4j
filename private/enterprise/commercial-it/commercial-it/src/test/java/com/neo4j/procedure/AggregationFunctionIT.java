@@ -46,7 +46,6 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -305,8 +304,8 @@ class AggregationFunctionIT
     {
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().toPath().toAbsolutePath() )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
     }

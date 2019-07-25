@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,8 +55,8 @@ class SystemGraphCachingTest
     void setUp() throws Throwable
     {
         final DatabaseManagementServiceBuilder builder = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() );
-        builder.setConfig( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME );
-        builder.setConfig( SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME );
+        builder.setConfig( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
+        builder.setConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
         managementService = builder.build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();

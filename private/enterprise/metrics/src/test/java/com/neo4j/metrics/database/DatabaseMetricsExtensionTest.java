@@ -51,7 +51,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.function.Suppliers.singleton;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -70,7 +69,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, FALSE );
+        Config config = Config.defaults( MetricsSettings.csvEnabled, false );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 
@@ -86,7 +85,7 @@ class DatabaseMetricsExtensionTest
     @Test
     void extensionCanBeStartedWhenMetricsDisabled()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, FALSE );
+        Config config = Config.defaults( MetricsSettings.metricsEnabled, false );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
 

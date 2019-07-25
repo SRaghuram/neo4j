@@ -65,9 +65,9 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( CommercialEditionSettings.mode, "SINGLE" ),
-                "-c", configOption( data_directory, getRelativePath( folder.storeDir(), data_directory ) ),
+                "-c", configOption( data_directory, getRelativePath( folder.storeDir(), data_directory ).toString() ),
                 "-c", configOption( logs_directory, testDirectory.storeDir().getAbsolutePath() ),
-                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.storeDir(), legacy_certificates_directory ) ) ) );
+                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.storeDir(), legacy_certificates_directory ).toString() ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );

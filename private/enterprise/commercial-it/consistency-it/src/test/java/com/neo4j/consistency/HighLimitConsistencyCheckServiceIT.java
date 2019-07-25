@@ -14,8 +14,6 @@ import java.util.Map;
 import org.neo4j.consistency.ConsistencyCheckServiceIntegrationTest;
 import org.neo4j.graphdb.config.Setting;
 
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-
 public class HighLimitConsistencyCheckServiceIT extends ConsistencyCheckServiceIntegrationTest
 {
     @Override
@@ -25,10 +23,10 @@ public class HighLimitConsistencyCheckServiceIT extends ConsistencyCheckServiceI
     }
 
     @Override
-    protected Map<Setting<?>,String> settings()
+    protected Map<Setting<?>,Object> settings()
     {
-        Map<Setting<?>, String> settings = new HashMap<>( super.settings() );
-        settings.put( OnlineBackupSettings.online_backup_enabled, FALSE );
+        Map<Setting<?>, Object> settings = new HashMap<>( super.settings() );
+        settings.put( OnlineBackupSettings.online_backup_enabled, false );
         return settings;
     }
 }

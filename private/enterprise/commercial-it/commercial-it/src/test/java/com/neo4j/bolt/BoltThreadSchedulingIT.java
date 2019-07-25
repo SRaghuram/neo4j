@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.Config;
@@ -42,8 +43,6 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
 public class BoltThreadSchedulingIT
@@ -146,12 +145,12 @@ public class BoltThreadSchedulingIT
     {
         DatabaseManagementServiceBuilder dbFactory = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() );
         managementService = dbFactory
-                .setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.listen_address, "localhost:0" )
-                .setConfig( BoltConnector.thread_pool_min_size, String.valueOf( threadPoolMinSize ) )
-                .setConfig( BoltConnector.thread_pool_max_size, String.valueOf( threadPoolMaxSize ) )
-                .setConfig( GraphDatabaseSettings.auth_enabled, FALSE )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE ).build();
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .setConfig( BoltConnector.thread_pool_min_size, threadPoolMinSize )
+                .setConfig( BoltConnector.thread_pool_max_size, threadPoolMaxSize )
+                .setConfig( GraphDatabaseSettings.auth_enabled, false )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }
 

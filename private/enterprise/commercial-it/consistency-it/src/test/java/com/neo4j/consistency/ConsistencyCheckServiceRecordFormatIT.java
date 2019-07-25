@@ -37,13 +37,12 @@ import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @RunWith( Parameterized.class )
 public class ConsistencyCheckServiceRecordFormatIT
 {
     private final DbmsRule db = new EmbeddedDbmsRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
+            .withSetting( OnlineBackupSettings.online_backup_enabled, false )
             .startLazily();
 
     @Rule

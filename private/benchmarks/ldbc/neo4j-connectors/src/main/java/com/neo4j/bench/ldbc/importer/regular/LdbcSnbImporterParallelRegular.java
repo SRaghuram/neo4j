@@ -6,7 +6,6 @@
 package com.neo4j.bench.ldbc.importer.regular;
 
 import com.ldbc.driver.DbException;
-import com.ldbc.driver.util.MapUtils;
 import com.neo4j.bench.ldbc.Domain.Forum;
 import com.neo4j.bench.ldbc.Domain.HasMember;
 import com.neo4j.bench.ldbc.Domain.Knows;
@@ -723,7 +722,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         LifeSupport lifeSupport = new LifeSupport();
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
-        Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
+        Config dbConfig = null == importerProperties ? Config.defaults() : Config.newBuilder().fromFile( importerProperties ).build();
         dbConfig.set( GraphDatabaseSettings.dense_node_threshold, 1 );
         Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(

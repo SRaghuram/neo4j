@@ -34,7 +34,6 @@ import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
@@ -99,7 +98,7 @@ class AdminToolCausalClusterBackupIT
 
     private static Config tempDbConfig()
     {
-        return Config.defaults( metricsEnabled, FALSE );
+        return Config.defaults( metricsEnabled, false );
     }
 
     private static String newBackupDirName()

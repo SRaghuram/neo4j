@@ -33,7 +33,7 @@ public class DnsHostnameResolverTest
     private final MapDomainNameResolver mockDomainNameResolver = new MapDomainNameResolver( new HashMap<>() );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private final AssertableLogProvider userLogProvider = new AssertableLogProvider();
-    private final Config config = Config.defaults( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "2" );
+    private final Config config = Config.defaults( CausalClusteringSettings.minimum_core_cluster_size_at_formation, 2 );
 
     private final DnsHostnameResolver resolver = new DnsHostnameResolver( new SimpleLogService( userLogProvider, logProvider ), mockDomainNameResolver,
             config, RetryStrategyTest.testRetryStrategy( 1 ) );

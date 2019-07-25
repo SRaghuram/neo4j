@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.{File, PrintWriter}
+import java.lang.Boolean.FALSE
 import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
 import java.nio.file.Files
 import java.util.Collections.emptyMap
@@ -13,9 +14,7 @@ import java.util.Collections.emptyMap
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher._
-import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
@@ -584,7 +583,7 @@ class LoadCsvAcceptanceTest
     )
 
     val managementService = acceptanceTestDatabaseBuilder
-      .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
+      .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir)
       .build()
 
     val db = managementService.database(DEFAULT_DATABASE_NAME)
@@ -605,7 +604,7 @@ class LoadCsvAcceptanceTest
     val dir = createTempDirectory("loadcsvroot")
 
     val managementService = acceptanceTestDatabaseBuilder
-      .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir.toString)
+      .setConfig(GraphDatabaseSettings.load_csv_file_url_root, dir)
       .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
 
@@ -725,7 +724,7 @@ class LoadCsvAcceptanceTest
   }
 
   test("should give nice error message when overflowing the buffer") {
-    runWithConfig(GraphDatabaseSettings.csv_buffer_size -> (1 * 1024 * 1024).toString) { db =>
+    runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(1 * 1024 * 1024)) { db =>
 
       trackResources(db)
 
@@ -748,7 +747,7 @@ class LoadCsvAcceptanceTest
   }
 
   test("should be able to configure db to handle huge fields") {
-    runWithConfig(GraphDatabaseSettings.csv_buffer_size -> (4 * 1024 * 1024).toString) { db =>
+    runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(4 * 1024 * 1024)) { db =>
 
       trackResources(db)
 

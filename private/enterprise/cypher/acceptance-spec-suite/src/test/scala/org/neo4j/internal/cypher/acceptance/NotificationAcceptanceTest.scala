@@ -5,8 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.FALSE
+
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
@@ -23,9 +24,9 @@ import scala.collection.JavaConverters._
 class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   // Need to override so that graph.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> FALSE,
-    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10"
+    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> Integer.valueOf(10)
   )
 
   override def initTest(): Unit = {
@@ -643,9 +644,9 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   // Need to override so that graph.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> FALSE,
-    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> "10",
+    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> java.lang.Long.valueOf(10),
     GraphDatabaseSettings.default_schema_provider -> "lucene+native-3.0"
   )
 

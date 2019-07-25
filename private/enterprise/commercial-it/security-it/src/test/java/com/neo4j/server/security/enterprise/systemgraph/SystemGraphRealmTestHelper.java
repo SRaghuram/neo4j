@@ -23,7 +23,6 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 class SystemGraphRealmTestHelper
 {
@@ -35,7 +34,7 @@ class SystemGraphRealmTestHelper
         TestDatabaseManager( TestDirectory testDir )
         {
             managementService = new TestCommercialDatabaseManagementServiceBuilder( testDir.databaseDir() ).impermanent()
-                    .setConfig( GraphDatabaseSettings.auth_enabled, FALSE ).build();
+                    .setConfig( GraphDatabaseSettings.auth_enabled, false ).build();
             testSystemDb = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         }
 

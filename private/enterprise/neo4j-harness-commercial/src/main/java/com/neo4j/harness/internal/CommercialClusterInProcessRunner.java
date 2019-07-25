@@ -9,10 +9,10 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 public class CommercialClusterInProcessRunner
@@ -31,9 +31,9 @@ public class CommercialClusterInProcessRunner
                             .withReplicas( 3 )
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
-                            .withConfig( GraphDatabaseSettings.auth_enabled.name(), TRUE )
-                            .withConfig( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
-                            .withConfig( SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME )
+                            .withConfig( GraphDatabaseSettings.auth_enabled, true )
+                            .withConfig( SecuritySettings.authentication_providers,  List.of( SecuritySettings.NATIVE_REALM_NAME ) )
+                            .withConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );

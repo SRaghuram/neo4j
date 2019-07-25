@@ -14,6 +14,7 @@ import java.io.IOException;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.TransientException;
@@ -29,7 +30,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -90,8 +90,8 @@ class MultiDatabaseBoltIT
     private DatabaseManagementService createManagementService()
     {
         return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
     }
 }

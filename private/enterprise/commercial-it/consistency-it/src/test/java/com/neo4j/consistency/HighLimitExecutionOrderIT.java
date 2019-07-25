@@ -14,8 +14,6 @@ import java.util.Map;
 import org.neo4j.consistency.checking.full.ExecutionOrderIntegrationTest;
 import org.neo4j.graphdb.config.Setting;
 
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-
 public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
 {
 
@@ -26,10 +24,10 @@ public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
     }
 
     @Override
-    protected Map<Setting<?>,String> getSettings()
+    protected Map<Setting<?>,Object> getSettings()
     {
-        Map<Setting<?>, String> settings = new HashMap<>( super.getSettings() );
-        settings.put( OnlineBackupSettings.online_backup_enabled, FALSE );
+        Map<Setting<?>, Object> settings = new HashMap<>( super.getSettings() );
+        settings.put( OnlineBackupSettings.online_backup_enabled, false );
         return settings;
     }
 }

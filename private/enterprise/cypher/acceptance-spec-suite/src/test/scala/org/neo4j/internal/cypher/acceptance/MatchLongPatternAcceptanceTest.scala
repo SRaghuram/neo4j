@@ -5,11 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.TRUE
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
@@ -27,8 +27,8 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   val VERBOSE = false
 
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_min_replan_interval -> "0",
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+    GraphDatabaseSettings.cypher_min_replan_interval -> Integer.valueOf(0),
     GraphDatabaseSettings.cypher_compiler_tracing -> TRUE,
     GraphDatabaseSettings.pagecache_memory -> "8M"
   )
@@ -268,8 +268,8 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
     matchStatement + returnStatement
   }
 
-  private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
-    val config: util.Map[Setting[_], String] = m.toMap.asJava
+  private def runWithConfig(m: (Setting[_], Object)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
+    val config: util.Map[Setting[_], Object] = m.toMap.asJava
     val managementService = new TestDatabaseManagementServiceBuilder().impermanent().setConfig(config).build()
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     val graph = new GraphDatabaseCypherService(database)

@@ -31,6 +31,6 @@ class TypesafeConfigServiceTest
 
     private static Config neo4jConfigWithMiddlewareLoggingLevel( Level level )
     {
-        return Config.defaults( middleware_logging_level, level.toString() );
+        return Config.defaults( middleware_logging_level, level );
     }
 }

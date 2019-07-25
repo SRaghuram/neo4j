@@ -17,10 +17,14 @@ import org.junit.runners.Parameterized.Parameter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -35,8 +39,6 @@ import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
@@ -112,14 +114,14 @@ public class BoltTlsIT
     private void createAndStartDb()
     {
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
-                .setConfig( BoltConnector.enabled, TRUE )
-                .setConfig( BoltConnector.listen_address, "localhost:0" )
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.ssl_policy, "bolt" )
-                .setConfig( sslPolicy.allow_key_generation, TRUE )
-                .setConfig( sslPolicy.base_directory, "certificates" )
-                .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
-                .setConfig( sslPolicy.client_auth, "none" )
-                .setConfig( sslPolicy.verify_hostname, FALSE ).build();
+                .setConfig( sslPolicy.allow_key_generation, true )
+                .setConfig( sslPolicy.base_directory, Path.of( "certificates" ) )
+                .setConfig( sslPolicy.tls_versions, SettingValueParsers.listOf( SettingValueParsers.STRING ).parse( setup.boltTlsVersions ) )
+                .setConfig( sslPolicy.client_auth, ClientAuth.NONE )
+                .setConfig( sslPolicy.verify_hostname, false ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

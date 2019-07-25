@@ -133,7 +133,7 @@ class BootstrapStateTest
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage, MetadataMessage metadataMessage,
             UniqueAddress uniqueAddress, boolean refuseToBeLeader )
     {
-        var config = Config.defaults(refuse_to_be_leader, Boolean.toString( refuseToBeLeader ) );
+        var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
 
         return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config );
     }

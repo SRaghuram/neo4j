@@ -38,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class DefaultDatabaseSelectionIT
@@ -99,7 +98,7 @@ class DefaultDatabaseSelectionIT
     {
         String customDbName = "activeDb";
         managementService = getDatabaseBuilder()
-                .setConfig( "dbms.active_database", customDbName )
+                .setConfig( default_database, customDbName )
                 .build();
         GraphDatabaseService database = managementService.database( customDbName );
         checkDatabaseNames( database, customDbName );
@@ -111,7 +110,7 @@ class DefaultDatabaseSelectionIT
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
         String customDbName = "legacyCustomDb";
         managementService = getDatabaseBuilder()
-                .setConfig( "dbms.active_database", customDbName )
+                .setConfig( default_database, customDbName )
                 .build();
         GraphDatabaseService database = managementService.database( customDbName );
         checkDatabaseNames( database, customDbName );
@@ -199,7 +198,7 @@ class DefaultDatabaseSelectionIT
     private TestCommercialDatabaseManagementServiceBuilder getDatabaseBuilder()
     {
         return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     private static DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )

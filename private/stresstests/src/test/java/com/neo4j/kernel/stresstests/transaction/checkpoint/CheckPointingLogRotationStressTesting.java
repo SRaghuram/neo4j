@@ -10,6 +10,7 @@ import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
 import org.junit.Test;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
@@ -84,7 +85,7 @@ public class CheckPointingLogRotationStressTesting
         DatabaseManagementService managementService = builder
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pageCacheMemory )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, FALSE )
-                .setConfig( GraphDatabaseSettings.check_point_interval_time, CHECK_POINT_INTERVAL_MINUTES + "m" )
+                .setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMinutes( CHECK_POINT_INTERVAL_MINUTES ) )
                 .setConfig( GraphDatabaseSettings.tracer, "timer" ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 

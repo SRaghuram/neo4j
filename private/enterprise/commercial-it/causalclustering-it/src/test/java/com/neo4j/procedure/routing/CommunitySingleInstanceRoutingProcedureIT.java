@@ -34,8 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -118,13 +116,13 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
 
         DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
-        builder.setConfig( auth_enabled, FALSE );
-        builder.setConfig( BoltConnector.enabled, TRUE );
-        builder.setConfig( BoltConnector.encryption_level, OPTIONAL.toString() );
-        builder.setConfig( BoltConnector.listen_address, "localhost:0" );
+        builder.setConfig( auth_enabled, false );
+        builder.setConfig( BoltConnector.enabled, true );
+        builder.setConfig( BoltConnector.encryption_level, OPTIONAL );
+        builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
         if ( advertisedBoltAddress != null )
         {
-            builder.setConfig( BoltConnector.advertised_address, advertisedBoltAddress.toString() );
+            builder.setConfig( BoltConnector.advertised_address, advertisedBoltAddress );
         }
         managementService = builder.build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

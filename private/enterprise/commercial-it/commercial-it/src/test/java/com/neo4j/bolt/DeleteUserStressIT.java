@@ -27,16 +27,14 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.driver.AuthTokens.basic;
 
 public class DeleteUserStressIT
 {
     @Rule
     public Neo4jRule db = new Neo4jRule()
-            .withConfig( GraphDatabaseSettings.auth_enabled, TRUE )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+            .withConfig( GraphDatabaseSettings.auth_enabled, true )
+            .withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
     private Driver adminDriver;
     private final Set<Throwable> errors = ConcurrentHashMap.newKeySet();

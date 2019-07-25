@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @ExtendWith( TestDirectoryExtension.class )
 class GlobalMetricsExtensionTest
@@ -50,7 +49,7 @@ class GlobalMetricsExtensionTest
     @Test
     void extensionCanBeStartedWithoutRegisteredReporters()
     {
-        Config config = Config.defaults( MetricsSettings.csvEnabled, FALSE );
+        Config config = Config.defaults( MetricsSettings.csvEnabled, false );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 
@@ -84,7 +83,7 @@ class GlobalMetricsExtensionTest
     @Test
     void globalExtensionProvideMetricsRegistryAndReporter()
     {
-        Config config = Config.defaults( MetricsSettings.metricsEnabled, FALSE );
+        Config config = Config.defaults( MetricsSettings.metricsEnabled, false );
         GlobalMetricsDependencies metricsDependencies = new GlobalMetricsDependencies( config );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, metricsDependencies );
 

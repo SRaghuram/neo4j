@@ -88,7 +88,7 @@ class MultiDatabaseHttpIt
     private CommercialNeoServer createService()
     {
         Config config = Config.newBuilder()
-                .setRaw( GraphDatabaseSettings.SERVER_DEFAULTS )
+                .set( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, CommercialEditionSettings.Mode.SINGLE )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().toPath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, false )

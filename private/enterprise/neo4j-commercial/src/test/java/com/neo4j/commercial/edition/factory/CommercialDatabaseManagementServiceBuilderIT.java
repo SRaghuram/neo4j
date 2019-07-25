@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
@@ -41,8 +40,8 @@ class CommercialDatabaseManagementServiceBuilderIT
         File databasesDir = testDirectory.directory( "my_databases" );
 
         DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( factoryDir )
-                .setConfig( databases_root_path, databasesDir.toString() )
-                .setConfig( online_backup_enabled, FALSE )
+                .setConfig( databases_root_path, databasesDir.toPath() )
+                .setConfig( online_backup_enabled, false )
                 .build();
         try
         {

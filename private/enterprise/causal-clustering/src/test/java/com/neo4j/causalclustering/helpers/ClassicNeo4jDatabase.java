@@ -9,6 +9,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -29,7 +30,6 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
 public class ClassicNeo4jDatabase
@@ -129,7 +129,7 @@ public class ClassicNeo4jDatabase
             managementService = new TestDatabaseManagementServiceBuilder( databasesRootDirectoryAbsolute )
                     .setFileSystem( fileSystem )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
                     .build();
             GraphDatabaseService db = managementService.database( databaseId.name() );
@@ -157,10 +157,10 @@ public class ClassicNeo4jDatabase
             return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
         }
 
-        private String getTransactionLogsRoot()
+        private Path getTransactionLogsRoot()
         {
             File directory = transactionLogsInDatabaseFolder ? databasesRootDirectoryAbsolute : transactionLogsRootDirectoryAbsolute;
-            return directory.getAbsolutePath();
+            return directory.toPath().toAbsolutePath();
         }
 
         /**

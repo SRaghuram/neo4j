@@ -12,6 +12,8 @@ import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.procedures.detection.CompareFunction;
 import com.neo4j.bench.procedures.detection.DateTimeFunction;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
+import com.neo4j.common.util.SyntheticStoreGenerator;
+import com.neo4j.common.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,9 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.net.URI;
-import com.neo4j.common.util.SyntheticStoreGenerator;
-import com.neo4j.common.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
-
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -41,7 +40,6 @@ import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class CompareFunctionTest
 {
@@ -54,7 +52,7 @@ public class CompareFunctionTest
             .withProcedure( VarianceProcedure.class )
             .withFunction( CompareFunction.class )
             .withFunction( DateTimeFunction.class )
-            .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
+            .withConfig( GraphDatabaseSettings.auth_enabled, false )
             .build();
 
     private URI boltUri;

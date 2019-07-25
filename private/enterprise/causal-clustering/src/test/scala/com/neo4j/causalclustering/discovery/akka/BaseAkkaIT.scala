@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.helpers.SocketAddress
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
@@ -30,7 +31,7 @@ object BaseAkkaIT {
 
   def config: TSConf = {
     val discoveryListenPort = 0
-    val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, s"localhost:$discoveryListenPort")
+    val config = Config.defaults(CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", discoveryListenPort ) )
 
     new TypesafeConfigService(ArteryTransport.TCP, config).generate()
   }

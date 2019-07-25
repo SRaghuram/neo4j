@@ -12,6 +12,8 @@ import com.neo4j.causalclustering.protocol.handshake.SupportedProtocols;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
@@ -56,7 +58,8 @@ class SupportedProtocolCreatorTest
     void shouldFilterUnknownRaftImplementations()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "1.0, 2.0, 3.0" );
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations,
+                List.of( appProtocolVer( 1, 0 ), appProtocolVer( 2, 0 ), appProtocolVer( 3, 0 ) ) );
 
         // when
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
@@ -69,7 +72,7 @@ class SupportedProtocolCreatorTest
     void shouldReturnConfiguredRaftProtocolVersions()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "2.0" );
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations, List.of( appProtocolVer( 2, 0 ) ) );
 
         // when
         var supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
@@ -82,7 +85,7 @@ class SupportedProtocolCreatorTest
     void shouldThrowIfVersionsSpecifiedButAllUnknown()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.raft_implementations, "99999.99999" );
+        var config = Config.defaults( CausalClusteringSettings.raft_implementations,  List.of( appProtocolVer(99999,99999 ) ) );
         var supportedProtocolCreator = new SupportedProtocolCreator( config, log );
 
         // when / then
@@ -107,7 +110,7 @@ class SupportedProtocolCreatorTest
     void shouldReturnACompressionModifierIfCompressionVersionsSpecified()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, List.of( COMPRESSION_SNAPPY.implementation() ) );
 
         // when
         var supportedModifierProtocols =
@@ -122,7 +125,7 @@ class SupportedProtocolCreatorTest
     void shouldReturnCompressionWithVersionsSpecified()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, List.of( COMPRESSION_SNAPPY.implementation() ) );
 
         // when
         var supportedModifierProtocols =
@@ -137,7 +140,7 @@ class SupportedProtocolCreatorTest
     void shouldReturnCompressionWithVersionsSpecifiedCaseInsensitive()
     {
         // given
-        var config = Config.defaults( CausalClusteringSettings.compression_implementations, COMPRESSION_SNAPPY.implementation().toLowerCase() );
+        var config = Config.defaults( CausalClusteringSettings.compression_implementations, List.of( COMPRESSION_SNAPPY.implementation().toLowerCase() ) );
 
         // when
         var supportedModifierProtocols =
@@ -146,5 +149,10 @@ class SupportedProtocolCreatorTest
         // then
         var versions = supportedModifierProtocols.get( 0 ).versions();
         assertThat( versions, contains( COMPRESSION_SNAPPY.implementation() ) );
+    }
+
+    private static ApplicationProtocolVersion appProtocolVer( int major, int minor )
+    {
+        return new ApplicationProtocolVersion( major, minor );
     }
 }

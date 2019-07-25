@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
+import java.lang.Boolean.{FALSE, TRUE}
+
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.{FALSE, TRUE}
+import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselRuntimeScheduler
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
@@ -34,20 +36,20 @@ object ENTERPRISE {
                                            new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> "4")
+    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(4))
 
-  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
-                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded")
+  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
+                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> CypherMorselRuntimeScheduler.SINGLE_THREADED)
 
-  val SINGLE_THREADED_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
-                                                   GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded",
+  val SINGLE_THREADED_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
+                                                   GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> CypherMorselRuntimeScheduler.SINGLE_THREADED,
                                                    GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE)
 
-  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
-                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
+  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
+                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> CypherMorselRuntimeScheduler.LOCK_FREE)
 
-  val PARALLEL_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
-                                            GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free",
+  val PARALLEL_NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
+                                            GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> CypherMorselRuntimeScheduler.LOCK_FREE,
                                             GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE)
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =

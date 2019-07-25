@@ -18,6 +18,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,14 +43,11 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
-import static java.util.stream.Collectors.joining;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class ReadReplica implements ClusterMember
 {
@@ -86,42 +84,39 @@ public class ReadReplica implements ClusterMember
         this.serverId = serverId;
         this.memberId = new MemberId( UUID.randomUUID() );
 
-        String initialHosts = coreMemberDiscoveryAddresses.stream().map( SocketAddress::toString )
-                .collect( joining( "," ) );
         boltSocketAddress = format( advertisedAddress, boltPort );
 
-        Map<String,String> config = stringMap();
-        config.put( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.READ_REPLICA.toString() );
-        config.put( CausalClusteringSettings.initial_discovery_members.name(), initialHosts );
-        config.put( CausalClusteringSettings.discovery_listen_address.name(), format( listenAddress, discoveryPort ) );
-        config.put( CausalClusteringSettings.discovery_advertised_address.name(), format( advertisedAddress, discoveryPort ) );
-        config.put( GraphDatabaseSettings.store_internal_log_level.name(), Level.DEBUG.name() );
-        config.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        config.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
-        config.put( GraphDatabaseSettings.auth_store.name(), new File( parentDir, "auth" ).getAbsolutePath() );
-        config.putAll( extraParams );
+        Config.Builder config = Config.newBuilder();
+        config.set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.READ_REPLICA );
+        config.set( CausalClusteringSettings.initial_discovery_members, coreMemberDiscoveryAddresses );
+        config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );
+        config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedAddress, discoveryPort ) );
+        config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
+        config.set( GraphDatabaseSettings.record_format, recordFormat );
+        config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
+        config.set( GraphDatabaseSettings.auth_store, new File( parentDir, "auth" ).toPath().toAbsolutePath() );
+        config.setRaw( extraParams );
 
-        for ( Map.Entry<String,IntFunction<String>> entry : instanceExtraParams.entrySet() )
-        {
-            config.put( entry.getKey(), entry.getValue().apply( serverId ) );
-        }
+        Map<String,String> instanceExtras = new HashMap<>();
+        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
+        config.setRaw( instanceExtras );
 
-        config.put( BoltConnector.enabled.name(), TRUE );
-        config.put( BoltConnector.listen_address.name(), format( listenAddress, boltPort ) );
-        config.put( BoltConnector.advertised_address.name(), boltSocketAddress );
-        config.put( BoltConnector.encryption_level.name(), DISABLED.name() );
-        config.put( HttpConnector.enabled.name(), TRUE );
-        config.put( HttpConnector.listen_address.name(), format( listenAddress, httpPort ) );
-        config.put( HttpConnector.advertised_address.name(), format( advertisedAddress, httpPort ) );
+        config.set( BoltConnector.enabled, true );
+        config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
+        config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
+        config.set( BoltConnector.encryption_level, DISABLED );
+        config.set( HttpConnector.enabled, true );
+        config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
+        config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
 
         this.neo4jHome = new File( parentDir, "read-replica-" + serverId );
-        config.put( GraphDatabaseSettings.neo4j_home.name(), neo4jHome.getAbsolutePath() );
+        config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
 
-        config.put( CausalClusteringSettings.transaction_listen_address.name(), format( listenAddress, txPort ) );
-        config.put( OnlineBackupSettings.online_backup_listen_address.name(), format( listenAddress, backupPort ) );
-        config.put( GraphDatabaseSettings.logs_directory.name(), new File( neo4jHome, "logs" ).getAbsolutePath() );
-        config.put( GraphDatabaseSettings.transaction_logs_root_path.name(), new File( neo4jHome, "replica-tx-logs-" + serverId ).getAbsolutePath() );
-        memberConfig = Config.defaults( config );
+        config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
+        config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
+        config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( neo4jHome, "replica-tx-logs-" + serverId ).toPath().toAbsolutePath() );
+        memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDirectory = new File( neo4jHome, "data" );

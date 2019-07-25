@@ -58,7 +58,7 @@ class MultiDatabaseManagerIT
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_NAME )
-                .setConfig( maxNumberOfDatabases, "5" )
+                .setConfig( maxNumberOfDatabases, 5L )
                 .build();
     }
 
@@ -90,7 +90,7 @@ class MultiDatabaseManagerIT
             new TestCommercialDatabaseManagementServiceBuilder( new File( "testFileForMaxDbTest" ) )
                     .setInternalLogProvider( logProvider )
                     .setConfig( default_database, CUSTOM_DATABASE_NAME )
-                    .setConfig( maxNumberOfDatabases, "1" )
+                    .setConfig( maxNumberOfDatabases, 1L )
                     .build();
         } );
 

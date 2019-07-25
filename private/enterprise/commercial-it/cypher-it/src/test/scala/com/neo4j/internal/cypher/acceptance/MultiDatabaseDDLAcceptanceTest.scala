@@ -6,11 +6,11 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.io.File
+import java.lang.Boolean.TRUE
 
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseManagementException
 import org.neo4j.cypher.internal.DatabaseStatus
@@ -1167,5 +1167,5 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   // Use the default value instead of the new value in DDLAcceptanceTestBase
-  override def databaseConfig(): Map[Setting[_], String] = Map()
+  override def databaseConfig(): Map[Setting[_], Object] = Map()
 }

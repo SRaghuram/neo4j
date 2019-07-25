@@ -39,8 +39,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -59,11 +57,11 @@ class TransactionLogsMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, TRUE );
-        builder.setConfig( MetricsSettings.csvEnabled, TRUE );
-        builder.setConfig( preallocate_logical_logs, FALSE );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+        builder.setConfig( MetricsSettings.metricsEnabled, true );
+        builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( preallocate_logical_logs, false );
+        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @Test

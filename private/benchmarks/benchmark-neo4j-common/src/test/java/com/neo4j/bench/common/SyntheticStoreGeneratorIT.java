@@ -50,14 +50,13 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.AnyOf.anyOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class SyntheticStoreGeneratorIT
 {
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-                                                                   .withConfig( GraphDatabaseSettings.auth_enabled, FALSE )
+                                                                   .withConfig( GraphDatabaseSettings.auth_enabled, false )
                                                                    .build();
 
     private static final int CLIENT_RETRY_COUNT = 0;

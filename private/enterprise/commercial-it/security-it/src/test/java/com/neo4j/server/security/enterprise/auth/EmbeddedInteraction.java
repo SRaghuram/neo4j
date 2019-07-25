@@ -9,13 +9,16 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.ResourceIterator;
@@ -32,7 +35,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
@@ -52,14 +54,18 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
 
     private void init( DatabaseManagementServiceBuilder builder, Map<Setting<?>,String> config ) throws Throwable
     {
-        builder.setConfig( BoltConnector.enabled, TRUE );
-        builder.setConfig( BoltConnector.encryption_level, OPTIONAL.name() );
-        builder.setConfig( BoltConnector.listen_address, "localhost:0" );
-        builder.setConfig( GraphDatabaseSettings.tls_key_file, NeoInteractionLevel.tempPath( "key", ".key" ) );
-        builder.setConfig( GraphDatabaseSettings.tls_certificate_file, NeoInteractionLevel.tempPath( "cert", ".cert" ) );
-        builder.setConfig( GraphDatabaseSettings.auth_enabled, TRUE );
+        builder.setConfig( BoltConnector.enabled, true );
+        builder.setConfig( BoltConnector.encryption_level, OPTIONAL );
+        builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
+        builder.setConfig( GraphDatabaseSettings.tls_key_file, Path.of( NeoInteractionLevel.tempPath( "key", ".key" ) ) );
+        builder.setConfig( GraphDatabaseSettings.tls_certificate_file, Path.of( NeoInteractionLevel.tempPath( "cert", ".cert" ) ) );
+        builder.setConfig( GraphDatabaseSettings.auth_enabled, true );
 
-        builder.setConfig( config );
+        config.forEach( ( setting, valueStr ) ->
+        {
+            var settingObj = (SettingImpl<Object>) setting;
+            builder.setConfig( settingObj, settingObj.parse( valueStr ) );
+        } );
 
         managementService = builder.build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );

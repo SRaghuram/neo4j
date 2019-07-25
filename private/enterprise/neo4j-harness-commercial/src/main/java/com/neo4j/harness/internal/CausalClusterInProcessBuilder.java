@@ -26,6 +26,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.logging.Log;
@@ -33,8 +35,6 @@ import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.synchronizedList;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
 public class CausalClusterInProcessBuilder
@@ -58,7 +58,7 @@ public class CausalClusterInProcessBuilder
         private Log log;
         private Path path;
         private PortPickingFactory portFactory = PortPickingFactory.DEFAULT;
-        private final Map<String, String> config = new HashMap<>();
+        private final Map<Setting<Object>, Object> config = new HashMap<>();
 
         @Override
         public WithCores withBuilder( BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder )
@@ -88,9 +88,9 @@ public class CausalClusterInProcessBuilder
             return this;
         }
 
-        public Builder withConfig( String settingName, String value )
+        public <T> Builder withConfig( Setting<T> setting, T value )
         {
-            config.put( settingName, value );
+            config.put( (Setting<Object>) setting, value );
             return this;
         }
 
@@ -235,7 +235,7 @@ public class CausalClusterInProcessBuilder
         private final Path clusterPath;
         private final Log log;
         private final PortPickingFactory portFactory;
-        private final Map<String,String> config;
+        private final Map<Setting<Object>, Object> config;
         private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
         private final List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
@@ -254,12 +254,12 @@ public class CausalClusterInProcessBuilder
 
         public void boot()
         {
-            List<String> initialMembers = new ArrayList<>( nCores );
+            List<SocketAddress> initialMembers = new ArrayList<>( nCores );
 
             for ( int coreId = 0; coreId < nCores; coreId++ )
             {
                 int discoveryPort = portFactory.discoveryCorePort( coreId );
-                initialMembers.add( "localhost:" + discoveryPort );
+                initialMembers.add( new SocketAddress( "localhost", discoveryPort ) );
             }
 
             List<Runnable> coreStartActions = new ArrayList<>();
@@ -276,24 +276,24 @@ public class CausalClusterInProcessBuilder
 
                 CommercialInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
-                String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
-                builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );
-                builder.withConfig( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
+                Path homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath();
+                builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );
+                builder.withConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
 
-                builder.withConfig( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.CORE.name() );
-                builder.withConfig( CausalClusteringSettings.multi_dc_license.name(), TRUE );
-                builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
+                builder.withConfig( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE );
+                builder.withConfig( CausalClusteringSettings.multi_dc_license, true );
+                builder.withConfig( CausalClusteringSettings.initial_discovery_members, initialMembers );
 
-                builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( discoveryPort ) );
-                builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
-                builder.withConfig( CausalClusteringSettings.raft_listen_address.name(), specifyPortOnly( raftPort ) );
+                builder.withConfig( CausalClusteringSettings.discovery_listen_address, specifyPortOnly( discoveryPort ) );
+                builder.withConfig( CausalClusteringSettings.transaction_listen_address, specifyPortOnly( txPort ) );
+                builder.withConfig( CausalClusteringSettings.raft_listen_address, specifyPortOnly( raftPort ) );
 
-                builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation.name(), String.valueOf( nCores ) );
-                builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime.name(), String.valueOf( nCores ) );
-                builder.withConfig( CausalClusteringSettings.server_groups.name(), "core," + "core" + coreId );
+                builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation, nCores );
+                builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, nCores );
+                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "core",  "core" + coreId ) );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
 
-                builder.withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+                builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
                 config.forEach( builder::withConfig );
 
@@ -318,19 +318,19 @@ public class CausalClusterInProcessBuilder
                 String homeDir = "replica-" + replicaId;
                 CommercialInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
-                String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
-                builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );
-                builder.withConfig( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
+                Path homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath();
+                builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );
+                builder.withConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
 
-                builder.withConfig( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.READ_REPLICA.name() );
-                builder.withConfig( CausalClusteringSettings.initial_discovery_members.name(), String.join( ",", initialMembers ) );
-                builder.withConfig( CausalClusteringSettings.discovery_listen_address.name(), specifyPortOnly( discoveryPort ) );
-                builder.withConfig( CausalClusteringSettings.transaction_listen_address.name(), specifyPortOnly( txPort ) );
+                builder.withConfig( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.READ_REPLICA );
+                builder.withConfig( CausalClusteringSettings.initial_discovery_members, initialMembers );
+                builder.withConfig( CausalClusteringSettings.discovery_listen_address, specifyPortOnly( discoveryPort ) );
+                builder.withConfig( CausalClusteringSettings.transaction_listen_address, specifyPortOnly( txPort ) );
 
-                builder.withConfig( CausalClusteringSettings.server_groups.name(), "replica," + "replica" + replicaId );
+                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "replica", "replica" + replicaId ) );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
 
-                builder.withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+                builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
                 config.forEach( builder::withConfig );
 
@@ -344,24 +344,24 @@ public class CausalClusterInProcessBuilder
             executeAll( "Error starting read replicas", "replica-start", replicaStartActions );
         }
 
-        private static String specifyPortOnly( int port )
+        private static SocketAddress specifyPortOnly( int port )
         {
-            return ":" + port;
+            return new SocketAddress( port );
         }
 
         private static void configureConnectors( int boltPort, int httpPort, int httpsPort, Neo4jBuilder builder )
         {
-            builder.withConfig( BoltConnector.enabled.name(), TRUE );
-            builder.withConfig( BoltConnector.listen_address.name(), specifyPortOnly( boltPort ) );
-            builder.withConfig( BoltConnector.advertised_address.name(), specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.enabled, true );
+            builder.withConfig( BoltConnector.listen_address, specifyPortOnly( boltPort ) );
+            builder.withConfig( BoltConnector.advertised_address, specifyPortOnly( boltPort ) );
 
-            builder.withConfig( HttpConnector.enabled.name(), TRUE );
-            builder.withConfig( HttpConnector.listen_address.name(), specifyPortOnly( httpPort ) );
-            builder.withConfig( HttpConnector.advertised_address.name(), specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.enabled, true );
+            builder.withConfig( HttpConnector.listen_address, specifyPortOnly( httpPort ) );
+            builder.withConfig( HttpConnector.advertised_address, specifyPortOnly( httpPort ) );
 
-            builder.withConfig( HttpsConnector.enabled.name(), TRUE );
-            builder.withConfig( HttpsConnector.listen_address.name(), specifyPortOnly( httpsPort ) );
-            builder.withConfig( HttpsConnector.advertised_address.name(), specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.enabled, true );
+            builder.withConfig( HttpsConnector.listen_address, specifyPortOnly( httpsPort ) );
+            builder.withConfig( HttpsConnector.advertised_address, specifyPortOnly( httpsPort ) );
         }
 
         public List<InProcessNeo4j> getCoreNeo4j()

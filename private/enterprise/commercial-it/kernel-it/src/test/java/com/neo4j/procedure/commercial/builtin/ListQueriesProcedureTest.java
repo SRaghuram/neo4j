@@ -55,17 +55,15 @@ import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_allocation;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_cpu_time;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
 public class ListQueriesProcedureTest
 {
     private final DbmsRule db = new CommercialDbmsRule()
-            .withSetting( cypher_hints_error, TRUE )
-            .withSetting( GraphDatabaseSettings.track_query_allocation, TRUE )
-            .withSetting( track_query_cpu_time, TRUE )
+            .withSetting( cypher_hints_error, true )
+            .withSetting( GraphDatabaseSettings.track_query_allocation, true )
+            .withSetting( track_query_cpu_time, true )
             .startLazily();
 
     private final ThreadingRule threads = new ThreadingRule();
@@ -405,7 +403,7 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
-        db.withSetting( track_query_cpu_time, FALSE );
+        db.withSetting( track_query_cpu_time, false );
         Map<String,Object> data;
 
         // when
@@ -457,7 +455,7 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
-        db.withSetting( track_query_allocation, FALSE );
+        db.withSetting( track_query_allocation, false );
         Map<String,Object> data;
 
         // when

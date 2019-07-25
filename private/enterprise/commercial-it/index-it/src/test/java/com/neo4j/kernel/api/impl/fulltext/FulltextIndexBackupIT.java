@@ -42,7 +42,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
@@ -77,7 +76,7 @@ class FulltextIndexBackupIT
     void setUp()
     {
         dbManagementService = new TestCommercialDatabaseManagementServiceBuilder( dir.storeDir() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, true )
                 .build();
         db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
     }
@@ -194,7 +193,7 @@ class FulltextIndexBackupIT
     private static GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
         backupManagementService = new TestCommercialDatabaseManagementServiceBuilder( backupDatabaseDir )
-                .setConfig( transaction_logs_root_path, backupDatabaseDir.getAbsolutePath() )
+                .setConfig( transaction_logs_root_path, backupDatabaseDir.toPath().toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }

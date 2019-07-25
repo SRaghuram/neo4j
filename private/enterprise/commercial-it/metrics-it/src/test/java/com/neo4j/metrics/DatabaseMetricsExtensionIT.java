@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -54,8 +55,6 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -75,13 +74,13 @@ class DatabaseMetricsExtensionIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         outputPath = new File( directory.storeDir(), "metrics" );
-        builder.setConfig( MetricsSettings.metricsEnabled, TRUE );
-        builder.setConfig( MetricsSettings.csvEnabled, TRUE );
-        builder.setConfig( cypher_min_replan_interval, "0m" );
-        builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
-        builder.setConfig( check_point_interval_time, "100ms" );
-        builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
+        builder.setConfig( MetricsSettings.metricsEnabled, true );
+        builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( cypher_min_replan_interval, Duration.ofMinutes( 0 ) );
+        builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
+        builder.setConfig( check_point_interval_time, Duration.ofMillis( 100 ) );
+        builder.setConfig( MetricsSettings.graphiteInterval, Duration.ofSeconds( 1 ) );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 
     @BeforeEach

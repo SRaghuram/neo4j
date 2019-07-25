@@ -5,15 +5,16 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.TRUE
+
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.TRUE
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_lenient_create_relationship -> TRUE
   )
 

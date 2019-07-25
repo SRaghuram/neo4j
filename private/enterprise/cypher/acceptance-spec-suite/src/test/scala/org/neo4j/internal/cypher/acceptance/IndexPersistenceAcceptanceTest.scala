@@ -34,17 +34,17 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     startGraphDatabaseWithConfig(storeDir, databaseConfig())
   }
 
-  private def startGraphDatabaseWithConfig(storeDir: File, config: Map[Setting[_], String]): Unit = {
+  private def startGraphDatabaseWithConfig(storeDir: File, config: Map[Setting[_], Object]): Unit = {
     val builder = graphDatabaseFactory(storeDir)
     config.foreach {
-      case (setting, settingValue) => builder.setConfig(setting, settingValue)
+      case (setting, settingValue) => builder.setConfig(setting.asInstanceOf[Setting[Object]], settingValue)
     }
     managementService = builder.build()
     graphOps = managementService.database(DEFAULT_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
   }
 
-  private def restartGraphDatabase(config: Map[Setting[_], String] = databaseConfig()): Unit = {
+  private def restartGraphDatabase(config: Map[Setting[_], Object] = databaseConfig()): Unit = {
     managementService.shutdown()
     startGraphDatabaseWithConfig(dbDir, config)
   }
@@ -158,7 +158,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     testIndexRestartWithSettingsChanges(Map(wgs84_x_min -> "0,0"))
   }
 
-  private def testIndexRestartWithSettingsChanges(settings: Map[Setting[_], String]): Unit = {
+  private def testIndexRestartWithSettingsChanges(settings: Map[Setting[_], Object]): Unit = {
     createIndex()
     val data = (-180 to 180 by 10).flatMap { lon =>
       (-90 to 90 by 10).map { lat =>

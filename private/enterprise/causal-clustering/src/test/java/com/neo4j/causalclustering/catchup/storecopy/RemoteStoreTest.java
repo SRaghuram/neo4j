@@ -20,6 +20,7 @@ import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.Config;
@@ -136,7 +137,7 @@ class RemoteStoreTest
 
         StoreCopyFailedException copyFailedException = assertThrows( StoreCopyFailedException.class,
                 () -> doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider,
-                        Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ) ) );
+                        Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, Duration.ofSeconds( 0 ) ) ) );
 
         assertThat( copyFailedException.getMessage(), CoreMatchers.equalTo( "Pulling tx failed consecutively without progress" ) );
     }
@@ -171,7 +172,7 @@ class RemoteStoreTest
                 .pullTransactions( isNull(), eq( storeId ), anyLong(), any() );
 
         assertThrows( StoreCopyFailedException.class, () -> doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider,
-                Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ) ) );
+                Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, Duration.ofSeconds( 0 ) ) ) );
 
         verify( writer ).close();
     }
@@ -225,7 +226,7 @@ class RemoteStoreTest
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
         doStoreCopy( storeCopyClient, txPullClient, secondaryFailingAddressProvider,
-                Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ) );
+                Config.defaults( CausalClusteringSettings.catch_up_client_inactivity_timeout, Duration.ofSeconds( 0 ) ) );
 
         verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary( DATABASE_ID );
     }
