@@ -88,7 +88,7 @@ class RestoreDatabaseCommandIT
                 new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, true ).execute();
             }
         } );
-        assertThat( commandFailedException.getMessage(), equalTo( "the database is in use -- stop Neo4j and try again" ) );
+        assertThat( commandFailedException.getMessage(), equalTo( "The database is in use. Stop Neo4j and try again." ) );
     }
 
     @Test
