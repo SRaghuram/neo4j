@@ -42,8 +42,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     plan match {
       case plans.Input(nodes, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
-                          nodes.map(v => slots.getLongOffsetFor(v)),
-                          variables.map(v => slots.getReferenceOffsetFor(v)))
+                          nodes.map(v => slots.getLongOffsetFor(v)).toArray,
+                          variables.map(v => slots.getReferenceOffsetFor(v)).toArray)
 
       case plans.AllNodesScan(column, _) =>
         val argumentSize = physicalPlan.argumentSizes(id)

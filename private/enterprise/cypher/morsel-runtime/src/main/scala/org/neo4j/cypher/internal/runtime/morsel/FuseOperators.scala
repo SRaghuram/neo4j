@@ -400,8 +400,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Input(nodes, variables, nullable) =>
-            val newTemplate = new InputOperatorTemplate(acc.template, plan.id, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)),
-                                                        variables.map(v => slots.getReferenceOffsetFor(v)), nullable)(expressionCompiler)
+            val newTemplate = new InputOperatorTemplate(acc.template, plan.id, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)).toArray,
+                                                        variables.map(v => slots.getReferenceOffsetFor(v)).toArray, nullable)(expressionCompiler)
             acc.copy(template = newTemplate,
                      fusedPlans = nextPlan :: acc.fusedPlans)
 
