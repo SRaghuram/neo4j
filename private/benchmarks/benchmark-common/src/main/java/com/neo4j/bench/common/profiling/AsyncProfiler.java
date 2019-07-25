@@ -27,6 +27,7 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.appendFile;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileExists;
+import static java.lang.String.format;
 
 public class AsyncProfiler implements InternalProfiler, ExternalProfiler
 {
@@ -257,7 +258,27 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + asyncRecording.toAbsolutePath(),
                         "-------------------------------" );
-            Thread.sleep( 1000 );
+            String[] syncAsyncCommand = {
+                    "sync",
+                    format( "name=%s", recordingDescriptor.sanitizedName() )};
+            Process syncAsync = new ProcessBuilder( syncAsyncCommand )
+                    .redirectOutput( asyncLog.toFile() )
+                    .redirectError( asyncLog.toFile() )
+                    .start();
+
+            syncAsync.waitFor();
+            resultCode = syncAsync.waitFor();
+            if ( resultCode != 0 )
+            {
+                appendFile( profilerLog,
+                            Instant.now(),
+                            "Bad things happened when syncing JFR file",
+                            "See: " + asyncLog.toAbsolutePath(),
+                            "-------------------------------" );
+                throw new RuntimeException(
+                        "Bad things happened when syncing JFR file\n" +
+                        "See: " + asyncLog.toAbsolutePath() );
+            }
             ASYNC.maybeSecondaryRecordingCreator()
                  .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
         }

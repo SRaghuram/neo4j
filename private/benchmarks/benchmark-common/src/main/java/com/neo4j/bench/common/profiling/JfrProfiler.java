@@ -330,7 +330,28 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + jfrProfilerOutput.toAbsolutePath(),
                         "-------------------------------" );
-            Thread.sleep( 1000 );
+
+            String[] syncJfrCommand = {
+                    "sync",
+                    format( "name=%s", recordingDescriptor.sanitizedName() )};
+            Process syncJfr = new ProcessBuilder( syncJfrCommand )
+                    .redirectOutput( jfrLog.toFile() )
+                    .redirectError( jfrLog.toFile() )
+                    .start();
+
+            syncJfr.waitFor();
+            resultCode = syncJfr.waitFor();
+            if ( resultCode != 0 )
+            {
+                appendFile( profilerLog,
+                            Instant.now(),
+                            "Bad things happened when syncing JFR file",
+                            "See: " + jfrLog.toAbsolutePath(),
+                            "-------------------------------" );
+                throw new RuntimeException(
+                        "Bad things happened when syncing JFR file\n" +
+                        "See: " + jfrLog.toAbsolutePath() );
+            }
             JFR.maybeSecondaryRecordingCreator()
                .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
         }
