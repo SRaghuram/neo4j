@@ -258,9 +258,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + asyncRecording.toAbsolutePath(),
                         "-------------------------------" );
-            String[] syncAsyncCommand = {
-                    "sync",
-                    format( "%s.async", recordingDescriptor.sanitizedName() )};
+            String[] syncAsyncCommand = {"sync"};
             Process syncAsync = new ProcessBuilder( syncAsyncCommand )
                     .redirectOutput( asyncLog.toFile() )
                     .redirectError( asyncLog.toFile() )

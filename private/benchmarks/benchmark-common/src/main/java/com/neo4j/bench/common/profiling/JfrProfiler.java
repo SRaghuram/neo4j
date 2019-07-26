@@ -330,10 +330,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + jfrProfilerOutput.toAbsolutePath(),
                         "-------------------------------" );
-
-            String[] syncJfrCommand = {
-                    "sync",
-                    format( "%s.jfr", recordingDescriptor.sanitizedName() )};
+            String[] syncJfrCommand = {"sync"};
             Process syncJfr = new ProcessBuilder( syncJfrCommand )
                     .redirectOutput( jfrLog.toFile() )
                     .redirectError( jfrLog.toFile() )
