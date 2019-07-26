@@ -333,13 +333,12 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
 
             String[] syncJfrCommand = {
                     "sync",
-                    format( "name=%s", recordingDescriptor.sanitizedName() )};
+                    format( "%s.jfr", recordingDescriptor.sanitizedName() )};
             Process syncJfr = new ProcessBuilder( syncJfrCommand )
                     .redirectOutput( jfrLog.toFile() )
                     .redirectError( jfrLog.toFile() )
                     .start();
 
-            syncJfr.waitFor();
             resultCode = syncJfr.waitFor();
             if ( resultCode != 0 )
             {

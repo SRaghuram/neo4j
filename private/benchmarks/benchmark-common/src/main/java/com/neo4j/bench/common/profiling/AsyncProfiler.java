@@ -260,13 +260,12 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         "-------------------------------" );
             String[] syncAsyncCommand = {
                     "sync",
-                    format( "name=%s", recordingDescriptor.sanitizedName() )};
+                    format( "%s.async", recordingDescriptor.sanitizedName() )};
             Process syncAsync = new ProcessBuilder( syncAsyncCommand )
                     .redirectOutput( asyncLog.toFile() )
                     .redirectError( asyncLog.toFile() )
                     .start();
 
-            syncAsync.waitFor();
             resultCode = syncAsync.waitFor();
             if ( resultCode != 0 )
             {
