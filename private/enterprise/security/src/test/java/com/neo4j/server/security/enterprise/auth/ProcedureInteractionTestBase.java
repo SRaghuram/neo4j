@@ -12,8 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,9 +146,9 @@ public abstract class ProcedureInteractionTestBase<S>
     protected final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
     File securityLog;
 
-    Map<Setting<?>,String> defaultConfiguration() throws IOException
+    Map<Setting<?>,String> defaultConfiguration()
     {
-        Path homeDir = Files.createTempDirectory( "logs" );
+        Path homeDir = testDirectory.directory( "logs" ).toPath();
         securityLog = new File( homeDir.toFile(), "security.log" );
         return Map.of( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
                 GraphDatabaseSettings.procedure_roles,

@@ -7,6 +7,7 @@ package com.neo4j.server.enterprise.helpers;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 
 import java.io.File;
@@ -68,7 +69,7 @@ public class CommercialServerBuilder extends CommunityServerBuilder
     protected CommunityNeoServer build( File configFile, Config config,
             ExternalDependencies dependencies )
     {
-        return new TestCommercialNeoServer( config, configFile,
+        return new TestCommercialNeoServer( config, configFile, isPersistent(),
                 GraphDatabaseDependencies.newDependencies(dependencies).userLogProvider( logProvider ) );
     }
 
@@ -76,9 +77,9 @@ public class CommercialServerBuilder extends CommunityServerBuilder
     {
         private final File configFile;
 
-        TestCommercialNeoServer( Config config, File configFile, ExternalDependencies dependencies )
+        TestCommercialNeoServer( Config config, File configFile, boolean persistent, ExternalDependencies dependencies )
         {
-            super( config, dependencies );
+            super( config, persistent ? new CommercialGraphFactory() : new CommercialInMemoryGraphFactory(), dependencies );
             this.configFile = configFile;
         }
 

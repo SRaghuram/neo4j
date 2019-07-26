@@ -9,26 +9,29 @@ import com.neo4j.harness.extensionpackage.MyEnterpriseUnmanagedExtension;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.eclipse.jetty.http.HttpStatus;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
-import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 
 public class CommercialNeo4jRuleTest
 {
+    @ClassRule
+    public static TestDirectory testDirectory = TestDirectory.testDirectory();
     @Rule
     public Neo4jRule neo4j = new CommercialNeo4jRule()
             .withConfig( GraphDatabaseSettings.legacy_certificates_directory.name(),
-                    getRelativePath( getSharedTestTemporaryFolder(), GraphDatabaseSettings.legacy_certificates_directory ) )
+                    getRelativePath( testDirectory.storeDir(), GraphDatabaseSettings.legacy_certificates_directory ) )
             .withUnmanagedExtension( "/test", MyEnterpriseUnmanagedExtension.class )
             .withConfig( OnlineBackupSettings.online_backup_enabled, FALSE );
 

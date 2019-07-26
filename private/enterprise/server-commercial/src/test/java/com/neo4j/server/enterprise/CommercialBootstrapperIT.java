@@ -9,8 +9,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +23,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.ServerBootstrapper;
-import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.database.GraphFactory;
 import org.neo4j.test.rule.CleanupRule;
 
@@ -39,16 +36,14 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.internal.helpers.collection.MapUtil.store;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.server.ServerTestUtils.getDefaultRelativeProperties;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class CommercialBootstrapperIT extends BaseBootstrapperIT
 {
-    private final TemporaryFolder folder = new TemporaryFolder();
-    private final CleanupRule cleanupRule = new CleanupRule();
-
     @Rule
-    public RuleChain ruleChain = RuleChain.outerRule(folder).around( cleanupRule );
+    public final CleanupRule cleanupRule = new CleanupRule();
 
     @Override
     protected ServerBootstrapper newBootstrapper()
@@ -68,11 +63,11 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
     {
         // When
         int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
-                "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
+                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( CommercialEditionSettings.mode, "SINGLE" ),
-                "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
-                "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.getRoot(), legacy_certificates_directory ) ) ) );
+                "-c", configOption( data_directory, getRelativePath( folder.storeDir(), data_directory ) ),
+                "-c", configOption( logs_directory, testDirectory.storeDir().getAbsolutePath() ),
+                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.storeDir(), legacy_certificates_directory ) ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
@@ -83,10 +78,10 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingDisabledByDefault() throws Exception
     {
         // When
-        File configFile = tempDir.newFile( Config.DEFAULT_CONFIG_FILE_NAME );
+        File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap();
-        properties.putAll( ServerTestUtils.getDefaultRelativeProperties() );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.storeDir() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
@@ -94,7 +89,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         UncoveredCommercialBootstrapper uncoveredEnterpriseBootstrapper = new UncoveredCommercialBootstrapper();
         cleanupRule.add( uncoveredEnterpriseBootstrapper );
         ServerBootstrapper.start( uncoveredEnterpriseBootstrapper,
-                "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
+                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "--config-dir", configFile.getParentFile().getAbsolutePath() );
 
         // Then
@@ -107,10 +102,10 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingEnabledBySetting() throws Exception
     {
         // When
-        File configFile = tempDir.newFile( Config.DEFAULT_CONFIG_FILE_NAME );
+        File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
-        properties.putAll( ServerTestUtils.getDefaultRelativeProperties() );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.storeDir() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
@@ -118,7 +113,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         UncoveredCommercialBootstrapper uncoveredEnterpriseBootstrapper = new UncoveredCommercialBootstrapper();
         cleanupRule.add( uncoveredEnterpriseBootstrapper );
         ServerBootstrapper.start( uncoveredEnterpriseBootstrapper,
-                "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
+                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "--config-dir", configFile.getParentFile().getAbsolutePath() );
 
         // Then

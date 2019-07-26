@@ -10,12 +10,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
 
 import java.util.concurrent.Callable;
 
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.helpers.FunctionalTestHelper;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
 import static org.neo4j.test.rule.SuppressOutput.suppressAll;
@@ -23,7 +23,7 @@ import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 public abstract class CommercialVersionIT extends ExclusiveServerTestBase
 {
     @ClassRule
-    public static TemporaryFolder staticFolder = new TemporaryFolder();
+    public static final TestDirectory staticFolder = TestDirectory.testDirectory();
     protected static NeoServer server;
     static FunctionalTestHelper functionalTestHelper;
 
@@ -31,7 +31,8 @@ public abstract class CommercialVersionIT extends ExclusiveServerTestBase
     public static void setupServer() throws Exception
     {
         server = CommercialServerBuilder.serverOnRandomPorts()
-                .usingDataDir( staticFolder.getRoot().getAbsolutePath() )
+                .persistent()
+                .usingDataDir( staticFolder.storeDir().getAbsolutePath() )
                 .build();
 
         suppressAll().call((Callable<Void>) () ->

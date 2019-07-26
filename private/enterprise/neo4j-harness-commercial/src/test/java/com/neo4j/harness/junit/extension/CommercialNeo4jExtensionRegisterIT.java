@@ -35,8 +35,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.server.ServerTestUtils.createTempDir;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
-import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
 @SkipThreadLeakageGuard
@@ -44,22 +44,34 @@ class CommercialNeo4jExtensionRegisterIT
 {
     private static final String REGISTERED_TEMP_PREFIX = "registeredTemp";
     @RegisterExtension
-    static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-            .withFolder( createTempDirectory() )
-            .withFixture( "CREATE (u:User)" )
-            .withConfig( GraphDatabaseSettings.db_timezone.name(), LogTimeZone.SYSTEM.toString() )
-            .withConfig( GraphDatabaseSettings.legacy_certificates_directory,
-                    getRelativePath( getSharedTestTemporaryFolder(), GraphDatabaseSettings.legacy_certificates_directory) )
-            .withFixture( graphDatabaseService ->
-            {
-                try ( Transaction tx = graphDatabaseService.beginTx() )
-                {
-                    graphDatabaseService.createNode( Label.label( "User" ) );
-                    tx.success();
-                }
-                return null;
-            } )
-            .build();
+    static Neo4jExtension neo4jExtension;
+
+    static
+    {
+        try
+        {
+            neo4jExtension = CommercialNeo4jExtension.builder()
+                    .withFolder( createTempDirectory() )
+                    .withFixture( "CREATE (u:User)" )
+                    .withConfig( GraphDatabaseSettings.db_timezone.name(), LogTimeZone.SYSTEM.toString() )
+                    .withConfig( GraphDatabaseSettings.legacy_certificates_directory,
+                            getRelativePath( createTempDir(), GraphDatabaseSettings.legacy_certificates_directory) )
+                    .withFixture( graphDatabaseService ->
+                    {
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            graphDatabaseService.createNode( Label.label( "User" ) );
+                            tx.success();
+                        }
+                        return null;
+                    } )
+                    .build();
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
 
     @Test
     void neo4jAvailable( Neo4j neo4j )

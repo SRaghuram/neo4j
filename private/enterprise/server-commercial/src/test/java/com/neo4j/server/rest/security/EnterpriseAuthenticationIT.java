@@ -7,6 +7,7 @@ package com.neo4j.server.rest.security;
 
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.codehaus.jackson.node.ArrayNode;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.server.rest.security.AuthenticationIT;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -23,10 +25,15 @@ import static org.junit.Assert.assertThat;
 
 public class EnterpriseAuthenticationIT extends AuthenticationIT
 {
+    @Rule
+    public TestDirectory testDirectory = TestDirectory.testDirectory();
+
     @Override
     public void startServer( boolean authEnabled ) throws IOException
     {
         server = CommercialServerBuilder.serverOnRandomPorts()
+                .usingDataDir( testDirectory.storeDir().getAbsolutePath() )
+                .persistent()
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( authEnabled ) )
                 .build();
         server.start();
@@ -84,6 +91,8 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     private void startServerWithAuthDisabled() throws IOException
     {
         server = CommercialServerBuilder.serverOnRandomPorts()
+                .persistent()
+                .usingDataDir( testDirectory.storeDir().getAbsolutePath() )
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( false ) )
                 .build();
         server.start();

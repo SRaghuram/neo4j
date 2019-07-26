@@ -192,7 +192,7 @@ public class StoreUpgradeIT
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
-            props.putAll( ServerTestUtils.getDefaultRelativeProperties() );
+            props.putAll( ServerTestUtils.getDefaultRelativeProperties( rootDir ) );
             props.setProperty( data_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );

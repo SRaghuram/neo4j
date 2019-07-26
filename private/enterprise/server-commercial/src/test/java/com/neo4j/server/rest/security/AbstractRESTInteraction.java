@@ -18,6 +18,7 @@ import org.codehaus.jackson.node.LongNode;
 import org.codehaus.jackson.node.ObjectNode;
 import org.codehaus.jackson.node.TextNode;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,7 +73,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
     protected abstract HTTP.Response authenticate( String principalCredentials );
 
-    AbstractRESTInteraction( Map<Setting<?>,String> config ) throws IOException
+    AbstractRESTInteraction( Map<Setting<?>,String> config, File dataDir ) throws IOException
     {
         Map<String,String> stringMap = new HashMap<>( config.size() );
         config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
@@ -80,6 +81,8 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
         builder = builder
                 .withProperty( BoltConnector.enabled.name(), TRUE )
+                .persistent()
+                .usingDataDir( dataDir.getAbsolutePath() )
                 .withProperty( BoltConnector.encryption_level.name(), OPTIONAL.name() )
                 .withProperty( GraphDatabaseSettings.tls_key_file.name(),
                         NeoInteractionLevel.tempPath( "key", ".key" ) )
