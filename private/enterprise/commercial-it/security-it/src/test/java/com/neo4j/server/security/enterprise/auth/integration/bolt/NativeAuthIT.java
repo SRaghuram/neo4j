@@ -24,6 +24,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.graphdb.config.Setting;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -108,9 +109,9 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
         {
             try ( Session session = driver.session( forDatabase( DEFAULT_DATABASE_NAME ) ) )
             {
-                assertThat( session.run( "CALL db.labels" ).list( this::labelOf ), equalTo( List.of( "A", "B", "C" ) ) );
-                assertThat( session.run( "CALL db.relationshipTypes" ).list( this::typeOf ), equalTo( List.of( "X", "Y" ) ) );
-                assertThat( session.run( "CALL db.propertyKeys" ).list( this::propOf ), equalTo( List.of( "prop1", "prop2", "prop3" ) ) );
+                assertThat( session.run( "CALL db.labels" ).list( this::labelOf ), containsInAnyOrder( List.of( "A", "B", "C" ).toArray() ) );
+                assertThat( session.run( "CALL db.relationshipTypes" ).list( this::typeOf ), containsInAnyOrder( List.of( "X", "Y" ).toArray() ) );
+                assertThat( session.run( "CALL db.propertyKeys" ).list( this::propOf ), containsInAnyOrder( List.of( "prop1", "prop2", "prop3" ).toArray() ) );
             }
         }
     }
@@ -204,23 +205,27 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
                         "PROCURATOR", "LIQUIDATOR", "PERSONALLY_LIABLE_PARTNER", "CHAIRMAN", "OWNER", "DONATED_TO", "IS_LIKELY_TO_BE", "IS_VERY_LIKELY_TO_BE",
                         "IS_MAYBE_BECAUSE_OF_SAME_PLACE" );
 
-        try ( Driver driver = connectDriver( WRITE_USER, getPassword() ) )
+        try ( var driver = connectDriver( WRITE_USER, getPassword() ) )
         {
-            try ( Session session = driver.session( forDatabase( "foo" ) ) )
+            try ( var session = driver.session( forDatabase( "foo" ) ) )
             {
-                session.run( "CREATE (:PostCode {name:'postcode'})-[:LOCATED_IN]->(:City {name:'city'})-[:BELONGS_TO]->(:State {name:'state'})" ).consume();
-                for ( String label : labels )
+                try ( var tx = session.beginTransaction() )
                 {
-                    if ( !label.equals( "City" ) )
+                    tx.run( "CREATE (:PostCode {name:'postcode'})-[:LOCATED_IN]->(:City {name:'city'})-[:BELONGS_TO]->(:State {name:'state'})" ).consume();
+                    for ( String label : labels )
                     {
-                        for ( String relType : types )
+                        if ( !label.equals( "City" ) )
                         {
-                            if ( !relType.equals( "LOCATED_IN" ) && !relType.equals( "BELONGS_TO" ) )
+                            for ( String relType : types )
                             {
-                                session.run( "CREATE (:" + label + " {name:'" + label + "'})-[:" + relType + "]->(:" + label + ")" ).consume();
+                                if ( !relType.equals( "LOCATED_IN" ) && !relType.equals( "BELONGS_TO" ) )
+                                {
+                                    tx.run( "CREATE (:" + label + " {name:'" + label + "'})-[:" + relType + "]->(:" + label + ")" ).consume();
+                                }
                             }
                         }
                     }
+                    tx.success();
                 }
             }
         }
@@ -250,7 +255,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
             Map<String,List<String>> expectedResults )
     {
         String expectation = "User " + user + " should see " + key + " " + expectedResults.get( key );
-        assertThat( expectation, Set.copyOf( session.run( query ).list( mapper ) ), equalTo( Set.copyOf( expectedResults.get( key ) ) ) );
+        assertThat( expectation, Set.copyOf( session.run( query ).list( mapper ) ), containsInAnyOrder( expectedResults.get( key ).toArray() ) );
     }
 
     private String labelOf( Record r )

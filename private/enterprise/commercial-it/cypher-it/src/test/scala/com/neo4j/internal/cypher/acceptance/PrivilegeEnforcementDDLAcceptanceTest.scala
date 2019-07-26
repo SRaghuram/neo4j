@@ -710,7 +710,6 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
       execute("REVOKE DENY TRAVERSE ON GRAPH * RELATIONSHIPS * FROM custom")
-      //execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
       // THEN
       executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
