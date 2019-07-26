@@ -36,7 +36,7 @@ public class CommercialDbmsSupportExtension extends DbmsSupportExtension impleme
         // The caveat is that the order of postProcessTestInstance and beforeAll changes if you change TestInstance.Lifecycle
         TestDirectoryExtension testDirectoryExtension = new TestDirectoryExtension();
         testDirectoryExtension.postProcessTestInstance( testInstance, context );
-        testDirectoryExtension.prepare( context, "dbms" );
+        testDirectoryExtension.prepare( context );
         getStore( context ).put( TEST_DIRECTORY_EXTENSION_KEY, testDirectoryExtension );
 
         TestDirectory testDirectory = getTestDirectory( context );
