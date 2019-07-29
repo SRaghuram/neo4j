@@ -7,7 +7,6 @@ package com.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.Description;
@@ -43,6 +42,9 @@ import org.neo4j.values.storable.TextValue;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
+import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_COMMITTED_TEMPLATE;
+import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_MAX_TEMPLATE;
+import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_USED_TEMPLATE;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -105,9 +107,9 @@ class GlobalMetricsExtensionFactoryIT
     @Test
     void reportHeapUsageMetrics() throws InterruptedException, IOException
     {
-        File heapCommittedFile = metricsCsv( outputPath, HeapMetrics.HEAP_COMMITTED );
-        File heapMaxFile = metricsCsv( outputPath, HeapMetrics.HEAP_MAX );
-        File heapUsedFile = metricsCsv( outputPath, HeapMetrics.HEAP_USED );
+        File heapCommittedFile = metricsCsv( outputPath, "neo4j." + HEAP_COMMITTED_TEMPLATE );
+        File heapMaxFile = metricsCsv( outputPath, "neo4j." + HEAP_MAX_TEMPLATE );
+        File heapUsedFile = metricsCsv( outputPath, "neo4j." + HEAP_USED_TEMPLATE );
 
         long heapCommittedResult = readLongGaugeAndAssert( heapCommittedFile, ( newValue, currentValue ) -> newValue >= 0 );
         long heapUsedResult = readLongGaugeAndAssert( heapUsedFile, ( newValue, currentValue ) -> newValue >= 0 );

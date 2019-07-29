@@ -60,7 +60,7 @@ public class GlobalMetricsExporter
 
         if ( config.get( MetricsSettings.jvmHeapEnabled ) )
         {
-            life.add( new HeapMetrics( registry ) );
+            life.add( new HeapMetrics( globalMetricsPrefix, registry ) );
         }
 
         if ( config.get( MetricsSettings.jvmThreadsEnabled ) )

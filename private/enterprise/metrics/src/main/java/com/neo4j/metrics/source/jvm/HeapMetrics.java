@@ -25,32 +25,38 @@ import static com.codahale.metrics.MetricRegistry.name;
  */
 public class HeapMetrics extends JvmMetrics
 {
-    public static final String HEAP_COMMITTED = name( VM_NAME_PREFIX, "heap.committed" );
-    public static final String HEAP_USED = name( VM_NAME_PREFIX, "heap.used" );
-    public static final String HEAP_MAX = name( VM_NAME_PREFIX, "heap.max" );
+    public static final String HEAP_COMMITTED_TEMPLATE = name( VM_NAME_PREFIX, "heap.committed" );
+    public static final String HEAP_USED_TEMPLATE = name( VM_NAME_PREFIX, "heap.used" );
+    public static final String HEAP_MAX_TEMPLATE = name( VM_NAME_PREFIX, "heap.max" );
 
     private final MetricRegistry registry;
+    private final String heapCommitted;
+    private final String heapUsed;
+    private final String heapMax;
 
-    public HeapMetrics( MetricRegistry registry )
+    public HeapMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
+        this.heapCommitted = name( metricsPrefix, HEAP_COMMITTED_TEMPLATE );
+        this.heapUsed = name( metricsPrefix, HEAP_USED_TEMPLATE );
+        this.heapMax = name( metricsPrefix, HEAP_MAX_TEMPLATE );
     }
 
     @Override
     public void start()
     {
         MemoryUsageSupplier memoryUsageSupplier = new MemoryUsageSupplier();
-        registry.register( HEAP_COMMITTED, (Gauge<Long>) memoryUsageSupplier::getCommitted );
-        registry.register( HEAP_USED, (Gauge<Long>) memoryUsageSupplier::getUsed );
-        registry.register( HEAP_MAX, (Gauge<Long>) memoryUsageSupplier::getMax );
+        registry.register( heapCommitted, (Gauge<Long>) memoryUsageSupplier::getCommitted );
+        registry.register( heapUsed, (Gauge<Long>) memoryUsageSupplier::getUsed );
+        registry.register( heapMax, (Gauge<Long>) memoryUsageSupplier::getMax );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( HEAP_MAX );
-        registry.remove( HEAP_USED );
-        registry.remove( HEAP_COMMITTED );
+        registry.remove( heapMax );
+        registry.remove( heapUsed );
+        registry.remove( heapCommitted );
     }
 
     private static class MemoryUsageSupplier
