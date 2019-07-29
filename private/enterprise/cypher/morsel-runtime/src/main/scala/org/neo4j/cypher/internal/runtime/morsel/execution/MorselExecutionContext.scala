@@ -277,7 +277,7 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   /**
     * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
-    * The reasoning behind this is that the other parts of the morsel whould be part of other views in other buffers/argument states and will
+    * The reasoning behind this is that the other parts of the morsel would be part of other views in other buffers/argument states and will
     * also be accounted for.
     */
   override def estimatedHeapUsage: Long = {
