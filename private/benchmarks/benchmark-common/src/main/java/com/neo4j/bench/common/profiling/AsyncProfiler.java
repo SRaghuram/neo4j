@@ -27,7 +27,6 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.appendFile;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileExists;
-import static java.lang.String.format;
 
 public class AsyncProfiler implements InternalProfiler, ExternalProfiler
 {
@@ -258,7 +257,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + asyncRecording.toAbsolutePath(),
                         "-------------------------------" );
-            String[] syncAsyncCommand = {"sync"};
+            String[] syncAsyncCommand = {"sync", asyncRecording.toAbsolutePath().toString()};
             Process syncAsync = new ProcessBuilder( syncAsyncCommand )
                     .redirectOutput( asyncLog.toFile() )
                     .redirectError( asyncLog.toFile() )
