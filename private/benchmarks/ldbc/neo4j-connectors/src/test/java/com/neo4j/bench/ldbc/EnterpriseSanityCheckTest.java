@@ -5,17 +5,13 @@
  */
 package com.neo4j.bench.ldbc;
 
-import com.ldbc.driver.util.MapUtils;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -56,9 +52,16 @@ public class EnterpriseSanityCheckTest
     }
 
     @Test
-    public void shouldDefaultToCompiled() throws Exception
+    public void shouldUseMorsel() throws Exception
     {
-        shouldUseRuntime( Optional.empty(), "compiled" );
+        shouldUseRuntime( Optional.of("morsel"), "morsel" );
+    }
+
+
+    @Test
+    public void shouldDefaultToMorsel() throws Exception
+    {
+        shouldUseRuntime( Optional.empty(), "morsel" );
     }
 
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception
@@ -79,14 +82,9 @@ public class EnterpriseSanityCheckTest
     private File configFile() throws IOException
     {
         File neo4jConfigFile = createTempFile( testFolder.absolutePath() );
-        Map<String,String> neo4jConfigMap = new HashMap<>();
-        neo4jConfigMap.put( record_format.name(), "high_limit" );
-        Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );
-        try ( FileOutputStream stream = new FileOutputStream( neo4jConfigFile ) )
-        {
-            neo4jConfigProperties.store( stream, null );
-        }
+        Neo4jConfigBuilder.withDefaults()
+                          .withSetting( record_format, "high_limit" )
+                          .writeToFile( neo4jConfigFile.toPath() );
         return neo4jConfigFile;
     }
-
 }
