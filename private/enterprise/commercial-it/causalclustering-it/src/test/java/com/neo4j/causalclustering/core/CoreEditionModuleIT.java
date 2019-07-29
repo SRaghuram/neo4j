@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -17,6 +16,7 @@ import java.util.function.Predicate;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.id.BufferedIdController;
+import org.neo4j.internal.id.BufferingIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -54,7 +54,7 @@ class CoreEditionModuleIT
         IdGeneratorFactory idGeneratorFactory = dependencyResolver.resolveDependency( IdGeneratorFactory.class );
 
         assertThat( idController, instanceOf( BufferedIdController.class ) );
-        assertThat( idGeneratorFactory, instanceOf( FreeIdFilteredIdGeneratorFactory.class ) );
+        assertThat( idGeneratorFactory, instanceOf( BufferingIdGeneratorFactory.class ) );
     }
 
     @Test

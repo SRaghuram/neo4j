@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
-import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
@@ -42,8 +41,6 @@ import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierT
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.id.BarrierAwareIdGeneratorFactory;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
-import com.neo4j.causalclustering.core.state.machines.id.IdReusabilityCondition;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedRelationshipTypeTokenHolder;
@@ -84,7 +81,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -241,7 +237,7 @@ class CoreDatabaseFactory
         ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog );
         BarrierState barrierState = new BarrierState( myIdentity, replicator, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId );
 
-        DatabaseIdContext idContext = createIdContext( databaseId, raftGroup.raftMachine(), raftContext.commandIndexTracker(), barrierState );
+        DatabaseIdContext idContext = createIdContext( databaseId, barrierState );
 
         Supplier<StorageEngine> storageEngineSupplier = kernelResolvers.storageEngine();
 
@@ -413,14 +409,12 @@ class CoreDatabaseFactory
                 panicker, monitors );
     }
 
-    private DatabaseIdContext createIdContext( DatabaseId databaseId, RaftMachine raftMachine, CommandIndexTracker commandIndexTracker,
-                                               BarrierState barrierTokenState )
+    private DatabaseIdContext createIdContext( DatabaseId databaseId, BarrierState barrierTokenState )
     {
-        BooleanSupplier idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myIdentity );
         Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( databaseId, barrierTokenState );
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
-                .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) )
+                .withFactoryWrapper( generator -> generator )
                 .build();
         return idContextFactory.createIdContext( databaseId );
     }
