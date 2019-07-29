@@ -256,10 +256,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(config, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
-      not(includeSomewhere.aPlan("Projection")
-        .withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
-        .withExactVariables("n", "cached[n.prop1]"))
+      not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeek").withExactVariables("n", "cached[n.prop1]"))
 
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
   }
@@ -275,7 +273,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     // cached properties are not passed through aggregation
     description should
       not(includeSomewhere.aPlan("EagerAggregation")
-        .containingVariables("cached[n.prop1]"))
+                          .containingVariables("cached[n.prop1]"))
 
     result.toList should be(empty)
   }
