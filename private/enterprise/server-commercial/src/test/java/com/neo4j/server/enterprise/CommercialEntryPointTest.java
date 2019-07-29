@@ -15,7 +15,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.commandline.Util.neo4jVersion;
+import static org.neo4j.kernel.internal.Version.getNeo4jVersion;
 
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
@@ -31,6 +31,6 @@ class CommercialEntryPointTest
         CommercialEntryPoint.main( new String[]{ "--version" } );
 
         // then
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( "neo4j " + neo4jVersion() ) );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "neo4j " + getNeo4jVersion() ) );
     }
 }

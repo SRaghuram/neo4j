@@ -29,7 +29,8 @@ import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.internal.locker.StoreLocker;
+import org.neo4j.kernel.internal.locker.DatabaseLocker;
+import org.neo4j.kernel.internal.locker.Locker;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -64,7 +65,7 @@ class RestoreDatabaseCommandIT
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
-    void forceShouldRespectStoreLock()
+    void forceShouldRespectDatabaseLock()
     {
         var databaseId = databaseIdRepository.get( "new" );
         StoreLayout testStore = directory.storeLayout( "testStore" );
@@ -81,13 +82,13 @@ class RestoreDatabaseCommandIT
 
         CommandFailedException commandFailedException = assertThrows( CommandFailedException.class, () ->
         {
-            try ( StoreLocker storeLocker = new StoreLocker( fileSystem, testStore ) )
+            try ( Locker storeLocker = new DatabaseLocker( fileSystem, toLayout ) )
             {
                 storeLocker.checkLock();
                 new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseId, true ).execute();
             }
         } );
-        assertThat( commandFailedException.getMessage(), equalTo( "The database is in use. Stop Neo4j and try again." ) );
+        assertThat( commandFailedException.getMessage(), equalTo( "The database is in use. Stop database 'new' and try again." ) );
     }
 
     @Test

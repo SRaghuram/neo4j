@@ -5,9 +5,13 @@
  */
 package com.neo4j.restore;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.cli.CommandFailedException;
+import org.neo4j.commandline.dbms.CannotWriteException;
+import org.neo4j.commandline.dbms.DatabaseLockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -15,9 +19,9 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
+import org.neo4j.kernel.internal.locker.FileLockException;
 
 import static java.lang.String.format;
-import static org.neo4j.commandline.Util.checkLock;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.LayoutConfig.of;
@@ -60,16 +64,27 @@ public class RestoreDatabaseCommand
                             targetDatabaseLayout.databaseDirectory() ) );
         }
 
-        checkLock( targetDatabaseLayout.getStoreLayout() );
-
         fs.deleteRecursively( targetDatabaseLayout.databaseDirectory() );
-
         if ( !isSameOrChildFile( targetDatabaseLayout.databaseDirectory(), targetDatabaseLayout.getTransactionLogsDirectory() ) )
         {
             fs.deleteRecursively( targetDatabaseLayout.getTransactionLogsDirectory() );
         }
-        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
-        restoreDatabaseFiles( backupLogFiles, fromDatabasePath.listFiles() );
+        fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
+
+        try ( Closeable lock = DatabaseLockChecker.check( targetDatabaseLayout ) )
+        {
+            LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
+            restoreDatabaseFiles( backupLogFiles, fromDatabasePath.listFiles() );
+        }
+        catch ( FileLockException e )
+        {
+            throw new CommandFailedException( "The database is in use. Stop database '" + targetDatabaseLayout.getDatabaseName() + "' and try again.", e );
+        }
+        catch ( CannotWriteException e )
+        {
+            throw new CommandFailedException( "You do not have permission to restore database.", e );
+        }
+
     }
 
     private void restoreDatabaseFiles( LogFiles backupLogFiles, File[] files ) throws IOException

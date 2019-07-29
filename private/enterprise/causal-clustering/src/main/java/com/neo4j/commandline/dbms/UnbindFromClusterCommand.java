@@ -16,16 +16,12 @@ import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.CannotWriteException;
-import org.neo4j.commandline.dbms.StoreLockChecker;
+import org.neo4j.commandline.dbms.DatabaseLockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.layout.StoreLayout;
-import org.neo4j.kernel.StoreLockException;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.Validators;
+import org.neo4j.kernel.internal.locker.FileLockException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
@@ -61,11 +57,9 @@ class UnbindFromClusterCommand extends AbstractCommand
         try
         {
             Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
-            DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
-            DatabaseId databaseId = databaseIdRepository.get( database );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
             File databasesRoot = config.get( databases_root_path ).toFile();
-            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseId.name() );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, database );
 
             boolean hasDatabase = true;
             try
@@ -80,7 +74,7 @@ class UnbindFromClusterCommand extends AbstractCommand
 
             if ( hasDatabase )
             {
-                confirmTargetDirectoryIsWritable( databaseLayout.getStoreLayout() );
+                confirmTargetDirectoryIsWritable( databaseLayout );
             }
 
             File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
@@ -94,9 +88,9 @@ class UnbindFromClusterCommand extends AbstractCommand
                 ctx.err().println( "This instance was not bound. No work performed." );
             }
         }
-        catch ( StoreLockException e )
+        catch ( FileLockException e )
         {
-            throw new CommandFailedException( "Database is currently locked. Please shutdown Neo4j.", e );
+            throw new CommandFailedException( "Database is currently locked. Please shutdown database.", e );
         }
         catch ( Exception e )
         {
@@ -104,10 +98,10 @@ class UnbindFromClusterCommand extends AbstractCommand
         }
     }
 
-    private static void confirmTargetDirectoryIsWritable( StoreLayout storeLayout )
+    private static void confirmTargetDirectoryIsWritable( DatabaseLayout databaseLayout )
             throws CannotWriteException, IOException
     {
-        try ( Closeable ignored = StoreLockChecker.check( storeLayout ) )
+        try ( Closeable ignored = DatabaseLockChecker.check( databaseLayout ) )
         {
             // empty
         }

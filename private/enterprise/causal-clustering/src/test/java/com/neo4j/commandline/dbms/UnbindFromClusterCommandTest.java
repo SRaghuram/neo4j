@@ -141,7 +141,7 @@ class UnbindFromClusterCommandTest
                 CommandLine.populateCommand( command, databaseNameParameter( DEFAULT_DATABASE_NAME ) );
                 command.execute();
             } );
-            assertThat( commandException.getMessage(), containsString( "Database is currently locked. Please shutdown Neo4j." ) );
+            assertThat( commandException.getMessage(), containsString( "Database is currently locked. Please shutdown database." ) );
         }
         finally
         {
@@ -198,7 +198,7 @@ class UnbindFromClusterCommandTest
 
     private FileLock createLockedStoreLockFileIn( Path databaseDir ) throws IOException
     {
-        Path storeLockFile = Files.createFile( DatabaseLayout.of( databaseDir.toFile() ).getStoreLayout().storeLockFile().toPath() );
+        Path storeLockFile = Files.createFile( DatabaseLayout.of( databaseDir.toFile() ).databaseLockFile().toPath() );
         channel = FileChannel.open( storeLockFile, READ, WRITE );
         return channel.lock( 0, Long.MAX_VALUE, true );
     }

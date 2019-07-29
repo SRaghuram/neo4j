@@ -18,18 +18,18 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.makeSelectivityCumul
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.middlePad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.prefixPad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.suffixPad;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isOneOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.oneOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static java.util.stream.Collectors.toList;
-
-public class ValueGeneratorUtilTest
+class ValueGeneratorUtilTest
 {
     @Test
-    public void shouldMakeSelectivityCumulative() throws IOException
+    void shouldMakeSelectivityCumulative() throws IOException
     {
         List<Double> lowerSelectivities = Lists.newArrayList( 2D, 1D );
         Double targetSelectivity = 4D;
@@ -38,7 +38,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldFailToMakeSelectivityCumulativeWhenTargetIsTooLow() throws IOException
+    void shouldFailToMakeSelectivityCumulativeWhenTargetIsTooLow() throws IOException
     {
         List<Double> lowerSelectivities = Lists.newArrayList( 2D, 1D );
         Double targetSelectivity = 3D;
@@ -49,7 +49,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldFailToCalculateCumulativeSelectivitiesWhenInputIsNotInAscendingOrder() throws IOException
+    void shouldFailToCalculateCumulativeSelectivitiesWhenInputIsNotInAscendingOrder() throws IOException
     {
         List<Double> originalSelectivities = Lists.newArrayList( 2D, 1D );
         assertThrows( Kaboom.class, () ->
@@ -59,7 +59,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldCalculateCumulativeSelectivities() throws IOException
+    void shouldCalculateCumulativeSelectivities() throws IOException
     {
         List<Double> originalSelectivities = Lists.newArrayList( 1D, 2D, 4D );
         List<Double> cumulativeSelectivities = calculateCumulativeSelectivities( originalSelectivities );
@@ -67,7 +67,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void calculateCumulativeSelectivitiesShouldBeSortedInAscendingOrder() throws IOException
+    void calculateCumulativeSelectivitiesShouldBeSortedInAscendingOrder() throws IOException
     {
         List<Double> originalSelectivities = Lists.newArrayList( 1D, 2D, 4D, 100D );
         List<Double> cumulativeSelectivities = calculateCumulativeSelectivities( originalSelectivities );
@@ -78,7 +78,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void calculateCumulativeSelectivitiesOutputShouldBeSameSizeAsInput() throws IOException
+    void calculateCumulativeSelectivitiesOutputShouldBeSameSizeAsInput() throws IOException
     {
         List<Double> originalSelectivities = Lists.newArrayList( 1D, 2D, 4D, 100D );
         List<Double> cumulativeSelectivities = calculateCumulativeSelectivities( originalSelectivities );
@@ -86,7 +86,7 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void calculateCumulativeSelectivitiesOutputShouldNotCrash() throws IOException
+    void calculateCumulativeSelectivitiesOutputShouldNotCrash() throws IOException
     {
         List<Double> emptySelectivities = Lists.newArrayList();
         List<Double> singleSelectivities = Lists.newArrayList( 1D );
@@ -97,17 +97,17 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldPrefixPad() throws IOException
+    void shouldPrefixPad() throws IOException
     {
         String withPad = prefixPad( "12345", '0', 10 );
         assertThat( withPad, equalTo( "0000012345" ) );
 
         String withPadSmall = prefixPad( "12345", '0', 5 );
-        assertThat( withPadSmall, isOneOf( "12345", "12345" ) );
+        assertThat( withPadSmall, is( oneOf( "12345", "12345" ) ) );
     }
 
     @Test
-    public void shouldFailToPrefixPadWhenLengthTooShort() throws IOException
+    void shouldFailToPrefixPadWhenLengthTooShort() throws IOException
     {
         assertThrows( Kaboom.class, () ->
         {
@@ -116,17 +116,17 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldSuffixPad() throws IOException
+    void shouldSuffixPad() throws IOException
     {
         String withPad = suffixPad( "12345", '0', 10 );
         assertThat( withPad, equalTo( "1234500000" ) );
 
         String withPadSmall = suffixPad( "12345", '0', 5 );
-        assertThat( withPadSmall, isOneOf( "12345", "12345" ) );
+        assertThat( withPadSmall, is( oneOf( "12345", "12345" ) ) );
     }
 
     @Test
-    public void shouldFailToSuffixPadWhenLengthTooShort() throws IOException
+    void shouldFailToSuffixPadWhenLengthTooShort() throws IOException
     {
         assertThrows( Kaboom.class, () ->
         {
@@ -135,17 +135,17 @@ public class ValueGeneratorUtilTest
     }
 
     @Test
-    public void shouldMiddlePad() throws IOException
+    void shouldMiddlePad() throws IOException
     {
         String withPadRegular = middlePad( "12345", '0', 10 );
-        assertThat( withPadRegular, isOneOf( "0012345000", "0001234500" ) );
+        assertThat( withPadRegular, is( oneOf( "0012345000", "0001234500" ) ) );
 
         String withPadSmall = middlePad( "12345", '0', 6 );
-        assertThat( withPadSmall, isOneOf( "012345", "123450" ) );
+        assertThat( withPadSmall, is( oneOf( "012345", "123450" ) ) );
     }
 
     @Test
-    public void shouldFailToMiddlePadWhenLengthTooShort() throws IOException
+    void shouldFailToMiddlePadWhenLengthTooShort() throws IOException
     {
         assertThrows( Kaboom.class, () ->
         {

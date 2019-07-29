@@ -67,7 +67,6 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -84,6 +83,7 @@ import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -1029,7 +1029,7 @@ class BackupIT
         RuntimeException error = assertThrows( RuntimeException.class, () -> startDb( path ),
                 "Could build up database in same process, store not locked" );
 
-        assertThat( error.getCause().getCause(), instanceOf( StoreLockException.class ) );
+        assertThat( error.getCause().getCause(), instanceOf( FileLockException.class ) );
     }
 
     private DbRepresentation addMoreData( File path, String recordFormatName )

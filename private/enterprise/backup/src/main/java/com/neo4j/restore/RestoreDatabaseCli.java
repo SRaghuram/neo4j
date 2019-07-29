@@ -25,7 +25,7 @@ import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
         name = "restore",
         description = "Restore a backed up database."
 )
-class RestoreDatabaseCli extends AbstractCommand
+public class RestoreDatabaseCli extends AbstractCommand
 {
     @Option( names = "--from", paramLabel = "<path>", required = true, description = "Path to backup to restore from." )
     private File from;
@@ -34,7 +34,7 @@ class RestoreDatabaseCli extends AbstractCommand
     @Option( names = "--force", arity = "0", description = "If an existing database should be replaced." )
     private boolean force;
 
-    RestoreDatabaseCli( ExecutionContext ctx )
+    public RestoreDatabaseCli( ExecutionContext ctx )
     {
         super( ctx );
     }
@@ -49,7 +49,7 @@ class RestoreDatabaseCli extends AbstractCommand
     }
 
     @Override
-    protected void execute() throws IOException
+    public void execute() throws IOException
     {
         Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
         DatabaseIdRepository databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
