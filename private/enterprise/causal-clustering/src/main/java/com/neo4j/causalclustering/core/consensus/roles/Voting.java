@@ -32,7 +32,7 @@ public class Voting
         }
 
         boolean votedForAnother = outcome.getVotedFor() != null && !outcome.getVotedFor().equals( voteRequest.candidate() );
-        boolean willVoteForCandidate = shouldVoteFor( state, outcome, voteRequest, votedForAnother, log );
+        boolean willVoteForCandidate = shouldVoteFor( state, outcome, voteRequest, votedForAnother, log, false );
 
         if ( willVoteForCandidate )
         {
@@ -49,7 +49,7 @@ public class Voting
             RaftMessages.PreVote.Request voteRequest, Log log ) throws IOException
     {
         ThrowingBooleanSupplier<IOException> willVoteForCandidate =
-                () -> shouldVoteFor( state, outcome, voteRequest, false, log );
+                () -> shouldVoteFor( state, outcome, voteRequest, false, log, true );
         respondToPreVoteRequest( state, outcome, voteRequest, willVoteForCandidate );
     }
 
@@ -59,8 +59,8 @@ public class Voting
         respondToPreVoteRequest( state, outcome, voteRequest, () -> false );
     }
 
-    private static void respondToPreVoteRequest( ReadableRaftState state, Outcome outcome,
-            RaftMessages.PreVote.Request voteRequest, ThrowingBooleanSupplier<IOException> willVoteFor ) throws IOException
+    private static void respondToPreVoteRequest( ReadableRaftState state, Outcome outcome, RaftMessages.PreVote.Request voteRequest,
+            ThrowingBooleanSupplier<IOException> willVoteFor ) throws IOException
     {
         if ( voteRequest.term() > state.term() )
         {
@@ -68,12 +68,11 @@ public class Voting
         }
 
         outcome.addOutgoingMessage( new RaftMessages.Directed( voteRequest.from(), new RaftMessages.PreVote.Response(
-                state.myself(), outcome.getTerm(),
-                willVoteFor.getAsBoolean() ) ) );
+                state.myself(), outcome.getTerm(), willVoteFor.getAsBoolean() ) ) );
     }
 
     private static boolean shouldVoteFor( ReadableRaftState state, Outcome outcome, RaftMessages.AnyVote.Request voteRequest,
-            boolean committedToVotingForAnother, Log log )
+            boolean committedToVotingForAnother, Log log, boolean isPreVote )
             throws IOException
     {
         long requestTerm = voteRequest.term();
@@ -93,21 +92,14 @@ public class Voting
                 contextLastAppended,
                 requestLastLogIndex,
                 committedToVotingForAnother,
-                log
-        );
+                log, isPreVote );
     }
 
-    public static boolean shouldVoteFor( MemberId candidate, long contextTerm, long requestTerm,
-                                         long contextLastLogTerm, long requestLastLogTerm,
-                                         long contextLastAppended, long requestLastLogIndex,
-                                         boolean committedToVotingForAnother, Log log )
+    public static boolean shouldVoteFor( MemberId candidate, long contextTerm, long requestTerm, long contextLastLogTerm, long requestLastLogTerm,
+            long contextLastAppended, long requestLastLogIndex, boolean committedToVotingForAnother, Log log, boolean isPreVote )
     {
-        if ( requestTerm < contextTerm )
-        {
-            log.debug( "Will not vote for %s as vote request term %s was earlier than my term %s", candidate, requestTerm, contextTerm );
-            return false;
-        }
-
+        String voteType = isPreVote ? "pre-vote" : "vote";
+        boolean requestFromPreviousTerm = requestTerm < contextTerm;
         boolean requestLogEndsAtHigherTerm = requestLastLogTerm > contextLastLogTerm;
         boolean logsEndAtSameTerm = requestLastLogTerm == contextLastLogTerm;
         boolean requestLogAtLeastAsLongAsMyLog = requestLastLogIndex >= contextLastAppended;
@@ -117,16 +109,19 @@ public class Voting
 
         boolean votedForOtherInSameTerm = requestTerm == contextTerm && committedToVotingForAnother;
 
-        boolean shouldVoteFor = requesterLogUpToDate && !votedForOtherInSameTerm;
+        boolean shouldVoteFor = requesterLogUpToDate && !votedForOtherInSameTerm && !requestFromPreviousTerm;
 
-        log.debug( "Should vote for raft candidate %s: " +
+        log.info( "Received raft %s request from %s. Should vote for candidate: %s", voteType, candidate, shouldVoteFor );
+
+        log.debug( "Should vote for raft candidate: %s. Reasons for decision:%n" +
                         "requester log up to date: %s " +
-                        "(request last log term: %s, context last log term: %s, request last log index: %s, context last append: %s) " +
-                        "voted for other in same term: %s " +
-                        "(request term: %s, context term: %s, voted for another: %s)",
+                        "(request last log term: %s, context last log term: %s, request last log index: %s, context last append: %s),%n" +
+                        "requester from an earlier term: %s " +
+                        "(request term: %s, context term: %s),%n" +
+                        "voted for other in same term: %s",
                 shouldVoteFor,
                 requesterLogUpToDate, requestLastLogTerm, contextLastLogTerm, requestLastLogIndex, contextLastAppended,
-                votedForOtherInSameTerm, requestTerm, contextTerm, committedToVotingForAnother );
+                requestFromPreviousTerm, requestTerm, contextTerm, votedForOtherInSameTerm );
 
         return shouldVoteFor;
     }

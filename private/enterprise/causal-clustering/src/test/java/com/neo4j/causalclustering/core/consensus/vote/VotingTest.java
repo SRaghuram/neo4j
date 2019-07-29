@@ -39,8 +39,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -55,8 +54,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -71,8 +69,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -87,8 +84,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex - 1,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -103,8 +99,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -119,8 +114,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex + 1,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -135,8 +129,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex - 1,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -151,8 +144,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -167,8 +159,7 @@ public class VotingTest
                 appendIndex,
                 appendIndex + 1,
                 false,
-                log
-        ) );
+                log, false ) );
     }
 
     @Test
@@ -183,7 +174,6 @@ public class VotingTest
                 appendIndex,
                 appendIndex,
                 true,
-                log
-        ) );
+                log, false ) );
     }
 }
