@@ -17,11 +17,11 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -87,7 +87,7 @@ class HalfCreatedConstraintIT
                             "entered a FAILED state. Please see database logs.: Cause of failure:" ) );
     }
 
-    private static void addIndex( GraphDatabaseService database ) throws SchemaKernelException
+    private static void addIndex( GraphDatabaseService database ) throws KernelException
     {
         try ( Transaction transaction = database.beginTx() )
         {
