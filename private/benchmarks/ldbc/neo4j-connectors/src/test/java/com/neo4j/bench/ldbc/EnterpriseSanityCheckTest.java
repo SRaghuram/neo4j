@@ -54,9 +54,8 @@ public class EnterpriseSanityCheckTest
     @Test
     public void shouldUseMorsel() throws Exception
     {
-        shouldUseRuntime( Optional.of("morsel"), "morsel" );
+        shouldUseRuntime( Optional.of( "morsel" ), "morsel" );
     }
-
 
     @Test
     public void shouldDefaultToMorsel() throws Exception
