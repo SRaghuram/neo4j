@@ -503,6 +503,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
         {
             return "an application protocol version";
         }
+
+        @Override
+        public Class<ApplicationProtocolVersion> getType()
+        {
+            return ApplicationProtocolVersion.class;
+        }
     };
 
     @Description( "Raft protocol implementation versions that this instance will allow in negotiation as a comma-separated list. " +

@@ -37,6 +37,13 @@ public final class LoadBalancingServerPoliciesGroup extends LoadBalancingPluginG
         {
             return "a load-balancing filter";
         }
+
+        @Override
+        public Class<Filter<ServerInfo>> getType()
+        {
+            //noinspection unchecked
+            return (Class<Filter<ServerInfo>>) (Class) Filter.class;
+        }
     };
 
     public final Setting<Filter<ServerInfo>> value = getBuilder( PARSER, null ).build();
