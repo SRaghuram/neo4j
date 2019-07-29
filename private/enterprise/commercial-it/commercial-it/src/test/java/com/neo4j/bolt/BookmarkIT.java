@@ -57,7 +57,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 public class BookmarkIT
 {
     @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory( getClass() );
+    public final TestDirectory directory = TestDirectory.testDirectory();
 
     private Driver driver;
     private GraphDatabaseAPI db;
@@ -67,7 +67,7 @@ public class BookmarkIT
     public void tearDown() throws Exception
     {
         IOUtils.closeAllSilently( driver );
-        if ( db != null )
+        if ( managementService != null )
         {
             managementService.shutdown();
         }
@@ -144,11 +144,12 @@ public class BookmarkIT
         }
     }
 
-    private static Config configWithBoltEnabled()
+    private Config configWithBoltEnabled()
     {
         return Config.newBuilder()
                 .set( BoltConnector.enabled, TRUE )
                 .set( BoltConnector.listen_address, "localhost:0" )
+                .set( GraphDatabaseSettings.neo4j_home, directory.storeDir().getAbsolutePath() )
                 .build();
     }
 
