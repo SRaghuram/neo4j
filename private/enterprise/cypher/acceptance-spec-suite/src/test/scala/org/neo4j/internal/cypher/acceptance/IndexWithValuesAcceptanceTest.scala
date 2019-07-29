@@ -281,10 +281,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
     val result = executeWith(config, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
-        not(includeSomewhere.aPlan("Projection")
-          .withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+            includeSomewhere.aPlan("NodeIndexSeek").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)),
         expectPlansToFail = Configs.Compiled))
 
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
@@ -301,7 +299,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     // cached properties are not passed through aggregation
     description should
       not(includeSomewhere.aPlan("EagerAggregation")
-        .containingVariables("cached[n.prop1]"))
+                          .containingVariables("cached[n.prop1]"))
 
     result.toList should be(empty)
   }
