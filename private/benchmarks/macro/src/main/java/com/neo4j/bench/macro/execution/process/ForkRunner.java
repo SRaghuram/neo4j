@@ -105,7 +105,8 @@ public class ForkRunner
                                        forkDirectory,
                                        resources,
                                        jvm,
-                                       jvmArgs );
+                                       jvmArgs,
+                                       doFork );
                 }
                 printForkInfo( forkName, query, measurementFork );
                 runFork( query, unit, metricsPrinter, measurementFork );
@@ -174,22 +175,30 @@ public class ForkRunner
                                            ForkDirectory forkDirectory,
                                            Resources resources,
                                            Jvm jvm,
-                                           List<String> jvmArgs )
+                                           List<String> jvmArgs,
+                                           boolean doFork )
     {
         List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );
 
-        JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
-                                                                          jvm,
-                                                                          jvmArgs,
-                                                                          commandArgs,
-                                                                          Main.class );
-        // inherit output
-        ProcessBuilder.Redirect outputRedirect = ProcessBuilder.Redirect.INHERIT;
-        // redirect error to file
-        ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
-        JvmProcess.start( jvmProcessArgs,
-                          outputRedirect,
-                          errorRedirect ).waitFor();
+        if ( doFork )
+        {
+            JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
+                                                                              jvm,
+                                                                              jvmArgs,
+                                                                              commandArgs,
+                                                                              Main.class );
+            // inherit output
+            ProcessBuilder.Redirect outputRedirect = ProcessBuilder.Redirect.INHERIT;
+            // redirect error to file
+            ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
+            JvmProcess.start( jvmProcessArgs,
+                              outputRedirect,
+                              errorRedirect ).waitFor();
+        }
+        else
+        {
+            Main.main( commandArgs.toArray( new String[commandArgs.size()] ) );
+        }
     }
 }
 
