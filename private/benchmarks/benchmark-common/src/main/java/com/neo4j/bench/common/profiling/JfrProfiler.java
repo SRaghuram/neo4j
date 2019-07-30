@@ -330,10 +330,10 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + jfrProfilerOutput.toAbsolutePath(),
                         "-------------------------------" );
-            String[] syncJfrCommand = {"sync", jfrProfilerOutput.toAbsolutePath().toString()};
-            Process syncJfr = new ProcessBuilder( syncJfrCommand )
-                    .redirectOutput( jfrLog.toFile() )
-                    .redirectError( jfrLog.toFile() )
+            String[] jfrOutputSyncCommand = {"sync", jfrProfilerOutput.toAbsolutePath().toString()};
+            Process syncJfr = new ProcessBuilder( jfrOutputSyncCommand )
+                    .redirectOutput( profilerLog.toFile() )
+                    .redirectError( profilerLog.toFile() )
                     .start();
 
             resultCode = syncJfr.waitFor();
@@ -342,11 +342,11 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                 appendFile( profilerLog,
                             Instant.now(),
                             "Bad things happened when syncing JFR file",
-                            "See: " + jfrLog.toAbsolutePath(),
+                            "See: " + profilerLog.toAbsolutePath(),
                             "-------------------------------" );
                 throw new RuntimeException(
                         "Bad things happened when syncing JFR file\n" +
-                        "See: " + jfrLog.toAbsolutePath() );
+                        "See: " + profilerLog.toAbsolutePath() );
             }
             JFR.maybeSecondaryRecordingCreator()
                .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
