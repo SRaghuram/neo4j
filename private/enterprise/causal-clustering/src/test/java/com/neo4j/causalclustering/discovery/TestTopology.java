@@ -61,6 +61,7 @@ public class TestTopology
                 .set( CausalClusteringSettings.raft_advertised_address, coreServerInfo.getRaftServer() )
                 .set( CausalClusteringSettings.transaction_advertised_address, coreServerInfo.catchupServer() )
                 .set( BoltConnector.listen_address, coreServerInfo.connectors().boltAddress() )
+                .set( BoltConnector.advertised_address, coreServerInfo.connectors().boltAddress() )
                 .set( BoltConnector.enabled, true )
                 .set( CausalClusteringSettings.server_groups, new ArrayList<>( coreServerInfo.groups() ) )
                 .set( CausalClusteringSettings.refuse_to_be_leader, coreServerInfo.refusesToBeLeader() )
@@ -71,6 +72,7 @@ public class TestTopology
     {
         return Config.newBuilder()
                 .set( BoltConnector.listen_address, readReplicaInfo.connectors().boltAddress() )
+                .set( BoltConnector.advertised_address, readReplicaInfo.connectors().boltAddress() )
                 .set( BoltConnector.enabled, true )
                 .set( CausalClusteringSettings.transaction_advertised_address, readReplicaInfo.catchupServer() )
                 .set( CausalClusteringSettings.server_groups, new ArrayList<>( readReplicaInfo.groups() ) )

@@ -48,6 +48,7 @@ class EnterpriseDiscoverableURIsTest
                 .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE )
                 .set( BoltConnector.enabled, true )
                 .set( BoltConnector.listen_address, new SocketAddress( 0 ) )
+                .set( BoltConnector.advertised_address, new SocketAddress( 0 ) )
                 .build();
         ConnectorPortRegister ports = new ConnectorPortRegister();
         ports.register( BoltConnector.NAME, new InetSocketAddress( 1337 ) );

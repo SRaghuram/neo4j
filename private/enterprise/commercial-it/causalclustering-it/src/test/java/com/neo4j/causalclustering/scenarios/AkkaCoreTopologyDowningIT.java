@@ -224,6 +224,7 @@ public class AkkaCoreTopologyDowningIT
 
         Config config = Config.newBuilder()
                 .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", myPort ) )
+                .set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( myPort ) )
                 .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
                 .set( BoltConnector.enabled, true )
                 .set( BoltConnector.listen_address, boltAddress )

@@ -108,7 +108,9 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );
         config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedAddress, discoveryPort ) );
         config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
+        config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.raft_listen_address, new SocketAddress( listenAddress, raftPort ) );
+        config.set( CausalClusteringSettings.raft_advertised_address, new SocketAddress( raftPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, Duration.ofMillis( 1000 ) );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );

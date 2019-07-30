@@ -288,6 +288,10 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address, specifyPortOnly( txPort ) );
                 builder.withConfig( CausalClusteringSettings.raft_listen_address, specifyPortOnly( raftPort ) );
 
+                builder.withConfig( CausalClusteringSettings.discovery_advertised_address, specifyPortOnly( discoveryPort ) );
+                builder.withConfig( CausalClusteringSettings.transaction_advertised_address, specifyPortOnly( txPort ) );
+                builder.withConfig( CausalClusteringSettings.raft_advertised_address, specifyPortOnly( raftPort ) );
+
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation, nCores );
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, nCores );
                 builder.withConfig( CausalClusteringSettings.server_groups, List.of( "core",  "core" + coreId ) );
@@ -326,6 +330,8 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members, initialMembers );
                 builder.withConfig( CausalClusteringSettings.discovery_listen_address, specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address, specifyPortOnly( txPort ) );
+                builder.withConfig( CausalClusteringSettings.discovery_advertised_address, specifyPortOnly( discoveryPort ) );
+                builder.withConfig( CausalClusteringSettings.transaction_advertised_address, specifyPortOnly( txPort ) );
 
                 builder.withConfig( CausalClusteringSettings.server_groups, List.of( "replica", "replica" + replicaId ) );
                 configureConnectors( boltPort, httpPort, httpsPort, builder );
