@@ -191,8 +191,10 @@ public class EmbeddedDatabase implements Database
     private int execute( String query, Map<String,Object> parameters )
     {
         resultVisitor.reset();
-        Result result = db.execute( query, parameters );
-        result.accept( resultVisitor );
+        try ( Result result = db.execute( query, parameters ) )
+        {
+            result.accept( resultVisitor );
+        }
         return resultVisitor.count();
     }
 
