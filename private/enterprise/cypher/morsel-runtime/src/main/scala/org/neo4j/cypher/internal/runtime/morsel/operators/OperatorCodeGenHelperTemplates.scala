@@ -71,10 +71,19 @@ object OperatorCodeGenHelperTemplates {
     load("context")
 
   val OUTPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation =
-    invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("moveToNextRow"))
+    invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("moveToNextRow"))
 
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
+
+  val PARAMS: IntermediateRepresentation =
+    load("params")
+
+  val EXPRESSION_CURSORS: IntermediateRepresentation =
+    load("cursors")
+
+  val EXPRESSION_VARIABLES: IntermediateRepresentation =
+    load("expressionVariables")
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
                                                             invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
@@ -103,8 +112,8 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
 
   val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(load("context"), method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("finishedWriting"))
+  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselExecutionContext, Boolean]("isValidRow"))
+  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("finishedWriting"))
   val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
   val UPDATE_DEMAND: IntermediateRepresentation =
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))

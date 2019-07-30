@@ -87,8 +87,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
     * Generated code that executes the operator.
     */
   @throws[Exception]
-  def compiledOperate(output: MorselExecutionContext,
-                      context: QueryContext,
+  def compiledOperate(context: MorselExecutionContext,
+                      dbAccess: QueryContext,
                       state: QueryState,
                       resources: QueryResources,
                       queryProfiler: QueryProfiler): Unit
@@ -170,8 +170,8 @@ trait OperatorTaskTemplate {
   /**
     * Responsible for generating:
     * {{{
-    *     def operate(output: MorselExecutionContext,
-    *                 context: QueryContext,
+    *     def operate(context: MorselExecutionContext,
+    *                 dbAccess: QueryContext,
     *                 state: QueryState,
     *                 resources: QueryResources,
     *                 queryProfiler: QueryProfiler): Unit
@@ -257,13 +257,15 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   // TODO: Use methods of actual interface to generate declaration?
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[CompiledTask] = {
 
-    ClassDeclaration[CompiledTask](packageName, className,
-                                                        extendsClass = None,
-                                                        implementsInterfaces =  Seq(typeRefOf[CompiledTask]),
-                                                        constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER,
-                                                                                    INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
-                                                        initializationCode = genInit,
-                                                        methods = Seq(
+    ClassDeclaration[CompiledTask](
+      packageName,
+      className,
+      extendsClass = None,
+      implementsInterfaces = Seq(typeRefOf[CompiledTask]),
+      constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER,
+                                  INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
+      initializationCode = genInit,
+      methods = Seq(
         MethodDeclaration("initializeProfileEvents",
                           owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],
@@ -292,12 +294,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                                                         invoke(QUERY_RESOURCES,
                                                                method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
                                                                invoke(QUERY_STATE,
-                                                                      method[QueryState, Int]("nExpressionSlots"))
-                                                        ))) ++ flatMap[LocalVariable](op => op.genLocalVariables ++
-                                                                                            op.genExpressions.flatMap(_.variables))
+                                                                      method[QueryState, Int]("nExpressionSlots")))
+                              )) ++ flatMap[LocalVariable](op => op.genLocalVariables ++
+                                                                 op.genExpressions.flatMap(_.variables))
                           },
-                          parameterizedWith = None, throws = Some(typeRefOf[Exception])
-        ),
+                          parameterizedWith = None,
+                          throws = Some(typeRefOf[Exception])),
         MethodDeclaration("closeProfileEvents",
                           owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],
