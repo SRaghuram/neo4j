@@ -22,6 +22,7 @@ import java.util.UUID;
 import javax.management.MBeanServer;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -40,6 +41,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_COMMITTED_TEMPLATE;
@@ -107,9 +109,11 @@ class GlobalMetricsExtensionFactoryIT
     @Test
     void reportHeapUsageMetrics() throws InterruptedException, IOException
     {
-        File heapCommittedFile = metricsCsv( outputPath, "neo4j." + HEAP_COMMITTED_TEMPLATE );
-        File heapMaxFile = metricsCsv( outputPath, "neo4j." + HEAP_MAX_TEMPLATE );
-        File heapUsedFile = metricsCsv( outputPath, "neo4j." + HEAP_USED_TEMPLATE );
+        Config config = db.getDependencyResolver().resolveDependency( Config.class );
+        String prefix = config.get( metricsPrefix ) + ".";
+        File heapCommittedFile = metricsCsv( outputPath, prefix + HEAP_COMMITTED_TEMPLATE );
+        File heapMaxFile = metricsCsv( outputPath, prefix + HEAP_MAX_TEMPLATE );
+        File heapUsedFile = metricsCsv( outputPath, prefix + HEAP_USED_TEMPLATE );
 
         long heapCommittedResult = readLongGaugeAndAssert( heapCommittedFile, ( newValue, currentValue ) -> newValue >= 0 );
         long heapUsedResult = readLongGaugeAndAssert( heapUsedFile, ( newValue, currentValue ) -> newValue >= 0 );
