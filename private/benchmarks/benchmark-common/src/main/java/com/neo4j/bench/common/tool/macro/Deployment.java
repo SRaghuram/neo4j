@@ -10,6 +10,8 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static java.lang.String.format;
+
 public abstract class Deployment implements DeploymentMode
 {
     public static Deployment parse( String value )
@@ -26,7 +28,7 @@ public abstract class Deployment implements DeploymentMode
         }
         else
         {
-            throw new RuntimeException( "Invalid deployment mode value: '" + value );
+            throw new RuntimeException( format( "Invalid deployment mode value: '%s'", value ) );
         }
     }
 
