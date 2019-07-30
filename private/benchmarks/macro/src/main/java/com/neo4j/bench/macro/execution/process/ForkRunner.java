@@ -10,6 +10,8 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.process.JvmProcess;
+import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -17,12 +19,14 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.macro.execution.database.PlanCreator;
+import com.neo4j.bench.macro.Main;
+import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -92,12 +96,16 @@ public class ForkRunner
                                                      jvmArgs,
                                                      resources );
                 // Export logical plan -- only necessary to do so once, every fork should produce the same plan
-                // NOTE: this will use main process to create and export plans, if it becomes a problem an "export plan" command can be created
                 if ( forkNumber == 0 )
                 {
-                    System.out.println( "Generating plan for : " + query.name() );
-                    Path planFile = PlanCreator.exportPlan( forkDirectory, store, edition, neo4jConfigFile, query );
-                    System.out.println( "Plan exported to    : " + planFile.toAbsolutePath().toString() );
+                    runPlanExportFork( query,
+                                       store,
+                                       edition,
+                                       neo4jConfigFile,
+                                       forkDirectory,
+                                       resources,
+                                       jvm,
+                                       jvmArgs );
                 }
                 printForkInfo( forkName, query, measurementFork );
                 runFork( query, unit, metricsPrinter, measurementFork );
@@ -157,6 +165,31 @@ public class ForkRunner
                                            jvm,
                                            jvmArgs,
                                            resources );
+    }
+
+    private static void runPlanExportFork( Query query,
+                                           Store store,
+                                           Edition edition,
+                                           Path neo4jConfigFile,
+                                           ForkDirectory forkDirectory,
+                                           Resources resources,
+                                           Jvm jvm,
+                                           List<String> jvmArgs )
+    {
+        List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );
+
+        JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
+                                                                          jvm,
+                                                                          jvmArgs,
+                                                                          commandArgs,
+                                                                          Main.class );
+        // inherit output
+        ProcessBuilder.Redirect outputRedirect = ProcessBuilder.Redirect.INHERIT;
+        // redirect error to file
+        ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
+        JvmProcess.start( jvmProcessArgs,
+                          outputRedirect,
+                          errorRedirect ).waitFor();
     }
 }
 
