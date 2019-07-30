@@ -257,7 +257,24 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         Instant.now(),
                         "Profiling complete: " + asyncRecording.toAbsolutePath(),
                         "-------------------------------" );
+            String[] asyncOutputSyncCommand = {"sync", asyncRecording.toAbsolutePath().toString()};
+            Process syncAsync = new ProcessBuilder( asyncOutputSyncCommand )
+                    .redirectOutput( profilerLog.toFile() )
+                    .redirectError( profilerLog.toFile() )
+                    .start();
 
+            resultCode = syncAsync.waitFor();
+            if ( resultCode != 0 )
+            {
+                appendFile( profilerLog,
+                            Instant.now(),
+                            "Bad things happened when syncing Async file",
+                            "See: " + profilerLog.toAbsolutePath(),
+                            "-------------------------------" );
+                throw new RuntimeException(
+                        "Bad things happened when syncing Async file\n" +
+                        "See: " + profilerLog.toAbsolutePath() );
+            }
             ASYNC.maybeSecondaryRecordingCreator()
                  .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
         }
