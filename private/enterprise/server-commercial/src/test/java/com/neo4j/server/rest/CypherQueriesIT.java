@@ -12,7 +12,7 @@ import org.neo4j.test.server.HTTP;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
-public class CypherQueriesIT extends CommercialVersionIT
+public class CypherQueriesIT extends CommercialServerIT
 {
     @Test
     public void runningInCompiledRuntime()

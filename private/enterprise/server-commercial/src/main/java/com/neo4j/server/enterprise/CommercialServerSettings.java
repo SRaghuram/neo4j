@@ -40,12 +40,4 @@ public class CommercialServerSettings implements SettingsDeclaration
     public static final Setting<Boolean> browser_allowOutgoingBrowserConnections =
             newBuilder( "browser.allow_outgoing_connections", BOOL,  true  ).build();
 
-    @Internal
-    @Description( "Publicly discoverable bolt+routing:// URI to use for Neo4j Drivers wanting to access a cluster " +
-            "that this instance is a member of. Only applicable to causal clusters." )
-    @DocumentedDefaultValue( "Defaults to empty on any deployment that is not a causal cluster core, and a " +
-            "bolt+routing://-schemed URI of the advertised address of the first found bolt connector if the " +
-            "instance is a core member of a causal cluster." )
-    public static final Setting<URI> bolt_routing_discoverable_address =
-            newBuilder( "unsupported.dbms.discoverable_bolt_routing_address", SettingValueParsers.URI, SettingValueParsers.URI.parse( "" ) ).build();
 }

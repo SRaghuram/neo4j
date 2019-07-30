@@ -11,7 +11,6 @@ import com.neo4j.metrics.source.server.ServerThreadViewSetter;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
-import com.neo4j.server.rest.EnterpriseDiscoverableURIs;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
 import java.util.ArrayList;
@@ -33,6 +32,8 @@ import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
+
+import static com.neo4j.server.rest.EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs;
 
 public class CommercialNeoServer extends CommunityNeoServer
 {
@@ -93,8 +94,8 @@ public class CommercialNeoServer extends CommunityNeoServer
     protected DBMSModule createDBMSModule()
     {
         // ConnectorPortRegister isn't available until runtime, so defer loading until then
-        Supplier<DiscoverableURIs> discoverableURIs  = () -> EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs(
-                        getConfig(), getSystemDatabaseDependencyResolver().resolveDependency( ConnectorPortRegister.class ) );
+        Supplier<DiscoverableURIs> discoverableURIs  = () -> enterpriseDiscoverableURIs(
+                getConfig(), getSystemDatabaseDependencyResolver().resolveDependency( ConnectorPortRegister.class ) );
         return new DBMSModule( webServer, getConfig(), discoverableURIs );
     }
 

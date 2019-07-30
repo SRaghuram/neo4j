@@ -16,7 +16,7 @@ import static org.neo4j.server.http.cypher.integration.TransactionMatchers.conta
 import static org.neo4j.server.http.cypher.integration.TransactionMatchers.hasErrors;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
-public class ServerMultiDatabaseIT extends CommercialVersionIT
+public class ServerMultiDatabaseIT extends CommercialServerIT
 {
     @Test
     public void shouldBeAbleToCreateAndDropDatabases()

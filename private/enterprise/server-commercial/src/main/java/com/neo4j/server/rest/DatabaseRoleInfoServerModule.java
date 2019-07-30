@@ -57,6 +57,7 @@ public class DatabaseRoleInfoServerModule implements ServerModule
         );
     }
 
+    // TODO move this under /db/{db_name}/management for example
     private URI managementApiUri()
     {
         return config.get( ServerSettings.management_api_path );

@@ -5,17 +5,16 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.jupiter.api.Test;
 
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -24,47 +23,35 @@ import static org.hamcrest.Matchers.equalTo;
 class EnterpriseDiscoverableURIsTest
 {
     @Test
-    void shouldExposeBoltRoutingIfCore()
+    void shouldExposeManagementApi()
     {
         // Given
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE )
-                .set( BoltConnector.enabled, true )
-                .build();
+        var config = Config.defaults();
 
         // When
-        Map<String,Object> asd = toMap(
-                EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs( config, new ConnectorPortRegister() ) );
+        var asd = toMap( EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs( config, new ConnectorPortRegister() ) );
 
         // Then
-        assertThat(asd.get("bolt_routing"), equalTo( "bolt+routing://localhost:7687" ));
+        assertThat( asd.get( "management" ), equalTo( "/db/manage/" ) );
     }
 
     @Test
-    void shouldGrabPortFromRegisterIfSetTo0()
+    void shouldBeAbleToResetManagementApi()
     {
         // Given
-        Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE )
-                .set( BoltConnector.enabled, true )
-                .set( BoltConnector.listen_address, new SocketAddress( 0 ) )
-                .set( BoltConnector.advertised_address, new SocketAddress( 0 ) )
-                .build();
-        ConnectorPortRegister ports = new ConnectorPortRegister();
-        ports.register( BoltConnector.NAME, new InetSocketAddress( 1337 ) );
+        var config = Config.defaults( ServerSettings.management_api_path, URI.create( "/a/new/manage/api" ) );
 
         // When
-        Map<String,Object> asd = toMap(
-                EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs( config, ports ) );
+        var asd = toMap( EnterpriseDiscoverableURIs.enterpriseDiscoverableURIs( config, new ConnectorPortRegister() ) );
 
         // Then
-        assertThat(asd.get("bolt_routing"), equalTo( "bolt+routing://localhost:1337" ));
+        assertThat( asd.get( "management" ), equalTo( "/a/new/manage/api/" ) );
     }
 
     private Map<String,Object> toMap( DiscoverableURIs uris )
     {
         Map<String,Object> out = new HashMap<>();
-        uris.forEach( ( k, v ) -> out.put( k, v.toASCIIString() ) );
+        uris.forEach( out::put );
         return out;
     }
 }

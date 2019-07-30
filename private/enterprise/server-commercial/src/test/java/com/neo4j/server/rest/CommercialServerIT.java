@@ -20,7 +20,7 @@ import org.neo4j.test.server.ExclusiveServerTestBase;
 
 import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
-public abstract class CommercialVersionIT extends ExclusiveServerTestBase
+public abstract class CommercialServerIT extends ExclusiveServerTestBase
 {
     @ClassRule
     public static final TestDirectory staticFolder = TestDirectory.testDirectory();
