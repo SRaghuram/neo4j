@@ -14,7 +14,7 @@ import org.neo4j.values.storable.Values
 /**
   * Aggregator for count(...).
   */
-case object CountAggregator extends Aggregator {
+case class CountAggregator() extends Aggregator {
 
   override def newUpdater: Updater = new CountUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
@@ -30,7 +30,7 @@ case object CountAggregator extends Aggregator {
 /**
   * Aggregator for count(*).
   */
-case object CountStarAggregator extends Aggregator {
+case class CountStarAggregator() extends Aggregator {
 
   override def newUpdater: Updater = new CountStarUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer

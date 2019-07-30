@@ -15,12 +15,14 @@ import org.neo4j.values.{AnyValue, AnyValues}
 /**
   * Aggregator for max(...).
   */
-case object MaxAggregator extends Aggregator {
+case class MaxAggregator() extends Aggregator {
 
   override def newUpdater: Updater = new MaxUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MaxStandardReducer
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
+}
 
+object MaxAggregator {
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =
     (max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0
 }

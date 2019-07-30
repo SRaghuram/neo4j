@@ -25,29 +25,29 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case e if !e.isDeterministic =>
         throw new SyntaxException("Can't use non-deterministic (random) functions inside of aggregate functions.")
 
-      case _: CountStar => (CountStarAggregator, Null.NULL)
+      case _: CountStar => (CountStarAggregator(), Null.NULL)
       case c: FunctionInvocation =>
         c.function match {
           case _: AggregatingFunction if c.distinct =>
             throw new CantCompileQueryException("Morsel does not yet support Distinct aggregating functions, use another runtime.")
 
           case functions.Count =>
-            (CountAggregator, c.arguments.head)
+            (CountAggregator(), c.arguments.head)
 
           case functions.Sum =>
-            (SumAggregator, c.arguments.head)
+            (SumAggregator(), c.arguments.head)
 
           case functions.Avg =>
-            (AvgAggregator, c.arguments.head)
+            (AvgAggregator(), c.arguments.head)
 
           case functions.Max =>
-            (MaxAggregator, c.arguments.head)
+            (MaxAggregator(), c.arguments.head)
 
           case functions.Min =>
-            (MinAggregator, c.arguments.head)
+            (MinAggregator(), c.arguments.head)
 
           case functions.Collect =>
-            (CollectAggregator, c.arguments.head)
+            (CollectAggregator(), c.arguments.head)
 
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Morsel does not yet support the Aggregating function `${c.name}`, use another runtime.")

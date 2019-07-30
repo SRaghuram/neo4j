@@ -17,7 +17,7 @@ import org.neo4j.values.utils.ValueMath.overflowSafeAdd
 /**
   * Aggregator for sum(...).
   */
-case object SumAggregator extends Aggregator {
+case class SumAggregator() extends Aggregator {
 
   override def newUpdater: Updater = new SumUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new SumStandardReducer

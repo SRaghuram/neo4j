@@ -44,7 +44,7 @@ import org.neo4j.values.utils.ValueMath.overflowSafeAdd
   *    # for durations we derive a faster formulation using batch sums, because we won't overflow
   *   CMA =  CMA +              (US - (m * CMA)) / n + m
   */
-case object AvgAggregator extends Aggregator {
+case class AvgAggregator() extends Aggregator {
 
   override def newUpdater: Updater = new AvgUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new AvgStandardReducer
