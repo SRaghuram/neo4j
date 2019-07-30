@@ -139,49 +139,63 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
       declareAndAssign(v.typ, v.name, v.value)
     }: _*)
+
+    intermediateCompileGrouping(groupings) match {
+      case None => None
+      case Some(irGrouping) => {
+        val classDeclaration =
+          ClassDeclaration[CompiledGroupingExpression](
+            PACKAGE_NAME,
+            className(),
+            None,
+            Seq(typeRefOf[CompiledGroupingExpression]),
+            Seq.empty,
+            initializationCode = noop(),
+            genFields = () => irGrouping.projectKey.fields ++ irGrouping.computeKey.fields ++ irGrouping.getKey.fields,
+            methods = Seq(
+              MethodDeclaration("projectGroupingKey",
+                                owner = typeRefOf[CompiledGroupingExpression],
+                                returnType = typeRefOf[Unit],
+                                parameters = Seq(param[ExecutionContext]("context"),
+                                                 param[AnyValue]("key")),
+                                body = block(
+                                  declarations(irGrouping.projectKey),
+                                  irGrouping.projectKey.ir)),
+              MethodDeclaration("computeGroupingKey",
+                                owner = typeRefOf[CompiledGroupingExpression],
+                                returnType = typeRefOf[AnyValue],
+                                parameters = Seq(param[ExecutionContext]("context"),
+                                                 param[DbAccess]("dbAccess"),
+                                                 param[Array[AnyValue]]("params"),
+                                                 param[ExpressionCursors]("cursors"),
+                                                 param[Array[AnyValue]]("expressionVariables")),
+                                body = block(
+                                  declarations(irGrouping.computeKey),
+                                  nullCheckIfRequired(irGrouping.computeKey))),
+              MethodDeclaration("getGroupingKey",
+                                owner = typeRefOf[CompiledGroupingExpression],
+                                returnType = typeRefOf[AnyValue],
+                                parameters = Seq(param[ExecutionContext]("context")),
+                                body = block(
+                                  declarations(irGrouping.getKey),
+                                  nullCheckIfRequired(irGrouping.getKey)))
+            ))
+        Some(compileClass(classDeclaration).getDeclaredConstructor().newInstance())
+      }
+    }
+  }
+
+  /**
+    * Compiles the given groupings to an instance of [[CompiledGroupingExpression]]
+    * @param groupings the groupings to compile
+    * @return an instance of [[CompiledGroupingExpression]] corresponding to the provided groupings
+    */
+  def intermediateCompileGrouping(groupings: Map[String, Expression]): Option[IntermediateGroupingExpression] = {
     val compiled = for {(k, v) <- groupings
                         c <- intermediateCompileExpression(v)} yield slots(k) -> c
     if (compiled.size < groupings.size) None
     else {
-      val grouping = intermediateCompileGroupingExpression(compiled)
-      val classDeclaration =
-        ClassDeclaration[CompiledGroupingExpression](
-          PACKAGE_NAME,
-          className(),
-          None,
-          Seq(typeRefOf[CompiledGroupingExpression]),
-          Seq.empty,
-          initializationCode = noop(),
-          genFields = () => grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
-          methods = Seq(
-            MethodDeclaration("projectGroupingKey",
-                              owner = typeRefOf[CompiledGroupingExpression],
-                              returnType = typeRefOf[Unit],
-                              parameters = Seq(param[ExecutionContext]("context"),
-                                               param[AnyValue]("key")),
-                              body = block(
-                                declarations(grouping.projectKey),
-                                grouping.projectKey.ir)),
-            MethodDeclaration("computeGroupingKey",
-                              owner = typeRefOf[CompiledGroupingExpression],
-                              returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[ExecutionContext]("context"),
-                                               param[DbAccess]("dbAccess"),
-                                               param[Array[AnyValue]]("params"),
-                                               param[ExpressionCursors]("cursors"),
-                                               param[Array[AnyValue]]("expressionVariables")),
-                              body = block(
-                                declarations(grouping.computeKey),
-                                nullCheckIfRequired(grouping.computeKey))),
-            MethodDeclaration("getGroupingKey",
-                              owner = typeRefOf[CompiledGroupingExpression],
-                              returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[ExecutionContext]("context")),
-                              body = block(
-                                declarations(grouping.getKey),
-                                nullCheckIfRequired(grouping.getKey)))
-          ))
-      Some(compileClass(classDeclaration).getDeclaredConstructor().newInstance())
+      Some(intermediateCompileGroupingExpression(compiled))
     }
   }
 
