@@ -6,10 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
+import java.time.Duration
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
+import org.neo4j.configuration.{GraphDatabaseSettings, SettingImpl}
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
@@ -28,7 +29,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
   val VERBOSE = false
 
   override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
-    GraphDatabaseSettings.cypher_min_replan_interval -> Integer.valueOf(0),
+    GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
     GraphDatabaseSettings.cypher_compiler_tracing -> TRUE,
     GraphDatabaseSettings.pagecache_memory -> "8M"
   )
@@ -41,7 +42,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
     // WHEN
     val idpInnerIterations = determineIDPLoopSizes(numberOfPatternRelationships,
-      cypher_idp_solver_table_threshold, maxTableSizes, Map(cypher_idp_solver_duration_threshold -> "10000"))
+      cypher_idp_solver_table_threshold, maxTableSizes, Map(cypher_idp_solver_duration_threshold -> java.lang.Long.valueOf(10000) ))
     // Added an increased duration to make up for the test running in parallel, should preferably be solved in a different way
 
     // THEN
@@ -205,11 +206,11 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
     expandsAndJoinsCount(plan, Map("expands" -> 0, "joins" -> 0))
   }
 
-  private def determineIDPLoopSizes(numberOfPatternRelationships: Int, configKey: Setting[_], configValues: Seq[Int], additionalConfig: Map[Setting[_], String]): Map[Any, Int] = {
+  private def determineIDPLoopSizes(numberOfPatternRelationships: Int, configKey: Setting[_], configValues: Seq[Int], additionalConfig: Map[Setting[_], Object]): Map[Any, Int] = {
     val query = makeLongPatternQuery(numberOfPatternRelationships)
     if (VERBOSE) println(configKey)
     val idpInnerIterations: mutable.Map[Int, Int] = configValues.foldLeft(mutable.Map.empty[Int, Int]) { (acc, configValue) =>
-      val config = databaseConfig() + (configKey -> configValue.toString) ++ additionalConfig
+      val config = databaseConfig() + (configKey -> configKey.asInstanceOf[SettingImpl[Object]].parse(configValue.toString)) ++ additionalConfig
       runWithConfig(config.toSeq: _*) {
         (engine, db) =>
           graph = db

@@ -91,7 +91,6 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
                 {
                     settings.put( GraphDatabaseSettings.auth_enabled, true );
                     config.forEach( ( setting, value ) -> settings.put( setting, ((SettingImpl<Object>) setting ).parse( value ) )  );
-                    settings.putAll( config );
                 } );
         server.ensureDatabase( r ->
         {

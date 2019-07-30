@@ -36,7 +36,6 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.LogPosition.start;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
@@ -99,7 +98,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         }
         if ( asPartOfStoreCopy )
         {
-            builder.set( preallocate_logical_logs, FALSE );
+            builder.set( preallocate_logical_logs, false );
         }
         return builder.build();
     }

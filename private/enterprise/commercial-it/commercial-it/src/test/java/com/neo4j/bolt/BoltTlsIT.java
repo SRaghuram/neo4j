@@ -18,10 +18,10 @@ import org.junit.runners.Parameterized.Parameter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.configuration.ssl.ClientAuth;
@@ -116,10 +116,11 @@ public class BoltTlsIT
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )
                 .setConfig( BoltConnector.ssl_policy, "bolt" )
                 .setConfig( sslPolicy.allow_key_generation, true )
                 .setConfig( sslPolicy.base_directory, Path.of( "certificates" ) )
-                .setConfig( sslPolicy.tls_versions, SettingValueParsers.listOf( SettingValueParsers.STRING ).parse( setup.boltTlsVersions ) )
+                .setConfig( sslPolicy.tls_versions, Arrays.asList( setup.boltTlsVersions.split( "," ) ) )
                 .setConfig( sslPolicy.client_auth, ClientAuth.NONE )
                 .setConfig( sslPolicy.verify_hostname, false ).build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
@@ -138,7 +139,7 @@ public class BoltTlsIT
     public void shouldRespectProtocolSelection() throws Exception
     {
         // given
-        SslContextFactory.SslParameters params = protocols( setup.clientTlsVersions ).ciphers();
+        SslContextFactory.SslParameters params = protocols( setup.clientTlsVersions.split( "," ) ).ciphers();
         SecureClient client = new SecureClient( makeSslPolicy( sslResource, params ) );
 
         // when

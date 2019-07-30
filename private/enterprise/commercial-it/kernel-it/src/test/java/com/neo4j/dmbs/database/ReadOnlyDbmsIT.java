@@ -19,7 +19,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -80,6 +79,6 @@ class ReadOnlyDbmsIT
     private DatabaseManagementService createDbms( boolean readOnly )
     {
         return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( read_only, valueOf( readOnly ) ).build();
+                .setConfig( read_only, readOnly ).build();
     }
 }

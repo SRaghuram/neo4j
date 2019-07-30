@@ -26,7 +26,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   // Need to override so that graph.execute will not throw an exception
   override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> FALSE,
-    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> Integer.valueOf(10)
+    GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> java.lang.Long.valueOf(10)
   )
 
   override def initTest(): Unit = {

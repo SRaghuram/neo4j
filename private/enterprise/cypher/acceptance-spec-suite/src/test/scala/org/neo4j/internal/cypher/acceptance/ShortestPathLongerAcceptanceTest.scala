@@ -5,10 +5,10 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.FALSE
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.SettingValueParsers.FALSE
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription

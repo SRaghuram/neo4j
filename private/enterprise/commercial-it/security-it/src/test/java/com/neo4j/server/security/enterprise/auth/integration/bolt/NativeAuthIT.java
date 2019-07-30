@@ -38,11 +38,11 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
     private static final String ADMIN_USER = "neo4j";
 
     @Override
-    protected Map<Setting<?>, String> getSettings()
+    protected Map<Setting<?>, Object> getSettings()
     {
         return Map.of(
-                SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME
+                SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ),
+                SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME )
         );
     }
 

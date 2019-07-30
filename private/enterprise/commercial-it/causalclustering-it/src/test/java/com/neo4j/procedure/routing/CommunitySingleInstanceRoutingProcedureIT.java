@@ -124,6 +124,10 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         {
             builder.setConfig( BoltConnector.advertised_address, advertisedBoltAddress );
         }
+        else
+        {
+            builder.setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) );
+        }
         managementService = builder.build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }

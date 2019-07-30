@@ -86,7 +86,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 MetricsSettings.metricsEnabled, true,
                 MetricsSettings.csvEnabled, true,
                 MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() ) );
+                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
     }
@@ -119,7 +119,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 MetricsSettings.metricsEnabled, true,
                 MetricsSettings.csvEnabled, true,
                 MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
-                MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() ) );
+                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
     }
@@ -202,8 +202,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         db.restartDatabase( Map.of(
                 MetricsSettings.metricsEnabled, true,
                 MetricsSettings.csvEnabled, true,
-                MetricsSettings.csvInterval, "100ms",
-                MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() ) );
+                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
+                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() ) );
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
 

@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -903,7 +904,7 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, false ) );
+        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, SettingValueParsers.FALSE ) );
 
         createInitialDataSet( db );
         createIndex( db );
