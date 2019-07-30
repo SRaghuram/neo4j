@@ -45,18 +45,17 @@ public class PlannerDescription
                                                                               PLANNER_IMPL,
                                                                               RUNTIME_IMPL );
 
-    public static PlannerDescription fromResults( Result profileWithPlannerAndRuntime,
-                                                  Result explainWithoutPlannerOrRuntime,
+    public static PlannerDescription fromResults( ExecutionPlanDescription profileWithPlannerAndRuntime,
+                                                  ExecutionPlanDescription explainWithoutPlannerOrRuntime,
                                                   String requestedPlanner,
                                                   String requestedRuntime )
     {
-        ExecutionPlanDescription usedExecutionPlanDescription = profileWithPlannerAndRuntime.getExecutionPlanDescription();
-        Map<String,Object> usedArguments = usedExecutionPlanDescription.getArguments();
+        Map<String,Object> usedArguments = profileWithPlannerAndRuntime.getArguments();
         String usedPlanner = (String) usedArguments.getOrDefault( PLANNER_IMPL, UNKNOWN );
         String usedRuntime = (String) usedArguments.getOrDefault( RUNTIME_IMPL, UNKNOWN );
         Long dbHits = (Long) usedArguments.get( DB_HITS );
 
-        Map<String,Object> defaultArguments = explainWithoutPlannerOrRuntime.getExecutionPlanDescription().getArguments();
+        Map<String,Object> defaultArguments = explainWithoutPlannerOrRuntime.getArguments();
         String defaultPlanner = (String) defaultArguments.getOrDefault( PLANNER_IMPL, UNKNOWN );
         String defaultRuntime = (String) defaultArguments.getOrDefault( RUNTIME_IMPL, UNKNOWN );
 
@@ -66,7 +65,7 @@ public class PlannerDescription
                                        requestedRuntime,
                                        usedRuntime.toLowerCase(),
                                        defaultRuntime.toLowerCase(),
-                                       usedExecutionPlanDescription,
+                                       profileWithPlannerAndRuntime,
                                        dbHits );
     }
 

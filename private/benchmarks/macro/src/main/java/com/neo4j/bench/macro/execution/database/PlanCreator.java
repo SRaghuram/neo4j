@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -87,8 +88,6 @@ public class PlanCreator
                                     ParametersReader parameters,
                                     GraphDatabaseService db ) throws Exception
     {
-        CountingResultVisitor resultVisitor = new CountingResultVisitor();
-
         Map<String,Object> queryParameters = parameters.next();
 
         // Make sure Planner & Runtime are at default for EXPLAIN run
@@ -96,21 +95,31 @@ public class PlanCreator
                 .copyWith( Planner.DEFAULT )
                 .copyWith( Runtime.DEFAULT )
                 .copyWith( PLAN );
-        Result explainResult = db.execute( defaultExplainQueryString.value(), queryParameters );
-        explainResult.accept( resultVisitor );
+        ExecutionPlanDescription explainPlanDescription = getPlanDescriptionFor( db, defaultExplainQueryString, queryParameters );
 
         // For PROFILE run, use the provided Planner & Runtime
         QueryString profileQueryString = (defaultExplainQueryString.isPeriodicCommit())
                                          ? queryString.copyWith( PLAN )
                                          : queryString.copyWith( PROFILE );
-        Result profileResult = db.execute( profileQueryString.value(), queryParameters );
-        profileResult.accept( resultVisitor );
+        ExecutionPlanDescription profilePlanDescription = getPlanDescriptionFor( db, profileQueryString, queryParameters );
 
-        PlannerDescription plannerDescription = PlannerDescription.fromResults( profileResult,
-                                                                                explainResult,
+        PlannerDescription plannerDescription = PlannerDescription.fromResults( profilePlanDescription,
+                                                                                explainPlanDescription,
                                                                                 queryString.planner().name(),
                                                                                 queryString.runtime().name() );
 
         return plannerDescription.toPlan( NO_PLAN_COMPILATION_METRICS );
+    }
+
+    private static ExecutionPlanDescription getPlanDescriptionFor( GraphDatabaseService db,
+                                                                   QueryString queryString,
+                                                                   Map<String,Object> queryParameters )
+    {
+        try ( Result result = db.execute( queryString.value(), queryParameters ) )
+        {
+            CountingResultVisitor resultVisitor = new CountingResultVisitor();
+            result.accept( resultVisitor );
+            return result.getExecutionPlanDescription();
+        }
     }
 }
