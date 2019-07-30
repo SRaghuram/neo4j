@@ -10,14 +10,11 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.PlanCreator;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
@@ -27,7 +24,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand.createDatabase;
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 
 @Command( name = "export-plan", description = "exports the plan description for one query of one workload" )
@@ -35,55 +31,55 @@ public class ExportPlanCommand implements Runnable
 {
     private static final String CMD_WORKLOAD = "--workload";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKLOAD},
-            description = "Path to workload configuration file",
-            title = "Workload configuration" )
+             name = {CMD_WORKLOAD},
+             description = "Path to workload configuration file",
+             title = "Workload configuration" )
     @Required
     private String workloadName;
 
     private static final String CMD_QUERY = "--query";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_QUERY},
-            description = "Name of query, in the Workload configuration",
-            title = "Query name" )
+             name = {CMD_QUERY},
+             description = "Name of query, in the Workload configuration",
+             title = "Query name" )
     @Required
     private String queryName;
 
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DB},
-            description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
-            title = "Store directory" )
+             name = {CMD_DB},
+             description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
+             title = "Store directory" )
     @Required
     private File storeDir;
 
     private static final String CMD_EDITION = "--db-edition";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_EDITION},
-            description = "Neo4j edition: COMMUNITY or ENTERPRISE",
-            title = "Neo4j edition" )
+             name = {CMD_EDITION},
+             description = "Neo4j edition: COMMUNITY or ENTERPRISE",
+             title = "Neo4j edition" )
     private Edition edition = Edition.ENTERPRISE;
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_CONFIG},
-            title = "Neo4j configuration file" )
+             name = {CMD_NEO4J_CONFIG},
+             title = "Neo4j configuration file" )
     @Required
     private File neo4jConfigFile;
 
     private static final String CMD_OUTPUT = "--output";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_OUTPUT},
-            description = "Output directory: where plan will be written",
-            title = "Output directory" )
+             name = {CMD_OUTPUT},
+             description = "Output directory: where plan will be written",
+             title = "Output directory" )
     @Required
     private File outputDir;
 
     private static final String CMD_WORK_DIR = "--work-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORK_DIR},
-            description = "Work directory",
-            title = "Work directory" )
+             name = {CMD_WORK_DIR},
+             description = "Work directory",
+             title = "Work directory" )
     @Required
     private File workDir = new File( System.getProperty( "user.dir" ) );
 
@@ -92,12 +88,10 @@ public class ExportPlanCommand implements Runnable
     {
         ForkDirectory forkDirectory = ForkDirectory.openAt( outputDir.toPath() );
         BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
-        Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
 
         try ( Resources resources = new Resources( workDir.toPath() );
               // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-              Store store = Store.createFrom( storeDir.toPath() );
-              EmbeddedDatabase db = createDatabase( store, edition, neo4jConfig, forkDirectory ) )
+              Store store = Store.createFrom( storeDir.toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, DeploymentMode.EMBEDDED );
             Query query = workload.queryForName( queryName );
