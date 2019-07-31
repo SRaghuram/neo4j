@@ -18,12 +18,12 @@ class DefaultTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runDefault(): util.Collection[DynamicTest] = {
-    createTests(scenarios, DefaultTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    createTests(scenarios, DefaultTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder() )
   }
 
   @Disabled
   def generateBlacklistDefault(): Unit = {
-    printComputedBlacklist(scenarios, DefaultTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, DefaultTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

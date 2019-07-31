@@ -18,12 +18,12 @@ class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostCompiledTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    createTests(scenarios, CostCompiledTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
   }
 
   @Disabled
   def generateBlacklistCostCompiled(): Unit = {
-    printComputedBlacklist(scenarios, CostCompiledTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, CostCompiledTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

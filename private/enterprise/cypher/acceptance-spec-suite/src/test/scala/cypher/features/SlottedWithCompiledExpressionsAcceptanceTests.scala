@@ -18,12 +18,12 @@ class SlottedWithCompiledExpressionsAcceptanceTests extends EnterpriseBaseAccept
 
   @TestFactory
   def runCostSlottedWithCompiledExpressions(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
   }
 
   @Disabled
   def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

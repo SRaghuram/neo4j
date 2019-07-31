@@ -18,12 +18,12 @@ class MorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    createTests(scenarios, CostMorselSingleThreadedTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
   }
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, CostMorselSingleThreadedTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }
