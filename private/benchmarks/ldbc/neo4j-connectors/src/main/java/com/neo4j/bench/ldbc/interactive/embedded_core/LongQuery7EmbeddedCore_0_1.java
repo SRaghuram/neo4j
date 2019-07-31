@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class LongQuery7EmbeddedCore_0_1 extends Neo4jQuery7<Neo4jConnectionState>
 {
@@ -132,12 +133,16 @@ public class LongQuery7EmbeddedCore_0_1 extends Neo4jQuery7<Neo4jConnectionState
 
     private boolean likerKnowsPerson( Node liker, Node person )
     {
-        for ( Relationship knowsRelationship : liker.getRelationships( Rels.KNOWS ) )
+        try ( ResourceIterator<Relationship> knowsRelationships = (ResourceIterator<Relationship>) liker.getRelationships( Rels.KNOWS ).iterator() )
         {
-            Node otherPerson = knowsRelationship.getOtherNode( liker );
-            if ( otherPerson.equals( person ) )
+            while ( knowsRelationships.hasNext() )
             {
-                return true;
+                Relationship knowsRelationship = knowsRelationships.next();
+                Node otherPerson = knowsRelationship.getOtherNode( liker );
+                if ( otherPerson.equals( person ) )
+                {
+                    return true;
+                }
             }
         }
         return false;
