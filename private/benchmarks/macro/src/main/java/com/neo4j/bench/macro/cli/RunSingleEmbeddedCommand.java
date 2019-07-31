@@ -35,6 +35,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.kernel.configuration.BoltConnector;
+
 import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.util.Collections.singletonMap;
 
@@ -164,7 +166,9 @@ public class RunSingleEmbeddedCommand implements Runnable
             {
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             }
-            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile )
+                                                        .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+                                                        .build();
             QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
                                                                   forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
             Pid clientPid = HasPid.getPid();

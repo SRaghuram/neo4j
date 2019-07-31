@@ -21,6 +21,7 @@ import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.configuration.HttpConnector;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.tx_state_memory_allocation;
@@ -34,6 +35,8 @@ public class Neo4jConfigBuilder
     {
         return empty()
                 .withSetting( UdcSettings.udc_enabled, "false" )
+                .withSetting( new HttpConnector( "http" ).enabled, "false" )
+                .withSetting( new HttpConnector( "https" ).enabled, "false" )
                 .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
