@@ -5,11 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.graphdb.schema.IndexDefinition
 import org.neo4j.graphdb.{Label, Node, Relationship}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.internal.schema.SchemaDescriptor
-import org.neo4j.kernel.impl.api.index.IndexingService
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.scalatest.LoneElement._
 
@@ -129,7 +126,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         Map("label" -> "C", "nodeCount" -> 1)))
   }
 
-  test("should get correct count for labels when removed") {
+  test("should get correct count for labels when removed incl. zero counts") {
     // Given
     createLabeledNode(Map("name" -> "Tic"), "A")
     createLabeledNode(Map("name" -> "Tac"), "A")
@@ -141,6 +138,27 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     //When
     val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount RETURN *")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("label" -> "A", "nodeCount" -> 3),
+        Map("label" -> "B", "nodeCount" -> 1),
+        Map("label" -> "C", "nodeCount" -> 0)))
+  }
+
+  test("should get correct count for labels when removed") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    execute("MATCH (c:C) REMOVE c:C")
+
+    //When
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount WHERE nodeCount > 0 RETURN *")
 
     // Then
     result.toList should equal(
@@ -187,7 +205,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     result.toList should equal(
       List(
         Map("label" -> "A", "nodeCount" -> 3),
-        Map("label" -> "B", "nodeCount" -> 1)))
+        Map("label" -> "B", "nodeCount" -> 1),
+        Map("label" -> "C", "nodeCount" -> 0)))
   }
 
   test("db.labels works on an empty database") {
@@ -208,19 +227,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     result.toList shouldBe empty
   }
 
-  test("db.labels should be empty when all labels are removed") {
-    // Given
-    createLabeledNode("A")
-    execute("MATCH (a:A) REMOVE a:A")
-
-    //When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels")
-
-    // Then
-    result shouldBe empty
-  }
-
-  test("db.labels should be empty when all nodes are removed") {
+  test("db.labels should show unused label even when all nodes are removed") {
     // Given
     createLabeledNode("A")
     execute("MATCH (a) DETACH DELETE a")
@@ -229,7 +236,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels")
 
     // Then
-    result shouldBe empty
+    result.toList should equal(
+      List(Map("label" -> "A", "nodeCount" -> 0)))
   }
 
   test("should be able to find types from built-in-procedure") {
@@ -295,7 +303,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     result.toList should equal(
       List(
         Map("relationshipType" -> "A", "relationshipCount" -> 1),
-        Map("relationshipType" -> "B", "relationshipCount" -> 2)))
+        Map("relationshipType" -> "B", "relationshipCount" -> 2),
+        Map("relationshipType" -> "C", "relationshipCount" -> 0)))
   }
 
   test("db.relationshipType work on an empty database") {
@@ -307,7 +316,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     result shouldBe empty
   }
 
-  test("db.relationshipTypes should be empty when all relationships are removed") {
+  test("db.relationshipTypes should not be empty when all relationships are removed") {
     // Given
     relate(createNode(), createNode(), "A")
     relate(createNode(), createNode(), "B")
@@ -318,7 +327,11 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.relationshipTypes")
 
     // Then
-    result shouldBe empty
+    result.toList should equal(
+      List(
+        Map("relationshipType" -> "A", "relationshipCount" -> 0),
+        Map("relationshipType" -> "B", "relationshipCount" -> 0),
+        Map("relationshipType" -> "C", "relationshipCount" -> 0)))
   }
 
   test("should be able to find propertyKeys from built-in-procedure") {

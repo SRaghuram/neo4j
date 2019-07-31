@@ -27,6 +27,7 @@ import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
@@ -108,7 +109,8 @@ public class InstalledProtocolsProcedureIT
             Procedures procedures = tx.procedures();
             int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ) ).id();
             RawIterator<AnyValue[],ProcedureException> itr =
-                    procedures.procedureCallRead( procedureId, null );
+                    procedures.procedureCallRead( procedureId, null,
+                            ProcedureCallContext.EMPTY );
 
             while ( itr.hasNext() )
             {

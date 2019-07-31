@@ -30,6 +30,7 @@ import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
@@ -237,7 +238,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
                         {
                                 stringOrNoValue( pattern ), // index
                                 stringOrNoValue( specifiedProvider ) // providerName
-                        } );
+                        },
+                ProcedureCallContext.EMPTY );
     }
 
     private void awaitIndexOnline()
