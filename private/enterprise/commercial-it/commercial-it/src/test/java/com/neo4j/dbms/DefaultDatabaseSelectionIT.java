@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
@@ -98,7 +99,7 @@ class DefaultDatabaseSelectionIT
     {
         String customDbName = "activeDb";
         managementService = getDatabaseBuilder()
-                .setConfig( default_database, customDbName )
+                .setConfigRaw( Map.of( "dbms.active_database", customDbName ) )
                 .build();
         GraphDatabaseService database = managementService.database( customDbName );
         checkDatabaseNames( database, customDbName );
@@ -110,7 +111,7 @@ class DefaultDatabaseSelectionIT
         prepareLegacyStandalone( LEGACY_DATABASE_NAME );
         String customDbName = "legacyCustomDb";
         managementService = getDatabaseBuilder()
-                .setConfig( default_database, customDbName )
+                .setConfigRaw( Map.of( "dbms.active_database", customDbName ) )
                 .build();
         GraphDatabaseService database = managementService.database( customDbName );
         checkDatabaseNames( database, customDbName );
