@@ -28,6 +28,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
 {
@@ -141,12 +142,16 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
 
     private Relationship getKnowsOrNull( Node person1, Node person2 )
     {
-        for ( Relationship knows : person1.getRelationships( Rels.KNOWS, Direction.BOTH ) )
+        try ( ResourceIterator<Relationship> knowsIter = (ResourceIterator<Relationship>) person1.getRelationships( Rels.KNOWS, Direction.BOTH ).iterator() )
         {
-            Node otherPerson = knows.getOtherNode( person1 );
-            if ( otherPerson.equals( person2 ) )
+            while ( knowsIter.hasNext() )
             {
-                return knows;
+                Relationship knows = knowsIter.next();
+                Node otherPerson = knows.getOtherNode( person1 );
+                if ( otherPerson.equals( person2 ) )
+                {
+                    return knows;
+                }
             }
         }
         return null;

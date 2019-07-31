@@ -28,6 +28,7 @@ import java.util.Set;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class LongQuery10EmbeddedCore_0_1 extends Neo4jQuery10<Neo4jConnectionState>
 {
@@ -141,12 +142,17 @@ public class LongQuery10EmbeddedCore_0_1 extends Neo4jQuery10<Neo4jConnectionSta
 
     private boolean postIsTaggedWithAnyOfGivenTags( Node post, Set<Node> tags )
     {
-        for ( Relationship relationship : post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ) )
+        try ( ResourceIterator<Relationship> relationships =
+                      (ResourceIterator<Relationship>) post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ).iterator() )
         {
-            Node postTag = relationship.getEndNode();
-            if ( tags.contains( postTag ) )
+            while ( relationships.hasNext() )
             {
-                return true;
+                Relationship relationship = relationships.next();
+                Node postTag = relationship.getEndNode();
+                if ( tags.contains( postTag ) )
+                {
+                    return true;
+                }
             }
         }
         return false;
