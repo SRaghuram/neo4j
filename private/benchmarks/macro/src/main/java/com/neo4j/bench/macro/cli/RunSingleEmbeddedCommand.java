@@ -187,7 +187,7 @@ public class RunSingleEmbeddedCommand implements Runnable
         }
     }
 
-    private static Database createDatabase( Store store,
+    static EmbeddedDatabase createDatabase( Store store,
                                             Edition edition,
                                             Neo4jConfig neo4jConfig,
                                             ForkDirectory forkDirectory )

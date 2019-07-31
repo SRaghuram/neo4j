@@ -15,6 +15,7 @@ import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
@@ -37,6 +38,7 @@ public class Main
                         RunWorkloadCommand.class,
                         RunSingleEmbeddedCommand.class,
                         RunSingleServerCommand.class,
+                        ExportPlanCommand.class,
                         UpgradeStoreCommand.class,
                         Help.class );
 
