@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.runtime.MemoryTracker
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.AvgAggregator.{AvgConcurrentReducer, AvgStandardReducer, AvgUpdater}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{DurationValue, NumberValue, Values}
@@ -49,8 +50,10 @@ case class AvgAggregator() extends Aggregator {
   override def newUpdater: Updater = new AvgUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new AvgStandardReducer
   override def newConcurrentReducer: Reducer = new AvgConcurrentReducer
+}
 
-  class AvgUpdater() extends AvgStandardBase with Updater {
+object AvgAggregator {
+  class AvgUpdater extends AvgStandardBase with Updater {
 
     private[AvgAggregator] var seenNumber = false
     private[AvgAggregator] var seenDuration = false
