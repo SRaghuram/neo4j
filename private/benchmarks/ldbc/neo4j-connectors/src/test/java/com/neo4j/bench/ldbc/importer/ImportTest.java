@@ -16,7 +16,7 @@ import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.connection.QueryDateUtil;
 import com.neo4j.bench.ldbc.utils.Utils;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@Ignore( "Failing due to product issue enable when fixed" )
+@Disabled( "Failing due to product issue enable when fixed" )
 @ExtendWith( {TestDirectoryExtension.class, RandomExtension.class} )
 class ImportTest
 {
