@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Date;
 
 import org.neo4j.configuration.Config;
@@ -936,6 +938,19 @@ class ImportTest
                         NullLogProvider.getInstance(),
                         false,
                         new ConsistencyFlags( true, true, true, true ) );
+        if ( !result.isSuccessful() )
+        {
+            try
+            {
+                System.err.println( "Store " + storeDir + " not consistent:" );
+                Files.lines( result.reportFile().toPath() ).forEach( System.err::println );
+            }
+            catch ( IOException e )
+            {
+                System.err.println( "Tried to read report file from unsuccessful consistency check at " + result.reportFile() + ", but failed" );
+                e.printStackTrace();
+            }
+        }
         assertTrue( result.isSuccessful() );
     }
 }
