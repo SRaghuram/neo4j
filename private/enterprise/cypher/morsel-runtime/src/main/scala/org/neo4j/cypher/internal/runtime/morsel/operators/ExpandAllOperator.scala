@@ -196,6 +196,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
+      setField(canContinue, constant(false)),
       condition(notEqual(codeGen.getLongAt(fromOffset), constant(-1L))){
        block(
          loadTypes,
