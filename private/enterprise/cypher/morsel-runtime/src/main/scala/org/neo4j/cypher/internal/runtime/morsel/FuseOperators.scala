@@ -38,10 +38,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
       if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
-    // TODO FIX: as it is we will still create an output morsel for pipelines that contains a fused Aggregation at the end
     //For a fully fused pipeline that includes ProduceResult we don't need to allocate an output morsel
     val needsMorsel = (p.outputDefinition, maybeHeadOperator, unhandledMiddlePlans) match {
       case (_:ProduceResultOutput, Some(_), Seq()) => false
+      case (ReduceOutput(_,plans.Aggregation(_,groupingExpressions,_)), Some(_), Seq()) if groupingExpressions.nonEmpty => false
       case _ => true
     }
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
@@ -95,7 +95,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         case reduceOutput@ReduceOutput(bufferId, p) =>
           println(s"Encountered a ReduceOutput: $reduceOutput")
           p match {
-            case plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap) =>
+            case plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap) if groupingExpressions.nonEmpty =>
 
               println("Trying to create Aggregation Template")
 
@@ -118,7 +118,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                        p.id,
                                                                        argumentSlotOffset,
                                                                        aggregators.result(),
-                                                                       // TODO use buffer
                                                                        bufferId,
                                                                        aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compile(e)()),
                                                                        groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions),

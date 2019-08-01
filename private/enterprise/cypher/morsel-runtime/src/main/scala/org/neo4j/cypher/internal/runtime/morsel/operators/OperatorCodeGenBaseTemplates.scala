@@ -11,14 +11,15 @@ import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
+import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -64,7 +65,11 @@ object ContinuableOperatorTaskWithMorselGenerator {
 /**
   * We need to specialize this because we don't have support for compiling try-finally.
   */
-trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
+trait CompiledTask extends ContinuableOperatorTaskWithMorsel
+                   with OutputOperator
+                   with OutputOperatorState
+                   with PreparedOutput
+{
   override def operateWithProfile(output: MorselExecutionContext,
                                   context: QueryContext,
                                   state: QueryState,
@@ -77,6 +82,37 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
       closeProfileEvents(resources)
     }
   }
+
+  /**
+    * Method of [[OutputOperator]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as an [[OutputOperatorState]].
+    */
+  override final def createState(executionState: ExecutionState,
+                                 pipelineId: PipelineId): OutputOperatorState = {
+    compiledCreateState(executionState, pipelineId.x)
+    this
+  }
+
+  /**
+    * Method of [[OutputOperator]] trait
+    */
+  override final def outputBuffer: Option[BufferId] = compiledOutputBuffer() match {
+    case -1 => None
+    case bufferId => Some(BufferId(bufferId))
+  }
+
+  /**
+    * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
+    */
+  override protected final def prepareOutput(outputMorsel: MorselExecutionContext,
+                                             context: QueryContext,
+                                             state: QueryState,
+                                             resources: QueryResources,
+                                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = this
+
+  /**
+    * Method of [[PreparedOutput]] trait. Implementing this allows fused reducing operators to write to [[ExecutionState]].
+    */
+  override final def produce(): Unit = compiledProduce()
 
   /**
     * Generated code that initializes the profile events.
@@ -92,6 +128,28 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
                       state: QueryState,
                       resources: QueryResources,
                       queryProfiler: QueryProfiler): Unit
+
+  /**
+    * Generated code that produces output into the execution state.
+    */
+  @throws[Exception]
+  def compiledProduce(): Unit
+
+  /**
+    * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
+    * E.g., retrieving [[org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink]] from [[ExecutionState]].
+    * Note, <code>pipelineId</code> parameter is [[Int]] because [[PipelineId]] extends [[AnyVal]]
+    */
+  @throws[Exception]
+  def compiledCreateState(executionState: ExecutionState,
+                          pipelineId: Int): Unit
+
+  /**
+    * Generated code for [[OutputOperator.outputBuffer]]. Return [[BufferId]] or null.
+    * Note, this method return [[Int]] because [[BufferId]] extends [[AnyVal]] causing it to be an [[Int]] in Java.
+    */
+  @throws[Exception]
+  def compiledOutputBuffer(): Int
 
   /**
     * Generated code that closes all events for profiling.
@@ -196,6 +254,31 @@ trait OperatorTaskTemplate {
   protected def genOperate: IntermediateRepresentation
 
   /**
+    * Responsible for generating [[PreparedOutput]] method:
+    * {{{
+    *     def produce(): Unit
+    * }}}
+    */
+  protected def genProduce: IntermediateRepresentation = inner.genProduce
+
+  /**
+    * Responsible for generating the body of [[OutputOperator]] method (but is not expected to return anything):
+    * {{{
+    *     def createState(executionState: ExecutionState,
+    *                     pipelineId: PipelineId): OutputOperatorState
+    * }}}
+    */
+  protected def genCreateState: IntermediateRepresentation = inner.genCreateState
+
+  /**
+    * Responsible for generating:
+    * {{{
+    *   override def outputBuffer: Option[BufferId]
+    * }}}
+    */
+  def genOutputBuffer: Option[IntermediateRepresentation] = inner.genOutputBuffer
+
+  /**
     * Get the intermediate expressions used by the operator.
     *
     * Should NOT recurse into inner operator templates.
@@ -238,12 +321,15 @@ object OperatorTaskTemplate {
     override def inner: OperatorTaskTemplate = null
     override def id: Id = withId
     override def genOperate: IntermediateRepresentation = noop()
+    override def genProduce: IntermediateRepresentation = noop()
+    override def genCreateState: IntermediateRepresentation = noop()
     override def genFields: Seq[Field] = Seq.empty
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
     override def genExpressions: Seq[IntermediateExpression] = Seq.empty
     override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
     override def genCanContinue: Option[IntermediateRepresentation] = None
     override def genCloseCursors: IntermediateRepresentation = noop()
+    override def genOutputBuffer: Option[IntermediateRepresentation] = None
   }
 }
 
@@ -300,6 +386,28 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           },
                           parameterizedWith = None,
                           throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledProduce",
+                          owner = typeRefOf[CompiledTask],
+                          returnType = typeRefOf[Unit],
+                          parameters = Seq.empty,
+                          body = genProduce,
+                          genLocalVariables = () => Seq.empty,
+                          throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledCreateState",
+                          owner = typeRefOf[CompiledTask],
+                          returnType = typeRefOf[Unit],
+                          Seq(param[ExecutionState]("executionState"),
+                              param[Int]("pipelineId")
+                          ),
+                          body = genCreateState,
+                          genLocalVariables = () => Seq.empty,
+                          throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledOutputBuffer",
+                          owner = typeRefOf[CompiledTask],
+                          returnType = typeRefOf[Int],
+                          parameters = Seq.empty,
+                          body = genOutputBuffer.getOrElse(constant(-1))
+        ),
         MethodDeclaration("closeProfileEvents",
                           owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Unit],

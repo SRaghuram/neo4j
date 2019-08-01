@@ -29,6 +29,8 @@ import scala.collection.JavaConverters._
 import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * General purpose aggregation operator, supporting clauses like
   *
@@ -254,7 +256,6 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             override val id: Id,
                                             argumentSlotOffset: Int,
                                             aggregators: Array[Aggregator],
-                                            // TODO find way to use this to write to ASM at the end of work unit
                                             outputBufferId: BufferId,
                                             aggregationExpressionsCreator : () => Array[IntermediateExpression],
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
@@ -263,7 +264,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
 
-  type AggPreMap2 = java.util.LinkedHashMap[AnyValue, Array[Updater]]
+  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Updater]]
+  type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
 
   // TODO profiling events?
 
@@ -291,11 +293,14 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     arrayOf[Updater](newUpdaters: _ *)
   }
 
-  private val perArgsField: Field = field[java.util.List[PerArgument[AggPreMap2]]](codeGen.namer.nextVariableName())
+  private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
+  private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName())
+  private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
+  private val collectionHelperField: Field = field[ScalaCollectionHelper](codeGen.namer.nextVariableName())
 
   private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators())
   private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
-  private val aggPreMapVar = variable[AggPreMap2](codeGen.namer.nextVariableName(), constant(null))
+  private val aggPreMapVar = variable[AggMap](codeGen.namer.nextVariableName(), constant(null))
 
   private var compiledAggregationExpressions: Array[IntermediateExpression] = _
   private var compiledGroupingExpression: IntermediateExpression = _
@@ -303,7 +308,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   // constructor
   override def genInit: IntermediateRepresentation = {
     block(
-      setField(perArgsField, newInstance(constructor[java.util.ArrayList[PerArgument[AggPreMap2]]])),
+      setField(perArgsField, newInstance(constructor[AggOut])),
+      setField(bufferIdField, constant(outputBufferId.x)),
+      setField(collectionHelperField, newInstance(constructor[ScalaCollectionHelper])),
       inner.genInit
     )
   }
@@ -381,10 +388,11 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       condition(notEqual(load(currentArg), load(argVar)))(
         block(
           assign(argVar, load(currentArg)),
-          assign(aggPreMapVar, newInstance(constructor[AggPreMap2])),
-          invokeSideEffect(loadField(perArgsField),
-                           method[List[PerArgument[AggPreMap2]], Boolean, PerArgument[AggPreMap2]]("add"),
-                           newInstance(constructor[PerArgument[AggPreMap2], Long, AggPreMap2], load(argVar), load(aggPreMapVar))),
+          assign(aggPreMapVar, newInstance(constructor[AggMap])),
+          invokeSideEffect(loadField(collectionHelperField),
+                           method[ScalaCollectionHelper, Unit, PerArgument[AggMap]]("add"),
+                           loadField(perArgsField),
+                           newInstance(constructor[PerArgument[AggMap], Long, AggMap], load(argVar), load(aggPreMapVar))),
         )),
 
       /*
@@ -402,15 +410,15 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         groupingValue,
         compiledGroupingExpression.ir),
       declareAndAssign(typeRefOf[Array[Updater]],
-        updaters,
-        invoke(load(aggPreMapVar), method[AggPreMap2, Array[Updater], AnyValue]("get"), load(groupingValue))),
+                       updaters,
+                       invoke(load(aggPreMapVar), method[AggMap, Array[Updater], AnyValue]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
         block(
           assign(updaters, createUpdaters()),
           invokeSideEffect(load(aggPreMapVar),
-            method[AggPreMap2, Array[Updater], AnyValue, Array[Updater]]("put"),
-            load(groupingValue),
-            load(updaters)),
+                           method[AggMap, Array[Updater], AnyValue, Array[Updater]]("put"),
+                           load(groupingValue),
+                           load(updaters)),
         )
       ),
 
@@ -430,15 +438,40 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
-  override def genFields: Seq[Field] = Seq(perArgsField) ++ inner.genFields
+  override protected def genCreateState: IntermediateRepresentation = {
+    block(
+      setField(sinkField,
+               invoke(EXECUTION_STATE,
+                      method[ExecutionState, PipelineId, BufferId, Sink[IndexedSeq[PerArgument[AggMap]]]]("getSink"),
+                      PIPELINE_ID,
+                      loadField(bufferIdField)))
+    )
+  }
+
+  override protected def genProduce: IntermediateRepresentation = {
+    block(
+      invokeSideEffect(loadField(sinkField),
+                       method[Sink[AggOut], AggOut, Unit]("put"),
+                       loadField(perArgsField)),
+      setField(perArgsField, newInstance(constructor[AggOut]))
+    )
+  }
+
+  override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
+
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, collectionHelperField) ++ inner.genFields
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggPreMapVar) ++ inner.genLocalVariables
 
-  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions ++ Seq(compiledGroupingExpression) ++ inner.genExpressions
+  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions ++ Seq(compiledGroupingExpression)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+}
+
+class ScalaCollectionHelper {
+  def add[T](seq: ArrayBuffer[T], element: T): Unit = seq += element
 }

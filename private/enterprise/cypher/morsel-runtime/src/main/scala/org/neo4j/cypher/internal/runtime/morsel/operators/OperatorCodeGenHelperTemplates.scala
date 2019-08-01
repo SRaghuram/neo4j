@@ -85,6 +85,12 @@ object OperatorCodeGenHelperTemplates {
   val EXPRESSION_VARIABLES: IntermediateRepresentation =
     load("expressionVariables")
 
+  val EXECUTION_STATE: IntermediateRepresentation =
+    load("executionState")
+
+  val PIPELINE_ID: IntermediateRepresentation =
+    load("pipelineId")
+
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
                                                             invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
   val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
