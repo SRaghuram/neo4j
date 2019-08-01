@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@Ignore
+@Ignore( "Failing due to product issue enable when fixed" )
 @ExtendWith( {TestDirectoryExtension.class, RandomExtension.class} )
 class ImportTest
 {
