@@ -12,20 +12,18 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 
 /**
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
   * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
   * task to perform on that query.
   *
-  * A worker has it's own [[QueryResources]] which it will use to execute tasks.
+  * A worker has it's own [[WorkerExecutionResources]] which it will use to execute tasks.
   */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
-             val sleeper: Sleeper,
-             val resources: QueryResources) extends Runnable {
+             val sleeper: Sleeper) extends Runnable {
 
   @volatile
   private var isTimeToStop = false
@@ -46,7 +44,8 @@ class Worker(val workerId: Int,
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {
-          val worked = workOnQuery(executingQuery)
+          val resources = executingQuery.workerResourceProvider.resourcesForWorker(workerId)
+          val worked = workOnQuery(executingQuery, resources)
           if (!worked) {
             sleeper.reportIdle()
           }
@@ -68,10 +67,11 @@ class Worker(val workerId: Int,
     * Try to obtain a task for a given query and work on it.
     *
     * @param executingQuery the query
+    * @param resources      the query resources for this worker
     * @return `true` if some work was performed, otherwise `false`
     */
-  def workOnQuery(executingQuery: ExecutingQuery): Boolean = {
-    val task = scheduleNextTask(executingQuery)
+  def workOnQuery(executingQuery: ExecutingQuery, resources: WorkerExecutionResources): Boolean = {
+    val task = scheduleNextTask(executingQuery, resources)
     if (task == null) {
       false
     } else {
@@ -82,7 +82,7 @@ class Worker(val workerId: Int,
           case pipelineTask: PipelineTask =>
             val state = pipelineTask.pipelineState
 
-            executeTask(executingQuery, pipelineTask)
+            executeTask(executingQuery, pipelineTask, resources)
 
             if (pipelineTask.canContinue) {
               state.putContinuation(pipelineTask, wakeUp = false, resources)
@@ -104,6 +104,8 @@ class Worker(val workerId: Int,
             case t2:Throwable =>
               // Cleaning up also failed
               throwable.addSuppressed(t2)
+              // We would actually want a hard shutdown here
+              throwable.printStackTrace()
           }
           true
       }
@@ -111,7 +113,8 @@ class Worker(val workerId: Int,
   }
 
   private def executeTask(executingQuery: ExecutingQuery,
-                          task: PipelineTask): Unit = {
+                          task: PipelineTask,
+                          resources: WorkerExecutionResources): Unit = {
     var workUnitEvent: WorkUnitEvent = null
     var preparedOutput: PreparedOutput = null
     try {
@@ -137,7 +140,7 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def scheduleNextTask(executingQuery: ExecutingQuery): Task[QueryResources] = {
+  private def scheduleNextTask(executingQuery: ExecutingQuery, resources: WorkerExecutionResources): Task[WorkerExecutionResources] = {
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {
@@ -165,23 +168,9 @@ class Worker(val workerId: Int,
     }
   }
 
-  def close(): Unit = {
-    resources.close()
-  }
-
-  def collectCursorLiveCounts(acc: LiveCounts): Unit = {
-    resources.cursorPools.collectLiveCounts(acc)
-  }
-
-  def assertAllReleased(): Unit = {
-    AssertionRunner.runUnderAssertion { () =>
-      val liveCounts = new LiveCounts()
-      collectCursorLiveCounts(liveCounts)
-      liveCounts.assertAllReleased()
-
-      if (sleeper.isWorking) {
-        throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
-      }
+  def assertIsNotActive(): Unit = {
+    if (sleeper.isWorking) {
+      throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
     }
   }
 

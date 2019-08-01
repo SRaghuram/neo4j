@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -39,7 +39,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
@@ -60,7 +60,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
     protected override def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources,
+                                               resources: WorkerExecutionResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       val fromNode = inputMorsel.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
@@ -98,7 +98,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
       val pools = resources.cursorPools
       pools.nodeCursorPool.free(nodeCursor)
       pools.relationshipGroupCursorPool.free(groupCursor)

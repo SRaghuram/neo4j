@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
@@ -34,7 +34,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
@@ -46,7 +46,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources,
+                                               resources: WorkerExecutionResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
       val queryState = new InterpretedQueryState(context,
@@ -77,7 +77,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
       unwoundValues = null
     }
 

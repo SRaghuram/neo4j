@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, OptionalMorselBuffer, Sink}
@@ -172,7 +172,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param wakeUp `true` if a worker should be woken because of this put
     * @param resources resources used for closing this task if the query is failed
     */
-  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit
+  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: WorkerExecutionResources): Unit
 
   /**
     * Try to lock execution of the given pipeline.
@@ -206,14 +206,14 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
     *                       the failure happened pipeline execution
     */
-  def failQuery(throwable: Throwable, resources: QueryResources, failedPipeline: ExecutablePipeline): Unit
+  def failQuery(throwable: Throwable, resources: WorkerExecutionResources, failedPipeline: ExecutablePipeline): Unit
 
   /**
     * Cancel the query immediately.
     *
     * @param resources resources where to hand-back any open cursors
     */
-  def cancelQuery(resources: QueryResources): Unit
+  def cancelQuery(resources: WorkerExecutionResources): Unit
 
   /**
     * Cancel the query as soon as possible. This will schedule a Task that performs the cancellation.

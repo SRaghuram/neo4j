@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -31,7 +31,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     val indexSession = state.queryIndexes(queryIndexId)
     IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
@@ -45,7 +45,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources,
+                                               resources: WorkerExecutionResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
       val read = context.transactionalContext.dataRead
@@ -85,7 +85,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
       resources.cursorPools.nodeValueIndexCursorPool.free(cursor)
       cursor = null
     }

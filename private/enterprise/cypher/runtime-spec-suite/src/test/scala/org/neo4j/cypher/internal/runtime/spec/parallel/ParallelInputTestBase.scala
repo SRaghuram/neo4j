@@ -7,11 +7,12 @@ package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
+import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, Edition, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class ParallelInputTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends InputTestBase(ENTERPRISE.PARALLEL, runtime, SIZE_HINT) {
+abstract class ParallelInputTestBase(edition: Edition[EnterpriseRuntimeContext],
+                                     runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends InputTestBase(edition, runtime, SIZE_HINT) {
 
   test("should process input batches in parallel") {
     // when

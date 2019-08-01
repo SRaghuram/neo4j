@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -28,7 +28,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
   override def operate(readingRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
-                       resources: QueryResources): Unit = {
+                       resources: WorkerExecutionResources): Unit = {
 
     val writingRow = readingRow.shallowCopy()
     val queryState = new OldQueryState(context,

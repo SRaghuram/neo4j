@@ -9,7 +9,7 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNoValue
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -29,7 +29,7 @@ class InputOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     if (parallelism == 1)
       IndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
@@ -47,7 +47,7 @@ class InputOperator(val workIdentity: WorkIdentity,
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          queryState: QueryState,
-                         resources: QueryResources): Unit = {
+                         resources: WorkerExecutionResources): Unit = {
 
       while (outputRow.isValidRow && input.nextInput()) {
         var i = 0
@@ -70,7 +70,7 @@ class InputOperator(val workIdentity: WorkIdentity,
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
-    override protected def closeCursors(resources: QueryResources): Unit = input.close()
+    override protected def closeCursors(resources: WorkerExecutionResources): Unit = input.close()
   }
 }
 

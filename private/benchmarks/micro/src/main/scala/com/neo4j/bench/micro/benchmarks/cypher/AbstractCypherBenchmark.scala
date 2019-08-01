@@ -142,7 +142,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       schemaRead = schemaRead,
       cursors = cursors,
       txBridge = txBridge,
-      lifeSupport = lifeSupport)
+      lifeSupport = lifeSupport,
+      dependencyResolver = dependencyResolver)
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(

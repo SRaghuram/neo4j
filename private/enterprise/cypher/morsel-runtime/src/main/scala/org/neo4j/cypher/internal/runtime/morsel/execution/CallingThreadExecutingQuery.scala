@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, Worker}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, Worker, WorkerResourceProvider}
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class CallingThreadExecutingQuery(executionState: ExecutionState,
@@ -15,14 +16,17 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   queryState: QueryState,
                                   queryExecutionTracer: QueryExecutionTracer,
                                   workersQueryProfiler: WorkersQueryProfiler,
-                                  worker: Worker)
-  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler)
+                                  worker: Worker,
+                                  workerResourceProvider: WorkerResourceProvider)
+  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider)
   with QuerySubscription {
+
+  private val workerResources = workerResourceProvider.resourcesForWorker(worker.workerId)
 
   override def request(numberOfRecords: Long): Unit = {
     super.request(numberOfRecords)
     while (!executionState.isCompleted && flowControl.hasDemand) {
-      worker.workOnQuery(this)
+      worker.workOnQuery(this, workerResources)
     }
   }
 
@@ -31,21 +35,27 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
     val isCompleted = executionState.isCompleted
     flowControl.cancel()
     if (!isCompleted) {
-      executionState.cancelQuery(worker.resources)
+      executionState.cancelQuery(workerResources)
     }
     try {
-      worker.assertAllReleased()
+      AssertionRunner.runUnderAssertion { () =>
+        worker.assertIsNotActive()
+        workerResourceProvider.assertAllReleased()
+      }
     } finally {
-      worker.close()
+      workerResourceProvider.shutdown()
     }
   }
 
   override def await(): Boolean = {
     if (executionState.isCompleted) {
       try {
-        worker.assertAllReleased()
+        AssertionRunner.runUnderAssertion { () =>
+          worker.assertIsNotActive()
+          workerResourceProvider.assertAllReleased()
+        }
       } finally {
-        worker.close()
+        workerResourceProvider.shutdown()
       }
     }
 

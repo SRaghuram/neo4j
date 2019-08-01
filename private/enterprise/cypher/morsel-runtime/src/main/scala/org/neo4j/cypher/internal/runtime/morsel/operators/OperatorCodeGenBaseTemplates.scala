@@ -14,7 +14,7 @@ import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -35,7 +35,7 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                    state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
-                                   resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                                   resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     taskFactory(context.transactionalContext.dataRead, inputMorsel)
   }
 }
@@ -68,7 +68,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
   override def operateWithProfile(output: MorselExecutionContext,
                                   context: QueryContext,
                                   state: QueryState,
-                                  resources: QueryResources,
+                                  resources: WorkerExecutionResources,
                                   queryProfiler: QueryProfiler): Unit = {
     initializeProfileEvents(queryProfiler)
     try {
@@ -90,20 +90,20 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel {
   def compiledOperate(output: MorselExecutionContext,
                       context: QueryContext,
                       state: QueryState,
-                      resources: QueryResources,
+                      resources: WorkerExecutionResources,
                       queryProfiler: QueryProfiler): Unit
 
   /**
     * Generated code that closes all events for profiling.
     */
-  def closeProfileEvents(resources: QueryResources): Unit
+  def closeProfileEvents(resources: WorkerExecutionResources): Unit
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
   override def operate(output: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
-                       resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
+                       resources: WorkerExecutionResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
   override def workIdentity: WorkIdentity = throw new IllegalStateException("Fused operators do not have a single WorkIdentity.")
 
@@ -159,7 +159,7 @@ trait OperatorTaskTemplate {
   def genCloseProfileEvents: IntermediateRepresentation = {
     block(
       genSetExecutionEvent(NO_OPERATOR_PROFILE_EVENT),
-      invokeSideEffect(QUERY_RESOURCES, method[QueryResources, Unit, KernelReadTracer]("setKernelTracer"), NO_KERNEL_TRACER),
+      invokeSideEffect(QUERY_RESOURCES, method[WorkerExecutionResources, Unit, KernelReadTracer]("setKernelTracer"), NO_KERNEL_TRACER),
       invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("close")),
       inner.genCloseProfileEvents
     )
@@ -276,7 +276,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           Seq(param[MorselExecutionContext]("context"),
                               param[QueryContext]("dbAccess"),
                               param[QueryState]("state"),
-                              param[QueryResources]("resources"),
+                              param[WorkerExecutionResources]("resources"),
                               param[QueryProfiler]("queryProfiler")
                           ),
                           body = genOperateWithExpressions,
@@ -287,10 +287,10 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                                                                method[QueryState, Array[AnyValue]]("params"))),
                               variable[ExpressionCursors]("cursors",
                                                           invoke(QUERY_RESOURCES,
-                                                                 method[QueryResources, ExpressionCursors]("expressionCursors"))),
+                                                                 method[WorkerExecutionResources, ExpressionCursors]("expressionCursors"))),
                               variable[Array[AnyValue]]("expressionVariables",
                                                         invoke(QUERY_RESOURCES,
-                                                               method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
+                                                               method[WorkerExecutionResources, Array[AnyValue], Int]("expressionVariables"),
                                                                invoke(QUERY_STATE,
                                                                       method[QueryState, Int]("nExpressionSlots"))
                                                         ))) ++ flatMap[LocalVariable](op => op.genLocalVariables ++

@@ -3,39 +3,39 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.morsel
+package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
-import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.{Worker, WorkerManager, WorkerResourceProvider}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{Cursor, CursorFactory}
 
 import scala.util.Random
 
-class WorkerManagerTest extends CypherFunSuite {
+class FixedWorkersQueryExecutorTest extends CypherFunSuite {
 
   test("assertAllReleased should pass initially") {
     // given
-    val workerManager = new RandomWorkerManager
+    val executor = new RandomExecutor
 
     // then
-    workerManager.assertAllReleased()
+    executor.assertAllReleased()
   }
 
   test("assertAllReleased should throw on leaked cursors") {
     def assertFor[T <: Cursor](cursorName: String, pool: CursorPools => CursorPool[T]):Unit = {
       // given
-      val workerManager = new RandomWorkerManager()
+      val executor = new RandomExecutor()
 
       // when
-      val p = pool(workerManager.randomWorkerCursorPools())
+      val p = pool(executor.randomCursorPools())
       p.allocate()
 
       // then
       withClue(cursorName+"Cursor: ") {
         intercept[RuntimeResourceLeakException] {
-          workerManager.assertAllReleased()
+          executor.assertAllReleased()
         }
       }
     }
@@ -50,16 +50,16 @@ class WorkerManagerTest extends CypherFunSuite {
   test("assertAllReleased should pass on freed cursors") {
     def assertFor[T <: Cursor](cursorName: String, pool: CursorPools => CursorPool[T]):Unit = {
       // given
-      val workerManager = new RandomWorkerManager()
+      val executor = new RandomExecutor()
 
       // when
-      val p = pool(workerManager.randomWorkerCursorPools())
+      val p = pool(executor.randomCursorPools())
       val cursor = p.allocate()
       p.free(cursor)
 
       // then
       withClue(cursorName+"Cursor: ") {
-        workerManager.assertAllReleased()
+        executor.assertAllReleased()
       }
     }
 
@@ -73,15 +73,15 @@ class WorkerManagerTest extends CypherFunSuite {
   test("assertAllReleased should pass on cursors acquired and released on different workers") {
     def assertFor[T <: Cursor](cursorName: String, pool: CursorPools => CursorPool[T]):Unit = {
       // given
-      val workerManager = new RandomWorkerManager()
+      val executor = new RandomExecutor()
 
       // when
-      val cursor = pool(workerManager.randomWorkerCursorPools()).allocate()
-      pool(workerManager.randomWorkerCursorPools()).free(cursor)
+      val cursor = pool(executor.randomCursorPools()).allocate()
+      pool(executor.randomCursorPools()).free(cursor)
 
       // then
       withClue(cursorName+"Cursor: ") {
-        workerManager.assertAllReleased()
+        executor.assertAllReleased()
       }
     }
 
@@ -94,37 +94,41 @@ class WorkerManagerTest extends CypherFunSuite {
 
   test("assertAllReleased should throw on working worker") {
     // given
-    val workerManager = new RandomWorkerManager()
+    val executor = new RandomExecutor()
 
     // when
-    workerManager.randomWorker().sleeper.reportStartWorkUnit()
+    executor.randomWorker().sleeper.reportStartWorkUnit()
 
     // then
     intercept[RuntimeResourceLeakException] {
-      workerManager.assertAllReleased()
+      executor.assertAllReleased()
     }
   }
 
   test("assertAllReleased should not throw on active worker, because that will cause flaky tests") {
     // given
-    val workerManager = new RandomWorkerManager()
+    val executor = new RandomExecutor()
 
     // when
-    val worker = workerManager.randomWorker()
+    val worker = executor.randomWorker()
     worker.sleeper.reportStartWorkUnit()
     worker.sleeper.reportStopWorkUnit()
 
     // then
-    workerManager.assertAllReleased()
+    executor.assertAllReleased()
   }
 
-  class RandomWorkerManager extends WorkerManager(3, null, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))) {
+  class RandomExecutor extends FixedWorkersQueryExecutor(0,
+    null,
+    new WorkerResourceProvider(3, () => new WorkerExecutionResources(mock[CursorFactory](RETURNS_DEEP_STUBS))),
+    new WorkerManager(3, null)) {
 
     private val random = new Random()
 
-    def randomWorkerCursorPools(): CursorPools =
-      randomWorker().resources.cursorPools
+    def randomCursorPools(): CursorPools =
+      workerResourceProvider.resourcesForWorker(random.nextInt(workerManager.numberOfWorkers)).cursorPools
 
-    def randomWorker(): Worker = workers(random.nextInt(numberOfWorkers))
+    def randomWorker(): Worker =
+      workerManager.workers(random.nextInt(workerManager.numberOfWorkers))
   }
 }

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorState, _}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
@@ -29,7 +29,7 @@ case class ExecutablePipeline(id: PipelineId,
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,
                   queryState: QueryState,
-                  resources: QueryResources,
+                  resources: WorkerExecutionResources,
                   stateFactory: StateFactory): PipelineState = {
 
     val middleTasks = new Array[OperatorTask](middleOperators.length)
@@ -75,7 +75,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     */
   def nextTask(context: QueryContext,
                state: QueryState,
-               resources: QueryResources): PipelineTask = {
+               resources: WorkerExecutionResources): PipelineTask = {
     var task: PipelineTask = null
     try {
       // Loop until we find a task that is not completely cancelled
@@ -122,7 +122,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   private def innerNextTask(context: QueryContext,
                             state: QueryState,
-                            resources: QueryResources): PipelineTask = {
+                            resources: WorkerExecutionResources): PipelineTask = {
     if (!executionState.canPut(pipeline)) {
       return null
     }
@@ -165,7 +165,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     * @param wakeUp `true` if a worker should be woken because of this put
     * @param resources resources used for closing this task if the query is failed
     */
-  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
+  def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: WorkerExecutionResources): Unit = {
     executionState.putContinuation(task, wakeUp, resources)
   }
 

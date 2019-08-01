@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{MemoryTrackingStandardStateFactory, StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker, WorkerResourceProvider}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
@@ -51,7 +51,7 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
       new MemoryTrackingStandardStateFactory(executionGraphDefinition.transactionMaxMemory)
     }
 
-    val resources = new QueryResources(cursors)
+    val resources = new WorkerExecutionResources(cursors)
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
@@ -84,13 +84,15 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)
       }
 
-    val worker = new Worker(0, null, LazyScheduling, Sleeper.noSleep, resources)
+    val worker = new Worker(0, null, LazyScheduling, Sleeper.noSleep)
+    val workerResourceProvider = new WorkerResourceProvider(1, () => resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
                                                          queryContext,
                                                          queryState,
                                                          tracer,
                                                          workersProfiler,
-                                                         worker)
+                                                         worker,
+                                                         workerResourceProvider)
     ProfiledQuerySubscription(executingQuery, queryProfile)
   }
 }

@@ -33,9 +33,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
-    val resolver = graph.getDependencyResolver
-    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
-    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), txBridge, spi.lifeSupport)
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, graph.getDependencyResolver)
   }
 
   private val log: Log = spi.logProvider().getLog(getClass)
@@ -68,10 +66,11 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
           LastCommittedTxIdProvider(graph))
     }
 
-    val runtime = if (plannerConfig.planSystemCommands)
+    val runtime = if (plannerConfig.planSystemCommands) {
       EnterpriseAdministrationCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
-    else
+    } else {
       EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings)
+    }
 
     CypherCurrentCompiler(
       planner,

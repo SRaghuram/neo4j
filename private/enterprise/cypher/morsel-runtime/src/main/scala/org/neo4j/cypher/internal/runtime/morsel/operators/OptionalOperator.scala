@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -48,7 +48,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
                            state: QueryState,
                            operatorInput: OperatorInput,
                            parallelism: Int,
-                           resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+                           resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTask] = {
       val input: MorselData = operatorInput.takeData()
       if (input != null) {
         IndexedSeq(new OTask(input))
@@ -67,7 +67,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: WorkerExecutionResources): Unit = {
       while (output.isValidRow && canContinue) {
         if (currentMorsel == null || !currentMorsel.isValidRow) {
           if (morselIterator.hasNext) {
@@ -104,7 +104,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
       output.finishedWriting()
     }
 
-    override protected def closeCursors(resources: QueryResources): Unit = {}
+    override protected def closeCursors(resources: WorkerExecutionResources): Unit = {}
 
     override def canContinue: Boolean =
       (currentMorsel != null && currentMorsel.isValidRow) ||

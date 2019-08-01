@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
@@ -35,7 +35,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     IndexedSeq(new NodeFromCountStoreTask(inputMorsel.nextCopy))
   }
 
@@ -49,7 +49,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources,
+                                               resources: WorkerExecutionResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       hasNext = true
       true
@@ -93,7 +93,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
       this.executionEvent = event
     }
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
       // nothing to do here
     }
   }

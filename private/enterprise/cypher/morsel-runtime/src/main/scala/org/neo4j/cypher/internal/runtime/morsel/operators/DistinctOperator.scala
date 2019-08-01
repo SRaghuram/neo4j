@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -41,7 +41,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           stateFactory: StateFactory,
                           queryContext: QueryContext,
                           state: QueryState,
-                          resources: QueryResources): OperatorTask = {
+                          resources: WorkerExecutionResources): OperatorTask = {
 
     new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker)))
   }
@@ -53,7 +53,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: QueryResources): Unit = {
+                         resources: WorkerExecutionResources): Unit = {
 
       val queryState = new OldQueryState(context,
                                            resources = null,

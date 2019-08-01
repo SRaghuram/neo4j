@@ -8,6 +8,7 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
+import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
@@ -50,7 +51,8 @@ object ContextHelper extends MockitoSugar {
              schemaRead: SchemaRead,
              cursors: CursorFactory,
              txBridge: ThreadToStatementContextBridge,
-             lifeSupport: LifeSupport): EnterpriseRuntimeContext = {
+             lifeSupport: LifeSupport,
+             dependencyResolver: DependencyResolver): EnterpriseRuntimeContext = {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
@@ -59,7 +61,7 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, dependencyResolver),
       compileExpressions = useCompiledExpressions)
   }
 }

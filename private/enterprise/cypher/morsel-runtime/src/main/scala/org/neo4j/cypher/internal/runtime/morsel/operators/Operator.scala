@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
@@ -123,7 +123,7 @@ trait OperatorState {
                 state: QueryState,
                 operatorInput: OperatorInput,
                 parallelism: Int,
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTask]
+                resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTask]
 }
 
 /**
@@ -135,7 +135,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
                                state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
-                               resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
+                               resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
     val input = operatorInput.takeAccumulator[DATA, ACC]()
     if (input != null) {
       try {
@@ -155,7 +155,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
   def nextTasks(context: QueryContext,
                 state: QueryState,
                 input: ACC,
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]]
+                resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]]
 }
 
 /**
@@ -167,7 +167,7 @@ trait StreamingOperator extends Operator with OperatorState {
                                state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
-                               resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+                               resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTask] = {
     val input = operatorInput.takeMorsel()
     if (input != null) {
       try {
@@ -189,7 +189,7 @@ trait StreamingOperator extends Operator with OperatorState {
                           state: QueryState,
                           inputMorsel: MorselParallelizer,
                           parallelism: Int,
-                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel]
+                          resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
   override final def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = this
 }
@@ -199,7 +199,7 @@ trait MiddleOperator extends HasWorkIdentity {
                  stateFactory: StateFactory,
                  queryContext: QueryContext,
                  state: QueryState,
-                 resources: QueryResources): OperatorTask
+                 resources: WorkerExecutionResources): OperatorTask
 }
 
 trait StatelessOperator extends MiddleOperator with OperatorTask {
@@ -207,7 +207,7 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
                                 stateFactory: StateFactory,
                                 queryContext: QueryContext,
                                 state: QueryState,
-                                resources: QueryResources): OperatorTask = this
+                                resources: WorkerExecutionResources): OperatorTask = this
 
   // stateless operators by definition do not hold cursors
   final override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
@@ -221,7 +221,7 @@ trait OperatorTask extends HasWorkIdentity {
   def operateWithProfile(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: QueryResources,
+                         resources: WorkerExecutionResources,
                          queryProfiler: QueryProfiler): Unit = {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
@@ -242,7 +242,7 @@ trait OperatorTask extends HasWorkIdentity {
   def operate(output: MorselExecutionContext,
               context: QueryContext,
               state: QueryState,
-              resources: QueryResources): Unit
+              resources: WorkerExecutionResources): Unit
 }
 
 /**
@@ -250,14 +250,14 @@ trait OperatorTask extends HasWorkIdentity {
   */
 trait ContinuableOperatorTask extends OperatorTask with WithHeapUsageEstimation {
   def canContinue: Boolean
-  def close(operatorCloser: OperatorCloser, resources: QueryResources): Unit = {
+  def close(operatorCloser: OperatorCloser, resources: WorkerExecutionResources): Unit = {
     // NOTE: we have to close cursors before closing the input to make sure that all cursors
     // are freed before the query is completed
     closeCursors(resources)
     closeInput(operatorCloser)
   }
   protected def closeInput(operatorCloser: OperatorCloser): Unit
-  protected def closeCursors(resources: QueryResources): Unit
+  protected def closeCursors(resources: WorkerExecutionResources): Unit
   def producingWorkUnitEvent: WorkUnitEvent
 
   /**
@@ -299,7 +299,7 @@ trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumu
 
   // These operators have no cursors
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
-  override protected def closeCursors(resources: QueryResources): Unit = {}
+  override protected def closeCursors(resources: WorkerExecutionResources): Unit = {}
 
   // Since we track memory separately on the ArgumentStates in ArgumentStateMaps, we can disregard any size here.
   override def estimatedHeapUsage: Long = 0

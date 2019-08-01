@@ -5,9 +5,12 @@
  */
 package org.neo4j.cypher.internal
 
+import org.neo4j.common.DependencyResolver
+import org.neo4j.common.DependencyResolver.SelectionStrategy
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
-import org.neo4j.cypher.internal.runtime.morsel.execution.{CallingThreadQueryExecutor, FixedWorkersQueryExecutor, NO_TRANSACTION_BINDER, QueryExecutor, QueryResources}
-import org.neo4j.cypher.internal.runtime.morsel.tracing.{CsvFileDataWriter, CsvStdOutDataWriter, DataPointSchedulerTracer, SchedulerTracer, SingleConsumerDataBuffers}
+import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.tracing._
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManager, WorkerResourceProvider}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -22,29 +25,30 @@ object RuntimeEnvironment {
   def of(config: CypherRuntimeConfiguration,
          jobScheduler: JobScheduler,
          cursors: CursorFactory,
-         txBridge: ThreadToStatementContextBridge,
-         lifeSupport: LifeSupport): RuntimeEnvironment = {
+         lifeSupport: LifeSupport,
+         dependencies: DependencyResolver): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
-                           createQueryExecutor(config, jobScheduler, cursors, txBridge, lifeSupport),
+                           createQueryExecutor(config, cursors, lifeSupport, dependencies),
                            createTracer(config, jobScheduler, lifeSupport),
                            cursors)
   }
 
   def createQueryExecutor(config: CypherRuntimeConfiguration,
-                          jobScheduler: JobScheduler,
                           cursors: CursorFactory,
-                          txBridge: ThreadToStatementContextBridge,
-                          lifeSupport: LifeSupport): QueryExecutor =
+                          lifeSupport: LifeSupport,
+                          dependencies: DependencyResolver): QueryExecutor =
     config.scheduler match {
       case SingleThreaded =>
         new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER, cursors)
       case Simple | LockFree =>
-        val threadFactory = jobScheduler.threadFactory(Group.CYPHER_WORKER)
-        val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
+        val workerManager = dependencies.resolveDependency(classOf[WorkerManager])
+        val txBridge = dependencies.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
         val txBinder = new TxBridgeTransactionBinder(txBridge)
-        val queryExecutor = new FixedWorkersQueryExecutor(threadFactory, numberOfThreads, txBinder, () => new QueryResources(cursors))
-        lifeSupport.add(queryExecutor)
+        val resourceFactory = () => new WorkerExecutionResources(cursors)
+        val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
+        lifeSupport.add(workerResourceProvider)
+        val queryExecutor = new FixedWorkersQueryExecutor(config.morselSize, txBinder, workerResourceProvider, workerManager)
         queryExecutor
     }
 

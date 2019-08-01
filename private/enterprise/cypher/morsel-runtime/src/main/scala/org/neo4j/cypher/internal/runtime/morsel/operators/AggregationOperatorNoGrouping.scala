@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Updater}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
@@ -64,7 +64,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
-                                 resources: QueryResources,
+                                 resources: WorkerExecutionResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
         val queryState = new OldQueryState(context,
@@ -125,7 +125,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     override def nextTasks(queryContext: QueryContext,
                            state: QueryState,
                            input: AggregatingAccumulator,
-                           resources: QueryResources
+                           resources: WorkerExecutionResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator]] = {
       Array(new OTask(input))
     }
@@ -137,7 +137,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def operate(outputRow: MorselExecutionContext,
                            context: QueryContext,
                            state: QueryState,
-                           resources: QueryResources): Unit = {
+                           resources: WorkerExecutionResources): Unit = {
 
         var i = 0
         while (i < aggregations.length) {

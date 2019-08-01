@@ -12,8 +12,9 @@ import org.neo4j.values.AnyValue
 
 /**
   * Resources used by the morsel runtime for query execution.
+  * Each worker has its own resources.
   */
-class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
+class WorkerExecutionResources(cursorFactory: CursorFactory) extends AutoCloseable {
 
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory)
   val cursorPools: CursorPools = new CursorPools(cursorFactory)

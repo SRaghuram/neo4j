@@ -26,7 +26,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         workerWaker: WorkerWaker,
                         queryContext: QueryContext,
                         queryState: QueryState,
-                        resources: QueryResources,
+                        initializationResources: WorkerExecutionResources,
                         tracker: QueryCompletionTracker) extends ExecutionState {
 
 
@@ -68,7 +68,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       val pipeline = pipelines(i)
       pipeline.outputOperator.outputBuffer.foreach(bufferId =>
                                                    buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
-      states(i) = pipeline.createState(this, queryContext, queryState, resources, stateFactory)
+      states(i) = pipeline.createState(this, queryContext, queryState, initializationResources, stateFactory)
       buffers.constructBuffer(pipeline.inputBuffer)
       i -= 1
     }
@@ -187,7 +187,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffer.filterCancelledArguments(accumulator, inputMorsel)
   }
 
-  override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
+  override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: WorkerExecutionResources): Unit = {
     if (queryStatus.cancelled) {
       DebugSupport.ERROR_HANDLING.log("[putContinuation] Closing %s because of query cancellation", task)
       task.close(resources)
@@ -241,7 +241,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     * @param throwable the observed exception
     */
   override def failQuery(throwable: Throwable,
-                         resources: QueryResources,
+                         resources: WorkerExecutionResources,
                          failedPipeline: ExecutablePipeline): Unit = {
 
     DebugSupport.ERROR_HANDLING.log("Starting ExecutionState.failQuery, because of %s", throwable)
@@ -252,7 +252,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   /**
     * Cancel this query, and close any outstanding work.
     */
-  override def cancelQuery(resources: QueryResources): Unit = {
+  override def cancelQuery(resources: WorkerExecutionResources): Unit = {
     closeOutstandingWork(resources, failedPipeline = null)
   }
 
@@ -279,7 +279,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
     *                       the failure happened outside of pipeline execution
     */
-  private def closeOutstandingWork(resources: QueryResources, failedPipeline: ExecutablePipeline): Unit = {
+  private def closeOutstandingWork(resources: WorkerExecutionResources, failedPipeline: ExecutablePipeline): Unit = {
     queryStatus.cancelled = true
 
     buffers.clearAll()

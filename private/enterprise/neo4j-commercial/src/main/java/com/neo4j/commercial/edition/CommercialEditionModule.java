@@ -36,6 +36,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.cypher.internal.runtime.morsel.WorkerManager;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
@@ -59,6 +60,7 @@ import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
@@ -79,6 +81,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         super( globalModule );
         this.globalModule = globalModule;
+        createCypherWorkerManagerIfNeeded();
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
     }
@@ -214,5 +217,19 @@ public class CommercialEditionModule extends CommunityEditionModule
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
+    }
+
+    private void createCypherWorkerManagerIfNeeded()
+    {
+        if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
+             GraphDatabaseSettings.CypherMorselRuntimeScheduler.SINGLE_THREADED )
+        {
+            int configuredWorkers = globalModule.getGlobalConfig().get( GraphDatabaseSettings.cypher_worker_count );
+            int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
+            WorkerManager workerManager =
+                    new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
+            globalModule.getGlobalDependencies().satisfyDependency( workerManager );
+            globalModule.getGlobalLife().add( workerManager );
+        }
     }
 }

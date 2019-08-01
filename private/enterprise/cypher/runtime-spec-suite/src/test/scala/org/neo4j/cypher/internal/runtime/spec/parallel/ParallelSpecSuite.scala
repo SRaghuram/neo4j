@@ -18,7 +18,8 @@ object ParallelRuntimeSpecSuite {
 }
 
 // INPUT
-class ParallelRuntimeInputTest extends ParallelInputTestBase(PARALLEL)
+class ParallelRuntimeInputTest extends ParallelInputTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeInputTestNoFusing extends ParallelInputTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // ALL NODE SCAN
 class ParallelRuntimeAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
@@ -126,7 +127,7 @@ class ParallelRuntimeReactiveResultsNoFusingTest extends ReactiveResultTestBase(
 class ParallelRuntimeReactiveResultsStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL, PARALLEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)// this test is slow, hence the reduced size
-class ParallelRuntimeReactiveParallelNoFusingStressTest
+class ParallelRuntimeReactiveNoFusingStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)// this test is slow, hence the reduced size
 

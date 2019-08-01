@@ -13,7 +13,6 @@ import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselRuntimeSchedule
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
@@ -24,13 +23,12 @@ object ENTERPRISE {
     (runtimeConfig, resolver, lifeSupport) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
-      val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
 
       TracingRuntimeContextManager(
         GeneratedQueryStructure,
         NullLog.getInstance(),
         runtimeConfig,
-        RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge, lifeSupport),
+        RuntimeEnvironment.createQueryExecutor(runtimeConfig, kernel.cursors(), lifeSupport, resolver),
         kernel.cursors(),
         () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
                                            new ParallelismTracer))
