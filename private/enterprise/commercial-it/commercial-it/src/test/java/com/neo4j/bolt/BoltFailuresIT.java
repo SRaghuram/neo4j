@@ -24,7 +24,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
@@ -33,6 +33,7 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -131,7 +132,7 @@ public class BoltFailuresIT
 
         try
         {
-            driver = GraphDatabase.driver( "bolt://localhost:" + getBoltPort( db ), Config.build().withoutEncryption().toConfig() );
+            driver = graphDatabaseDriver( "bolt://localhost:" + getBoltPort( db ) );
             driver.verifyConnectivity();
             if ( shouldBeAbleToBeginTransaction )
             {
@@ -203,7 +204,7 @@ public class BoltFailuresIT
 
     private static Driver createDriver( int port )
     {
-        Driver driver = GraphDatabase.driver( "bolt://localhost:" + port, Config.build().withoutEncryption().toConfig() );
+        Driver driver = graphDatabaseDriver( "bolt://localhost:" + port );
         driver.verifyConnectivity();
         return driver;
     }

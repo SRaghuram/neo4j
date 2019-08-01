@@ -12,11 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.ClientException;
@@ -28,6 +24,7 @@ import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
@@ -40,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.SocketAddressParser.socketAddress;
-import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.AccessMode.READ;
+import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.internal.SessionConfig.builder;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -205,12 +202,7 @@ abstract class BaseRoutingProcedureIT
 
     private static Driver createDriver( String boltHostnamePort )
     {
-        Config config = Config.build()
-                .withoutEncryption()
-                .withLogging( Logging.none() )
-                .build();
-
-        return GraphDatabase.driver( "neo4j://" + boltHostnamePort, config );
+        return graphDatabaseDriver( "neo4j://" + boltHostnamePort );
     }
 
     private static Map<String,Object> paramsWithContext( Map<String,Object> context )

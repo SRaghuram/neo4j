@@ -25,6 +25,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
 import static com.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
 import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
@@ -99,6 +100,7 @@ public class PemSslPolicyLoaderIT
         trust( clientConfig, serverConfig );
 
         // and setup
+        SelfSignedCertificateFactory.create( testDirectory.directory( "certificates" ) );
         SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( "legacy" );
         SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( "legacy" );
         SecureServer secureServer = new SecureServer( serverPolicy );

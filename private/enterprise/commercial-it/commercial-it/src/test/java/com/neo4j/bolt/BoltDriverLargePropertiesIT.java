@@ -19,12 +19,12 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.runners.Parameterized.Parameter;
@@ -46,7 +46,7 @@ public class BoltDriverLargePropertiesIT
     @BeforeClass
     public static void setUp() throws Exception
     {
-        driver = GraphDatabase.driver( db.boltURI() );
+        driver = graphDatabaseDriver( db.boltURI() );
     }
 
     @AfterClass

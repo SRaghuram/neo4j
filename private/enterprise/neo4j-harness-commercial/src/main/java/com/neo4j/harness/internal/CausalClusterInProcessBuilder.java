@@ -25,7 +25,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.harness.internal.InProcessNeo4j;
@@ -194,11 +193,6 @@ public class CausalClusterInProcessBuilder
             return st.port( 59000, coreId );
         }
 
-        int httpsCorePort( int coreId )
-        {
-            return st.port( 60000, coreId );
-        }
-
         int discoveryReadReplicaPort( int replicaId )
         {
             return st.port( 55500, replicaId );
@@ -217,11 +211,6 @@ public class CausalClusterInProcessBuilder
         int httpReadReplicaPort( int replicaId )
         {
             return st.port( 59500, replicaId );
-        }
-
-        int httpsReadReplicaPort( int replicaId )
-        {
-            return st.port( 60500, replicaId );
         }
     }
 
@@ -270,7 +259,6 @@ public class CausalClusterInProcessBuilder
                 int raftPort = portFactory.raftCorePort( coreId );
                 int boltPort = portFactory.boltCorePort( coreId );
                 int httpPort = portFactory.httpCorePort( coreId );
-                int httpsPort = portFactory.httpsCorePort( coreId );
 
                 String homeDir = "core-" + coreId;
 
@@ -295,7 +283,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation, nCores );
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, nCores );
                 builder.withConfig( CausalClusteringSettings.server_groups, List.of( "core",  "core" + coreId ) );
-                configureConnectors( boltPort, httpPort, httpsPort, builder );
+                configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
@@ -317,7 +305,6 @@ public class CausalClusterInProcessBuilder
                 int txPort = portFactory.txReadReplicaPort( replicaId );
                 int boltPort = portFactory.boltReadReplicaPort( replicaId );
                 int httpPort = portFactory.httpReadReplicaPort( replicaId );
-                int httpsPort = portFactory.httpsReadReplicaPort( replicaId );
 
                 String homeDir = "replica-" + replicaId;
                 CommercialInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
@@ -334,7 +321,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.transaction_advertised_address, specifyPortOnly( txPort ) );
 
                 builder.withConfig( CausalClusteringSettings.server_groups, List.of( "replica", "replica" + replicaId ) );
-                configureConnectors( boltPort, httpPort, httpsPort, builder );
+                configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
@@ -355,7 +342,7 @@ public class CausalClusterInProcessBuilder
             return new SocketAddress( port );
         }
 
-        private static void configureConnectors( int boltPort, int httpPort, int httpsPort, Neo4jBuilder builder )
+        private static void configureConnectors( int boltPort, int httpPort, Neo4jBuilder builder )
         {
             builder.withConfig( BoltConnector.enabled, true );
             builder.withConfig( BoltConnector.listen_address, specifyPortOnly( boltPort ) );
@@ -364,10 +351,6 @@ public class CausalClusterInProcessBuilder
             builder.withConfig( HttpConnector.enabled, true );
             builder.withConfig( HttpConnector.listen_address, specifyPortOnly( httpPort ) );
             builder.withConfig( HttpConnector.advertised_address, specifyPortOnly( httpPort ) );
-
-            builder.withConfig( HttpsConnector.enabled, true );
-            builder.withConfig( HttpsConnector.listen_address, specifyPortOnly( httpsPort ) );
-            builder.withConfig( HttpsConnector.advertised_address, specifyPortOnly( httpsPort ) );
         }
 
         public List<InProcessNeo4j> getCoreNeo4j()

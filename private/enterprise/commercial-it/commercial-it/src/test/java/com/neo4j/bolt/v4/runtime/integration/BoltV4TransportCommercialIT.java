@@ -49,11 +49,11 @@ import static org.hamcrest.Matchers.not;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
+import static org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket.withOptionalBoltEncryption;
 import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newMessageEncoder;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newNeo4jPack;
 import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.DB_NAME_KEY;
-import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
@@ -67,8 +67,7 @@ public class BoltV4TransportCommercialIT
     private static final String USER_AGENT = "TestClient/4.0";
 
     @Rule
-    public final Neo4jWithSocket server =
-            new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), settings -> settings.put( auth_enabled, false ) );
+    public final Neo4jWithSocket server = new Neo4jWithSocket( getClass(), new TestCommercialDatabaseManagementServiceBuilder(), withOptionalBoltEncryption() );
 
     private HostnamePort address;
     private TransportConnection connection;

@@ -8,6 +8,7 @@ package com.neo4j.harness;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

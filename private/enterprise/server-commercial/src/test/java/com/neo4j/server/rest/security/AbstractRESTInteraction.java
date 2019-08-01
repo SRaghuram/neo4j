@@ -55,7 +55,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>
@@ -80,14 +80,10 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
         builder = builder
-                .withProperty( BoltConnector.enabled.name(), TRUE )
                 .persistent()
                 .usingDataDir( dataDir.getAbsolutePath() )
-                .withProperty( BoltConnector.encryption_level.name(), OPTIONAL.name() )
-                .withProperty( GraphDatabaseSettings.tls_key_file.name(),
-                        NeoInteractionLevel.tempPath( "key", ".key" ) )
-                .withProperty( GraphDatabaseSettings.tls_certificate_file.name(),
-                        NeoInteractionLevel.tempPath( "cert", ".cert" ) )
+                .withProperty( BoltConnector.enabled.name(), TRUE )
+                .withProperty( BoltConnector.encryption_level.name(), DISABLED.name() )
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( true ) );
 
         for ( Map.Entry<String,String> entry : stringMap.entrySet() )

@@ -30,9 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
@@ -45,6 +43,7 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.VerboseTimeout;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -56,7 +55,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
@@ -87,7 +85,7 @@ public class SessionResetIT
     @Before
     public void setUp()
     {
-        driver = GraphDatabase.driver( db.boltURI(), Config.build().withLogging( DEV_NULL_LOGGING ).toConfig() );
+        driver = graphDatabaseDriver( db.boltURI() );
     }
 
     @After

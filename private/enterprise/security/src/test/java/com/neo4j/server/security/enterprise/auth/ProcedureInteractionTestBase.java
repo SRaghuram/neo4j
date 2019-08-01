@@ -150,10 +150,11 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         Path homeDir = testDirectory.directory( "logs" ).toPath();
         securityLog = new File( homeDir.toFile(), "security.log" );
-        return Map.of( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
+        return Map.of(
+                GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
                 GraphDatabaseSettings.procedure_roles,
-                "test.allowed*Procedure:role1;test.nestedAllowedFunction:role1;" +
-                "test.allowedFunc*:role1;test.*estedAllowedProcedure:role1" );
+                "test.allowed*Procedure:role1;test.nestedAllowedFunction:role1;" + "test.allowedFunc*:role1;test.*estedAllowedProcedure:role1"
+        );
     }
 
     @BeforeEach

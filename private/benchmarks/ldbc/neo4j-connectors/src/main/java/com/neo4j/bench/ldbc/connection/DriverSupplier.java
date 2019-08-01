@@ -35,9 +35,7 @@ public class DriverSupplier implements Supplier<Driver>, Closeable
     {
         if ( driver == null )
         {
-            this.driver = GraphDatabase.driver( uri, authToken, Config.build().withLogging( logging )
-                                                                      .withEncryptionLevel( Config.EncryptionLevel.NONE )
-                                                                      .toConfig() );
+            this.driver = GraphDatabase.driver( uri, authToken, Config.builder().withLogging( logging ).withoutEncryption().build() );
         }
         return driver;
     }

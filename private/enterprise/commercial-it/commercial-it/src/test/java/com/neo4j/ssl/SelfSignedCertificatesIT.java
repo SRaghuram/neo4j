@@ -14,8 +14,8 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 
-import org.neo4j.ssl.PkiUtils;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,10 +31,8 @@ public class SelfSignedCertificatesIT
     {
         assumeTrue( !SystemUtils.IS_OS_WINDOWS );
 
-        PkiUtils certificates = new PkiUtils();
-        certificates
-                .createSelfSignedCertificate( testDirectory.file( "certificate" ), testDirectory.file( "privateKey" ),
-                        "localhost" );
+        var certificates = new SelfSignedCertificateFactory();
+        certificates.createSelfSignedCertificate( testDirectory.file( "certificate" ), testDirectory.file( "privateKey" ), "localhost" );
 
         PosixFileAttributes certificateAttributes =
                 Files.getFileAttributeView( testDirectory.file( "certificate" ).toPath(), PosixFileAttributeView.class )

@@ -27,9 +27,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
@@ -38,6 +36,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.IOUtils;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -156,6 +155,6 @@ public class BoltThreadSchedulingIT
 
     private static Driver createDriver( int port )
     {
-        return GraphDatabase.driver( "bolt://localhost:" + port, Config.build().withoutEncryption().toConfig() );
+        return graphDatabaseDriver( "bolt://localhost:" + port );
     }
 }

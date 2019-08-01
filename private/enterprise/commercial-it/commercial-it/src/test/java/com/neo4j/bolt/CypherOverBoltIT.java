@@ -18,9 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.exceptions.ClientException;
@@ -30,6 +28,7 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -59,7 +58,7 @@ public class CypherOverBoltIT
 
         for ( int i = lineCountInCSV - 1; i < lineCountInCSV + 1; i++ ) // test with different periodic commit sizes
         {
-            try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+            try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                     Session session = driver.session() )
             {
                 StatementResult result = session.run( "USING PERIODIC COMMIT " + i + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
@@ -81,7 +80,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork2()
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -102,7 +101,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork3()
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -123,7 +122,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -148,7 +147,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithListsOfLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -175,7 +174,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMaps() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -202,7 +201,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMapsWithinMaps() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -232,7 +231,7 @@ public class CypherOverBoltIT
     @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWorkWithMapsWithLists() throws Exception
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
             StatementResult result = session.run(
@@ -259,7 +258,7 @@ public class CypherOverBoltIT
     @Test
     public void shouldConsumeWithFailure()
     {
-        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() );
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
               Session session = driver.session() )
         {
             String query = "UNWIND [1, 2, 3, 4, 0] AS x RETURN 10 / x";
@@ -281,11 +280,6 @@ public class CypherOverBoltIT
                assertEquals( query, summary.statement().text() );
            }
         }
-    }
-
-    private Config configuration()
-    {
-        return Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
     }
 
     private URL prepareTestImportFile( int lines ) throws IOException

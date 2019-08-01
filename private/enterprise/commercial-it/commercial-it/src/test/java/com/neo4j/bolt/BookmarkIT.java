@@ -22,7 +22,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
@@ -44,6 +43,7 @@ import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -78,7 +78,7 @@ public class BookmarkIT
     {
         CommitBlocker commitBlocker = new CommitBlocker();
         db = createDb( commitBlocker );
-        driver = GraphDatabase.driver( boltAddress( db ) );
+        driver = graphDatabaseDriver( boltAddress( db ) );
 
         String firstBookmark = createNode( driver );
 
@@ -106,7 +106,7 @@ public class BookmarkIT
     public void shouldReturnBookmarkInNewFormat() throws Exception
     {
         db = createDb();
-        driver = GraphDatabase.driver( boltAddress( db ) );
+        driver = graphDatabaseDriver( boltAddress( db ) );
 
         var bookmark = createNode( driver );
         var split = bookmark.split( ":" );

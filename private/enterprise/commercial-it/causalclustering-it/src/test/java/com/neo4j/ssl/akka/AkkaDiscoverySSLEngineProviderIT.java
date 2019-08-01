@@ -44,6 +44,7 @@ import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
@@ -52,6 +53,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
 import static com.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
 import static com.neo4j.ssl.HostnameVerificationHelper.SSL_POLICY_CONFIG;
@@ -227,9 +229,12 @@ public class AkkaDiscoverySSLEngineProviderIT
     @Test
     public void shouldConnectIfLegacyPolicyRegardlessOfHostname() throws Throwable
     {
+
         Config serverConfig = aConfig( "invalid-server", testDir );
+        SelfSignedCertificateFactory.create( serverConfig.get( GraphDatabaseSettings.legacy_certificates_directory ).toFile() );
 
         Config clientConfig = aConfig( "invalid-client", testDir );
+        SelfSignedCertificateFactory.create( clientConfig.get( GraphDatabaseSettings.legacy_certificates_directory ).toFile() );
 
         trust( serverConfig, clientConfig );
         trust( clientConfig, serverConfig );

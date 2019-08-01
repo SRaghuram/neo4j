@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
@@ -117,8 +118,8 @@ public class BoltTlsIT
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )
+                .setConfig( BoltConnector.encryption_level, EncryptionLevel.OPTIONAL )
                 .setConfig( BoltConnector.ssl_policy, "bolt" )
-                .setConfig( sslPolicy.allow_key_generation, true )
                 .setConfig( sslPolicy.base_directory, Path.of( "certificates" ) )
                 .setConfig( sslPolicy.tls_versions, Arrays.asList( setup.boltTlsVersions.split( "," ) ) )
                 .setConfig( sslPolicy.client_auth, ClientAuth.NONE )

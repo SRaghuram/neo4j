@@ -11,7 +11,6 @@ import org.junit.rules.RuleChain;
 
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -24,6 +23,7 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -216,8 +216,7 @@ public class ReadAndDeleteTransactionConflictIT
     {
         if ( driver == null )
         {
-            Config config = Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
-            driver = GraphDatabase.driver( graphDb.boltURI(), config );
+            driver = graphDatabaseDriver( graphDb.boltURI() );
             cleanupRule.add( driver );
             cleanupRule.add( () ->
             {

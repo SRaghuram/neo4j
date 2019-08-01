@@ -41,7 +41,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
         return settings ->
         {
-            settings.put( GraphDatabaseSettings.auth_enabled, true );
+            super.getSettingsFunction().accept( settings );
             settings.put( GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath() );
         };
     }

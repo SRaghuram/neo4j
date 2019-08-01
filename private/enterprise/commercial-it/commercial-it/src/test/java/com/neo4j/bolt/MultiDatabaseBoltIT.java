@@ -16,7 +16,6 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -26,6 +25,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,7 +61,7 @@ class MultiDatabaseBoltIT
         managementService = createManagementService();
         TransientException transientException = assertThrows( TransientException.class, () ->
         {
-            try ( var driver = GraphDatabase.driver( boltAddress() );
+            try ( var driver = graphDatabaseDriver( boltAddress() );
                   var session = driver.session( forDatabase( databaseName ) ) )
             {
                 session.run( "CREATE (n)" ).consume();

@@ -33,10 +33,7 @@ import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -50,6 +47,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -109,13 +107,7 @@ class BoltCausalClusteringIT
 
     private static Driver makeDriver( String uri )
     {
-        Config config = Config
-                .builder()
-                .withoutEncryption()
-                .withLogging( Logging.none() )
-                .build();
-
-        return GraphDatabase.driver( uri, AuthTokens.basic( "neo4j", "neo4j" ), config );
+        return graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
     }
 
     @Test
@@ -395,7 +387,7 @@ class BoltCausalClusteringIT
             {
                 // execute a write/read query
                 session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
-                Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
+                Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
                 assertEquals( 1, record.get( "count" ).asInt() );
 
                 // change leader
@@ -421,7 +413,7 @@ class BoltCausalClusteringIT
             {
                 // execute a write/read query
                 session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
-                Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
+                Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
                 assertEquals( 2, record.get( "count" ).asInt() );
                 return null;
             } );

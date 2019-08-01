@@ -84,6 +84,7 @@ public class ServerDatabase implements Database
         {
             Config driverConfig = Config.builder()
                                         .withLogging( Logging.none() )
+                                        .withoutEncryption()
                                         .build();
             this.driver = GraphDatabase.driver( boltUri,
                                                 AuthTokens.none(),

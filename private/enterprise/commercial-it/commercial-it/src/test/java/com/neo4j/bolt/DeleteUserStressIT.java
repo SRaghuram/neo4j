@@ -19,12 +19,12 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.neo4j.driver.AuthTokens.basic;
@@ -42,7 +42,7 @@ public class DeleteUserStressIT
     @Before
     public void setup()
     {
-        adminDriver = GraphDatabase.driver( db.boltURI(), basic( "neo4j", "neo4j" ) );
+        adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "neo4j" ) );
         try ( Session session = adminDriver.session();
               Transaction tx = session.beginTransaction() )
         {
@@ -50,7 +50,7 @@ public class DeleteUserStressIT
             tx.success();
         }
         adminDriver.close();
-        adminDriver = GraphDatabase.driver( db.boltURI(), basic( "neo4j", "abc" ) );
+        adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "abc" ) );
     }
 
     @Test
@@ -74,7 +74,7 @@ public class DeleteUserStressIT
 
         for (; ; )
         {
-            try ( Driver driver = GraphDatabase.driver( db.boltURI(), basic( "pontus", "sutnop" ) ) )
+            try ( Driver driver = graphDatabaseDriver( db.boltURI(), basic( "pontus", "sutnop" ) ) )
             {
 
                 try ( Session session = driver.session();

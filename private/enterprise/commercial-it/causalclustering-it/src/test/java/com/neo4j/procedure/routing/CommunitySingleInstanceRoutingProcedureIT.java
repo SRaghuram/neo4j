@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
-import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
@@ -118,7 +117,6 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, false );
         builder.setConfig( BoltConnector.enabled, true );
-        builder.setConfig( BoltConnector.encryption_level, OPTIONAL );
         builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
         if ( advertisedBoltAddress != null )
         {

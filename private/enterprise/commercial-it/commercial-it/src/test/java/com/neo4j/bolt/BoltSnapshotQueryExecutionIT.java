@@ -20,9 +20,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -38,6 +36,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -84,7 +83,7 @@ class BoltSnapshotQueryExecutionIT
                 .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSetting ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         initDatabase();
-        connectDirver();
+        connectDriver();
         verifyQueryExecution();
     }
 
@@ -120,9 +119,9 @@ class BoltSnapshotQueryExecutionIT
         }
     }
 
-    private void connectDirver()
+    private void connectDriver()
     {
-        driver = GraphDatabase.driver( boltURI(), Config.build().withoutEncryption().toConfig() );
+        driver = graphDatabaseDriver( boltURI() );
     }
 
     private void initDatabase()

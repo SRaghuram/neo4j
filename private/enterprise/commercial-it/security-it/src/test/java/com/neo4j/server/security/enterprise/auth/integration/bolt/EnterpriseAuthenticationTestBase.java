@@ -33,6 +33,8 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -53,15 +55,19 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.driver.AuthTokens.basic;
 import static org.neo4j.driver.AuthTokens.custom;
-import static org.neo4j.driver.GraphDatabase.driver;
-import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestUnit
 {
-    private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).withConnectionTimeout( 10000, TimeUnit.MILLISECONDS ).toConfig();
+    private static final Config config = Config.builder()
+            .withLogging( Logging.none() )
+            .withoutEncryption()
+            .withConnectionTimeout( 10, TimeUnit.SECONDS )
+            .build();
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
 
@@ -75,7 +81,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     {
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
               .withSetting( BoltConnector.enabled, true )
-              .withSetting( BoltConnector.encryption_level, OPTIONAL )
+              .withSetting( BoltConnector.encryption_level, DISABLED )
               .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
@@ -275,7 +281,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         try
         {
             var localAddress = dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
-            var driver = driver( "bolt://" + localAddress.toString(), token, config );
+            var driver = GraphDatabase.driver( "bolt://" + localAddress.toString(), token, config );
             driver.verifyConnectivity();
             return driver;
         }

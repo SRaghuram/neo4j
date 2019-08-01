@@ -36,6 +36,7 @@ import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginContext>
@@ -55,10 +56,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     private void init( DatabaseManagementServiceBuilder builder, Map<Setting<?>,String> config ) throws Throwable
     {
         builder.setConfig( BoltConnector.enabled, true );
-        builder.setConfig( BoltConnector.encryption_level, OPTIONAL );
         builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
-        builder.setConfig( GraphDatabaseSettings.tls_key_file, Path.of( NeoInteractionLevel.tempPath( "key", ".key" ) ) );
-        builder.setConfig( GraphDatabaseSettings.tls_certificate_file, Path.of( NeoInteractionLevel.tempPath( "cert", ".cert" ) ) );
         builder.setConfig( GraphDatabaseSettings.auth_enabled, true );
 
         config.forEach( ( setting, valueStr ) ->

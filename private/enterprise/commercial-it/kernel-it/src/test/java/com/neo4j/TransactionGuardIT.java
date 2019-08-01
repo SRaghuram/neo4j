@@ -35,6 +35,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -424,8 +425,9 @@ class TransactionGuardIT
 
     private static org.neo4j.driver.Config getDriverConfig()
     {
-        return org.neo4j.driver.Config.build()
-                .withEncryptionLevel( org.neo4j.driver.Config.EncryptionLevel.NONE )
+        return org.neo4j.driver.Config.builder()
+                .withoutEncryption()
+                .withLogging( Logging.none() )
                 .toConfig();
     }
 

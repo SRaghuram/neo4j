@@ -22,7 +22,6 @@ import java.util.Queue;
 import java.util.stream.Stream;
 
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
@@ -41,6 +40,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -63,7 +63,7 @@ public class BoltProceduresIT
     @BeforeClass
     public static void setUp() throws Exception
     {
-        driver = GraphDatabase.driver( db.boltURI() );
+        driver = graphDatabaseDriver( db.boltURI() );
     }
 
     @AfterClass
