@@ -33,6 +33,12 @@ public class BarrierAwareIdGenerator implements IdGenerator
     }
 
     @Override
+    public void markHighestWrittenAtHighId()
+    {
+        delegate.markHighestWrittenAtHighId();
+    }
+
+    @Override
     public long getHighId()
     {
         return delegate.getHighId();
