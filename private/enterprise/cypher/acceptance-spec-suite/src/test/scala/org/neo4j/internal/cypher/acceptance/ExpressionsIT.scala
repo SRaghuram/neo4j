@@ -46,7 +46,7 @@ import org.neo4j.values.storable.LocalTimeValue.localTime
 import org.neo4j.values.storable.Values._
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues.{EMPTY_LIST, EMPTY_MAP, list}
-import org.neo4j.values.virtual.{MapValue, NodeValue, RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.{ListValue, MapValue, NodeValue, RelationshipValue, VirtualValues}
 import org.neo4j.values.{AnyValue, AnyValues, VirtualValue}
 import org.scalatest.matchers.{MatchResult, Matcher}
 
@@ -410,15 +410,26 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("split function") {
     val compiled = compile(function("split", parameter(0), parameter(1)))
+    def sl(s: String*): ListValue = list(s.map(stringValue): _*)
 
-    evaluate(compiled, params(stringValue("HELLO"), stringValue("LL"))) should
-      equal(list(stringValue("HE"), stringValue("O")))
-    evaluate(compiled, params(NO_VALUE, stringValue("LL"))) should equal(NO_VALUE)
-    evaluate(compiled, params(stringValue("HELLO"), NO_VALUE)) should equal(NO_VALUE)
-    evaluate(compiled, params(stringValue("HELLO"), EMPTY_STRING)) should
-      equal(list(stringValue("H"), stringValue("E"), stringValue("L"), stringValue("L"), stringValue("O")))
+    // Strings with single delimiter
+    evaluate(compiled, params(stringValue("HELLO"), stringValue("LL"))) should be(sl("HE", "O"))
+    evaluate(compiled, params(NO_VALUE, stringValue("LL"))) should be(NO_VALUE)
+    evaluate(compiled, params(stringValue("HELLO"), NO_VALUE)) should be(NO_VALUE)
+    evaluate(compiled, params(stringValue("HELLO"), EMPTY_STRING)) should be(sl("H", "E", "L", "L", "O"))
     evaluate(compiled, params(EMPTY_STRING, stringValue("LL"))) should equal(list(EMPTY_STRING))
 
+    // Strings with multiple delimiters
+    evaluate(compiled, params(stringValue("first,second;third"), sl(",", ";"))) should be(sl("first", "second", "third"))
+    evaluate(compiled, params(stringValue("(a)-->(b)<--(c)-->(d)--(e)"), sl("-->", "<--", "--"))) should be(sl("(a)", "(b)", "(c)", "(d)", "(e)"))
+    val sentence = "This is a sentence, with punctuation."
+    evaluate(compiled, params(stringValue(sentence), sl(",", ".", ";", ""))) should be(sl(sentence.replaceAll("[,.;]", "").split(""): _*))
+
+    // Splitting chars
+    evaluate(compiled, params(charValue('x'), stringValue("x"))) should be(sl("", ""))
+    evaluate(compiled, params(charValue('x'), stringValue("y"))) should be(sl("x"))
+    evaluate(compiled, params(charValue('x'), stringValue(""))) should be(sl("x"))
+    evaluate(compiled, params(charValue('x'), sl("x", "y"))) should be(sl("", ""))
   }
 
   test("substring function no length") {
