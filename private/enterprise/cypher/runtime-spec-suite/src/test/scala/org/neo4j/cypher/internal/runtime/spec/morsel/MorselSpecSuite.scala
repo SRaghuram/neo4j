@@ -103,6 +103,7 @@ class MorselSortTest extends SortTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 
 // AGGREGATION
 class MorselSingleThreadedAggregationTest extends AggregationTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselSingleThreadedAggregationNoFusingTest extends AggregationTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // NODE HASH JOIN
 class MorselNodeHashJoinTest extends NodeHashJoinTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)

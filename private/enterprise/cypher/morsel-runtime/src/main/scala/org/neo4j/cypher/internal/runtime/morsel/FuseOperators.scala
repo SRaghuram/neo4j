@@ -9,22 +9,25 @@ import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.{RefSlot, _}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
                     tokenContext: TokenContext) {
 
   private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
+  private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
     // Fused operators do not support Cached properties for now
@@ -62,6 +65,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots is the same within an entire pipeline
     def compile(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
+
+    def compileGroupingKey(astExpressions: Map[String, org.neo4j.cypher.internal.v4_0.expressions.Expression]): () => IntermediateExpression =
+      () => expressionCompiler.intermediateCompileGrouping(astExpressions)
+                              .map(_.computeKey)
+                              .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
+
     generateSlotAccessorFunctions(slots)
 
     // Fold plans in reverse to build-up code generation templates with inner templates
@@ -82,6 +91,43 @@ class FuseOperators(operatorFactory: OperatorFactory,
           val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(expressionCompiler)
           (template, List(p), NoOutput)
 
+        case reduceOutput@ReduceOutput(bufferId, p) =>
+          println(s"Encountered a ReduceOutput: $reduceOutput")
+          p match {
+            case plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap) =>
+
+              println("Trying to create Aggregation Template")
+
+              innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
+              innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
+              val argumentDepth = physicalPlan.applyPlans(id)
+              val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+
+              val aggregators = Array.newBuilder[Aggregator]
+              val aggregationExpressions = Array.newBuilder[Expression]
+              aggregationExpressionsMap.foreach {
+                case (key, astExpression) =>
+                  val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
+                  aggregators += aggregator
+                  aggregationExpressions += innerAstExpression
+              }
+
+              val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
+              val template = new AggregationMapperOperatorTaskTemplate(innermostTemplate,
+                                                                       p.id,
+                                                                       argumentSlotOffset,
+                                                                       aggregators.result(),
+                                                                       // TODO use buffer
+                                                                       bufferId,
+                                                                       aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compile(e)()),
+                                                                       groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions),
+                                                                       aggregationAstExpressions)(expressionCompiler)
+              // TODO should this be NoOutput or ReduceOutput?
+              (template, List(p), NoOutput)
+
+            case unhandledReducePlan =>
+              (innermostTemplate, List.empty[LogicalPlan], reduceOutput)
+          }
         case unhandled =>
           (innermostTemplate, List.empty[LogicalPlan], unhandled)
       }
