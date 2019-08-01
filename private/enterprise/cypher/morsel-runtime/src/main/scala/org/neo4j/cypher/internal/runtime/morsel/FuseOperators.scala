@@ -38,6 +38,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
+    // TODO FIX: as it is we will still create an output morsel for pipelines that contains a fused Aggregation at the end
     //For a fully fused pipeline that includes ProduceResult we don't need to allocate an output morsel
     val needsMorsel = (p.outputDefinition, maybeHeadOperator, unhandledMiddlePlans) match {
       case (_:ProduceResultOutput, Some(_), Seq()) => false

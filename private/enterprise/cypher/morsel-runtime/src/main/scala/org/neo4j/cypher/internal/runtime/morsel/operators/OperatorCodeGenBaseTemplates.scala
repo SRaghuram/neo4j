@@ -343,7 +343,8 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
 // and also for providing demand operations
-class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
+class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
+                                   var shouldCheckDemand: Boolean = true)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   override def inner: OperatorTaskTemplate = null
@@ -371,15 +372,25 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true)
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  def predicate: IntermediateRepresentation = if (shouldWriteToContext) OUTPUT_ROW_IS_VALID else HAS_DEMAND
+  def predicate: IntermediateRepresentation =
+    if (shouldWriteToContext)
+      OUTPUT_ROW_IS_VALID
+    else if (shouldCheckDemand)
+      HAS_DEMAND
+    else
+      constant(true)
 
   /**
     * If we need to care about demand (produceResult part of the fused operator)
     * we need to update the demand after having produced data.
     */
   def onExit: IntermediateRepresentation =
-    if (shouldWriteToContext) OUTPUT_ROW_FINISHED_WRITING
-    else UPDATE_DEMAND
+    if (shouldWriteToContext)
+      OUTPUT_ROW_FINISHED_WRITING
+    else if (shouldCheckDemand)
+      UPDATE_DEMAND
+    else
+      noop()
 
   override def genFields: Seq[Field] = Seq.empty
 
