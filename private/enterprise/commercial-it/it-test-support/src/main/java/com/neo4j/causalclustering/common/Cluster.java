@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 
 import java.io.File;
@@ -65,6 +66,7 @@ import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -543,6 +545,20 @@ public class Cluster
             }
         };
         return awaitEx( supplier, notNull()::test, timeout, timeUnit );
+    }
+
+    public static boolean canAuthenticateAgainstMember( ClusterMember member, Map<String,Object> credentials )
+    {
+        CommercialAuthManager authManager = member.systemDatabase().getDependencyResolver().resolveDependency( CommercialAuthManager.class );
+        try
+        {
+            authManager.login( credentials );
+            return true;
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            return false;
+        }
     }
 
     private static boolean isTransientFailure( Throwable e )

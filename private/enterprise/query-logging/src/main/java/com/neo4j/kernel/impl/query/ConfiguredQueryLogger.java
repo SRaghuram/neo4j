@@ -84,6 +84,7 @@ class ConfiguredQueryLogger implements QueryLogger
             result.append( " - runtime=" ).append( query.runtime() );
         }
         QueryLogFormatter.formatMap( result.append(" - "), query.transactionAnnotationData() );
-        return result.toString();
+        String logEntry = result.toString();
+        return logEntry;
     }
 }

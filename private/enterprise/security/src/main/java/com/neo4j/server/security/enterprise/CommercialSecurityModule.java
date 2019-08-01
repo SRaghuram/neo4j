@@ -105,7 +105,7 @@ public class CommercialSecurityModule extends SecurityModule
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
     private DatabaseManager<?> databaseManager;
-    private boolean initSystemGraphOnStart;
+    private boolean isClustered;
     private Config config;
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
@@ -132,8 +132,8 @@ public class CommercialSecurityModule extends SecurityModule
         this.logProvider = dependencies.logService().getUserLogProvider();
         this.fileSystem = dependencies.fileSystem();
 
-        initSystemGraphOnStart = config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.CORE &&
-                config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.READ_REPLICA;
+        isClustered = config.get( CommercialEditionSettings.mode ) == CommercialEditionSettings.Mode.CORE ||
+                config.get( CommercialEditionSettings.mode ) == CommercialEditionSettings.Mode.READ_REPLICA;
 
         GlobalProcedures globalProcedures = dependencies.procedures();
         JobScheduler jobScheduler = dependencies.scheduler();
@@ -143,6 +143,13 @@ public class CommercialSecurityModule extends SecurityModule
 
         authManager = newAuthManager( config, logProvider, securityLog, fileSystem, databaseManager.databaseIdRepository() );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
+
+        // If is clustered
+        //      Resolve cluster Transaction Event Service
+        //      Add handler to clear caches
+        // else
+        //      Resolve kernel transaction event listeners
+        //      Add handler
 
         // Register procedures
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
@@ -290,8 +297,8 @@ public class CommercialSecurityModule extends SecurityModule
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
         SecurityGraphInitializer securityGraphInitializer =
-                initSystemGraphOnStart ? new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, securityLog, systemGraphOperations,
-                        configureImportOptions( config, logProvider, fileSystem ), secureHasher ) : SecurityGraphInitializer.NO_OP;
+                isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor,
+                        securityLog, systemGraphOperations, configureImportOptions( config, logProvider, fileSystem ), secureHasher );
 
         return new SystemGraphRealm(
                 systemGraphOperations,

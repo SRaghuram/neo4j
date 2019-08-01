@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@ExtendWith( TestDirectoryExtension.class )
+@ExtendWith( { TestDirectoryExtension.class } )
 class SystemGraphCachingTest
 {
     private GraphDatabaseService database;
@@ -49,6 +49,7 @@ class SystemGraphCachingTest
 
     @Inject
     private TestDirectory testDirectory;
+
     private DatabaseManagementService managementService;
 
     @BeforeEach

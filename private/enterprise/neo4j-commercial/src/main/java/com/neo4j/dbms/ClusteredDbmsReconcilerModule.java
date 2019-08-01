@@ -41,6 +41,11 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
         txEventService.registerHandler( SYSTEM_DATABASE_ID, txId -> systemOperator.transactionCommitted( txId, null ) );
     }
 
+    void handleSystemDatabaseTx( long txId )
+    {
+
+    }
+
     @Override
     protected ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager )
     {

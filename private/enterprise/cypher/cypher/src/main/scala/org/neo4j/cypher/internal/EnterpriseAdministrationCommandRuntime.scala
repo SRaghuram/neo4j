@@ -89,7 +89,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           QueryHandler
             .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified user '$userName'.")))
             .handleError(e => new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", e))
-            .handleResult((_, _) => clearCacheForUser(userName))
+            .handleResult((_, _) => clearCacheForUser(userName)) // TODO: remove
         )
       } finally {
         // Clear password
@@ -106,7 +106,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified user '$userName': User does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
-          .handleResult((_, _) => clearCacheForUser(userName))
+          .handleResult((_, _) => clearCacheForUser(userName)) // TODO: remove
       )
 
     // ALTER USER foo
@@ -144,7 +144,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                   None
               case None => None
             }
-            clearCacheForUser(userName)
+            clearCacheForUser(userName) // TODO: remove
             maybeThrowable
           })
       )
@@ -181,7 +181,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               else
                 None
             }
-            clearCacheForUser(currentUser)
+            clearCacheForUser(currentUser) // TODO: remove
             maybeThrowable
           })
       )
@@ -260,8 +260,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
             .handleResult((_, _) => {
-              clearCacheForAllUsers()
-              clearCacheForRole(roleName)
+              clearCacheForAllUsers() // TODO: remove
+              clearCacheForRole(roleName) // TODO: remove
             })
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
@@ -277,7 +277,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
-          .handleResult((_,value) => clearCacheForUser(value.asInstanceOf[TextValue].stringValue()))
+          .handleResult((_,value) => clearCacheForUser(value.asInstanceOf[TextValue].stringValue())) // TODO: remove
           .handleNoResult(() =>  Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -295,7 +295,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
           .handleResult((_, u) => {
-            if (!(u eq Values.NO_VALUE)) clearCacheForUser(u.asInstanceOf[TextValue].stringValue())
+            if (!(u eq Values.NO_VALUE)) clearCacheForUser(u.asInstanceOf[TextValue].stringValue()) // TODO: remove
             else Some(new InvalidArgumentsException(s"Failed to revoke role '$roleName' from user '$userName': User does not exist."))
           })
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to revoke role '$roleName' from user '$userName': Role does not exist."))),
@@ -463,7 +463,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        QueryHandler.handleResult((_, _) => clearCacheForAllRoles()),
+        QueryHandler.handleResult((_, _) => clearCacheForAllRoles()), // TODO: remove
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -617,7 +617,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
         .handleResult((offset, _) => {
-          if (offset == 0) clearCacheForRole(roleName)
+          if (offset == 0) clearCacheForRole(roleName) // TODO : remove
           None
         })
         .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage Database '$db' does not exist.")))
@@ -675,7 +675,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         .handleResult((offset, value) => {
           if (offset == 0 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"$startOfErrorMessage The role '$roleName' does not exist."))
           else if (offset == 1 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"$startOfErrorMessage The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier, revokeType)}."))
-          else clearCacheForRole(roleName)
+          else clearCacheForRole(roleName) // TODO: remove
         })
         .handleNoResult(() => Some(new InvalidArgumentsException(s"$startOfErrorMessage The privilege '${describePrivilege(actionName, resource, database, qualifier, revokeType)}' does not exist."))),
       source

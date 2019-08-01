@@ -13,11 +13,13 @@ public interface TransactionEventService
 
     TransactionCommitNotifier getCommitNotifier( DatabaseId databaseId );
 
+    @FunctionalInterface
     interface TransactionCommitHandler
     {
         void transactionCommitted( long txId );
     }
 
+    @FunctionalInterface
     interface TransactionCommitNotifier
     {
         void transactionCommitted( long txId );
