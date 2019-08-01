@@ -516,4 +516,10 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genCanContinue: Option[IntermediateRepresentation] = None
 
   override def genCloseCursors: IntermediateRepresentation = block()
+
+  override protected def genProduce: IntermediateRepresentation = noop()
+
+  override protected def genCreateState: IntermediateRepresentation = noop()
+
+  override def genOutputBuffer: Option[IntermediateRepresentation] = None
 }
