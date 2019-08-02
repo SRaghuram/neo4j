@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
+import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.single;
 
 public class CypherExecutingRunner extends QueryRunner
 {
@@ -56,7 +57,7 @@ public class CypherExecutingRunner extends QueryRunner
                             query.parameters().create(),
                             forkDirectory,
                             warmupStrategy.warmupControl(),
-                            measurementControl,
+                            query.isSingleShot() ? single() : measurementControl,
                             warmupStrategy.doRollbackOnWarmup() );
             }
         }
