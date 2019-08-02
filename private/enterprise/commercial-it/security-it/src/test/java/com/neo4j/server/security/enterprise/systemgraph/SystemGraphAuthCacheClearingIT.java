@@ -14,13 +14,9 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +27,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -39,9 +36,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -56,62 +52,38 @@ class SystemGraphAuthCacheClearingIT
     @Inject
     private TestDirectory directory;
 
-    private File tempLogsDir;
-
-    @BeforeEach
-    void setup()
-    {
-        tempLogsDir = this.directory.directory( "tempLogs" );
-    }
-
     @Test
     void systemDbUpdatesShouldClearAuthCacheInStandalone() throws Exception
     {
         // Given a standalone db
-        File tempLog = queryLog( 0 );
-        tempLog.createNewFile();
         DatabaseManagementService dbms = new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() )
                 .setConfigRaw( getConfig() )
-                .setConfig( GraphDatabaseSettings.log_queries_filename, tempLog.toPath() )
                 .build();
 
-        GraphDatabaseAPI systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
+        var systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
+        var dbs = Collections.singletonList( systemDb );
 
         try ( Transaction tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "CREATE USER foo SET PASSWORD 'f00'" );
-            systemDb.execute( "CREATE USER bar SET PASSWORD 'b4r'" );
             tx.success();
         }
 
-        var dbs = Collections.singletonList( systemDb );
-        var queryLogs = Collections.singletonList( tempLog );
-
-        // When initial login attempt is made
-        allCanAuth( dbs, "foo", "f00" );
-
-        // Then a login query against the system database should be logged
-        assertEventually( () -> nLoginsAttempted( queryLogs, 1, "foo" ), is( true ), 5, TimeUnit.SECONDS );
-
-        // When subsequent attempts are made
-        allCanAuth( dbs, "foo", "f00" );
-        allCanAuth( dbs, "foo", "f00" );
-        allCanAuth( dbs, "bar", "b4r" );
-
-        // Then only those for new users should cause a login query against the system database
-        assertEventually( () -> nLoginsAttempted( queryLogs, 1, "bar" ), is( true ), 5, TimeUnit.SECONDS );
-        assertThat( nLoginsAttempted( queryLogs, 1, "foo" ), is( true ) );
+        // When initial login attempt is made, user is stored in cache
+        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
 
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "DROP USER bar" );
+            systemDb.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.success();
         }
 
-        // Then the auth cache should be cleared and logins for previous users require a login query against the system database
-        allCanAuth( dbs, "foo", "f00" );
-        assertEventually( () -> nLoginsAttempted( queryLogs, 2, "foo" ), is( false ), 5, TimeUnit.SECONDS );
+        // Then the auth cache should be cleared and login with new password is required
+        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( false ), 5, TimeUnit.SECONDS );
+        assertTrue( () -> allCanAuth( dbs, "foo", "b4r" ) );
+
+        dbms.shutdown();
     }
 
     @Test
@@ -122,66 +94,35 @@ class SystemGraphAuthCacheClearingIT
             .withSharedCoreParams( getConfig() )
             .withNumberOfCoreMembers( 3 );
 
-        clusterConfig.withInstanceCoreParam( GraphDatabaseSettings.log_queries_filename, i -> queryLog( i ).getAbsolutePath() );
         var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
+        var clusterSystemDbs = clusterSystemDbs( cluster );
 
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "CREATE USER foo SET PASSWORD 'f00'" );
-            sys.execute( "CREATE USER bar SET PASSWORD 'b4r'" );
             tx.success();
         } );
 
-        var queryLogs = clusterQueryLogs( cluster );
-        var clusterSystemDbs = clusterSystemDbs( cluster );
-
-        // When initial login attempt is made
-        allCanAuth( clusterSystemDbs, "foo", "f00" );
-
-        // Then a login query against the system database should be logged
-        assertEventually( () -> nLoginsAttempted( queryLogs, 1, "foo" ), is( true ), 5, TimeUnit.SECONDS );
-
-        // When subsequent attempts are made
-        allCanAuth( clusterSystemDbs, "foo", "f00" );
-        allCanAuth( clusterSystemDbs, "foo", "f00" );
-        allCanAuth( clusterSystemDbs, "bar", "b4r" );
-
-        // Then only those for new users should cause a login query against the system database
-        assertEventually( () -> nLoginsAttempted( queryLogs, 1, "bar" ),
-                is( true ), 5, TimeUnit.SECONDS );
-        assertThat( nLoginsAttempted( queryLogs, 1, "foo" ), is( true ) );
+        // When initial login attempt is made, user is stored in cache
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
 
         // When changing the system database
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "DROP USER bar" );
+            sys.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.success();
         } );
 
-        // Then the auth cache should be cleared and logins for previous users require a login query against the system database
-        allCanAuth( clusterSystemDbs, "foo", "f00" );
-        assertEventually( () -> nLoginsAttempted( queryLogs, 2, "foo" ),
-                is( false ), 5, TimeUnit.SECONDS );
+        // Then the auth cache should be cleared and login with new password is required
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), is( false ), 5, TimeUnit.SECONDS );
+        assertTrue( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ) );
     }
 
     private List<GraphDatabaseAPI> clusterSystemDbs( Cluster cluster )
     {
         return cluster.allMembers()
                 .map( ClusterMember::systemDatabase )
-                .collect( Collectors.toList() );
-    }
-
-    private File queryLog( int mId )
-    {
-        return new File( tempLogsDir, format( "query_log_%d", mId ) );
-    }
-
-    private List<File> clusterQueryLogs( Cluster cluster )
-    {
-        return cluster.allMembers()
-                .map( ClusterMember::serverId )
-                .map( this::queryLog )
                 .collect( Collectors.toList() );
     }
 
@@ -192,51 +133,13 @@ class SystemGraphAuthCacheClearingIT
                 .reduce( true, ( l, r ) -> l && r );
     }
 
-    private boolean nLoginsAttempted( List<File> queryLogs, long n, String username )
-    {
-        return allLoginAttempts( queryLogs, username ).stream().allMatch( l -> l.equals( n ) );
-    }
-
-    private List<Long> allLoginAttempts( List<File> queryLogNames, String username )
-    {
-        return queryLogNames.stream()
-                .map( logFile -> countLoginAttempts( logFile, username ) )
-                .collect( Collectors.toList() );
-    }
-
-    private File tempLog( String queryLogName, File tempParent )
-    {
-        return new File( tempParent, queryLogName );
-    }
-
-    // TODO: Improve proxy for detecting whether the cache is working or not
-    private long countLoginAttempts( File queryLog, String username )
-    {
-        try
-        {
-            List<String> strings = Files.readAllLines( queryLog.toPath() );
-            return Files.readAllLines( queryLog.toPath() ).stream()
-                    .filter( l -> l.contains( loginQuery( username ) ) )
-                    .count();
-        }
-        catch ( IOException e )
-        {
-            return -1;
-        }
-    }
-
-    private static String loginQuery( String username )
-    {
-        return format( "MATCH (u:User {name: $name}) RETURN u.credentials, u.passwordChangeRequired, u.suspended - {name -> %s}", username );
-    }
-
     private boolean canAuthenticateAgainstDbms( GraphDatabaseAPI database, Map<String,Object> credentials )
     {
         var authManager = database.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         try
         {
-            authManager.login( credentials );
-            return true;
+            var result = authManager.login( credentials ).subject().getAuthenticationResult();
+            return result == AuthenticationResult.SUCCESS || result == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         }
         catch ( InvalidAuthTokenException e )
         {
@@ -248,9 +151,7 @@ class SystemGraphAuthCacheClearingIT
     {
         var config = new HashMap<String,String>();
         config.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
-        config.put( GraphDatabaseSettings.log_queries.name(), "true" );
-        config.put( GraphDatabaseSettings.log_queries_parameter_logging_enabled.name(), "true" );
-        config.put( SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
+        config.put( SecuritySettings.auth_cache_use_ttl.name(), "false" ); // disable cache timeout
         return config;
     }
 }
