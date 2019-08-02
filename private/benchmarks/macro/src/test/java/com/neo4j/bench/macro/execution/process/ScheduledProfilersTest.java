@@ -38,20 +38,16 @@ public class ScheduledProfilersTest
     {
         // given
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "benchmarkgroup" );
-        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
-
+        BenchmarkGroupDirectory benchmarkGroupDirectory =
+                BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
-
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
-
         ScheduledProfilers scheduledProfilers = ScheduledProfilers.from( Collections.emptyList() );
-
         // when
         scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, null, new Pid( 1111 ) );
         // then
         assertTrue( scheduledProfilers.isRunning() );
-
         //when
         scheduledProfilers.stop();
         // then
@@ -63,30 +59,21 @@ public class ScheduledProfilersTest
     {
         // given
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "benchmarkgroup" );
-        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
-
+        BenchmarkGroupDirectory benchmarkGroupDirectory =
+                BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
-
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
-
         CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
-
         List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( future ) );
-
         ScheduledProfilers scheduledProfilers = ScheduledProfilers.from( externalProfilers );
-
         // when
-        scheduledProfilers.start(
-                forkDirectory,
-                benchmarkGroup,
-                benchmark,
-                new Parameters( Collections.emptyMap() ),
+        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, new Parameters( Collections.emptyMap() ),
                 new Pid( 1111 ) );
-        // then, wait double time of default schedule,
-        // to make sure scheduled profiler gets called
         try
         {
+            // then, wait double time of default fixed rate,
+            // to make sure scheduled profiler gets called
             assertTrue( future.get( 10, TimeUnit.SECONDS ) );
         }
         finally
@@ -97,7 +84,6 @@ public class ScheduledProfilersTest
 
     public static class SimpleScheduledProfiler implements ExternalProfiler, ScheduledProfiler
     {
-
         private final CompletableFuture<Boolean> future;
 
         public SimpleScheduledProfiler( CompletableFuture<Boolean> future )
@@ -137,6 +123,5 @@ public class ScheduledProfilersTest
         {
             future.complete( true );
         }
-
     }
 }

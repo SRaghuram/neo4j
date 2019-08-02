@@ -17,20 +17,23 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Profilers implementing this interface will be invoked periodically, during benchmark run.
+ * By default, every 5 seconds. This can by change. You can add {@link FixedRate} annotation
+ * to overwritten {@link ScheduledProfiler#onSchedule(ForkDirectory, BenchmarkGroup, Benchmark, Parameters, Pid)} method.
+ *
+ */
 public interface ScheduledProfiler
 {
     @Retention( RetentionPolicy.RUNTIME )
     @Target( ElementType.METHOD )
-    public @interface Schedule
+    public @interface FixedRate
     {
-        int rate() default 5;
+        int period() default 5;
+
         TimeUnit timeUnit() default TimeUnit.SECONDS;
     }
 
-    void onSchedule(
-                ForkDirectory forkDirectory,
-                BenchmarkGroup benchmarkGroup,
-                Benchmark benchmark,
-                Parameters additionalParameters,
-                Pid pid );
+    void onSchedule( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+            Parameters additionalParameters, Pid pid );
 }
