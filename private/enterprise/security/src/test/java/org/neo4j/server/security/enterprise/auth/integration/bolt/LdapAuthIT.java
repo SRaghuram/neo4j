@@ -52,7 +52,6 @@ import org.neo4j.internal.diagnostics.DiagnosticsPhase;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Logger;
 import org.neo4j.server.security.enterprise.auth.LdapRealm;
 import org.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
@@ -61,16 +60,26 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.DoubleLatch;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadFails;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertRoles;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteSucceeds;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.clearAuthCacheFromDifferentConnection;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriverWithParameters;
 
 interface TimeoutTests
 { /* Category marker */
@@ -110,7 +119,7 @@ interface TimeoutTests
         certificatePassword = "secret"
 )
 @ApplyLdifFiles( {"ad_schema.ldif", "ldap_test_data.ldif"} )
-public class LdapAuthIT extends EnterpriseAuthenticationTestBase
+public class LdapAuthIT extends EnterpriseLdapAuthenticationTestBase
 {
     private static final String LDAP_ERROR_MESSAGE_INVALID_CREDENTIALS = "LDAP: error code 49 - INVALID_CREDENTIALS";
     private static final String REFUSED_IP = "127.0.0.1"; // "0.6.6.6";
@@ -152,7 +161,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldShowCurrentUser()
     {
-        try ( Driver driver = connectDriver( "smith", "abc123" ); Session session = driver.session() )
+        try ( Driver driver = connectDriver( boltUri, "smith", "abc123" ); Session session = driver.session() )
         {
             // when
             Record record = session.run( "CALL dbms.showCurrentUser()" ).single();
@@ -172,14 +181,14 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
-        assertReadFails( "neo", "abc123" );
+        assertReadFails( boltUri, "neo", "abc123" );
     }
 
     @Test
     public void shouldFailIfAuthorizationExpiredWithserLdapContext()
     {
         // Given
-        try ( Driver driver = connectDriver( "neo4j", "abc123" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" ) )
         {
             assertReadSucceeds( driver );
 
@@ -204,7 +213,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithUserLdapContext()
     {
         // Given
-        try ( Driver driver = connectDriver( "neo4j", "abc123" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" ) )
         {
             assertReadSucceeds( driver );
 
@@ -245,7 +254,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         {
             try
             {
-                try ( Driver driver = connectDriver( username, "abc123" );
+                try ( Driver driver = connectDriver( boltUri, username, "abc123" );
                         Session session = driver.session();
                         Transaction tx = session.beginTransaction() )
                 {
@@ -268,7 +277,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         readerThread.start();
         latch.startAndWaitForAllToStart();
 
-        clearAuthCacheFromDifferentConnection();
+        clearAuthCacheFromDifferentConnection( boltUri );
 
         latch.finishAndWaitForAllToFinish();
 
@@ -286,7 +295,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldap://127.0.0.1" );
         try
         {
-            connectDriver( "neo", "abc123" );
+            connectDriver( boltUri, "neo", "abc123" );
             fail( "should have refused connection" );
         }
         catch ( TransientException e )
@@ -307,7 +316,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                     SecuritySettings.ldap_authorization_use_system_account.name(), "true"
             );
 
-            assertReadFails( "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123" );
         }
     }
 
@@ -324,7 +333,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                     SecuritySettings.ldap_authorization_use_system_account.name(), "true"
             );
 
-            assertReadFails( "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123" );
         }
     }
 
@@ -339,7 +348,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                     SecuritySettings.ldap_authorization_use_system_account.name(), "true"
             );
 
-            assertReadFails( "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123" );
         }
     }
 
@@ -354,7 +363,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
             try
             {
-                connectDriver( "neo", "abc123" );
+                connectDriver( boltUri, "neo", "abc123" );
                 fail( "should have timed out" );
             }
             catch ( TransientException e )
@@ -383,13 +392,13 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         // Then
         // the created "tank" can log in and gets roles from both providers
         // because the system account is used to authorize over the ldap provider
-        try ( Driver driver = connectDriver( "tank", "localpassword", "native" ) )
+        try ( Driver driver = connectDriver( boltUri, "tank", "localpassword", "native" ) )
         {
             assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER );
         }
 
         // the ldap "tank" can also log in and gets roles from both providers
-        try ( Driver driver = connectDriver( "tank", "abc123", "ldap" ) )
+        try ( Driver driver = connectDriver( boltUri, "tank", "abc123", "ldap" ) )
         {
             assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER );
         }
@@ -415,7 +424,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
         // Then
         // the created "foo" can log in
-        assertAuth( "foo", "bar" );
+        assertAuth( boltUri, "foo", "bar" );
 
         // We should not get errors spammed in the security log
         assertSecurityLogDoesNotContain( "ERROR" );
@@ -439,7 +448,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
         // Then
         // the created "foo" can log in
-        assertAuth( "foo", "bar" );
+        assertAuth( boltUri, "foo", "bar" );
 
         // We should not get errors spammed in the security log
         assertSecurityLogDoesNotContain( "ERROR" );
@@ -449,7 +458,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogInvalidCredentialErrorFromLdapRealm() throws Throwable
     {
         // When
-        assertAuthFail( "neo", "wrong-password" );
+        assertAuthFail( boltUri, "neo", "wrong-password" );
 
         // Then
         assertSecurityLogContains( LDAP_ERROR_MESSAGE_INVALID_CREDENTIALS );
@@ -472,7 +481,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         createNativeUser( "foo", "bar" );
 
         // When
-        assertAuthFail( "foo", "wrong-password" );
+        assertAuthFail( boltUri, "foo", "wrong-password" );
 
         // Then
         assertSecurityLogContains( LDAP_ERROR_MESSAGE_INVALID_CREDENTIALS );
@@ -486,7 +495,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
         try
         {
-            connectDriver( "neo", "abc123" );
+            connectDriver( boltUri, "neo", "abc123" );
             fail( "Expected connection refused" );
         }
         catch ( TransientException e )
@@ -512,7 +521,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             SecuritySettings.ldap_server.name(), "ldap://" + REFUSED_IP
         );
 
-        assertAuthFail( "neo", "abc123" );
+        assertAuthFail( boltUri, "neo", "abc123" );
 
         assertSecurityLogContains( "ERROR" );
         assertSecurityLogContains( "LDAP connection refused" );
@@ -530,21 +539,21 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
 
             // Then
-            assertAuth( "tank", "abc123" );
+            assertAuth( boltUri, "tank", "abc123" );
             changeLDAPPassword( "tank", "abc123", "123abc" );
 
             // When logging in without clearing cache
 
             // Then
-            assertAuthFail( "tank", "123abc" );
-            assertAuth( "tank", "abc123" );
+            assertAuthFail( boltUri, "tank", "123abc" );
+            assertAuth( boltUri, "tank", "abc123" );
 
             // When clearing cache and logging in
-            clearAuthCacheFromDifferentConnection();
+            clearAuthCacheFromDifferentConnection( boltUri );
 
             // Then
-            assertAuthFail( "tank", "abc123" );
-            assertAuth( "tank", "123abc" );
+            assertAuthFail( boltUri, "tank", "abc123" );
+            assertAuth( boltUri, "tank", "123abc" );
         }
     }
 
@@ -559,7 +568,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
 
             // Then
-            try ( Driver driver = connectDriver( "tank", "abc123" ) )
+            try ( Driver driver = connectDriver( boltUri, "tank", "abc123" ) )
             {
                 assertReadSucceeds( driver );
                 assertWriteSucceeds( driver );
@@ -568,7 +577,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             changeLDAPGroup( "tank", "abc123", "reader" );
 
             // When logging in without clearing cache
-            try ( Driver driver = connectDriver( "tank", "abc123" ) )
+            try ( Driver driver = connectDriver( boltUri, "tank", "abc123" ) )
             {
                 // Then
                 assertReadSucceeds( driver );
@@ -576,10 +585,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             }
 
             // When clearing cache and logging in
-            clearAuthCacheFromDifferentConnection();
+            clearAuthCacheFromDifferentConnection( boltUri );
 
             // Then
-            try ( Driver driver = connectDriver( "tank", "abc123" ) )
+            try ( Driver driver = connectDriver( boltUri, "tank", "abc123" ) )
             {
                 assertReadSucceeds( driver );
                 assertWriteFails( driver );
@@ -609,17 +618,17 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
         Map<String,Object> parameters = map( "port", ldapServer.getPort() );
 
-        try ( Driver driver = connectDriverWithParameters( "neo", "abc123", parameters ) )
+        try ( Driver driver = connectDriverWithParameters( boltUri, "neo", "abc123", parameters ) )
         {
             assertRoles( driver, PredefinedRoles.READER );
         }
 
-        try ( Driver driver = connectDriverWithParameters( "tank", "abc123", parameters ) )
+        try ( Driver driver = connectDriverWithParameters( boltUri, "tank", "abc123", parameters ) )
         {
             assertRoles( driver, PredefinedRoles.PUBLISHER );
         }
 
-        try ( Driver driver = connectDriverWithParameters( "smith", "abc123", parameters ) )
+        try ( Driver driver = connectDriverWithParameters( boltUri, "smith", "abc123", parameters ) )
         {
             assertRoles( driver );
         }

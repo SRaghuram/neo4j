@@ -38,6 +38,14 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import static org.junit.Assume.assumeTrue;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertProcSucceeds;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadFails;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteSucceeds;
+import static org.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
 
 @SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )
@@ -73,7 +81,7 @@ import static org.junit.Assume.assumeTrue;
         certificatePassword = "secret"
 )
 @ApplyLdifFiles( {"ad_schema.ldif", "ldap_test_data.ldif"} )
-public class AuthIT extends AuthTestBase
+public class AuthIT extends EnterpriseLdapAuthenticationTestBase
 {
     private static EmbeddedTestCertificates embeddedTestCertificates;
 
@@ -294,6 +302,11 @@ public class AuthIT extends AuthTestBase
         } );
     }
 
+    private static final String NONE_USER = "smith";
+    private static final String READ_USER = "neo";
+    private static final String WRITE_USER = "tank";
+    private static final String PROC_USER = "jane";
+
     private final String password;
     private final Map<Setting<?>,String> configMap;
     private final boolean confidentialityRequired;
@@ -362,12 +375,6 @@ public class AuthIT extends AuthTestBase
         return settings;
     }
 
-    @Override
-    protected String getPassword()
-    {
-        return password;
-    }
-
     @AfterClass
     public static void classTeardown()
     {
@@ -378,30 +385,84 @@ public class AuthIT extends AuthTestBase
     }
 
     @Test
+    public void shouldLoginWithCorrectInformation()
+    {
+        assertAuth( boltUri, READ_USER, password );
+        assertAuth( boltUri, READ_USER, password );
+    }
+
+    @Test
+    public void shouldFailLoginWithIncorrectCredentials()
+    {
+        assertAuthFail( boltUri, READ_USER, "WRONG" );
+        assertAuthFail( boltUri, READ_USER, "ALSO WRONG" );
+    }
+
+    @Test
+    public void shouldFailLoginWithInvalidCredentialsFollowingSuccessfulLogin()
+    {
+        assertAuth( boltUri, READ_USER, password );
+        assertAuthFail( boltUri, READ_USER, "WRONG" );
+    }
+
+    @Test
+    public void shouldLoginFollowingFailedLogin()
+    {
+        assertAuthFail( boltUri, READ_USER, "WRONG" );
+        assertAuth( boltUri, READ_USER, password );
+    }
+
+    @Test
+    public void shouldGetCorrectAuthorization()
+    {
+        try ( Driver driver = connectDriver( boltUri, NONE_USER, password ) )
+        {
+            assertReadFails( driver );
+            assertWriteFails( driver );
+        }
+        try ( Driver driver = connectDriver( boltUri, READ_USER, password ) )
+        {
+            assertReadSucceeds( driver );
+            assertWriteFails( driver );
+        }
+        try ( Driver driver = connectDriver( boltUri, WRITE_USER, password ) )
+        {
+            assertReadSucceeds( driver );
+            assertWriteSucceeds( driver );
+        }
+        try ( Driver driver = connectDriver( boltUri, PROC_USER, password ) )
+        {
+            assertProcSucceeds( driver );
+            assertReadFails( driver );
+            assertWriteFails( driver );
+        }
+    }
+
+    @Test
     public void shouldLoginWithSamAccountName()
     {
         assumeTrue( ldapWithAD );
 
         // dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
-        assertAuth( "luser", "abc123" );
-        assertAuth( "luser", "abc123" );
+        assertAuth( boltUri, "luser", "abc123" );
+        assertAuth( boltUri, "luser", "abc123" );
         // dn: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
-        assertAuth( "ruser", "abc123" );
-        assertAuth( "ruser", "abc123" );
+        assertAuth( boltUri, "ruser", "abc123" );
+        assertAuth( boltUri, "ruser", "abc123" );
     }
 
     @Test
     public void shouldFailLoginSamAccountNameWrongPassword()
     {
         assumeTrue( ldapWithAD );
-        assertAuthFail( "luser", "wrong" );
+        assertAuthFail( boltUri, "luser", "wrong" );
     }
 
     @Test
     public void shouldFailLoginSamAccountNameWithDN()
     {
         assumeTrue( ldapWithAD );
-        assertAuthFail( "local.user", "abc123" );
+        assertAuthFail( boltUri, "local.user", "abc123" );
     }
 
     @Test
@@ -409,7 +470,7 @@ public class AuthIT extends AuthTestBase
     {
         assumeTrue( ldapWithAD );
 
-        try ( Driver driver = connectDriver( "luser", "abc123" ) )
+        try ( Driver driver = connectDriver( boltUri, "luser", "abc123" ) )
         {
             assertReadSucceeds( driver );
         }
