@@ -86,7 +86,7 @@ public class AuthProceduresBase
     private KernelTransaction getCurrentTx()
     {
         return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                .getKernelTransactionBoundToThisThread( true );
+                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
     }
 
     public static class StringResult

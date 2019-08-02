@@ -182,7 +182,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val metaData = new util.HashMap[String, AnyRef]()
     val threadToStatementContextBridge =
       dependencyResolver.provideDependency(classOf[ThreadToStatementContextBridge]).get
-    val initialStatement: Statement = threadToStatementContextBridge.get()
+    val initialStatement: Statement = threadToStatementContextBridge.get(db.asInstanceOf[GraphDatabaseAPI].databaseId())
     val threadExecutingTheQuery = Thread.currentThread()
     val activeLockCount: LongSupplier = new LongSupplier {
       override def getAsLong = 0

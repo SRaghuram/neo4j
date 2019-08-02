@@ -122,6 +122,7 @@ class IndexConfigCausalClusterIT
 
     private static TokenRead tokenRead( GraphDatabaseFacade db )
     {
-        return db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( false ).tokenRead();
+        ThreadToStatementContextBridge bridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        return bridge.getKernelTransactionBoundToThisThread( false, db.databaseId() ).tokenRead();
     }
 }

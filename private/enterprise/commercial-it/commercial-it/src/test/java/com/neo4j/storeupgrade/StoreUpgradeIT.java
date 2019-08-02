@@ -511,7 +511,7 @@ public class StoreUpgradeIT
 
             ThreadToStatementContextBridge bridge = db.getDependencyResolver()
                     .resolveDependency( ThreadToStatementContextBridge.class );
-            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true );
+            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
 
             for ( Map.Entry<Label,Long> entry : counts.entrySet() )
             {
@@ -530,7 +530,7 @@ public class StoreUpgradeIT
         {
             ThreadToStatementContextBridge bridge = db.getDependencyResolver()
                     .resolveDependency( ThreadToStatementContextBridge.class );
-            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true );
+            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
 
             assertThat( kernelTransaction.dataRead().countsForNode( -1 ), is( store.expectedNodeCount ) );
         }
@@ -554,7 +554,7 @@ public class StoreUpgradeIT
 
             try ( Statement statement = db.getDependencyResolver()
                     .resolveDependency( ThreadToStatementContextBridge.class )
-                    .getKernelTransactionBoundToThisThread( true ).acquireStatement() )
+                    .getKernelTransactionBoundToThisThread( true, db.databaseId() ).acquireStatement() )
             {
                 long countsTxId = ((CountsTracker) db.getDependencyResolver().resolveDependency( CountsAccessor.class )).txId();
                 assertEquals( lastCommittedTxId, countsTxId );

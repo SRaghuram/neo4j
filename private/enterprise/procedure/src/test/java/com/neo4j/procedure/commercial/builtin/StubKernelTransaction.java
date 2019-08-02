@@ -33,6 +33,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.ClockContext;
 
 import static org.mockito.Mockito.mock;
@@ -295,5 +296,11 @@ class StubKernelTransaction implements KernelTransaction
     public boolean isSchemaTransaction()
     {
         return false;
+    }
+
+    @Override
+    public DatabaseId getDatabaseId()
+    {
+        throw new UnsupportedOperationException( "not implemented" );
     }
 }

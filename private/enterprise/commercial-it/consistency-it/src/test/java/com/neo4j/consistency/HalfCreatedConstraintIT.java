@@ -93,7 +93,7 @@ class HalfCreatedConstraintIT
         {
             DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
             ThreadToStatementContextBridge statementBridge = resolver.provideDependency( ThreadToStatementContextBridge.class ).get();
-            KernelTransaction kernelTransaction = statementBridge.getKernelTransactionBoundToThisThread( true );
+            KernelTransaction kernelTransaction = statementBridge.getKernelTransactionBoundToThisThread( true, ((GraphDatabaseAPI) database).databaseId() );
             LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( 0, 0 );
             Config config = resolver.resolveDependency( Config.class );
             kernelTransaction.indexUniqueCreate( descriptor, config.get( GraphDatabaseSettings.default_schema_provider ) );

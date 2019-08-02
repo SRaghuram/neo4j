@@ -115,7 +115,7 @@ public class EnterpriseBuiltInDbmsProcedures
     private KernelTransaction getCurrentTx()
     {
         return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                .getKernelTransactionBoundToThisThread( true );
+                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
     }
 
     @Description( "List all accepted network connections at this instance that are visible to the user." )

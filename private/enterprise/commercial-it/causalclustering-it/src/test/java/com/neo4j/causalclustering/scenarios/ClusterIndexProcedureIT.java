@@ -205,8 +205,8 @@ public class ClusterIndexProcedureIT
 
     private void assertCorrectProvider( GraphDatabaseAPI db, Label label, String property )
     {
-        KernelTransaction kernelTransaction =
-                db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ).getKernelTransactionBoundToThisThread( false );
+        ThreadToStatementContextBridge bridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( false, db.databaseId() );
         TokenRead tokenRead = kernelTransaction.tokenRead();
         int labelId = tokenRead.nodeLabel( label.name() );
         int propId = tokenRead.propertyKey( property );

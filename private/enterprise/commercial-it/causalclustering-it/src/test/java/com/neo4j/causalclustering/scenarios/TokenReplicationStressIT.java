@@ -315,7 +315,8 @@ class TokenReplicationStressIT
 
     private static KernelTransaction currentKernelTx( CoreClusterMember member )
     {
-        ThreadToStatementContextBridge bridge = member.defaultDatabase().getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        return bridge.getKernelTransactionBoundToThisThread( true );
+        GraphDatabaseFacade graphDatabaseFacade = member.defaultDatabase();
+        ThreadToStatementContextBridge bridge = graphDatabaseFacade.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        return bridge.getKernelTransactionBoundToThisThread( true, graphDatabaseFacade.databaseId() );
     }
 }

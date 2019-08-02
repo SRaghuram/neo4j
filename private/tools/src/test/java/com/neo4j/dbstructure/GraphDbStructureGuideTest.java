@@ -301,7 +301,7 @@ class GraphDbStructureGuideTest
 
     KernelTransaction ktx()
     {
-        return bridge.getKernelTransactionBoundToThisThread( true );
+        return bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
     }
 
     void commitAndReOpen()
