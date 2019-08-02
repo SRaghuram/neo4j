@@ -6,6 +6,7 @@
 package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +56,7 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
 
-        assertEquals( triggerCalls.size(), 2 );
+        Assertions.assertEquals( triggerCalls.size(), 2 );
         var initialDesired = triggerCalls.get( 0 ).first();
         var expected = databases.stream()
                 .filter( id -> !databaseIdRepository.systemDatabase().equals( id ) )
@@ -73,8 +74,8 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
         var finalTrigger = triggerCalls.get( triggerCalls.size() - 1 );
-        assertTrue( finalTrigger.first().keySet().containsAll( databases ) );
+        Assertions.assertTrue( finalTrigger.first().keySet().containsAll( databases ) );
         var expected = databases.stream().collect( Collectors.toMap( Function.identity(), ignored -> STOPPED ) );
-        assertEquals( expected, finalTrigger.first() );
+        Assertions.assertEquals( expected, finalTrigger.first() );
     }
 }

@@ -65,6 +65,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -105,7 +106,7 @@ class BookmarkIT
     void shouldReturnUpToDateBookmarkWhenSomeTransactionIsCommitting() throws Exception
     {
         CommitBlocker commitBlocker = new CommitBlocker();
-        db = createDb( commitBlocker );
+        db = createDbms( commitBlocker );
         driver = graphDatabaseDriver( boltAddress( db ) );
 
         String firstBookmark = createNode( driver );
@@ -133,7 +134,7 @@ class BookmarkIT
     @Test
     void shouldReturnBookmarkInNewFormat() throws Exception
     {
-        db = createDb();
+        db = createDbms();
         driver = graphDatabaseDriver( boltAddress( db ) );
 
         var bookmark = createNode( driver );
@@ -144,7 +145,7 @@ class BookmarkIT
     @Test
     void shouldFailForUnreachableSystemDatabaseBookmark()
     {
-        db = createDb();
+        db = createDbms();
         driver = graphDatabaseDriver( boltAddress( db ) );
 
         var unreachableSystemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + 9999 );
@@ -159,7 +160,7 @@ class BookmarkIT
     void shouldWaitForSystemDatabaseBookmark( TestInfo testInfo ) throws Exception
     {
         var waitTrackingMonitor = new WaitTrackingMonitor();
-        db = createDb( waitTrackingMonitor );
+        db = createDbms( waitTrackingMonitor );
         driver = graphDatabaseDriver( boltAddress( db ) );
         executor = newSingleThreadExecutor( daemon( "thread-" + testInfo.getDisplayName() ) );
 
@@ -177,6 +178,8 @@ class BookmarkIT
         assertFalse( future.isDone() );
         assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 1, MINUTES );
 
+        assertThat( "Dbms already has database foo", managementService.listDatabases(), not( hasItem( "foo" ) ) );
+
         for ( var i = 0; i < txCount; i++ )
         {
             createDatabase( "baz" + i );
@@ -193,22 +196,22 @@ class BookmarkIT
         }
     }
 
-    private GraphDatabaseAPI createDb( CommitBlocker commitBlocker )
+    private GraphDatabaseAPI createDbms( CommitBlocker commitBlocker )
     {
-        return createDb( globalModule -> new CustomCommercialEditionModule( globalModule, commitBlocker ) );
+        return createDbms( globalModule -> new CustomCommercialEditionModule( globalModule, commitBlocker ) );
     }
 
-    private GraphDatabaseAPI createDb( TransactionIdTrackerMonitor monitor )
+    private GraphDatabaseAPI createDbms( TransactionIdTrackerMonitor monitor )
     {
-        return createDb( globalModule -> new CommercialEditionModuleWithMonitor( globalModule, monitor ) );
+        return createDbms( globalModule -> new CommercialEditionModuleWithMonitor( globalModule, monitor ) );
     }
 
-    private GraphDatabaseAPI createDb()
+    private GraphDatabaseAPI createDbms()
     {
-        return createDb( CommercialEditionModule::new );
+        return createDbms( CommercialEditionModule::new );
     }
 
-    private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
+    private GraphDatabaseAPI createDbms( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
         var factory = new DatabaseManagementServiceFactory( COMMERCIAL, editionModuleFactory );
         managementService = factory.build( directory.storeDir(), configWithBoltEnabled(), GraphDatabaseDependencies.newDependencies() );
