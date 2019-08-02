@@ -270,6 +270,12 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         }
 
         @Override
+        public boolean disallowsTraverseType( long type )
+        {
+            return disallowsTraverseAllRelTypes || blacklistTraverseRelTypes.contains( (int) type );
+        }
+
+        @Override
         public boolean allowsTraverseNodeLabels( long... labels )
         {
             if ( allowsTraverseAllLabels() )

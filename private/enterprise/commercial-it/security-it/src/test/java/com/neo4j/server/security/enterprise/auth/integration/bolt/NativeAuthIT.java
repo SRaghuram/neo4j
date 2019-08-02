@@ -232,7 +232,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
 
         List<String> timLabels = labels.stream().filter( v -> !v.equals( "City" ) ).collect( Collectors.toList() );
         List<String> timTypes =
-                types.stream().filter( v -> !(v.equals( "LOCATED_IN" ) || v.equals( "BELONGS_TO" ) || v.equals( "FROM" )) ).collect( Collectors.toList() );
+                types.stream().filter( v -> !( v.equals( "FROM" )) ).collect( Collectors.toList() );
         Map<String,Map<String,List<String>>> userExpectedResults =
                 Map.of( READ_USER, Map.of( "labels", labels, "types", types, "props", List.of( "name" ) ),
                         "tim", Map.of( "labels", timLabels, "types", timTypes, "props", List.of( "name" ) ) );

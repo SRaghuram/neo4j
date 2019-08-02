@@ -126,6 +126,25 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         Map("label" -> "C", "nodeCount" -> 1)))
   }
 
+  test("should get count for labels even when yielded variables are renamed") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    //When
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label as l, nodeCount as c RETURN l, c")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("l" -> "A", "c" -> 3),
+        Map("l" -> "B", "c" -> 1),
+        Map("l" -> "C", "c" -> 1)))
+  }
+
   test("should get correct count for labels when removed incl. zero counts") {
     // Given
     createLabeledNode(Map("name" -> "Tic"), "A")
