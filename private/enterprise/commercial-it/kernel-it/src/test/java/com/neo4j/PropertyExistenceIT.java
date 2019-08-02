@@ -6,23 +6,26 @@
 package com.neo4j;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class PropertyExistenceIT
+@ExtendWith( TestDirectoryExtension.class )
+class PropertyExistenceIT
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void deletedNodesNotCheckedByExistenceConstraints()
+    void deletedNodesNotCheckedByExistenceConstraints()
     {
         DatabaseManagementService managementService =
                 new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory() ).build();

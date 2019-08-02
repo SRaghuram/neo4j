@@ -5,48 +5,50 @@
  */
 package com.neo4j.dbms;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.ImpermanentDbmsRule;
+import org.neo4j.test.extension.ImpermanentDbmsExtension;
+import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.DELETED;
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.OFFLINE;
 import static com.neo4j.dbms.SystemGraphDbmsModel.DatabaseState.ONLINE;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class SystemGraphDbmsModelTest
+@ImpermanentDbmsExtension
+class SystemGraphDbmsModelTest
 {
-    @Rule
-    public final DbmsRule db = new ImpermanentDbmsRule();
-
+    @Inject
+    private DatabaseManagementService managementService;
+    @Inject
+    private GraphDatabaseService db;
     private TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private Collection<DatabaseId> updatedDatabases = new ArrayList<>();
     private SystemGraphDbmsModel dbmsModel;
 
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
         dbmsModel = new SystemGraphDbmsModel( databaseIdRepository );
         dbmsModel.setSystemDatabase( db );
 
-        db.getManagementService().registerTransactionEventListener( DEFAULT_DATABASE_NAME, new TransactionEventListenerAdapter<>()
+        managementService.registerTransactionEventListener( DEFAULT_DATABASE_NAME, new TransactionEventListenerAdapter<>()
         {
             @Override
             public void afterCommit( TransactionData txData, Object state, GraphDatabaseService databaseService )
@@ -57,7 +59,7 @@ public class SystemGraphDbmsModelTest
     }
 
     @Test
-    public void shouldDetectUpdatedDatabases()
+    void shouldDetectUpdatedDatabases()
     {
         // when
         try ( var tx = db.beginTx() )
@@ -93,7 +95,7 @@ public class SystemGraphDbmsModelTest
     }
 
     @Test
-    public void shouldReturnDatabaseStates()
+    void shouldReturnDatabaseStates()
     {
         // when
         try ( var tx = db.beginTx() )
@@ -113,7 +115,7 @@ public class SystemGraphDbmsModelTest
         }
 
         // then
-        var expected = new HashMap<>();
+        var expected = new HashMap<DatabaseId,SystemGraphDbmsModel.DatabaseState>();
 
         expected.put( databaseIdRepository.get( "A" ), ONLINE );
         expected.put( databaseIdRepository.get( "B" ), OFFLINE );

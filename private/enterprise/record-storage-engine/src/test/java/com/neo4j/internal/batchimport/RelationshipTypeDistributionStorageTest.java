@@ -5,9 +5,8 @@
  */
 package com.neo4j.internal.batchimport;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -15,25 +14,30 @@ import java.util.List;
 
 import org.neo4j.internal.batchimport.DataStatistics;
 import org.neo4j.internal.batchimport.DataStatistics.RelationshipTypeCount;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.util.stream.StreamSupport.stream;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RelationshipTypeDistributionStorageTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, RandomExtension.class} )
+class RelationshipTypeDistributionStorageTest
 {
-    private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    private final TestDirectory directory = TestDirectory.testDirectory( fs );
-    private final RandomRule random = new RandomRule();
-
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory );
+    @Inject
+    private DefaultFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory directory;
+    @Inject
+    private RandomRule random;
 
     @Test
-    public void shouldStoreAndLoadStringTypes() throws Exception
+    void shouldStoreAndLoadStringTypes() throws Exception
     {
         // given
         File file = directory.file( "store" );
@@ -43,7 +47,7 @@ public class RelationshipTypeDistributionStorageTest
         {
             types.add( new RelationshipTypeCount( i, random.nextLong( 1, 1_000_000 ) ) );
         }
-        RelationshipTypeCount[] expectedTypes = types.stream().toArray( RelationshipTypeCount[]::new );
+        RelationshipTypeCount[] expectedTypes = types.toArray( new RelationshipTypeCount[0] );
 
         // when
         long nodeCount = random.nextLong( 100_000_000_000L );

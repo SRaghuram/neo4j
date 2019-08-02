@@ -5,16 +5,16 @@
  */
 package org.neo4j.cypher.internal.codegen;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.setStaticField;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SetStaticFieldTest
+class SetStaticFieldTest
 {
     @Test
-    public void shouldAssignFields()
+    void shouldAssignFields()
     {
         // when
         setStaticField.apply( Apa.class, "X", "HELLO WORLD!" );

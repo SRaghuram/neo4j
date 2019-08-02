@@ -5,17 +5,16 @@
  */
 package com.neo4j.kernel;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.internal.Version;
 
-import static org.junit.Assert.assertNotEquals;
-
-public class VersionIT
+class VersionIT
 {
     @Test
-    public void canGetKernelRevision()
+    void canGetKernelRevision()
     {
-        assertNotEquals( "Kernel revision not specified", "", Version.getKernelVersion() );
+        Assertions.assertNotEquals( "", Version.getKernelVersion(), "Kernel revision not specified" );
     }
 }

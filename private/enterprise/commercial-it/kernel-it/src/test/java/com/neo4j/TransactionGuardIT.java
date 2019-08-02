@@ -9,10 +9,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +48,7 @@ import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
@@ -61,18 +60,17 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.SimpleGraphFactory;
 import org.neo4j.server.web.HttpHeaderUtils;
-import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.EphemeralPageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 import org.neo4j.test.server.HTTP;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_timeout;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
@@ -82,18 +80,15 @@ import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.imme
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionNotFound;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
-public class TransactionGuardIT
+@EphemeralPageCacheExtension
+class TransactionGuardIT
 {
-    @ClassRule
-    public static final CleanupRule cleanupRule = new CleanupRule();
-    @ClassRule
-    public static final TestDirectory testDirectory = TestDirectory.testDirectory();
-
-    @Rule
-    public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
-
-    @Rule
-    public final PageCacheRule pageCacheRule = new PageCacheRule();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private EphemeralFileSystemAbstraction fileSystem;
+    @Inject
+    private PageCache pageCache;
 
     private static final FakeClock fakeClock = Clocks.fakeClock();
     private static GraphDatabaseAPI databaseWithTimeout;
@@ -106,8 +101,8 @@ public class TransactionGuardIT
     private static final IdInjectionFunctionAction getIdInjectionFunction = new IdInjectionFunctionAction( monitorSupplier );
     private DatabaseManagementService customManagementService;
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         databaseWithTimeout = null;
         databaseWithoutTimeout = null;
@@ -121,49 +116,45 @@ public class TransactionGuardIT
     }
 
     @Test
-    public void terminateLongRunningTransaction()
+    void terminateLongRunningTransaction()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
-        try ( Transaction transaction = database.beginTx() )
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            fakeClock.forward( 3, TimeUnit.SECONDS );
-            transaction.success();
-            timeoutMonitor.run();
-            database.createNode();
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException e )
-        {
-            assertThat( e.getMessage(), startsWith( "The transaction has been terminated." ) );
-            assertEquals( e.status(), Status.Transaction.TransactionTimedOut );
-        }
+            try ( Transaction transaction = database.beginTx() )
+            {
+                fakeClock.forward( 3, TimeUnit.SECONDS );
+                transaction.success();
+                timeoutMonitor.run();
+                database.createNode();
+            }
+        } );
+
+        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertEquals( exception.status(), Status.Transaction.TransactionTimedOut );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningTransactionWithPeriodicCommit() throws Exception
+    void terminateLongRunningTransactionWithPeriodicCommit()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         monitorSupplier.setTransactionMonitor( timeoutMonitor );
-        try
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
             URL url = prepareTestImportFile( 8 );
             database.execute( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" );
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException ignored )
-        {
-        }
+        } );
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateTransactionWithCustomTimeoutWithoutConfiguredDefault()
+    void terminateTransactionWithCustomTimeoutWithoutConfiguredDefault()
     {
         GraphDatabaseAPI database = startDatabaseWithoutTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -176,47 +167,45 @@ public class TransactionGuardIT
             transaction.failure();
         }
 
-        try ( Transaction transaction = database.beginTx( 27, TimeUnit.SECONDS ) )
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            fakeClock.forward( 28, TimeUnit.SECONDS );
-            timeoutMonitor.run();
-            database.createNode();
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException e )
-        {
-            assertThat( e.getMessage(), startsWith( "The transaction has been terminated." ) );
-        }
+            try ( Transaction transaction = database.beginTx( 27, TimeUnit.SECONDS ) )
+            {
+                fakeClock.forward( 28, TimeUnit.SECONDS );
+                timeoutMonitor.run();
+                database.createNode();
+            }
+        } );
+        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningQueryTransaction()
+    void terminateLongRunningQueryTransaction()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         monitorSupplier.setTransactionMonitor( timeoutMonitor );
 
-        try ( Transaction transaction = database.beginTx() )
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            fakeClock.forward( 3, TimeUnit.SECONDS );
-            timeoutMonitor.run();
-            transaction.success();
-            database.execute( "create (n)" );
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException e )
-        {
-            assertThat( e.getMessage(), startsWith( "The transaction has been terminated." ) );
-        }
+            try ( Transaction transaction = database.beginTx() )
+            {
+                fakeClock.forward( 3, TimeUnit.SECONDS );
+                timeoutMonitor.run();
+                transaction.success();
+                database.execute( "create (n)" );
+            }
+        } );
+        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningQueryWithCustomTimeoutWithoutConfiguredDefault()
+    void terminateLongRunningQueryWithCustomTimeoutWithoutConfiguredDefault()
     {
         GraphDatabaseAPI database = startDatabaseWithoutTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -229,24 +218,23 @@ public class TransactionGuardIT
             transaction.failure();
         }
 
-        try ( Transaction transaction = database.beginTx( 6, TimeUnit.SECONDS ) )
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            fakeClock.forward( 7, TimeUnit.SECONDS );
-            timeoutMonitor.run();
-            transaction.success();
-            database.execute( "create (n)" );
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException e )
-        {
-            assertThat( e.getMessage(), startsWith( "The transaction has been terminated." ) );
-        }
+            try ( Transaction transaction = database.beginTx( 6, TimeUnit.SECONDS ) )
+            {
+                fakeClock.forward( 7, TimeUnit.SECONDS );
+                timeoutMonitor.run();
+                transaction.success();
+                database.execute( "create (n)" );
+            }
+        } );
+        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningRestTransactionalEndpointQuery() throws Exception
+    void terminateLongRunningRestTransactionalEndpointQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -259,18 +247,18 @@ public class TransactionGuardIT
 
         HTTP.Response response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( 200, response.status(), "Response should be successful." );
 
         HTTP.Response commitResponse = HTTP.POST( transactionEndPoint + "/commit" );
-        assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
+        assertEquals( 404, commitResponse.status(), "Transaction should be already closed and not found." );
 
-        assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
-                commitResponse.get( "errors" ).findValue( "code" ).asText() );
+        assertEquals( TransactionNotFound.code().serialize(),
+                commitResponse.get( "errors" ).findValue( "code" ).asText(), "Transaction should be forcefully closed." );
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningRestTransactionalEndpointWithCustomTimeoutQuery() throws Exception
+    void terminateLongRunningRestTransactionalEndpointWithCustomTimeoutQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -281,32 +269,32 @@ public class TransactionGuardIT
                 .withHeaders( HttpHeaderUtils.MAX_EXECUTION_TIME_HEADER, String.valueOf( customTimeout ) )
                 .POST( transactionUri( neoServer ),
                         quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        assertEquals( "Response should be successful.", 201, beginResponse.status() );
+        assertEquals( 201, beginResponse.status(), "Response should be successful." );
 
         String transactionEndPoint = beginResponse.location();
         fakeClock.forward( 3, TimeUnit.SECONDS );
 
         HTTP.Response response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( 200, response.status(), "Response should be successful." );
 
         fakeClock.forward( 11, TimeUnit.SECONDS );
         timeoutMonitor.run();
 
         response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( 200, response.status(), "Response should be successful." );
 
         HTTP.Response commitResponse = HTTP.POST( transactionEndPoint + "/commit" );
-        assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
+        assertEquals( 404, commitResponse.status(), "Transaction should be already closed and not found." );
 
-        assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
-                commitResponse.get( "errors" ).findValue( "code" ).asText() );
+        assertEquals( TransactionNotFound.code().serialize(),
+                commitResponse.get( "errors" ).findValue( "code" ).asText(), "Transaction should be forcefully closed." );
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningDriverQuery() throws Exception
+    void terminateLongRunningDriverQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -323,21 +311,13 @@ public class TransactionGuardIT
             transaction.success();
             fakeClock.forward( 3, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            try
-            {
-                transaction.run( "create (n)" ).consume();
-                fail( "Transaction should be already terminated by execution guard." );
-            }
-            catch ( Exception expected )
-            {
-                // ignored
-            }
+            assertThrows( Exception.class, transaction.run( "create (n)" )::consume );
         }
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void terminateLongRunningDriverPeriodicCommitQuery() throws Exception
+    void terminateLongRunningDriverPeriodicCommitQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
@@ -347,38 +327,35 @@ public class TransactionGuardIT
 
         org.neo4j.driver.Config driverConfig = getDriverConfig();
 
-        try ( Driver driver = GraphDatabase.driver( "bolt://localhost:" + boltPortDatabaseWithTimeout, driverConfig );
-                Session session = driver.session() )
+        assertThrows( Exception.class, () ->
         {
-            URL url = prepareTestImportFile( 8 );
-            session.run( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" ).consume();
-            fail( "Transaction should be already terminated by execution guard." );
-        }
-        catch ( Exception expected )
-        {
-            //
-        }
+            try ( Driver driver = GraphDatabase.driver( "bolt://localhost:" + boltPortDatabaseWithTimeout, driverConfig );
+                  Session session = driver.session() )
+            {
+                URL url = prepareTestImportFile( 8 );
+                session.run( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" ).consume();
+            }
+        } );
         assertDatabaseDoesNotHaveNodes( database );
     }
 
     @Test
-    public void changeTimeoutAtRuntime()
+    void changeTimeoutAtRuntime()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
-        try ( Transaction transaction = database.beginTx() )
+        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            fakeClock.forward( 3, TimeUnit.SECONDS );
-            timeoutMonitor.run();
-            transaction.success();
-            database.execute( "create (n)" );
-            fail( "Transaction should be already terminated." );
-        }
-        catch ( TransactionTerminatedException e )
-        {
-            assertThat( e.getMessage(), startsWith( "The transaction has been terminated." ) );
-        }
+            try ( Transaction transaction = database.beginTx() )
+            {
+                fakeClock.forward( 3, TimeUnit.SECONDS );
+                timeoutMonitor.run();
+                transaction.success();
+                database.execute( "create (n)" );
+            }
+        } );
+        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
 
         assertDatabaseDoesNotHaveNodes( database );
 
@@ -463,7 +440,6 @@ public class TransactionGuardIT
                     .withProperty( GraphDatabaseSettings.auth_enabled.name(), FALSE );
             serverBuilder.withProperty( HttpConnector.listen_address.name(), "localhost:0" );
             neoServer = serverBuilder.build();
-            cleanupRule.add( neoServer );
             neoServer.start();
         }
         return neoServer;
@@ -515,12 +491,11 @@ public class TransactionGuardIT
     {
         // Inject IdContextFactory
         Dependencies dependencies = new Dependencies();
-        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule );
-        dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystemRule, pageCache ) );
+        dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystem, pageCache ) );
 
         DatabaseManagementServiceBuilder databaseBuilder =
                 new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
-                        fileSystemRule ).impermanent();
+                        fileSystem ).impermanent();
         databaseBuilder.setConfig( configMap );
 
         customManagementService = databaseBuilder.build();
@@ -552,7 +527,7 @@ public class TransactionGuardIT
             return transactionMonitor;
         }
 
-        public void clear()
+        void clear()
         {
             setTransactionMonitor( null );
         }
@@ -578,7 +553,7 @@ public class TransactionGuardIT
         }
     }
 
-    private class GuardingServerBuilder extends CommercialServerBuilder
+    private static class GuardingServerBuilder extends CommercialServerBuilder
     {
         private final DatabaseManagementService databaseManagementService;
 
