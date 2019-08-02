@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.common.nmt;
 
+import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummary;
+import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummaryParser;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;

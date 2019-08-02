@@ -108,9 +108,18 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         Redirect outputRedirect = Redirect.INHERIT;
         // redirect error to file
         Redirect errorRedirect = Redirect.to( forkDirectory.newErrorLog().toFile() );
-        JvmProcess.start( jvmProcessArgs,
+        JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs,
                           outputRedirect,
-                          errorRedirect ).waitFor();
+                          errorRedirect );
+
+        // if any, schedule runs of scheduled profilers
+        ScheduledProfilers schedulerProfilers = ScheduledProfilers.from(externalProfilers);
+        schedulerProfilers.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvmProcess.pid() );
+
+        jvmProcess.waitFor();
+
+        // stop scheduled profilers
+        schedulerProfilers.stop();
 
         externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                       query.benchmarkGroup(),

@@ -3,14 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.common.nmt;
+package com.neo4j.bench.common.profiling.nmt;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
-import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor.ParseResult;
+import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 
