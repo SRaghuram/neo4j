@@ -390,7 +390,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
           assign(argVar, load(currentArg)),
           assign(aggPreMapVar, newInstance(constructor[AggMap])),
           invokeSideEffect(loadField(collectionHelperField),
-                           method[ScalaCollectionHelper, Unit, PerArgument[AggMap]]("add"),
+                           method[ScalaCollectionHelper, Unit, AggOut, PerArgument[AggMap]]("add"),
                            loadField(perArgsField),
                            newInstance(constructor[PerArgument[AggMap], Long, AggMap], load(argVar), load(aggPreMapVar))),
         )),
@@ -442,7 +442,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       setField(sinkField,
                invoke(EXECUTION_STATE,
-                      method[ExecutionState, PipelineId, BufferId, Sink[IndexedSeq[PerArgument[AggMap]]]]("getSink"),
+                      method[ExecutionState, Sink[IndexedSeq[PerArgument[AggMap]]], PipelineId, BufferId]("getSink"),
                       PIPELINE_ID,
                       loadField(bufferIdField)))
     )
@@ -451,7 +451,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override protected def genProduce: IntermediateRepresentation = {
     block(
       invokeSideEffect(loadField(sinkField),
-                       method[Sink[AggOut], AggOut, Unit]("put"),
+                       method[Sink[AggOut], Unit, AggOut]("put"),
                        loadField(perArgsField)),
       // currently impossible for owning task to continue, as there is no output morsel
       setField(perArgsField, constant(null))
@@ -460,9 +460,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
 
-  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, collectionHelperField) ++ inner.genFields
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, collectionHelperField)
 
-  override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggPreMapVar) ++ inner.genLocalVariables
+  override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggPreMapVar)
 
   override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions ++ Seq(compiledGroupingExpression)
 

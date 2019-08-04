@@ -163,7 +163,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
                        state: QueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
-  override def workIdentity: WorkIdentity = throw new IllegalStateException("Fused operators do not have a single WorkIdentity.")
+  // TODO find a better solution for this
+  override def workIdentity: WorkIdentity =  WorkIdentityImpl(Id(1), "")//throw new IllegalStateException("Fused operators do not have a single WorkIdentity.")
 
 }
 
