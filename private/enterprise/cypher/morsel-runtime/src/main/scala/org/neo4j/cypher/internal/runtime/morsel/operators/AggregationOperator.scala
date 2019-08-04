@@ -453,7 +453,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       invokeSideEffect(loadField(sinkField),
                        method[Sink[AggOut], AggOut, Unit]("put"),
                        loadField(perArgsField)),
-      setField(perArgsField, newInstance(constructor[AggOut]))
+      // currently impossible for owning task to continue, as there is no output morsel
+      setField(perArgsField, constant(null))
     )
   }
 

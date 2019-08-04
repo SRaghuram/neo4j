@@ -38,7 +38,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       if (fusingEnabled && !cannotFuse) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
-    //For a fully fused pipeline that includes ProduceResult we don't need to allocate an output morsel
+    //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel
     val needsMorsel = (p.outputDefinition, maybeHeadOperator, unhandledMiddlePlans) match {
       case (_:ProduceResultOutput, Some(_), Seq()) => false
       case (ReduceOutput(_,plans.Aggregation(_,groupingExpressions,_)), Some(_), Seq()) if groupingExpressions.nonEmpty => false
@@ -93,11 +93,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
           (template, List(p), NoOutput)
 
         case reduceOutput@ReduceOutput(bufferId, p) =>
-          println(s"Encountered a ReduceOutput: $reduceOutput")
           p match {
             case plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap) if groupingExpressions.nonEmpty =>
-
-              println("Trying to create Aggregation Template")
 
               innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
               innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
@@ -122,10 +119,9 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                        aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compile(e)()),
                                                                        groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions),
                                                                        aggregationAstExpressions)(expressionCompiler)
-              // TODO should this be NoOutput or ReduceOutput?
               (template, List(p), NoOutput)
 
-            case unhandledReducePlan =>
+            case _ =>
               (innermostTemplate, List.empty[LogicalPlan], reduceOutput)
           }
         case unhandled =>

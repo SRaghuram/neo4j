@@ -32,6 +32,14 @@ case class ExecutablePipeline(id: PipelineId,
                   resources: QueryResources,
                   stateFactory: StateFactory): PipelineState = {
 
+    // when a pipeline is fully fused (including output operator) the CompiledTask acts as OutputOperator
+    def outputOperatorStateFor(operatorTask: OperatorTask): OutputOperatorState = (operatorTask, outputOperator) match {
+      case (compiledTask: CompiledTask, NoOutputOperator) if middleOperators.isEmpty =>
+        compiledTask.createState(executionState, id)
+      case _ =>
+        outputOperator.createState(executionState, id)
+    }
+
     val middleTasks = new Array[OperatorTask](middleOperators.length)
     var i = 0
     while (i < middleTasks.length) {
@@ -42,7 +50,7 @@ case class ExecutablePipeline(id: PipelineId,
     new PipelineState(this,
                       start.createState(executionState, stateFactory),
                       middleTasks,
-                      () => outputOperator.createState(executionState, id),
+                      outputOperatorStateFor,
                       executionState)
     }
 
@@ -60,9 +68,7 @@ case class ExecutablePipeline(id: PipelineId,
 class PipelineState(val pipeline: ExecutablePipeline,
                     startState: OperatorState,
                     middleTasks: Array[OperatorTask],
-                    // TODO reviewer: it feels awkward that start & outputOperator are a-sci-metric (one 'state' creates tasks, while the other does not)
-                    //                OutputOperator should probably have something analogous to OperatorState.newTasks()
-                    outputOperatorStateCreator:() => OutputOperatorState,
+                    outputOperatorStateCreator: OperatorTask => OutputOperatorState,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
@@ -140,7 +146,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
         PipelineTask(startTask,
                      middleTasks,
                      // output operator state may be stateful, should not be shared across tasks
-                     outputOperatorStateCreator(),
+                     outputOperatorStateCreator(startTask),
                      context,
                      state,
                      this)
