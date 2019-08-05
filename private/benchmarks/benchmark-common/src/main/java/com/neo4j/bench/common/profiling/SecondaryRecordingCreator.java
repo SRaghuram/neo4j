@@ -247,27 +247,6 @@ abstract class SecondaryRecordingCreator
         }
     }
 
-    static class NativeMemoryTrackingSummaryReporting extends SecondaryRecordingCreator
-    {
-
-        @Override
-        Set<String> requiredEnvironmentVariables()
-        {
-            return Collections.emptySet();
-        }
-
-        @Override
-        Set<RecordingType> recordingTypes()
-        {
-            return Sets.newHashSet( RecordingType.NMT_SUMMARY_REPORT );
-        }
-
-        @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
-        {
-        }
-    }
-
     private static Path getFlameGraphSvg( ForkDirectory forkDirectory, ProfilerRecordingDescriptor recordingDescriptor, RecordingType recordingType )
     {
         Path flameGraphSvg = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( recordingType ) );

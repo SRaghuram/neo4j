@@ -9,13 +9,17 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummaryReport;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 
+import java.io.IOError;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -26,6 +30,14 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
 {
 
     public static final String SNAPSHOT_PARAM = "snapshot";
+
+    // TODO: state, because we need to keep
+    // snapshot number for ScheduledProfiler
+    // I don't like it, we can modify it
+    // by slight modification of ScheduledProfiler interface,
+    // we can return state from onSchedule method and
+    // pass state explicitly as method parameter
+    private int snapshot;
 
     @Override
     public List<String> invokeArgs(
@@ -64,6 +76,23 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
             Benchmark benchmark,
             Parameters additionalParameters )
     {
+        // TODO: I am not sure, how to handle this,
+        // maybe this should be a secondary recording creator?
+        // we take here all native memory tracking summaries and
+        // aggregate them, we can than save them to CSV or JSON
+        try
+        {
+            NativeMemoryTrackingSummaryReport summaryReport = NativeMemoryTrackingSummaryReport.create(
+                    forkDirectory,
+                    benchmarkGroup,
+                    benchmark,
+                    RunPhase.MEASUREMENT );
+            summaryReport.toCSV( forkDirectory.create( "native_memory_tracking.summary.csv" ) );
+        }
+        catch ( IOException e )
+        {
+            throw new IOError( e );
+        }
     }
 
     @Override
@@ -74,14 +103,13 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
             Parameters additionalParameters,
             Pid pid )
     {
+        Parameters parameters = incrementSnapshot( additionalParameters );
         ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
                 benchmarkGroup,
                 benchmark,
                 RunPhase.MEASUREMENT,
                 ProfilerType.NMT_SUMMARY,
-                additionalParameters );
-
-        // TODO: increment snapshot number
+                parameters );
 
         String recordingDescriptorFilename = recordingDescriptor.filename();
         List<String> command =
@@ -107,6 +135,13 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
         {
             System.out.println( format( "failed to snapshot native memory tracking summary\n%s", e ) );
         }
+    }
+
+    private Parameters incrementSnapshot( Parameters additionalParameters )
+    {
+        Map<String,String> map = new HashMap<>( additionalParameters.asMap() );
+        map.put( SNAPSHOT_PARAM, Integer.toString( snapshot++ ) );
+        return new Parameters( map );
     }
 
 }

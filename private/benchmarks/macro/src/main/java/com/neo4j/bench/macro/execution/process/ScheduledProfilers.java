@@ -45,8 +45,13 @@ public class ScheduledProfilers
     public void start( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
             Parameters clientParameters, Pid pid )
     {
-        scheduledProfilers.forEach( scheduledProfiler -> scheduleProfiler( scheduledProfiler, forkDirectory,
-                benchmarkGroup, benchmark, clientParameters, pid ) );
+        scheduledProfilers.forEach( scheduledProfiler -> scheduleProfiler(
+                scheduledProfiler,
+                forkDirectory,
+                benchmarkGroup,
+                benchmark,
+                clientParameters,
+                pid ) );
     }
 
     public void stop()
@@ -72,16 +77,14 @@ public class ScheduledProfilers
     {
         FixedRateValue fixedRate = getFixedRate( scheduledProfiler );
         scheduledThreadPool.scheduleAtFixedRate(
-                () -> scheduledProfiler.onSchedule( forkDirectory, benchmarkGroup, benchmark, additionalParameters,
-                        pid ),
+                () -> scheduledProfiler.onSchedule( forkDirectory, benchmarkGroup, benchmark, additionalParameters, pid ),
                 0,
                 fixedRate.period,
-                fixedRate.timeUnit);
+                fixedRate.timeUnit );
     }
 
     private FixedRateValue getFixedRate( ScheduledProfiler scheduledProfiler )
     {
-        // find interface method
         Method intfMethod = findIntfMethod();
         try
         {
