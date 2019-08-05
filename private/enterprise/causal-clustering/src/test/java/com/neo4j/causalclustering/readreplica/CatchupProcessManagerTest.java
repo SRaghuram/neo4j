@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.test.CallingThreadExecutor;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

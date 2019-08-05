@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -91,7 +91,7 @@ class StateMachineCommitHelperTest
         assertEquals( txId, committedTxId.longValue() );
         assertEquals( 15, commandIndexTracker.getAppliedCommandIndex() );
         verify( pageCursorTracer ).reportEvents();
-        verify( commitNotifier ).transactionCommitted( txId );
+        verify( commitNotifier ).fireTransactionCommitted( txId );
     }
 
     private static TransactionCommitProcess newCommitProcessMock( long transactionId ) throws TransactionFailureException

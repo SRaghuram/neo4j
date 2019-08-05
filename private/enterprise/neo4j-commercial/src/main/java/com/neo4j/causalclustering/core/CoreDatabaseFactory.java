@@ -78,7 +78,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.TransactionEventService;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -166,13 +166,13 @@ class CoreDatabaseFactory
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<SocketAddress,Message> raftSender;
-    private final TransactionEventService txEventService;
+    private final ReplicatedTransactionEventListeners txEventService;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, CoreStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<DatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, TransactionEventService txEventService )
+            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, ReplicatedTransactionEventListeners txEventService )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();

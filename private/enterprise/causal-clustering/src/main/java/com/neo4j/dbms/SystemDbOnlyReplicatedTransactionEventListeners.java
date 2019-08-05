@@ -5,27 +5,35 @@
  */
 package com.neo4j.dbms;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-public class SystemDatabaseOnlyTransactionEventService implements TransactionEventService
+public class SystemDbOnlyReplicatedTransactionEventListeners implements ReplicatedTransactionEventListeners
 {
-    private TransactionCommitHandler handler;
+    private List<TransactionCommitListener> listeners = new CopyOnWriteArrayList<>();
 
-    public void registerHandler( DatabaseId databaseId, TransactionCommitHandler handler )
+    public void registerListener( DatabaseId databaseId, TransactionCommitListener listener )
     {
         if ( isNotSystemDatabase( databaseId ) )
         {
             return;
         }
 
-        if ( this.handler != null )
+        this.listeners.add( listener );
+    }
+
+    public void unregisterListener( DatabaseId databaseId, TransactionCommitListener listener )
+    {
+        if ( isNotSystemDatabase( databaseId ) )
         {
-            throw new IllegalStateException( "Only one handler supported" );
+            return;
         }
 
-        this.handler = handler;
+        this.listeners.remove( listener );
     }
 
     public TransactionCommitNotifier getCommitNotifier( DatabaseId databaseId )
@@ -35,13 +43,7 @@ public class SystemDatabaseOnlyTransactionEventService implements TransactionEve
             return ignored -> {};
         }
 
-        return txId ->
-        {
-            if ( handler != null )
-            {
-                handler.transactionCommitted( txId );
-            }
-        };
+        return txId -> listeners.forEach( h -> h.transactionCommitted( txId ) );
     }
 
     private boolean isNotSystemDatabase( DatabaseId databaseId )

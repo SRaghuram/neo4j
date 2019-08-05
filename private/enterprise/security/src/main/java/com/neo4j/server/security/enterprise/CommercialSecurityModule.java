@@ -28,6 +28,7 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphI
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
@@ -55,6 +56,8 @@ import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -92,7 +95,9 @@ import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.impl.util.ValueUtils.asParameterMapValue;
 
 @ServiceProvider
@@ -144,12 +149,22 @@ public class CommercialSecurityModule extends SecurityModule
         authManager = newAuthManager( config, logProvider, securityLog, fileSystem, databaseManager.databaseIdRepository() );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
-        // If is clustered
-        //      Resolve cluster Transaction Event Service
-        //      Add handler to clear caches
-        // else
-        //      Resolve kernel transaction event listeners
-        //      Add handler
+        if ( isClustered )
+        {
+            var txEventListeners = platformDependencies.resolveDependency( ReplicatedTransactionEventListeners.class );
+            txEventListeners.registerListener( SYSTEM_DATABASE_ID, txId -> { /* TODO: clear caches */ } );
+        }
+        else
+        {
+            dependencies.transactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME, new TransactionEventListenerAdapter()
+            {
+                @Override
+                public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
+                {
+                    // TODO: clear caches
+                }
+            } );
+        }
 
         // Register procedures
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );

@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;

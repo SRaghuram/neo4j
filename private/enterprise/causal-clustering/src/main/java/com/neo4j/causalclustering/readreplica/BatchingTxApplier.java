@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 
 import java.util.function.Supplier;
 
@@ -109,7 +109,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         }
 
         var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() );
-        toApply.onClose( txCommitNotifier::transactionCommitted );
+        toApply.onClose( txCommitNotifier::fireTransactionCommitted );
         txQueue.queue( toApply );
 
         if ( !stopped )

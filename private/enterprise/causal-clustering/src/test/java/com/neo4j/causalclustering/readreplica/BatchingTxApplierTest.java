@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

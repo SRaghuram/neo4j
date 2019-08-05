@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 
-import static com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import static com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 import static org.mockito.Mockito.mock;
 
 public class DummyStateMachineCommitHelper extends StateMachineCommitHelper

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 
 import java.util.function.LongConsumer;
 
@@ -71,7 +71,7 @@ public class StateMachineCommitHelper
             }
 
             txCommittedCallback.accept( committedTxId );
-            commitNotifier.transactionCommitted( committedTxId );
+            commitNotifier.fireTransactionCommitted( committedTxId );
             updateLastAppliedCommandIndex( commandIndex );
         } );
         return txToApply;

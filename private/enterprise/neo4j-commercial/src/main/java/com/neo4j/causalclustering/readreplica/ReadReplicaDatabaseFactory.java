@@ -19,8 +19,8 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.TransactionEventService;
-import com.neo4j.dbms.TransactionEventService.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
@@ -52,11 +52,11 @@ class ReadReplicaDatabaseFactory
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Health health;
     private final CatchupClientFactory catchupClientFactory;
-    private final TransactionEventService txEventService;
+    private final ReplicatedTransactionEventListeners txEventService;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
             MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier, Health health,
-            CatchupClientFactory catchupClientFactory, TransactionEventService txEventService )
+            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService )
     {
         this.config = config;
         this.clock = clock;

@@ -7,14 +7,16 @@ package com.neo4j.dbms;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-public interface TransactionEventService
+public interface ReplicatedTransactionEventListeners
 {
-    void registerHandler( DatabaseId databaseId, TransactionCommitHandler handler );
+    void registerListener( DatabaseId databaseId, TransactionCommitListener listener );
+
+    void unregisterListener( DatabaseId databaseId, TransactionCommitListener listener );
 
     TransactionCommitNotifier getCommitNotifier( DatabaseId databaseId );
 
     @FunctionalInterface
-    interface TransactionCommitHandler
+    interface TransactionCommitListener
     {
         void transactionCommitted( long txId );
     }
@@ -22,6 +24,6 @@ public interface TransactionEventService
     @FunctionalInterface
     interface TransactionCommitNotifier
     {
-        void transactionCommitted( long txId );
+        void fireTransactionCommitted( long txId );
     }
 }

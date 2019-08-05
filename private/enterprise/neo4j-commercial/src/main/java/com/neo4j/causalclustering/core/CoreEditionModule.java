@@ -54,8 +54,8 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
-import com.neo4j.dbms.TransactionEventService;
+import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
@@ -282,7 +282,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return raftMessageLogger;
     }
 
-    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, TransactionEventService txEventService )
+    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, ReplicatedTransactionEventListeners txEventService )
     {
         final LifeSupport globalLife = globalModule.getGlobalLife();
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
@@ -329,15 +329,18 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig() );
 
-        TransactionEventService txEventService = new SystemDatabaseOnlyTransactionEventService();
-        createDatabaseManagerDependentModules( databaseManager, txEventService );
+        ReplicatedTransactionEventListeners txEventListeners = new SystemDbOnlyReplicatedTransactionEventListeners();
+        createDatabaseManagerDependentModules( databaseManager, txEventListeners );
+
+        var dependencies = globalModule.getGlobalDependencies();
+        dependencies.satisfyDependencies( txEventListeners );
 
         globalModule.getGlobalLife().add( databaseManager );
-        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
+        dependencies.satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventService, internalOperator, reconciledTxTracker );
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator, reconciledTxTracker );
         globalModule.getGlobalLife().add( reconcilerModule );
-        globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
+        dependencies.satisfyDependency( reconciledTxTracker );
 
         return databaseManager;
     }
