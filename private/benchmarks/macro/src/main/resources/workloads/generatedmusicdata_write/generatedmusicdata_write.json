@@ -37,8 +37,7 @@
       "description": "From read query Q8 (eager in older code)",
       "queryFile": "queries/WQ5.cypher",
       "parameters": {
-        "file": "parameters/relationship.txt",
-        "isLoopable": false
+        "file": "parameters/relationship.txt"
       },
       "isMutating": true
     },
