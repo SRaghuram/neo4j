@@ -49,12 +49,6 @@ public interface EnterpriseUserManager extends UserManager
     Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles );
 
     /**
-     * Clear the cached privileges for a role.
-     * @param role name of the role
-     */
-    void clearCacheForRole( String role );
-
-    /**
      * Clear the cached privileges for all roles.
      */
     void clearCacheForRoles();
@@ -116,11 +110,6 @@ public interface EnterpriseUserManager extends UserManager
         public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return emptySet();
-        }
-
-        @Override
-        public void clearCacheForRole( String role )
-        {
         }
 
         @Override

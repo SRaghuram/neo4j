@@ -85,7 +85,7 @@ class SystemGraphCachingTest
     {
         // Given
         systemGraphExecutor.takeAccessFlag();
-        realm.clearCacheForRole( READER );
+        realm.clearCacheForRoles();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
@@ -105,7 +105,7 @@ class SystemGraphCachingTest
     {
         // Given
         realm.getPrivilegesForRoles( Set.of( READER ) );
-        realm.clearCacheForRole( EDITOR );
+        realm.clearCacheForRoles();
         systemGraphExecutor.takeAccessFlag();
 
         // When
@@ -124,8 +124,9 @@ class SystemGraphCachingTest
     @Test
     void shouldClearCacheForNonCachedRole()
     {
+        // TODO rewrite this test
         // should not throw
-        realm.clearCacheForRole( "foobar" );
+        realm.clearCacheForRoles();
     }
 
     private class TestQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor

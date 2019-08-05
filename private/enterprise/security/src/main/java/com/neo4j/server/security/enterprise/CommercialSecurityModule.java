@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise;
 
 import com.github.benmanes.caffeine.cache.Ticker;
+import com.neo4j.dbms.ReplicatedTransactionEventListeners;
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
@@ -28,7 +29,6 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphI
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
@@ -152,7 +152,7 @@ public class CommercialSecurityModule extends SecurityModule
         if ( isClustered )
         {
             var txEventListeners = platformDependencies.resolveDependency( ReplicatedTransactionEventListeners.class );
-            txEventListeners.registerListener( SYSTEM_DATABASE_ID, txId -> { /* TODO: clear caches */ } );
+            txEventListeners.registerListener( SYSTEM_DATABASE_ID, txId -> authManager.clearAuthCache() );
         }
         else
         {
@@ -161,7 +161,7 @@ public class CommercialSecurityModule extends SecurityModule
                 @Override
                 public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
                 {
-                    // TODO: clear caches
+                    authManager.clearAuthCache();
                 }
             } );
         }

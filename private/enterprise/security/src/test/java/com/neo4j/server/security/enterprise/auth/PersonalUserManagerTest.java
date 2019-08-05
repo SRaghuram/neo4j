@@ -264,12 +264,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void clearCacheForRole( String role )
-        {
-            delegate.clearCacheForRole( role );
-        }
-
-        @Override
         public void clearCacheForRoles()
         {
             delegate.clearCacheForRoles();

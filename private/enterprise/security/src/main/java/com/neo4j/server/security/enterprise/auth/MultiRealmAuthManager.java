@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.IntPredicate;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
@@ -338,21 +337,10 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                 }
             }
         }
-    }
-
-    @Override
-    public void clearCacheForRole( String role )
-    {
-        userManager.clearCacheForRole( role );
-    }
-
-    @Override
-    public void clearCacheForRoles()
-    {
         userManager.clearCacheForRoles();
     }
 
-    public Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
+    Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
     {
         List<AuthorizationInfo> infoList = new ArrayList<>( 1 );
         for ( Realm realm : realms )

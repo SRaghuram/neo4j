@@ -414,11 +414,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         return combined;
     }
 
-    void clearCacheForRole( String role )
-    {
-        privilegeCache.invalidate( role );
-    }
-
     void clearCacheForRoles()
     {
         privilegeCache.invalidateAll();

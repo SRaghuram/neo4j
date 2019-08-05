@@ -14,9 +14,12 @@ import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.platform.commons.JUnitException;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -26,19 +29,24 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.kernel.api.Transaction.Type;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.server.security.auth.SecurityTestUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -52,18 +60,38 @@ class SystemGraphAuthCacheClearingIT
     @Inject
     private TestDirectory directory;
 
+    private DatabaseManagementService dbms;
+    private Cluster cluster;
+
+    @AfterEach
+    void teardown() throws IOException
+    {
+        if ( dbms != null )
+        {
+            dbms.shutdown();
+            dbms = null;
+            directory.cleanDirectory( directory.storeDir().getAbsolutePath() );
+        }
+        if ( cluster != null )
+        {
+            cluster.shutdown();
+            cluster = null;
+        }
+    }
+
     @Test
     void systemDbUpdatesShouldClearAuthCacheInStandalone() throws Exception
     {
         // Given a standalone db
-        DatabaseManagementService dbms = new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() )
+        dbms = new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() )
+                .impermanent()
                 .setConfigRaw( getConfig() )
                 .build();
 
         var systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
         var dbs = Collections.singletonList( systemDb );
 
-        try ( Transaction tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "CREATE USER foo SET PASSWORD 'f00'" );
             tx.success();
@@ -73,7 +101,7 @@ class SystemGraphAuthCacheClearingIT
         assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
 
         // When changing the system database
-        try ( Transaction tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.success();
@@ -82,8 +110,52 @@ class SystemGraphAuthCacheClearingIT
         // Then the auth cache should be cleared and login with new password is required
         assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( false ), 5, TimeUnit.SECONDS );
         assertTrue( () -> allCanAuth( dbs, "foo", "b4r" ) );
+    }
 
-        dbms.shutdown();
+    @Test
+    void systemDbUpdatesShouldClearPrivilegeCacheInStandalone() throws Exception
+    {
+        // Given a standalone db
+        dbms = new TestCommercialDatabaseManagementServiceBuilder( directory.storeDir() )
+                .impermanent()
+                .setConfigRaw( getConfig() )
+                .build();
+
+        var systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
+        var userDB = (GraphDatabaseAPI) dbms.database( DEFAULT_DATABASE_NAME );
+        var userDbs = Collections.singletonList( userDB );
+
+        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        {
+            systemDb.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+            systemDb.execute( "CREATE ROLE role" );
+            systemDb.execute( "GRANT ROLE role TO foo" );
+            tx.success();
+        }
+
+        // When initial login attempt is made, user is stored in cache
+        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
+        assertFalse( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ) );
+
+        // When changing the system database
+        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        {
+            systemDb.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.success();
+        }
+
+        // Then the privilege cache should be cleared giving read access
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( true ), 5, TimeUnit.SECONDS );
+
+        // When changing the system database
+        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
+        {
+            systemDb.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.success();
+        }
+
+        // Then the privilege cache should be cleared giving no read access
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( false ), 5, TimeUnit.SECONDS );
     }
 
     @Test
@@ -119,6 +191,51 @@ class SystemGraphAuthCacheClearingIT
         assertTrue( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ) );
     }
 
+    @Test
+    void systemDbUpdatesShouldClearPrivilegeCacheInCluster() throws Exception
+    {
+        // Given a cluster and 1 user with no privileges
+        var clusterConfig = ClusterConfig.clusterConfig()
+                .withSharedCoreParams( getConfig() )
+                .withNumberOfCoreMembers( 3 );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        var userDbs = clusteruserDbs( cluster );
+
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+            sys.execute( "CREATE ROLE role" );
+            sys.execute( "GRANT ROLE role TO foo" );
+            tx.success();
+        } );
+
+        // When initial login attempt is made, role to privilege is cached
+        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
+        assertFalse( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ) );
+
+        // When granting privilege
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.success();
+        } );
+
+        // Then the privilege cache should be cleared giving read access
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( true ), 5, TimeUnit.SECONDS );
+
+        // When revoking privilege
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            sys.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.success();
+        } );
+
+        // Then the privilege cache should be cleared giving no read access
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( false ), 5, TimeUnit.SECONDS );
+    }
+
     private List<GraphDatabaseAPI> clusterSystemDbs( Cluster cluster )
     {
         return cluster.allMembers()
@@ -126,24 +243,59 @@ class SystemGraphAuthCacheClearingIT
                 .collect( Collectors.toList() );
     }
 
+    private List<GraphDatabaseAPI> clusteruserDbs( Cluster cluster )
+    {
+        return cluster.allMembers()
+                .map( ClusterMember::defaultDatabase )
+                .collect( Collectors.toList() );
+    }
+
     private boolean allCanAuth( List<GraphDatabaseAPI> dbs, String user, String password )
     {
         return dbs.stream()
-                .map( db -> canAuthenticateAgainstDbms( db, SecurityTestUtils.authToken( user, password ) ) )
+                .map( db -> canAuthenticateAgainstDbms( db, authToken( user, password ) ) )
                 .reduce( true, ( l, r ) -> l && r );
     }
 
-    private boolean canAuthenticateAgainstDbms( GraphDatabaseAPI database, Map<String,Object> credentials )
+    private boolean canAuthenticateAgainstDbms( GraphDatabaseAPI database, Map<String,Object> authToken )
+    {
+        var result = login( database, authToken ).subject().getAuthenticationResult();
+        return result == AuthenticationResult.SUCCESS || result == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
+    }
+
+    private boolean allCanExecuteQuery( List<GraphDatabaseAPI> dbs, String user, String password, String query )
+    {
+        return dbs.stream()
+                .map( db -> canExecuteQuery( db, authToken( user, password ), query ) )
+                .reduce( true, ( l, r ) -> l && r );
+    }
+
+    private boolean canExecuteQuery( GraphDatabaseAPI database, Map<String,Object> authToken, String query )
+    {
+        var context = login( database, authToken );
+        try ( var tx = database.beginTransaction( Type.explicit, context ) )
+        {
+            Result result = database.execute( query );
+            result.accept( row -> true );
+            tx.success();
+        }
+        catch ( AuthorizationViolationException e )
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private LoginContext login( GraphDatabaseAPI database, Map<String,Object> credentials )
     {
         var authManager = database.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         try
         {
-            var result = authManager.login( credentials ).subject().getAuthenticationResult();
-            return result == AuthenticationResult.SUCCESS || result == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
+            return authManager.login( credentials );
         }
         catch ( InvalidAuthTokenException e )
         {
-            return false;
+            throw new JUnitException( "Failure in test setup, invalid auth token", e );
         }
     }
 

@@ -310,12 +310,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void clearCacheForRole( String role )
-    {
-        userManager.clearCacheForRole( role );
-    }
-
-    @Override
     public void clearCacheForRoles()
     {
         userManager.clearCacheForRoles();
