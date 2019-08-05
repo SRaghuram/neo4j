@@ -27,7 +27,7 @@ class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker, queryStatus: Q
       inner.put(t)
       waker.wakeOne()
     } else {
-      DebugSupport.logErrorHandling(s"Dropped data $t because of query cancellation")
+      DebugSupport.ERROR_HANDLING.log("Dropped data %s because of query cancellation", t)
     }
   }
 

@@ -61,11 +61,11 @@ class ConcurrentSleeper(val workerId: Int,
   }
 
   override def reportIdle(): Unit = {
-    DebugSupport.logWorker(s"Worker($workerId) parked after working $workStreak times")
+    DebugSupport.WORKERS.log("[WORKER%2d] parked after working %d times", workerId, workStreak)
     workStreak = 0
     status = SLEEPING
     LockSupport.parkNanos(sleepNs)
-    DebugSupport.logWorker(s"Worker($workerId) unparked")
+    DebugSupport.WORKERS.log("[WORKER%2d] unparked", workerId)
     status = ACTIVE
   }
 

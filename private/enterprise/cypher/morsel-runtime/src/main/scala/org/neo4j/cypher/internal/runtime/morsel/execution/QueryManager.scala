@@ -18,7 +18,7 @@ class QueryManager {
   private val runningQueries = new ConcurrentLinkedQueue[ExecutingQuery]()
 
   def addQuery(query: ExecutingQuery): Unit = {
-    DebugSupport.logQueries(s" Adding query $query")
+    DebugSupport.QUERIES.log("Adding query %s", query)
     runningQueries.add(query)
   }
 
@@ -29,7 +29,7 @@ class QueryManager {
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
     var query = runningQueries.peek()
     while (query != null && query.executionState.isCompleted) {
-      DebugSupport.logQueries(s"Removing query $query")
+      DebugSupport.QUERIES.log("Removing query %s", query)
       runningQueries.remove(query)
       query = runningQueries.peek()
     }

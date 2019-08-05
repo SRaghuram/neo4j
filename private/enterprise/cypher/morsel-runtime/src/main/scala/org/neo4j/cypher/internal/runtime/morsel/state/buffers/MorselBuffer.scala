@@ -26,15 +26,17 @@ class MorselBuffer(id: BufferId,
                    override val argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater
-                    with Sink[MorselExecutionContext]
-                    with Source[MorselParallelizer]
-                    with SinkByOrigin
-                    with DataHolder {
+  with Sink[MorselExecutionContext]
+  with Source[MorselParallelizer]
+  with SinkByOrigin
+  with DataHolder {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(morsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[put]   $this <- $morsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
+    }
     if (morsel.hasData) {
       morsel.resetToFirstRow()
       incrementArgumentCounts(downstreamArgumentReducers, morsel)
@@ -51,7 +53,9 @@ class MorselBuffer(id: BufferId,
     * buffer took care of incrementing the right ones already.
     */
   def putInDelegate(morsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[putInDelegate] $this <- $morsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
+    }
     if (morsel.hasData) {
       morsel.resetToFirstRow()
       tracker.increment()
@@ -66,7 +70,9 @@ class MorselBuffer(id: BufferId,
     if (morsel == null) {
       null
     } else {
-      DebugSupport.logBuffers(s"[take]  $this -> $morsel")
+      if (DebugSupport.BUFFERS.enabled) {
+        DebugSupport.BUFFERS.log(s"[take]  $this -> $morsel")
+      }
       new Parallelizer(morsel)
     }
   }
@@ -101,7 +107,9 @@ class MorselBuffer(id: BufferId,
     * Decrement reference counters attached to `morsel`.
     */
   def close(morsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[close] $this -X- $morsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
+    }
     decrementArgumentCounts(downstreamArgumentReducers, morsel)
     tracker.decrement()
   }
@@ -113,6 +121,7 @@ class MorselBuffer(id: BufferId,
     */
   class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
     private var usedOriginal = false
+
     override def nextCopy: MorselExecutionContext = {
       if (!usedOriginal) {
         usedOriginal = true
@@ -125,4 +134,5 @@ class MorselBuffer(id: BufferId,
       }
     }
   }
+
 }

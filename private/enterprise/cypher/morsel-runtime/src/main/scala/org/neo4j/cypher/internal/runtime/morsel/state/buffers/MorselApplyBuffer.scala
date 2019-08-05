@@ -40,7 +40,9 @@ class MorselApplyBuffer(id: BufferId,
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   def put(morsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[put]   $this <- $morsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
+    }
     if (morsel.hasData) {
       var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
 

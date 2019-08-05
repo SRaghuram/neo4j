@@ -121,7 +121,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
       workerWaker.wakeOne()
     } else {
-      DebugSupport.logErrorHandling(s"Dropped morsel $output because of query cancellation")
+      DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
     }
   }
 
@@ -189,10 +189,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
     if (queryStatus.cancelled) {
-      DebugSupport.logErrorHandling(s"[putContinuation] Closing $task because of query cancellation")
+      DebugSupport.ERROR_HANDLING.log("[putContinuation] Closing $task because of query cancellation")
       task.close(resources)
     } else {
-      DebugSupport.logBuffers(s"[putContinuation]   $this <- $task")
+      DebugSupport.BUFFERS.log("[putContinuation]   %s <- %s", this, task)
       continuations(task.pipelineState.pipeline.id.x).put(task)
       if (wakeUp && !task.pipelineState.pipeline.serial) {
         // We only wake up other Threads if this pipeline is not serial.
@@ -241,7 +241,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                          resources: QueryResources,
                          failedPipeline: ExecutablePipeline): Unit = {
 
-    DebugSupport.logErrorHandling(s"Starting ExecutionState.failQuery, because of $throwable")
+    DebugSupport.ERROR_HANDLING.log("Starting ExecutionState.failQuery, because of %s", throwable)
     tracker.error(throwable)
     closeOutstandingWork(resources, failedPipeline)
   }
@@ -283,7 +283,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
     for (pipeline <- pipelines) {
       val continuationBuffer = continuations(pipeline.id.x)
-      DebugSupport.logErrorHandling(s"Clearing continuation buffer $continuationBuffer")
+      DebugSupport.ERROR_HANDLING.log("Clearing continuation buffer %s", continuationBuffer)
       if (!pipeline.serial || pipeline == failedPipeline || tryLock(pipeline)) {
         var c = continuationBuffer.take()
         while (c != null) {

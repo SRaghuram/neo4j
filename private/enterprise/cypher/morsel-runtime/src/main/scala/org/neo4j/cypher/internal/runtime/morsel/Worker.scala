@@ -41,7 +41,7 @@ class Worker(val workerId: Int,
   def isSleeping: Boolean = sleeper.isSleeping
 
   override def run(): Unit = {
-    DebugSupport.logWorker(s"Worker($workerId) started")
+    DebugSupport.WORKERS.log("[WORKER%2d] started", workerId)
     while (!isTimeToStop) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
@@ -56,12 +56,12 @@ class Worker(val workerId: Int,
       } catch {
         // Failure in QueryManager. Crash horribly.
         case error: Throwable =>
-          DebugSupport.logWorker(s"Worker($workerId) crashed horribly")
+          DebugSupport.WORKERS.log("[WORKER%2d] crashed horribly", workerId)
           error.printStackTrace()
           throw error
       }
     }
-    DebugSupport.logWorker(s"Worker($workerId) stopped")
+    DebugSupport.WORKERS.log("[WORKER%2d] stopped", workerId)
   }
 
   /**
@@ -121,8 +121,8 @@ class Worker(val workerId: Int,
       try {
         executingQuery.bindTransactionToThread()
 
-        DebugLog.log(f"[WORKER$workerId%2d] working on $task")
-        DebugSupport.logWorker(f"[WORKER$workerId%2d] working on $task of $executingQuery")
+        DebugLog.log("[WORKER%2d] working on %s", workerId, task)
+        DebugSupport.WORKERS.log("[WORKER%2d] working on %s of %s", workerId, task, executingQuery)
 
         sleeper.reportStartWorkUnit()
         workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()

@@ -97,7 +97,9 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     */
   def allocate(): CURSOR = {
     liveCount += 1
-    DebugSupport.logCursors(stackTraceSlice(4, 5).mkString("+ allocate\n        ", "\n        ", ""))
+    if (DebugSupport.CURSORS.enabled) {
+      DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString("+ allocate\n        ", "\n        ", ""))
+    }
     val cursor =
       if (cached != null) {
         val temp = cached
@@ -115,7 +117,9 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     */
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
-      DebugSupport.logCursors(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
+      if (DebugSupport.CURSORS.enabled) {
+        DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
+      }
       cursor.setTracer(KernelReadTracer.NONE)
       liveCount -= 1
       if (cached != null)

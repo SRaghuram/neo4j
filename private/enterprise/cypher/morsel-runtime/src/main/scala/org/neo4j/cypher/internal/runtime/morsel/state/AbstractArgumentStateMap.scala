@@ -72,7 +72,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       val controller = iterator.next()
       if (controller.tryTake()) {
         controllers.remove(controller.state.argumentRowId)
-        DebugSupport.logAsm(f"ASM $argumentStateMapId take ${controller.state.argumentRowId}%03d")
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
         return controller.state
       }
     }
@@ -132,12 +132,12 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def remove(argument: Long): Boolean = {
-    DebugSupport.logAsm(f"ASM $argumentStateMapId rem $argument%03d")
+    DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     controllers.remove(argument) != null
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
-    DebugSupport.logAsm(f"ASM $argumentStateMapId init $argument%03d")
+    DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
     controllers.put(argument, newController)
   }
@@ -145,12 +145,12 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   override def increment(argument: Long): Unit = {
     val controller = controllers.get(argument)
     val newCount = controller.increment()
-    DebugSupport.logAsm(f"ASM $argumentStateMapId incr $argument%03d to $newCount")
+    DebugSupport.ASM.log("ASM %s incr %03d to %d", argumentStateMapId, argument, newCount)
   }
 
   override def decrement(argument: Long): Boolean = {
     val newCount = controllers.get(argument).decrement()
-    DebugSupport.logAsm(f"ASM $argumentStateMapId decr $argument%03d to $newCount")
+    DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
     newCount == 0
   }
 

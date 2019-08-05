@@ -41,7 +41,9 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
-    DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
+    }
     var i = 0
     while (i < data.length) {
       argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
@@ -56,13 +58,17 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def take(): ACC = {
     val accumulator = argumentStateMap.takeOneCompleted()
     if (accumulator != null) {
-      DebugSupport.logBuffers(s"[take]  $this -> $accumulator")
+      if (DebugSupport.BUFFERS.enabled) {
+        DebugSupport.BUFFERS.log(s"[take]  $this -> $accumulator")
+      }
     }
     accumulator
   }
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    }
 
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
@@ -86,7 +92,9 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     * Decrement reference counters attached to `accumulator`.
     */
   def close(accumulator: MorselAccumulator[_]): Unit = {
-    DebugSupport.logBuffers(s"[close] $this -X- $accumulator")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator")
+    }
     forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
     tracker.decrement()
   }

@@ -76,7 +76,9 @@ class OptionalMorselBuffer(id: BufferId,
       } else {
         null.asInstanceOf[MorselData]
       }
-    DebugSupport.logBuffers(s"[take]  $this -> $data")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[take]  $this -> $data")
+    }
     data
   }
 
@@ -86,7 +88,9 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
-    DebugSupport.logBuffers(s"[put]   $this <- ${data.mkString(", ")}")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
+    }
     // We increment for each morsel view, otherwise we can reach a count of zero too early, when the all data arrived in this buffer, but has not been
     // streamed out yet.
     tracker.incrementBy(data.length)
@@ -105,7 +109,9 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
-    DebugSupport.logBuffers(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
     argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
     tracker.increment()
@@ -129,7 +135,9 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def close(data: MorselData): Unit = {
-    DebugSupport.logBuffers(s"[close] $this -X- $data")
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[close] $this -X- $data")
+    }
 
    data.argumentStream match {
       case _:EndOfStream =>

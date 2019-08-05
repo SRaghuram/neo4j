@@ -184,10 +184,10 @@ class Buffers(numBuffers: Int,
       val buffer = buffers(i)
       buffer match {
         case dataHolder: DataHolder =>
-          DebugSupport.logErrorHandling(s"Clearing $dataHolder")
+          DebugSupport.ERROR_HANDLING.log("Clearing %s", dataHolder)
           dataHolder.clearAll()
         case x => // nothing to do here
-          DebugSupport.logErrorHandling(s"Not clearing $x")
+          DebugSupport.ERROR_HANDLING.log("Not clearing %s", x)
       }
       i += 1
     }
