@@ -13,6 +13,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.PlanCreator;
@@ -23,8 +24,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 
 @Command( name = "export-plan", description = "exports the plan description for one query of one workload" )
 public class ExportPlanCommand implements Runnable
@@ -93,7 +92,7 @@ public class ExportPlanCommand implements Runnable
               // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
               Store store = Store.createFrom( storeDir.toPath() ) )
         {
-            Workload workload = Workload.fromName( workloadName, resources, DeploymentMode.EMBEDDED );
+            Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
             Query query = workload.queryForName( queryName );
 
             System.out.println( "Generating plan for : " + query.name() );
