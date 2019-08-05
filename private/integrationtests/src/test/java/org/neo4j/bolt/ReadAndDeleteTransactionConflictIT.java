@@ -97,6 +97,23 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
+    public void returningRelationshipPropertiesOfRelationshipDeletedInSameTransactionMustNotThrow()
+    {
+        try ( Session session = driver.session() )
+        {
+            Value nodeId = session.run( "create (n)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
+            StatementResult result = session.run( "" +
+                    "match (n)-[r]->(m) " +
+                    "where id(n) = {nodeId} " +
+                    "with n, m, r, properties(r) as props " +
+                    "delete n, m, r " +
+                    "return props", Values.parameters( "nodeId", nodeId ) );
+            long value = result.single().get( 0 ).get( "a" ).asLong();
+            assertThat( value, equalTo( 1L ) );
+        }
+    }
+
+    @Test
     public void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
         try ( Session readSession = driver.session();
