@@ -35,6 +35,8 @@ trait ExecutionState extends ArgumentStateMapCreator {
     */
   def pipelineStates: Array[PipelineState]
 
+  def getSinkInt[T <: AnyRef](fromPipeline: Int, bufferId: Int): Sink[T] = getSink(PipelineId(fromPipeline), BufferId(bufferId))
+
   /**
     * The sink with id `bufferId` of the pipeline with id `fromPipeline`.
     */

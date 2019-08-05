@@ -174,13 +174,16 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
     def cantHandle(acc: FusionPlan,
                    nextPlan: LogicalPlan) = {
+      val outputPlan = initFusedPlans match {
+        case Seq(plan) => plan
+        case _ => null
+      }
       // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
       innermostTemplate.shouldWriteToContext = true
       acc.copy(
         template = innermostTemplate,
         fusedPlans = List.empty,
-        // TODO what is happening here, shouldn't Aggregation be kept now too?
-        unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_.isInstanceOf[ProduceResult]) ::: acc.unhandledPlans,
+        unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_ eq outputPlan) ::: acc.unhandledPlans,
         unhandledOutput = output)
     }
     def indexSeek(node: String,

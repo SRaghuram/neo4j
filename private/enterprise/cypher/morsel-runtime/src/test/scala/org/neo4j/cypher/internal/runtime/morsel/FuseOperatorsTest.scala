@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
-import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, LogicalPlan, ProduceResult, Selection}
+import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, LogicalPlan, ProduceResult, Selection}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
@@ -46,7 +46,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator shouldBe NoOutputOperator
   }
 
-  test("should fuse full pipeline") {
+  test("should fuse full pipeline, ending in produce results") {
     // given
    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> produceResult("x")
 
@@ -59,7 +59,21 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator shouldBe NoOutputOperator
   }
 
-  test("should fuse partial pipelines") {
+  test("should fuse full pipeline, ending in aggregation") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> groupAggregation(Map("x" -> varFor("x")), Map("y"->countStar()))
+
+    // when
+    val compiled = fuse(pipeline)
+
+    println(compiled)
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators shouldBe empty
+    compiled.outputOperator shouldBe NoOutputOperator
+  }
+
+  test("should fuse partial pipelines, ending in produce results 1") {
     // given
     val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dummy ~> produceResult("x")
 
@@ -72,9 +86,35 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator should not be NoOutputOperator
   }
 
-  test("should fuse partial pipelines 2") {
+  test("should fuse partial pipelines, ending in aggregation 1") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dummy ~> groupAggregation(Map("x" -> varFor("x")), Map("y"->countStar()))
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 2
+    compiled.outputOperator should not be NoOutputOperator
+  }
+
+  test("should fuse partial pipelines, ending in produce results 2") {
     // given
     val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> filter(trueLiteral) ~> produceResult("x")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 2
+    compiled.outputOperator should not be NoOutputOperator
+  }
+
+  test("should fuse partial pipelines, ending in aggregation 2") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> filter(trueLiteral) ~> groupAggregation(Map("x" -> varFor("x")), Map("y"->countStar()))
 
     // when
     val compiled = fuse(pipeline)
@@ -95,6 +135,9 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   def filter(predicates: Expression*): LogicalPlan => LogicalPlan = Selection(predicates.toSeq, _)
 
+  def groupAggregation(groupings: Map[String, Expression],
+                       aggregations: Map[String, Expression]): LogicalPlan => LogicalPlan = Aggregation(_, groupings, aggregations)
+
   def produceResult(out: String*): LogicalPlan => LogicalPlan = ProduceResult(_, out.toSeq)
 
   class PipelineBuilder(head: LogicalPlan) {
@@ -102,15 +145,26 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     private var longCount = 0
     private var refCount = 0
     private var current = head
+    private var bufferId = 0
+    private val applyPlansOffsets = mutable.Map[Id, Int](Id(0) -> 0)
+    val applyPlans = new ApplyPlans()
     val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
+      applyPlans.set(current.id, Id(0))
       current match {
         case p: ProduceResult => pipeline.outputDefinition = ProduceResultOutput(p)
+        case p: Aggregation => pipeline.outputDefinition = ReduceOutput(buffer(), p)
         case p => pipeline.middlePlans.append(p)
       }
       this
+    }
+
+    private def buffer(): BufferId = {
+      val buffer = BufferId(bufferId)
+      bufferId += 1
+      buffer
     }
 
     def addNode(node: String): Unit = {
@@ -128,7 +182,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       refCount += 1
     }
 
-    def slotConfiguration = SlotConfiguration(slots.toMap, longCount, refCount)
+    def slotConfiguration = new SlotConfiguration(slots, mutable.Map.empty, applyPlansOffsets, longCount, refCount)
 
   }
   private object fused extends BeMatcher[Operator] {
@@ -143,7 +197,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                     0,
                                     new SlotConfigurations,
                                     new ArgumentSizes,
-                                    new ApplyPlans,
+                                    pipelineBuilder.applyPlans,
                                     new NestedPlanArgumentConfigurations,
                                     new AvailableExpressionVariables,
                                     ParameterMapping.empty,

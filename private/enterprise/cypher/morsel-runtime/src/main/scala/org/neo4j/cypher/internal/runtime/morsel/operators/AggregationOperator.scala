@@ -392,7 +392,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
           invokeSideEffect(loadField(collectionHelperField),
                            method[ScalaCollectionHelper, Unit, AggOut, PerArgument[AggMap]]("add"),
                            loadField(perArgsField),
-                           newInstance(constructor[PerArgument[AggMap], Long, AggMap], load(argVar), load(aggPreMapVar))),
+                           newInstance(constructor[PerArgument[AggMap], Long, AggMap], load(argVar), load(aggPreMapVar)))
         )),
 
       /*
@@ -418,7 +418,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
           invokeSideEffect(load(aggPreMapVar),
                            method[AggMap, Array[Updater], AnyValue, Array[Updater]]("put"),
                            load(groupingValue),
-                           load(updaters)),
+                           load(updaters))
         )
       ),
 
@@ -442,7 +442,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       setField(sinkField,
                invoke(EXECUTION_STATE,
-                      method[ExecutionState, Sink[IndexedSeq[PerArgument[AggMap]]], PipelineId, BufferId]("getSink"),
+                      method[ExecutionState, Sink[IndexedSeq[PerArgument[AggMap]]], Int, Int]("getSinkInt"),
                       PIPELINE_ID,
                       loadField(bufferIdField)))
     )
