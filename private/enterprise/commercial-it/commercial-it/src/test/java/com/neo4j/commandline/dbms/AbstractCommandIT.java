@@ -35,7 +35,7 @@ abstract class AbstractCommandIT
     @Inject
     DatabaseManagementService managementService;
     @Inject
-     GraphDatabaseAPI databaseAPI;
+    GraphDatabaseAPI databaseAPI;
     @Inject
     TestDirectory testDirectory;
     Path neo4jHome;

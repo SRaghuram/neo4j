@@ -61,31 +61,18 @@ class UnbindFromClusterCommand extends AbstractCommand
             File databasesRoot = config.get( databases_root_path ).toFile();
             DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, database );
 
-            boolean hasDatabase = true;
-            try
+            try ( Closeable ignored = validateDatabase( databaseLayout ) )
             {
-                Validators.CONTAINS_EXISTING_DATABASE.validate( databaseLayout.databaseDirectory() );
-            }
-            catch ( IllegalArgumentException ignored )
-            {
-                // No such database, it must have been deleted. Must be OK to delete cluster state
-                hasDatabase = false;
-            }
+                File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
 
-            if ( hasDatabase )
-            {
-                confirmTargetDirectoryIsWritable( databaseLayout );
-            }
-
-            File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
-
-            if ( ctx.fs().fileExists( clusterStateDirectory ) )
-            {
-                deleteClusterStateIn( clusterStateDirectory );
-            }
-            else
-            {
-                ctx.err().println( "This instance was not bound. No work performed." );
+                if ( ctx.fs().fileExists( clusterStateDirectory ) )
+                {
+                    deleteClusterStateIn( clusterStateDirectory );
+                }
+                else
+                {
+                    ctx.err().println( "This instance was not bound. No work performed." );
+                }
             }
         }
         catch ( FileLockException e )
@@ -98,12 +85,17 @@ class UnbindFromClusterCommand extends AbstractCommand
         }
     }
 
-    private static void confirmTargetDirectoryIsWritable( DatabaseLayout databaseLayout )
-            throws CannotWriteException, IOException
+    private Closeable validateDatabase( DatabaseLayout databaseLayout ) throws CannotWriteException
     {
-        try ( Closeable ignored = DatabaseLockChecker.check( databaseLayout ) )
+        try
         {
-            // empty
+            Validators.CONTAINS_EXISTING_DATABASE.validate( databaseLayout.databaseDirectory() );
+            return DatabaseLockChecker.check( databaseLayout );
+        }
+        catch ( IllegalArgumentException ignored )
+        {
+            // No such database, it must have been deleted. Must be OK to delete cluster state
+            return () -> { };
         }
     }
 
