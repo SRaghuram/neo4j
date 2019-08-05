@@ -39,7 +39,6 @@ class ForsetiServiceLoadingTest
     }
 
     @Test
-    @DbmsExtension
     void shouldAllowUsingCommunityLockManager()
     {
         var cfg = getDBLocksInstance( Map.of( lock_manager, "community" ) );

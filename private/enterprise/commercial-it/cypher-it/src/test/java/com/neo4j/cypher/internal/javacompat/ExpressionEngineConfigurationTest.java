@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.javacompat;
+package com.neo4j.cypher.internal.javacompat;
 
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -111,7 +112,7 @@ class ExpressionEngineConfigurationTest
     private GraphDatabaseService withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine engine, int limit )
     {
 
-        managementService = new TestDatabaseManagementServiceBuilder()
+        managementService = new TestCommercialDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setInternalLogProvider( logProvider )
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )
@@ -126,8 +127,8 @@ class ExpressionEngineConfigurationTest
         db.execute( query ).resultAsString();
 
         logProvider.assertAtLeastOnce(
-                inLog( EnterpriseCompilerFactory.class )
-                        .debug( anyOf(
+                AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )
+                                     .debug( anyOf(
                                 containsString( "Compiling expression:" ),
                                 containsString( "Compiling projection:" )
                         ) ) );
@@ -139,8 +140,8 @@ class ExpressionEngineConfigurationTest
         db.execute( query ).resultAsString();
 
         logProvider.assertNone(
-                inLog( EnterpriseCompilerFactory.class )
-                        .debug( anyOf(
+                AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )
+                                     .debug( anyOf(
                                 containsString( "Compiling expression:" ),
                                 containsString( "Compiling projection:" )
                         ) ) );

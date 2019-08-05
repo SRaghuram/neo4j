@@ -31,7 +31,7 @@ class LoadCsvAcceptanceTest
     with QueryStatisticsTestSupport
     with CreateTempFileTestSupport
     with CypherComparisonSupport
-    with RunWithConfigTestSupport
+    with com.neo4j.cypher.RunWithConfigTestSupport
     with ResourceTracking {
 
   override protected def initTest(): Unit = {
@@ -636,7 +636,7 @@ class LoadCsvAcceptanceTest
           }
     })
 
-    val managementService = new TestDatabaseManagementServiceBuilder(acceptanceDbFolder)
+    val managementService = new TestCommercialDatabaseManagementServiceBuilder(acceptanceDbFolder)
       .addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
       .impermanent()
       .build()

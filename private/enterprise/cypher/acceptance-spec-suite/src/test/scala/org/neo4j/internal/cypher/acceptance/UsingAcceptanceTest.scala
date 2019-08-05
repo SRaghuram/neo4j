@@ -7,8 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.{FALSE, TRUE}
 
+import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.{ExecutionEngineFunSuite, _}
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{Node, QueryExecutionException}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}

@@ -7,12 +7,13 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.{FALSE, TRUE}
 
+import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, RunWithConfigTestSupport, ShortestPathCommonEndNodesForbiddenException}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, ShortestPathCommonEndNodesForbiddenException}
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.kernel.impl.query.RecordingQuerySubscriber

@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel;
 
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -30,7 +31,7 @@ class PageCacheFlushTracingTest
     void tracePageCacheFlushProgress()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( testDirectory.directory() )
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( GraphDatabaseSettings.tracer, "verbose" )
                 .build();

@@ -91,6 +91,13 @@
         <!-- neo4j testing -->
         <dependency>
             <groupId>com.neo4j</groupId>
+            <artifactId>commercial-cypher-it</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-commercial-record-storage-engine</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>

@@ -10,6 +10,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLocksFactory;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -18,7 +19,10 @@ import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.cypher.internal.javacompat.CommunityCypherEngineProvider;
+import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.security.URLAccessRule;
@@ -29,6 +33,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.time.SystemNanoClock;
 
+import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 
 public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
 {
@@ -68,6 +73,19 @@ public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabase
     public String getEdition()
     {
         return Edition.COMMERCIAL.toString();
+    }
+
+    @Override
+    protected ExternalDependencies databaseDependencies()
+    {
+        return newDependencies()
+                .monitors( monitors )
+                .userLogProvider( userLogProvider )
+                .dependencies( dependencies )
+                .urlAccessRules( urlAccessRules )
+                .extensions( extensions )
+                .databaseEventListeners( databaseEventListeners )
+                .queryEngineProviders( Collections.singletonList( new EnterpriseCypherEngineProvider() ) );
     }
 
     // Override to allow chaining

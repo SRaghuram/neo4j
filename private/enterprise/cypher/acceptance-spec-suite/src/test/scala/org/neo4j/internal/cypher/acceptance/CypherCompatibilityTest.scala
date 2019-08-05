@@ -3,11 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher
+package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.{FALSE, TRUE}
 
+import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.Status
