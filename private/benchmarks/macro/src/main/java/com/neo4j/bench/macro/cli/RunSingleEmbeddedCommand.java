@@ -26,7 +26,6 @@ import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.QueryRunner;
-import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -38,7 +37,6 @@ import java.util.List;
 
 import org.neo4j.kernel.configuration.BoltConnector;
 
-import static com.neo4j.bench.macro.execution.Neo4jDeployment.DeploymentMode;
 import static java.util.Collections.singletonMap;
 
 @Command( name = "run-single-embedded", description = "runs one query in a new process for a single workload" )
