@@ -78,16 +78,29 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     states
   }
 
-  private val pipelineLocks: Array[Lock] =
-    for (pipeline <- pipelines.toArray) yield {
-      stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
+  private val pipelineLocks: Array[Lock] = {
+    val arr = new Array[Lock](pipelines.length)
+    var i = 0
+    while (i < arr.length) {
+      val pipeline = pipelines(i)
+      arr(i) = stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
+      i += 1
     }
+    arr
+  }
 
-  private val continuations: Array[Buffer[PipelineTask]] =
-    pipelines.map(p =>
-                    if (p.serial) stateFactory.newSingletonBuffer[PipelineTask]()
-                    else stateFactory.newBuffer[PipelineTask]()
-    ).toArray
+  private val continuations: Array[Buffer[PipelineTask]] = {
+    val arr = new Array[Buffer[PipelineTask]](pipelines.length)
+    var i = 0
+    while (i < arr.length) {
+      val pipeline = pipelines(i)
+      arr(i) =
+        if (pipeline.serial) stateFactory.newSingletonBuffer[PipelineTask]()
+        else stateFactory.newBuffer[PipelineTask]()
+      i += 1
+    }
+    arr
+  }
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer

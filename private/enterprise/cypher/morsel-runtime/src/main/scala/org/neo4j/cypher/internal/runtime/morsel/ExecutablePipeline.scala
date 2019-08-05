@@ -31,9 +31,17 @@ case class ExecutablePipeline(id: PipelineId,
                   queryState: QueryState,
                   resources: QueryResources,
                   stateFactory: StateFactory): PipelineState = {
+
+    val middleTasks = new Array[OperatorTask](middleOperators.length)
+    var i = 0
+    while (i < middleTasks.length) {
+      middleTasks(i) = middleOperators(i).createTask(executionState, stateFactory, queryContext, queryState, resources)
+      i += 1
+    }
+
     new PipelineState(this,
                       start.createState(executionState, stateFactory),
-                      middleOperators.map(_.createTask(executionState, stateFactory, queryContext, queryState, resources)),
+                      middleTasks,
                       () => outputOperator.createState(executionState, id),
                       executionState)
     }
@@ -124,22 +132,26 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
 
     val parallelism = if (pipeline.serial) 1 else state.numberOfWorkers
-    val streamTasks = startState.nextTasks(context, state, this, parallelism, resources)
-    if (streamTasks != null) {
-      Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
-      val tasks = streamTasks.map(startTask => PipelineTask(startTask,
-                                                            middleTasks,
-                                                            // output operator state may be stateful, should not be shared across tasks
-                                                            outputOperatorStateCreator(),
-                                                            context,
-                                                            state,
-                                                            this))
+    val startTasks = startState.nextTasks(context, state, this, parallelism, resources)
+    if (startTasks != null) {
+      Preconditions.checkArgument(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
+
+      def asPipelineTask(startTask: ContinuableOperatorTask): PipelineTask =
+        PipelineTask(startTask,
+                     middleTasks,
+                     // output operator state may be stateful, should not be shared across tasks
+                     outputOperatorStateCreator(),
+                     context,
+                     state,
+                     this)
+
       var i = 1
-      while (i < tasks.length) {
-        putContinuation(tasks(i), wakeUp = true, resources)
+      while (i < startTasks.size) {
+        putContinuation(asPipelineTask(startTasks(i)), wakeUp = true, resources)
         i += 1
       }
-      tasks.head
+      asPipelineTask(startTasks(0))
+
     } else {
       null
     }
