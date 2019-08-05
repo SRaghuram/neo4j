@@ -5,7 +5,8 @@
  */
 package org.neo4j.bolt;
 
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
@@ -21,7 +22,6 @@ import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.driver.v1.summary.SummaryCounters;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.hamcrest.Matchers.is;
@@ -36,22 +36,27 @@ import static org.junit.Assert.assertThat;
  */
 public class ReadAndDeleteTransactionConflictIT
 {
-    private SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private RepeatRule outerRepeat = new RepeatRule( true, 10 );
-    private Neo4jRule graphDb = new Neo4jRule()
+    private static SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    private static Neo4jRule graphDb = new Neo4jRule()
             .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
-    private CleanupRule cleanupRule = new CleanupRule();
-    private RepeatRule innerRepeat = new RepeatRule( true, 10 );
+    private static CleanupRule cleanupRule = new CleanupRule();
 
-    private Driver driver;
+    private static Driver driver;
 
-    @Rule
-    public RuleChain rules = RuleChain.outerRule( suppressOutput ).around( outerRepeat ).around( graphDb ).around( cleanupRule ).around( innerRepeat );
+    @ClassRule
+    public static RuleChain rules = RuleChain.outerRule( suppressOutput ).around( graphDb ).around( cleanupRule );
+
+    @BeforeClass
+    public static void setUp()
+    {
+        Config config = Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
+        driver = GraphDatabase.driver( graphDb.boltURI(), config );
+        cleanupRule.add( driver );
+    }
 
     @Test
     public void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -92,7 +97,6 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void relationshipsWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -133,7 +137,6 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void nodesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -174,7 +177,6 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void nodesWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
@@ -210,22 +212,5 @@ public class ReadAndDeleteTransactionConflictIT
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
         }
-    }
-
-    private Driver getDriver()
-    {
-        if ( driver == null )
-        {
-            Config config = Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
-            driver = GraphDatabase.driver( graphDb.boltURI(), config );
-            cleanupRule.add( driver );
-            cleanupRule.add( () ->
-            {
-                // Clear the driver field when the driver is closed, to ensure we will create a new driver in the next iteration.
-                driver = null;
-            } );
-
-        }
-        return driver;
     }
 }
