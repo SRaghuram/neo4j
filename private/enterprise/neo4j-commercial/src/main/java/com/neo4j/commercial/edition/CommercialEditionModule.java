@@ -8,9 +8,11 @@ package com.neo4j.commercial.edition;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
+import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
@@ -81,7 +83,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         super( globalModule );
         this.globalModule = globalModule;
-        createCypherWorkerManagerIfNeeded();
+        satisfyCommercialOnlyDependencies( this.globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
     }
@@ -219,8 +221,13 @@ public class CommercialEditionModule extends CommunityEditionModule
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }
 
-    private void createCypherWorkerManagerIfNeeded()
+    /**
+     * Satisfy any commercial only dependencies, that are also needed in other Editions,
+     * e.g. {@link CoreEditionModule} and {@link ReadReplicaEditionModule}.
+     */
+    public static void satisfyCommercialOnlyDependencies( GlobalModule globalModule )
     {
+        // Create Cypher workers
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
              GraphDatabaseSettings.CypherMorselRuntimeScheduler.SINGLE_THREADED )
         {

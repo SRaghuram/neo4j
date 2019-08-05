@@ -51,6 +51,7 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.commercial.edition.CommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
@@ -186,6 +187,8 @@ public class CoreEditionModule extends ClusteringEditionModule
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         this.raftSender = new RaftSender( logProvider, raftChannelPoolService );
+
+        CommercialEditionModule.satisfyCommercialOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }

@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.commercial.edition.CommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
@@ -113,6 +114,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
+
+        CommercialEditionModule.satisfyCommercialOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }
