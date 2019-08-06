@@ -409,7 +409,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[AnyValue],
         groupingValue,
         compiledGroupingExpression.ir),
-      declareAndAssign(typeRefOf[Array[Updater]],
+      declareAndAssign(typeRefOf[Array[Any]],
                        updaters,
                        invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
@@ -430,7 +430,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        */
       block(
         compiledAggregationExpressions.indices.map(i => {
-          invokeSideEffect(arrayLoad(load(updaters), i), method[Updater, Unit, AnyValue]("update"), compiledAggregationExpressions(i).ir)
+          invokeSideEffect(arrayLoad(cast[Array[Updater]](load(updaters)), i), method[Updater, Unit, AnyValue]("update"), compiledAggregationExpressions(i).ir)
         }): _ *
       ),
 
