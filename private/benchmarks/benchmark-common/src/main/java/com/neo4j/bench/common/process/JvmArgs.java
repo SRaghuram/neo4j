@@ -30,10 +30,11 @@ public class JvmArgs
 {
 
     private static final Pattern MEMORY_SETTING = Pattern.compile( "-X(?<argname>ms|mx|ss)(\\d+)(k|K|m|M|g|G)" );
-    private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]*)" );
-    private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>.*)=.*" );
+    private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]+)" );
+    private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>[^=]+)=.*" );
+    private static final Pattern PROPERTY = Pattern.compile( "-D(?<argname>[^=]+)(=.+)?" );
 
-    private static final List<Pattern> PATTERNS = Arrays.asList( MEMORY_SETTING,BOOLEAN_ARGUMENT, VALUE_ARGUMENT );
+    private static final List<Pattern> PATTERNS = Arrays.asList( MEMORY_SETTING,BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY );
 
     public static List<String> standardArgs( ForkDirectory forkDirectory )
     {

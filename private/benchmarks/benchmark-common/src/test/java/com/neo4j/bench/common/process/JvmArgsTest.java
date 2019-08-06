@@ -31,7 +31,7 @@ public class JvmArgsTest
     }
 
     @Test
-    public void overwriteMemorySeetingIfExists()
+    public void overwriteMemorySettingIfExists()
     {
         // given
         JvmArgs jvmArgs = JvmArgs.from( emptyList() );
@@ -64,6 +64,18 @@ public class JvmArgsTest
         jvmArgs = jvmArgs.set( "-XX:NativeMemorySummary=summary" );
         // then
         assertThat( jvmArgs.toArgs(), Matchers.contains( "-XX:NativeMemorySummary=summary" ) );
+    }
+
+    @Test
+    public void overwritePropertyIfExists()
+    {
+        // given
+        JvmArgs jvmArgs = JvmArgs.from( emptyList() );
+        jvmArgs = jvmArgs.set( "-Dapp=name0" );
+        // when
+        jvmArgs = jvmArgs.set( "-Dapp=name1" );
+        // then
+        assertThat( jvmArgs.toArgs(), Matchers.contains( "-Dapp=name1" ) );
     }
 
     @Test( expected = IllegalArgumentException.class )
