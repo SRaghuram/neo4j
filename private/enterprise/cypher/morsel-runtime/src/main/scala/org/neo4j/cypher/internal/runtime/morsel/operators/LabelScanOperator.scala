@@ -168,8 +168,8 @@ class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTempla
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     ...
-      *     << inner.genOperate >>
       *     setLongAt(offset, nodeLabelCursor.nodeReference())
+      *     << inner.genOperate >>
       *     this.canContinue = this.nodeLabelCursor.next()
       *   }
       * }}}

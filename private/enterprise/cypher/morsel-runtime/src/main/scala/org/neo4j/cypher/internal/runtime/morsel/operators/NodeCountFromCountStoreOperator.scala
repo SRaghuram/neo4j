@@ -5,15 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.NameId
-import org.neo4j.values.storable.Values
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.util.Preconditions
+import org.neo4j.values.storable.{LongValue, Values}
 
 
 class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
@@ -65,11 +72,14 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
           }
           i += 1
         }
-        i = 0
-        while (i < wildCards) {
+        if (wildCards > 0) {
+          i = 0
+          val wildCardCount = context.nodeCountByCountStore(NameId.WILDCARD)
           executionEvent.dbHit()
-          count *= context.nodeCountByCountStore(NameId.WILDCARD)
-          i += 1
+          while (i < wildCards) {
+            count *= wildCardCount
+            i += 1
+          }
         }
 
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
@@ -89,3 +99,122 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
   }
 
 }
+
+class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTemplate,
+                                              id: Id,
+                                              val innermost: DelegateOperatorTaskTemplate,
+                                              val offset: Int,
+                                              val labels: List[Option[Either[String, Int]]],
+                                              val argumentSize: SlotConfiguration.Size)
+                                             (codeGen: OperatorExpressionCompiler)
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private val wildCards: Int = labels.count(_.isEmpty)
+  private val knownLabels = labels.flatten.collect {
+    case Right(token) => token
+  }
+  Preconditions.checkState(knownLabels.forall(_ >= 0), "Expect all label tokens to be positive")
+
+  private val nodeLabelCursorField = field[NodeLabelIndexCursor](codeGen.namer.nextVariableName())
+  private val labelFields = labels.flatten.collect {
+    case Left(labelName) => labelName -> field[Int](codeGen.namer.variableName(labelName), NO_TOKEN)
+  }.toMap
+
+  override def genMoreFields: Seq[Field] = labelFields.values.toSeq :+ nodeLabelCursorField
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+
+    val setLabelIds = labelFields.toSeq.map{
+      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
+    }
+    block(setLabelIds ++
+            Seq(setField(canContinue, constant(true)),
+            constant(true)):_*)
+  }
+
+  /**
+    *{{{
+    *  var count = 1L
+    *  //for the labels not known at compile time
+    *  if (this.labelField1 == -1) {
+    *    count = 0L
+    *  } else {
+    *    count = count * dbAccess.nodeCountByCountStore(this.labelField1)
+    *  }
+    *  if (this.labelField2 == -1) {
+    *      count = 0L
+    *    } else {
+    *      count = count * dbAccess.nodeCountByCountStore(this.labelField2)
+    *  }
+    *  ...
+    *  //for labels known at compile time
+    *  count = count * dbAccess.nodeCountByCountStore(11)
+    *  count = count * dbAccess.nodeCountByCountStore(1337)
+    *  ...
+    *  //for wild card labels
+    *  val wildCardCount = dbAccess.nodeCountByCountStore(-1)
+    *  count = count * wildCardCount
+    *  count = count * wildCardCount
+    *  count = count * wildCardCount
+    *  ...
+    *  setRefAt(offset, Values.longValue(count))
+    *  << inner.genOperate >>
+    *  this.canContinue = false
+    *}}}
+    */
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    val countVar = codeGen.namer.nextVariableName()
+    //takes care of the labels we don't know at compile time
+    val unknownLabelOps = block(labelFields.values.toSeq.map(field => {
+      ifElse(equal(loadField(field), constant(-1))){
+        assign(countVar, constant(0L))
+      }{
+        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field))))
+      }
+    }):_*)
+
+    //takes care of the labels we do know at compile time
+    val knownLabelOps = block(knownLabels.map(token =>
+        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))):_*)
+
+    //take care of all wildcard labels
+    val wildCardOps = if (wildCards > 0) {
+      val wildCardCount = codeGen.namer.nextVariableName()
+      val ops = (1 to wildCards).map(_ => assign(countVar, multiply(load(countVar), load(wildCardCount))))
+      block(
+        declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))) +:
+        ops :_*
+
+      )
+    } else noop()
+
+    block(
+      declareAndAssign(typeRefOf[Long], countVar, constant(1L)),
+      unknownLabelOps,
+      knownLabelOps,
+      wildCardOps,
+      if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                         loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+      } else {
+        noop()
+      },
+      codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
+      profileRow(id),
+      inner.genOperateWithExpressions,
+      setField(canContinue, constant(false))
+    )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = noop()
+
+  //TODO
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
+}
+

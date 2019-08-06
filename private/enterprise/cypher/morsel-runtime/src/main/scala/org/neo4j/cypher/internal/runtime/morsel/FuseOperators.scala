@@ -346,6 +346,23 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case plan@plans.NodeCountFromCountStore(name, labels, _) =>
+            val argumentSize = physicalPlan.argumentSizes(id)
+            val labelTokenOrNames = labels.map(_.map(labelName => tokenContext.getOptLabelId(labelName.name) match {
+              case None => Left(labelName.name)
+              case Some(token) => Right(token)
+            }))
+            val newTemplate = new NodeCountFromCountStoreOperatorTemplate(
+              acc.template,
+              plan.id,
+              innermostTemplate,
+              slots.getReferenceOffsetFor(name),
+              labelTokenOrNames,
+              argumentSize)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case _ =>
             cantHandle(acc, nextPlan)
         }

@@ -202,7 +202,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     case c: FunctionInvocation => compileFunction(c)
 
     //math
-    case Multiply(lhs, rhs) =>
+    case expressions.Multiply(lhs, rhs) =>
       for {l <- intermediateCompileExpression(lhs)
            r <- intermediateCompileExpression(rhs)
       } yield {
@@ -1373,7 +1373,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
     case HasLabels(nodeExpression, labels)  if labels.nonEmpty =>
       for (node <- intermediateCompileExpression(nodeExpression)) yield {
-        val tokensAndNames = labels.map(l => field[Int](s"label${l.name}", constant(-1)) -> l.name)
+        val tokensAndNames = labels.map(l => field[Int](namer.variableName(l.name), constant(-1)) -> l.name)
 
         val init = tokensAndNames.map {
           case (token, labelName) =>
