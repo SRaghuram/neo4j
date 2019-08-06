@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.NodeByIdSeekOperator.{asId, asIdMethod, isValidNode}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -40,7 +40,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
       IndexedSeq(new NodeByIdTask(inputMorsel.nextCopy))
   }
@@ -60,7 +60,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
       */
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       val queryState = new OldQueryState(context,
                                          resources = null,
@@ -94,7 +94,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
       this.tracer = event
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
       //nothing to do here
     }
   }

@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, Slot
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -45,7 +45,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
   class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
@@ -58,7 +58,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def operateWithProfile(outputIgnore: MorselExecutionContext,
                                     context: QueryContext,
                                     state: QueryState,
-                                    resources: WorkerExecutionResources,
+                                    resources: QueryResources,
                                     queryProfiler: QueryProfiler): Unit = {
 
       val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
@@ -73,11 +73,11 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: WorkerExecutionResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
+                         resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
-    override protected def closeCursors(resources: WorkerExecutionResources): Unit = {}
+    override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 
   //==========================================================================
@@ -96,7 +96,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def prepareOutput(outputMorsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
-                               resources: WorkerExecutionResources,
+                               resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
 
       produceOutputWithProfile(outputMorsel, context, state, resources, operatorExecutionEvent)
@@ -114,7 +114,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   protected def produceOutputWithProfile(output: MorselExecutionContext,
                                          context: QueryContext,
                                          state: QueryState,
-                                         resources: WorkerExecutionResources,
+                                         resources: QueryResources,
                                          operatorExecutionEvent: OperatorProfileEvent): Unit = {
     val rowBefore = output.getCurrentRow
     produceOutput(output, context, state, resources)
@@ -124,7 +124,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   protected def produceOutput(output: MorselExecutionContext,
                               context: QueryContext,
                               state: QueryState,
-                              resources: WorkerExecutionResources): Unit = {
+                              resources: QueryResources): Unit = {
     //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
     val queryState = new OldQueryState(context,
                                        resources = null,

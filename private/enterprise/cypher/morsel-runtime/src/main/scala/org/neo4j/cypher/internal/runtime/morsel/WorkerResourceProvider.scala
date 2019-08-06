@@ -5,20 +5,20 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.runtime.morsel.execution.{LiveCounts, WorkerExecutionResources}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{LiveCounts, QueryResources}
 import org.neo4j.kernel.lifecycle.Lifecycle
 
 /**
   * Get the resources for a worker by its id. The resources are bound to a Database, while a worker can work for different databases in a DBMS.
   */
 class WorkerResourceProvider(numberOfWorkers: Int,
-                             queryResourceFactory: () => WorkerExecutionResources) extends Lifecycle {
+                             queryResourceFactory: () => QueryResources) extends Lifecycle {
   private val queryResourcesForWorkers = Array.fill(numberOfWorkers)(queryResourceFactory())
 
   /**
     * Get the resources for the worker with the given id.
     */
-  def resourcesForWorker(workerId: Int): WorkerExecutionResources = queryResourcesForWorkers(workerId)
+  def resourcesForWorker(workerId: Int): QueryResources = queryResourcesForWorkers(workerId)
 
   /**
     * Assert that all resources are released

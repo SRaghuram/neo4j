@@ -9,12 +9,12 @@ import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.values.AnyValue
 
 abstract class MorselUnitTest extends CypherFunSuite {
-  protected val resources: WorkerExecutionResources = mock[WorkerExecutionResources](RETURNS_DEEP_STUBS)
+  protected val resources: QueryResources = mock[QueryResources](RETURNS_DEEP_STUBS)
 
   private def answer[T](a: InvocationOnMock => T): Answer[T] = {
     invocationOnMock: InvocationOnMock => a(invocationOnMock)

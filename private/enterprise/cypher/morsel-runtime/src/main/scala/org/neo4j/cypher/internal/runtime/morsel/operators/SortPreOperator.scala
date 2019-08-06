@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
@@ -37,7 +37,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     override def prepareOutput(morsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
-                               resources: WorkerExecutionResources,
+                               resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreSortedOutput = {
 
       val rowCloneForComparators = morsel.shallowCopy()

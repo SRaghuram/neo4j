@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -25,7 +25,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
                         pipelineState: PipelineState)
-  extends Task[WorkerExecutionResources] with WithHeapUsageEstimation {
+  extends Task[QueryResources] with WithHeapUsageEstimation {
 
   /**
     * This _output reference is needed to support reactive results in produce results,
@@ -40,7 +40,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     */
   private var _output: MorselExecutionContext = _
 
-  override final def executeWorkUnit(resources: WorkerExecutionResources,
+  override final def executeWorkUnit(resources: QueryResources,
                                      workUnitEvent: WorkUnitEvent,
                                      queryProfiler: QueryProfiler): PreparedOutput = {
     if (_output == null) {
@@ -50,7 +50,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     executeOutputOperator(resources, queryProfiler)
   }
 
-  private def executeOperators(resources: WorkerExecutionResources,
+  private def executeOperators(resources: QueryResources,
                                queryProfiler: QueryProfiler): Unit = {
     DebugSupport.logPipelines(MorselDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
     startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
@@ -66,7 +66,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     }
   }
 
-  private def executeOutputOperator(resources: WorkerExecutionResources,
+  private def executeOutputOperator(resources: QueryResources,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
     DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
     val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, queryContext, state, resources, queryProfiler)
@@ -83,7 +83,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     *
     * @return `true` if the task has become obsolete.
     */
-  def filterCancelledArguments(resources: WorkerExecutionResources): Boolean = {
+  def filterCancelledArguments(resources: QueryResources): Boolean = {
     if (_output == null) {
       val isCancelled = startTask.filterCancelledArguments(pipelineState)
       if (isCancelled) {
@@ -98,7 +98,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   /**
     * Close resources related to this task and update relevant counts.
     */
-  def close(resources: WorkerExecutionResources): Unit = {
+  def close(resources: QueryResources): Unit = {
     startTask.close(pipelineState, resources)
   }
 

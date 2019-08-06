@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
@@ -31,7 +31,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     IndexedSeq(new RelationshipFromCountStoreTask(inputMorsel.nextCopy))
   }
 
@@ -60,7 +60,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       hasNext = true
       true
@@ -114,7 +114,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
       this.executionEvent = event
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
       // nothing to do here
     }
   }

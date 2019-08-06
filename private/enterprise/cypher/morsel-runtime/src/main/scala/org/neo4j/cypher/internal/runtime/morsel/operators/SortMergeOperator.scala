@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
 
@@ -44,7 +44,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   override def nextTasks(queryContext: QueryContext,
                          state: QueryState,
                          input: ArgumentStateBuffer,
-                         resources: WorkerExecutionResources
+                         resources: QueryResources
                         ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, ArgumentStateBuffer]] = {
     Array(new OTask(input))
   }
@@ -65,7 +65,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: WorkerExecutionResources): Unit = {
+                         resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
         sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
         accumulator.foreach { morsel =>

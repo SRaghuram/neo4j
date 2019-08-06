@@ -120,7 +120,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
 
   class RandomExecutor extends FixedWorkersQueryExecutor(0,
     null,
-    new WorkerResourceProvider(3, () => new WorkerExecutionResources(mock[CursorFactory](RETURNS_DEEP_STUBS))),
+    new WorkerResourceProvider(3, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))),
     new WorkerManager(3, null)) {
 
     private val random = new Random()

@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
   * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
   * task to perform on that query.
   *
-  * A worker has it's own [[WorkerExecutionResources]] which it will use to execute tasks.
+  * A worker has it's own [[QueryResources]] which it will use to execute tasks.
   */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
@@ -70,7 +70,7 @@ class Worker(val workerId: Int,
     * @param resources      the query resources for this worker
     * @return `true` if some work was performed, otherwise `false`
     */
-  def workOnQuery(executingQuery: ExecutingQuery, resources: WorkerExecutionResources): Boolean = {
+  def workOnQuery(executingQuery: ExecutingQuery, resources: QueryResources): Boolean = {
     val task = scheduleNextTask(executingQuery, resources)
     if (task == null) {
       false
@@ -114,7 +114,7 @@ class Worker(val workerId: Int,
 
   private def executeTask(executingQuery: ExecutingQuery,
                           task: PipelineTask,
-                          resources: WorkerExecutionResources): Unit = {
+                          resources: QueryResources): Unit = {
     var workUnitEvent: WorkUnitEvent = null
     var preparedOutput: PreparedOutput = null
     try {
@@ -140,7 +140,7 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def scheduleNextTask(executingQuery: ExecutingQuery, resources: WorkerExecutionResources): Task[WorkerExecutionResources] = {
+  private def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): Task[QueryResources] = {
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
@@ -21,7 +21,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
@@ -33,7 +33,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: WorkerExecutionResources): Unit = {
+                         resources: QueryResources): Unit = {
 
       while (outputRow.isValidRow && inputMorsel.isValidRow) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
@@ -47,6 +47,6 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
     override def canContinue: Boolean = false
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
-    override protected def closeCursors(resources: WorkerExecutionResources): Unit = {}
+    override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 }

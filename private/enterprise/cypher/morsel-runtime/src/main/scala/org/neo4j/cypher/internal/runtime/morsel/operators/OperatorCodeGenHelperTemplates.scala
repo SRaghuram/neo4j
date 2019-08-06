@@ -49,7 +49,7 @@ object OperatorCodeGenHelperTemplates {
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
-  val QUERY_RESOURCE_PARAMETER: Parameter = param[WorkerExecutionResources]("resources")
+  val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")
 
   // Fields
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
@@ -63,7 +63,7 @@ object OperatorCodeGenHelperTemplates {
   val CURSOR_POOL_V: LocalVariable =
     variable[CursorPools]("cursorPools",
                           invoke(QUERY_RESOURCES,
-                                 method[WorkerExecutionResources, CursorPools]("cursorPools")))
+                                 method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
     load(CURSOR_POOL_V)
 

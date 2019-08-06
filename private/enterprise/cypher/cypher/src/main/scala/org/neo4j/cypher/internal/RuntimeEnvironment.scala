@@ -45,7 +45,7 @@ object RuntimeEnvironment {
         val workerManager = dependencies.resolveDependency(classOf[WorkerManager])
         val txBridge = dependencies.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
         val txBinder = new TxBridgeTransactionBinder(txBridge)
-        val resourceFactory = () => new WorkerExecutionResources(cursors)
+        val resourceFactory = () => new QueryResources(cursors)
         val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
         lifeSupport.add(workerResourceProvider)
         val queryExecutor = new FixedWorkersQueryExecutor(config.morselSize, txBinder, workerResourceProvider, workerManager)

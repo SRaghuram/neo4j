@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -25,7 +25,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     */
   protected def initializeInnerLoop(context: QueryContext,
                                     state: QueryState,
-                                    resources: WorkerExecutionResources,
+                                    resources: QueryResources,
                                     initExecutionContext: ExecutionContext): Boolean
 
   /**
@@ -38,14 +38,14 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   /**
     * Close any resources used by the inner loop.
     */
-  protected def closeInnerLoop(resources: WorkerExecutionResources): Unit
+  protected def closeInnerLoop(resources: QueryResources): Unit
 
   private var innerLoop: Boolean = false
 
   override final def operate(outputRow: MorselExecutionContext,
                              context: QueryContext,
                              state: QueryState,
-                             resources: WorkerExecutionResources): Unit = {
+                             resources: QueryResources): Unit = {
 
     while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
       if (!innerLoop) {
@@ -85,7 +85,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   override def canContinue: Boolean =
     inputMorsel.isValidRow || innerLoop
 
-  override protected def closeCursors(resources: WorkerExecutionResources): Unit = {
+  override protected def closeCursors(resources: QueryResources): Unit = {
     // note: we always close, because `innerLoop` might not be reliable if
     // there has been an exception during `initializeInnerLoop`
     closeInnerLoop(resources)

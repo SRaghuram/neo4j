@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -20,7 +20,7 @@ class ProjectOperator(val workIdentity: WorkIdentity,
   override def operate(currentRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
-                       resources: WorkerExecutionResources): Unit = {
+                       resources: QueryResources): Unit = {
 
     val queryState = new OldQueryState(context,
                                            resources = null,

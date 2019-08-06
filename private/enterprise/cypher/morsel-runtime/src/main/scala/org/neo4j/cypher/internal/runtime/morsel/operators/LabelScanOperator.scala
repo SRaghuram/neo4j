@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
@@ -30,7 +30,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     // Single threaded scan
     IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
@@ -51,7 +51,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       val id = label.getId(context)
       if (id == UNKNOWN) false
@@ -77,7 +77,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
       resources.cursorPools.nodeLabelIndexCursorPool.free(cursor)
       cursor = null
     }

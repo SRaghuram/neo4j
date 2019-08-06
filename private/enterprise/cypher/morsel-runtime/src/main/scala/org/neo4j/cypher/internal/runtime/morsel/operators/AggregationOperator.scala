@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryC
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, Reducer, Updater}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
@@ -74,7 +74,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
-                                 resources: WorkerExecutionResources,
+                                 resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
         val queryState = new OldQueryState(context,
@@ -206,7 +206,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     override def nextTasks(queryContext: QueryContext,
                            state: QueryState,
                            input: AggregatingAccumulator,
-                           resources: WorkerExecutionResources
+                           resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator]] = {
       Array(new OTask(input))
     }
@@ -221,7 +221,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       override def operate(outputRow: MorselExecutionContext,
                            context: QueryContext,
                            state: QueryState,
-                           resources: WorkerExecutionResources): Unit = {
+                           resources: QueryResources): Unit = {
 
         while (resultIterator.hasNext && outputRow.isValidRow) {
           val entry = resultIterator.next()

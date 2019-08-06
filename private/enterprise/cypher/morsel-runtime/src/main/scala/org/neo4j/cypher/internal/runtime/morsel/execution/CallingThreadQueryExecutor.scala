@@ -51,7 +51,7 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
       new MemoryTrackingStandardStateFactory(executionGraphDefinition.transactionMaxMemory)
     }
 
-    val resources = new WorkerExecutionResources(cursors)
+    val resources = new QueryResources(cursors)
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,

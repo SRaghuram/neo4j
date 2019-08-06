@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ManyQueriesExactNodeIndexSeekTaskTemplate.{nextMethod, queryIteratorMethod}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -52,7 +52,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
@@ -71,7 +71,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
       val queryState = new OldQueryState(context,
@@ -113,7 +113,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
       indexQueries = null
       resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursor)
       nodeCursor = null

@@ -11,7 +11,7 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.NodeHashJoinOperator.{HashTable, HashTableFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
@@ -47,7 +47,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
       Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
@@ -73,7 +73,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       fillKeyArray(rhsRow, key, rhsOffsets)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
@@ -91,7 +91,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {}
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {}
   }
 
 }

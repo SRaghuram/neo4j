@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
@@ -26,7 +26,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
-                         resources: WorkerExecutionResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     if (parallelism == 1) {
       // Single threaded scan
@@ -62,7 +62,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
-                                               resources: WorkerExecutionResources,
+                                               resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
       cursor = resources.cursorPools.nodeCursorPool.allocate()
       context.transactionalContext.dataRead.allNodesScan(cursor)
@@ -83,7 +83,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeInnerLoop(resources: WorkerExecutionResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
       resources.cursorPools.nodeCursorPool.free(cursor)
       cursor = null
     }
@@ -116,7 +116,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     override def operate(outputRow: MorselExecutionContext,
                          context: QueryContext,
                          queryState: QueryState,
-                         resources: WorkerExecutionResources): Unit = {
+                         resources: QueryResources): Unit = {
 
       while (next(queryState, resources) && outputRow.isValidRow) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
@@ -132,7 +132,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     }
 
 
-    private def next(queryState: QueryState, resources: WorkerExecutionResources): Boolean = {
+    private def next(queryState: QueryState, resources: QueryResources): Boolean = {
       while (true) {
         if (deferredRow) {
           deferredRow = false
@@ -162,7 +162,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def closeCursors(resources: WorkerExecutionResources): Unit = {
+    override protected def closeCursors(resources: QueryResources): Unit = {
       resources.cursorPools.nodeCursorPool.free(cursor)
       cursor = null
     }

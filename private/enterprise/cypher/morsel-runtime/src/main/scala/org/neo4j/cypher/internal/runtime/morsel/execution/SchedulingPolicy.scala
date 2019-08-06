@@ -13,13 +13,13 @@ import org.neo4j.cypher.internal.runtime.morsel.Task
   */
 trait SchedulingPolicy {
   def nextTask(executingQuery: ExecutingQuery,
-               queryResources: WorkerExecutionResources): Task[WorkerExecutionResources]
+               queryResources: QueryResources): Task[QueryResources]
 }
 
 object LazyScheduling extends SchedulingPolicy {
 
   def nextTask(executingQuery: ExecutingQuery,
-               queryResources: WorkerExecutionResources): Task[WorkerExecutionResources] = {
+               queryResources: QueryResources): Task[QueryResources] = {
 
     // TODO this schedules RHS of hash join first. Not so good.
     val pipelineStates = executingQuery.executionState.pipelineStates

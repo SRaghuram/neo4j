@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.mockito.Mockito.{never, times, verify}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutingQuery, QueryManager, WorkerExecutionResources, SchedulingPolicy}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutingQuery, QueryManager, QueryResources, SchedulingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class WorkerTest extends CypherFunSuite {
@@ -20,7 +20,7 @@ class WorkerTest extends CypherFunSuite {
       }
     val schedulingPolicy = new SchedulingPolicy {
       override def nextTask(executingQuery: ExecutingQuery,
-                            queryResources: WorkerExecutionResources): PipelineTask = null
+                            queryResources: QueryResources): PipelineTask = null
     }
     val sleeper = mock[Sleeper]
 
@@ -43,7 +43,7 @@ class WorkerTest extends CypherFunSuite {
     val schedulingPolicy: SchedulingPolicy =
       new SchedulingPolicy {
         override def nextTask(executingQuery: ExecutingQuery,
-                              queryResources: WorkerExecutionResources): PipelineTask = countDown.next()
+                              queryResources: QueryResources): PipelineTask = countDown.next()
       }
 
     val sleeper = mock[Sleeper]

@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
 import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, WorkerExecutionResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -28,7 +28,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator with NumericHelper {
 
-  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: WorkerExecutionResources): OperatorTask = {
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
 
     val queryState = new OldQueryState(queryContext,
                                        resources = null,
@@ -61,7 +61,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
-                         resources: WorkerExecutionResources): Unit = {
+                         resources: QueryResources): Unit = {
 
       argumentStateMap.filter[FilterState](output,
                                            (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
