@@ -15,7 +15,6 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,9 +29,11 @@ import static java.util.stream.Collectors.toList;
 public class JvmArgs
 {
 
-    private static final Pattern MEMORY_SETTING = Pattern.compile( "-X(ms|mx|ss)(\\d+)(k|K|m|M|g|G)" );
-    private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)([^=]*)" );
-    private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(.*)=.*" );
+    private static final Pattern MEMORY_SETTING = Pattern.compile( "-X(?<argname>ms|mx|ss)(\\d+)(k|K|m|M|g|G)" );
+    private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]*)" );
+    private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>.*)=.*" );
+
+    private static final List<Pattern> PATTERNS = Arrays.asList( MEMORY_SETTING,BOOLEAN_ARGUMENT, VALUE_ARGUMENT );
 
     public static List<String> standardArgs( ForkDirectory forkDirectory )
     {
@@ -133,34 +134,28 @@ public class JvmArgs
     private static Function<String,String> mapArg( String newJvmArg )
     {
 
-        Optional<String> newArgName = extractArgName( newJvmArg );
+        String newArgName = extractArgName( newJvmArg );
         // if arg names are equal return new jvm arg, else return old one
         // if we cannot parse argument, throw error
-        return oldJvmArg -> newArgName.map( arg -> extractArgName( oldJvmArg ).filter( arg::equals ).map( k -> newJvmArg ).orElseGet( () -> oldJvmArg ) )
-                .get();
+        return oldJvmArg -> {
+            String oldArgName = extractArgName( oldJvmArg );
+            if ( oldArgName.equals( newArgName ) )
+            {
+                return newJvmArg;
+            }
+            return oldJvmArg;
+        };
     }
 
-    private static Optional<String> extractArgName( String jvmArg )
+    private static String extractArgName( String jvmArg )
     {
-        Matcher matcher = MEMORY_SETTING.matcher( jvmArg );
-        if ( matcher.matches() )
-        {
-            return Optional.of( matcher.group( 1 ) );
-        }
 
-        matcher = BOOLEAN_ARGUMENT.matcher( jvmArg );
-        if ( matcher.matches() )
-        {
-            return Optional.of( matcher.group( 2 ) );
-        }
-
-        matcher = VALUE_ARGUMENT.matcher( jvmArg );
-        if ( matcher.matches() )
-        {
-            return Optional.of( matcher.group(1) );
-        }
-
-        throw new IllegalArgumentException( format( "don't know how to handle %s JVM argument", jvmArg ) );
+        return PATTERNS.stream()
+                .map( p -> p.matcher( jvmArg ) )
+                .filter( Matcher::matches )
+                .map( m -> m.group( "argname") )
+                .findFirst()
+                .orElseThrow( () -> new IllegalArgumentException( format( "don't know how to handle %s JVM argument", jvmArg ) ) );
     }
 
 }
