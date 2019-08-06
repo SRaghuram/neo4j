@@ -5,27 +5,21 @@
  */
 package com.neo4j.kernel;
 
+import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
+import org.neo4j.snapshot.TestVersionContext;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.function.LongSupplier;
-
 import org.neo4j.collection.Dependencies;
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
-import org.neo4j.kernel.impl.context.TransactionVersionContext;
-import org.neo4j.kernel.impl.context.TransactionVersionContextSupplier;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -95,7 +89,7 @@ class QueryRestartIT
 
     private void prepareCursorContext( String databaseName )
     {
-        testCursorContext = testCursorContext( databaseName );
+        testCursorContext = TestVersionContext.testCursorContext( managementService, databaseName );
         testContextSupplier.setCursorContext( testCursorContext );
     }
 
@@ -110,63 +104,4 @@ class QueryRestartIT
         }
     }
 
-    private TestVersionContext testCursorContext( String databaseName )
-    {
-        TransactionIdStore transactionIdStore = getTransactionIdStore( databaseName );
-        return new TestVersionContext( transactionIdStore::getLastClosedTransactionId );
-    }
-
-    private TransactionIdStore getTransactionIdStore( String databaseName )
-    {
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) managementService.database( databaseName )).getDependencyResolver();
-        return dependencyResolver.resolveDependency( TransactionIdStore.class );
-    }
-
-    private class TestVersionContext extends TransactionVersionContext
-    {
-        private boolean wrongLastClosedTxId = true;
-        private int additionalAttempts;
-
-        TestVersionContext( LongSupplier transactionIdSupplier )
-        {
-            super( transactionIdSupplier );
-        }
-
-        @Override
-        public long lastClosedTransactionId()
-        {
-            return wrongLastClosedTxId ? TransactionIdStore.BASE_TX_ID : super.lastClosedTransactionId();
-        }
-
-        @Override
-        public void markAsDirty()
-        {
-            super.markAsDirty();
-            wrongLastClosedTxId = false;
-        }
-
-        @Override
-        public boolean isDirty()
-        {
-            boolean dirty = super.isDirty();
-            if ( dirty )
-            {
-                additionalAttempts++;
-            }
-            return dirty;
-        }
-
-        int getAdditionalAttempts()
-        {
-            return additionalAttempts;
-        }
-    }
-
-    private static class TestTransactionVersionContextSupplier extends TransactionVersionContextSupplier
-    {
-        void setCursorContext( VersionContext versionContext )
-        {
-            this.cursorContext.set( versionContext );
-        }
-    }
 }

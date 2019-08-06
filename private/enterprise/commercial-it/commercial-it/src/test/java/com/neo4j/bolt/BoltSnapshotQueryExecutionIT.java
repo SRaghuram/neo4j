@@ -5,28 +5,28 @@
  */
 package com.neo4j.bolt;
 
+import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
+import org.neo4j.snapshot.TestVersionContext;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
-import org.neo4j.driver.Value;
-import org.neo4j.driver.util.Pair;
+import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
@@ -40,6 +40,7 @@ import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -48,9 +49,29 @@ class BoltSnapshotQueryExecutionIT
     @Inject
     private TestDirectory testDirectory;
 
+    private TestTransactionVersionContextSupplier testContextSupplier;
+    private TestVersionContext testCursorContext;
     private Driver driver;
     private GraphDatabaseService db;
     private DatabaseManagementService managementService;
+
+    @BeforeEach
+    void setUp()
+    {
+        testContextSupplier = new TestTransactionVersionContextSupplier();
+        var dependencies = new Dependencies();
+        dependencies.satisfyDependencies( testContextSupplier );
+        managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setExternalDependencies( dependencies )
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )
+                .setConfig( GraphDatabaseSettings.snapshot_query, true )
+                .build();
+        prepareCursorContext();
+        db = managementService.database( DEFAULT_DATABASE_NAME );
+        createData( db );
+        connectDriver();
+    }
 
     @AfterEach
     void tearDown()
@@ -63,103 +84,42 @@ class BoltSnapshotQueryExecutionIT
     }
 
     @Test
-    void executeQueryWithSnapshotEngine()
-    {
-        executeQuery( "withSnapshotEngine", true );
-    }
-
-    @Test
-    void executeQueryWithoutSnapshotEngine()
-    {
-        executeQuery( "withoutSnapshotEngine", false );
-    }
-
-    private void executeQuery( String directory, boolean useSnapshotEngineSetting )
-    {
-        managementService =
-                new TestCommercialDatabaseManagementServiceBuilder( testDirectory.directory( directory ) )
-                .setConfig( BoltConnector.enabled, true )
-                .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
-                .setConfig( GraphDatabaseSettings.snapshot_query, useSnapshotEngineSetting ).build();
-        db = managementService.database( DEFAULT_DATABASE_NAME );
-        initDatabase();
-        connectDriver();
-        verifyQueryExecution();
-    }
-
-    private void verifyQueryExecution()
+    void executeQueryWithSingleRetry()
     {
         try ( Session session = driver.session() )
         {
-            session.readTransaction( tx ->
+            StatementResult result = session.readTransaction( tx -> tx.run( "MATCH (n) RETURN n.c" ) );
+            assertEquals( 1, testCursorContext.getAdditionalAttempts() );
+            while ( result.hasNext() )
             {
-                StatementResult statementResult = tx.run( "MATCH (n) RETURN n.name, n.profession, n.planet, n.city ORDER BY n.name" );
-                List<String> fields = Arrays.asList( "n.name", "n.profession", "n.planet", "n.city" );
-                Record amy = statementResult.next();
-                assertEquals( amy.keys(), fields );
-                assertPairs( amy.fields(), "n.name", "Amy",
-                                   "n.profession", "Student",
-                                   "n.planet", "Mars",
-                                   "n.city", "null");
-                Record fry = statementResult.next();
-                assertEquals( fry.keys(), fields );
-                assertPairs( fry.fields(), "n.name", "Fry",
-                        "n.profession", "Delivery Boy",
-                        "n.planet", "Earth",
-                        "n.city", "New York");
-                Record lila = statementResult.next();
-                assertEquals( lila.keys(), fields );
-                assertPairs( lila.fields(), "n.name", "Lila",
-                        "n.profession", "Pilot",
-                        "n.planet", "Earth",
-                        "n.city", "New York");
-                assertFalse( statementResult.hasNext() );
-                return null;
-            } );
+                assertEquals( "d", result.next().get( "n.c" ).asString() );
+            }
+        }
+    }
+
+    @Test
+    void queryThatModifiesDataAndSeesUnstableSnapshotShouldThrowException()
+    {
+        // We need to stay dirty because the driver will re-attempt the query with a TransientError and otherwise it will work the 2nd time.
+        testCursorContext.stayDirty( true );
+        try
+        {
+            try ( Session session = driver.session() )
+            {
+                session.readTransaction( tx -> tx.run( "MATCH (n:toRetry) CREATE () RETURN n.c" ) );
+                fail( "No exception thrown" );
+            }
+        }
+        catch ( TransientException e )
+        {
+            assertEquals( "Unable to get clean data snapshot for query " +
+                          "'MATCH (n:toRetry) CREATE () RETURN n.c' that performs updates.", e.getMessage() );
         }
     }
 
     private void connectDriver()
     {
         driver = graphDatabaseDriver( boltURI() );
-    }
-
-    private void initDatabase()
-    {
-        try ( Transaction transaction = db.beginTx() )
-        {
-            Node fry = db.createNode();
-            fry.setProperty( "name", "Fry" );
-            fry.setProperty( "profession", "Delivery Boy" );
-            fry.setProperty( "planet", "Earth" );
-            fry.setProperty( "city", "New York" );
-            Node lila = db.createNode();
-            lila.setProperty( "name", "Lila" );
-            lila.setProperty( "profession", "Pilot" );
-            lila.setProperty( "planet", "Earth" );
-            lila.setProperty( "city", "New York" );
-            Node amy = db.createNode();
-            amy.setProperty( "name", "Amy" );
-            amy.setProperty( "profession", "Student" );
-            amy.setProperty( "planet", "Mars" );
-            transaction.commit();
-        }
-    }
-
-    private static void assertPairs( List<Pair<String,Value>> pairs, String key1, String value1, String key2, String value2, String key3, String value3,
-            String key4, String value4 )
-    {
-        assertThat( pairs, Matchers.hasSize( 4 ) );
-        validatePair( pairs.get( 0 ), key1, value1 );
-        validatePair( pairs.get( 1 ), key2, value2 );
-        validatePair( pairs.get( 2 ), key3, value3 );
-        validatePair( pairs.get( 3 ), key4, value4 );
-    }
-
-    private static void validatePair( Pair<String,Value> pair, String key, String value )
-    {
-        assertEquals( key, pair.key() );
-        assertEquals( value, pair.value().asString() );
     }
 
     private URI boltURI()
@@ -169,4 +129,20 @@ class BoltSnapshotQueryExecutionIT
         return URI.create( "bolt://" + boltHostNamePort.getHost() + ":" + boltHostNamePort.getPort() );
     }
 
+    private void prepareCursorContext()
+    {
+        testCursorContext = TestVersionContext.testCursorContext( managementService, DEFAULT_DATABASE_NAME );
+        testContextSupplier.setCursorContext( testCursorContext );
+    }
+
+    private static void createData( GraphDatabaseService database )
+    {
+        Label label = Label.label( "toRetry" );
+        try ( Transaction transaction = database.beginTx() )
+        {
+            Node node = database.createNode( label );
+            node.setProperty( "c", "d" );
+            transaction.commit();
+        }
+    }
 }
