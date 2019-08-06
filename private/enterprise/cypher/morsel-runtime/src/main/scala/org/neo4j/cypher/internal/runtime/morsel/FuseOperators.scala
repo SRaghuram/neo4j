@@ -19,8 +19,6 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperT
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
-import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
