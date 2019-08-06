@@ -29,6 +29,8 @@ import static java.util.stream.Collectors.toList;
 public class JvmArgs
 {
 
+    private static final String ARGNAME_CAPTURING_GROUP = "argname";
+
     private static final Pattern MEMORY_SETTING = Pattern.compile( "-X(?<argname>ms|mx|ss)(\\d+)(k|K|m|M|g|G)" );
     private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]+)" );
     private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>[^=]+)=.*" );
@@ -154,7 +156,7 @@ public class JvmArgs
         return PATTERNS.stream()
                 .map( p -> p.matcher( jvmArg ) )
                 .filter( Matcher::matches )
-                .map( m -> m.group( "argname") )
+                .map( m -> m.group( ARGNAME_CAPTURING_GROUP) )
                 .findFirst()
                 .orElseThrow( () -> new IllegalArgumentException( format( "don't know how to handle %s JVM argument", jvmArg ) ) );
     }
