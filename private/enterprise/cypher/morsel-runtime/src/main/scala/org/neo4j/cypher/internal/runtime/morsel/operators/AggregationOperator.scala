@@ -390,9 +390,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
           assign(argVar, load(currentArg)),
           assign(aggPreMapVar, newInstance(constructor[AggMap])),
           invokeSideEffect(loadField(collectionHelperField),
-                           method[ScalaCollectionHelper, Unit, AggOut, PerArgument[AggMap]]("add"),
+                           method[ScalaCollectionHelper, Unit, ArrayBuffer[_], Any]("add"),
                            loadField(perArgsField),
-                           newInstance(constructor[PerArgument[AggMap], Long, AggMap], load(argVar), load(aggPreMapVar)))
+                           newInstance(constructor[PerArgument[_], Long, Any], load(argVar), load(aggPreMapVar)))
         )),
 
       /*
@@ -411,12 +411,12 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         compiledGroupingExpression.ir),
       declareAndAssign(typeRefOf[Array[Updater]],
                        updaters,
-                       invoke(load(aggPreMapVar), method[AggMap, Array[Updater], AnyValue]("get"), load(groupingValue))),
+                       invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
         block(
           assign(updaters, createUpdaters()),
           invokeSideEffect(load(aggPreMapVar),
-                           method[AggMap, Array[Updater], AnyValue, Array[Updater]]("put"),
+                           method[AggMap, Any, Any, Any]("put"),
                            load(groupingValue),
                            load(updaters))
         )
@@ -442,7 +442,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       setField(sinkField,
                invoke(EXECUTION_STATE,
-                      method[ExecutionState, Sink[IndexedSeq[PerArgument[AggMap]]], Int, Int]("getSinkInt"),
+                      method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
                       PIPELINE_ID,
                       loadField(bufferIdField)))
     )
@@ -451,7 +451,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override protected def genProduce: IntermediateRepresentation = {
     block(
       invokeSideEffect(loadField(sinkField),
-                       method[Sink[AggOut], Unit, AggOut]("put"),
+                       method[Sink[_], Unit, Any]("put"),
                        loadField(perArgsField)),
       // currently impossible for owning task to continue, as there is no output morsel
       setField(perArgsField, constant(null))
