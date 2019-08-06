@@ -37,7 +37,8 @@
       "description": "From read query Q8 (eager in older code)",
       "queryFile": "queries/WQ5.cypher",
       "parameters": {
-        "file": "parameters/relationship.txt"
+        "file": "parameters/relationship.txt",
+        "isLoopable": false
       },
       "isMutating": true
     },
@@ -54,10 +55,64 @@
       "isMutating": true
     },
     {
+      "name": "WQ8",
+      "description": "From read query Q30",
+      "queryFile": "queries/WQ8.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ9",
+      "description": "Match albums based on date and delete them and their tracks",
+      "queryFile": "queries/WQ9.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ9.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ10",
+      "description": "Refactor graph to used category nodes for release year",
+      "queryFile": "queries/WQ10.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ10.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ11",
+      "description": "Refactor graph to move tracks into album array properties",
+      "queryFile": "queries/WQ11.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ11.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
       "name": "WQ12",
       "description": "Refactor graph to re-label tracks",
       "queryFile": "queries/WQ12.cypher",
       "warmupQueryFile": "queries/WARMUP-WQ12.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ13",
+      "description": "Refactor graph to merge all concerts in the same year",
+      "queryFile": "queries/WQ13.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ13.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
       "isMutating": true
     },
     {
