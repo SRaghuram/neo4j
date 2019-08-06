@@ -224,6 +224,30 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => existsFunction // Don't know how to specialize this
         }
 
+      case labels: FunctionInvocation if labels.function == frontendFunctions.Labels =>
+        labels.args.head match {
+          case Variable(key) =>
+            val slot = slotConfiguration(key)
+            slot match {
+              case LongSlot(offset, true, CTNode) => NullCheck(offset, LabelsFromSlot(offset))
+              case LongSlot(offset, false, CTNode) => LabelsFromSlot(offset)
+              case _ => labels // Don't know how to specialize this
+            }
+          case _ => labels // Don't know how to specialize this
+        }
+
+      case relType: FunctionInvocation if relType.function == frontendFunctions.Type =>
+        relType.args.head match {
+          case Variable(key) =>
+            val slot = slotConfiguration(key)
+            slot match {
+              case LongSlot(offset, true, CTRelationship) => NullCheck(offset, RelationshipTypeFromSlot(offset))
+              case LongSlot(offset, false, CTRelationship) => RelationshipTypeFromSlot(offset)
+              case _ => relType // Don't know how to specialize this
+            }
+          case _ => relType // Don't know how to specialize this
+        }
+
       case e@IsNull(prop@Property(Variable(key), PropertyKeyName(propKey))) =>
         val slot = slotConfiguration(key)
         val maybeSpecializedExpression = specializeCheckIfPropertyExists(slotConfiguration, key, propKey, prop, slot)

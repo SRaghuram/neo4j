@@ -1249,6 +1249,42 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, context) should equal(longValue(42))
   }
 
+  test("LabelsFromSlot") {
+    // Given
+    val labels = Values.stringArray("A", "B", "C")
+    val node = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "C"))
+
+    val offset = 0
+    val expression = LabelsFromSlot(offset)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, node.id)
+    evaluate(compiled, context) should equal(labels)
+  }
+
+  test("RelationshipTypeFromSlot") {
+    // Given
+    val relType = Values.stringValue("R")
+    val r = ValueUtils.fromRelationshipProxy(relate(createNode(), createNode(), "R"))
+
+    val offset = 0
+    val expression = RelationshipTypeFromSlot(offset)
+    val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, r.id)
+    evaluate(compiled, context) should equal(relType)
+  }
+
   test("PrimitiveEquals") {
     val compiled = compile(PrimitiveEquals(parameter(0), parameter(1)))
 

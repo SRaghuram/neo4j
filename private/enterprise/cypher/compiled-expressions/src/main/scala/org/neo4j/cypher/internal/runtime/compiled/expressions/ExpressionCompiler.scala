@@ -15,7 +15,7 @@ import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning.ast._
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
@@ -1482,6 +1482,22 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val value = invokeStatic(method[Values, LongValue, Long]("longValue"), getLongAt(offset))
 
       Some(IntermediateExpression(value, Seq.empty, Seq.empty, nullCheck))
+
+    case LabelsFromSlot(offset) =>
+      val nameOfSlot = slots.nameOfLongSlot(offset)
+      val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
+
+      val value = invoke(DB_ACCESS, method[DbAccess, ListValue, Long, NodeCursor]("getLabelsForNode"), getLongAt(offset), NODE_CURSOR)
+
+      Some(IntermediateExpression(value, Seq.empty, Seq(vNODE_CURSOR), nullCheck))
+
+    case RelationshipTypeFromSlot(offset) =>
+      val nameOfSlot = slots.nameOfLongSlot(offset)
+      val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
+
+      val value = invoke(DB_ACCESS, method[DbAccess, TextValue, Long, RelationshipScanCursor]("getTypeForRelationship"), getLongAt(offset), RELATIONSHIP_CURSOR)
+
+      Some(IntermediateExpression(value, Seq.empty, Seq(vRELATIONSHIP_CURSOR), nullCheck))
 
     case PrimitiveEquals(lhs, rhs) =>
       for {l <- intermediateCompileExpression(lhs)

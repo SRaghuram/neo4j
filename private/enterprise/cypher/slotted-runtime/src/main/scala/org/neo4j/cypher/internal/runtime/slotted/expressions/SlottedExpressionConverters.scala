@@ -60,6 +60,10 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.RelationshipProperty(offset, token))
       case runtimeAst.IdFromSlot(offset) =>
         Some(runtimeExpression.IdFromSlot(offset))
+      case runtimeAst.LabelsFromSlot(offset) =>
+        Some(runtimeExpression.LabelsFromSlot(offset))
+      case runtimeAst.RelationshipTypeFromSlot(offset) =>
+        Some(runtimeExpression.RelationshipTypeFromSlot(offset))
       case runtimeAst.NodePropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.NodePropertyLate(offset, propKey))
       case runtimeAst.SlottedCachedPropertyLate(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>

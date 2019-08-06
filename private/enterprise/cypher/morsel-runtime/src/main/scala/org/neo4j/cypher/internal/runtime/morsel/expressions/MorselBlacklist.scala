@@ -8,9 +8,13 @@ package org.neo4j.cypher.internal.runtime.morsel.expressions
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.v4_0.expressions.functions.{Filename, Linenumber}
+import org.neo4j.cypher.internal.v4_0.expressions.functions.{Filename, Linenumber, Type}
 
 object MorselBlacklist {
+
+  private val BLACKLISTED_FUNCTIONS = Seq(Linenumber,
+                                          Filename,
+                                          Type) // type() uses thread-unsafe RelationshipProxy.type()
 
   def throwOnUnsupportedPlan(logicalPlan: LogicalPlan): Unit = {
     val unsupport =
@@ -22,7 +26,7 @@ object MorselBlacklist {
         case _: ResolvedFunctionInvocation =>
           _ + "User-defined functions"
 
-        case f: FunctionInvocation if f.function == Linenumber || f.function == Filename =>
+        case f: FunctionInvocation if BLACKLISTED_FUNCTIONS.contains(f.function) =>
           _ + (f.functionName.name+"()")
       }
     if (unsupport.nonEmpty) {

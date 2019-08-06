@@ -39,14 +39,14 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
-    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan)
-
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
                                             MorselPipelineBreakingPolicy,
                                             context.config.transactionMaxMemory,
                                             allocateArgumentSlots = true)
+
+    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
