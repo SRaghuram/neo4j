@@ -287,8 +287,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: VarExpand |
            _: OptionalExpand |
            _: FindShortestPaths |
-           _: UnwindCollection |
-           _: VarExpand =>
+           _: UnwindCollection =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           pipeline.inputBuffer = outputToBuffer(source)
