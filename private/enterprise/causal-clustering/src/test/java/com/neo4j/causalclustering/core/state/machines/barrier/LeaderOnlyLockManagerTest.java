@@ -36,14 +36,14 @@ public class LeaderOnlyLockManagerTest
     }
 
     @Test
-    public void shouldNotIssueLocksOnNonBarrierHolder()
+    public void shouldNotIssueLocksOnNonBarrierHolder() throws BarrierException
     {
         // given
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
         BarrierState barrierState = mock( BarrierState.class );
-        doThrow( AcquireLockTimeoutException.class ).when( barrierState ).ensureHoldingToken();
+        doThrow( BarrierException.class ).when( barrierState ).ensureHoldingToken();
 
         LeaderOnlyLockManager lockManager =
                 new LeaderOnlyLockManager( locks, barrierState );

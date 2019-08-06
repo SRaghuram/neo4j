@@ -68,7 +68,7 @@ public class BarrierStateTest
             barrierState.ensureHoldingToken();
             fail( "Should have thrown exception" );
         }
-        catch ( AcquireBarrierTimeoutException e )
+        catch ( BarrierException e )
         {
             // expected
         }

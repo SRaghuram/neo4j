@@ -25,8 +25,8 @@ interface BarrierToken
      * Convenience method for retrieving a valid candidate id for a
      * barrier token request.
      *
-     *  @return A suitable candidate id for a token request.
-     * @param currentId
+     * @param currentId The current ID from which to generate the next.
+     * @return A suitable candidate id for a token request.
      */
     static int nextCandidateId( int currentId )
     {

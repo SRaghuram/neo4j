@@ -14,10 +14,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
-
 public class BarrierState
 {
     public static final String TOKEN_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take token when leader.";
@@ -44,7 +40,7 @@ public class BarrierState
      * exception if it was held but was later lost or never could be taken to
      * begin with.
      */
-    public void ensureHoldingToken()
+    public void ensureHoldingToken() throws BarrierException
     {
         if ( barrierTokenId == BarrierToken.INVALID_BARRIER_TOKEN_ID )
         {
@@ -52,11 +48,11 @@ public class BarrierState
         }
         else if ( barrierTokenId != currentToken().id() )
         {
-            throw new AcquireBarrierTimeoutException( "Local instance lost barrier token.", NotALeader );
+            throw new BarrierException( "Local instance lost barrier token." );
         }
     }
 
-    public int getCurrentToken()
+    int getCurrentToken()
     {
         return barrierTokenId;
     }
@@ -70,7 +66,7 @@ public class BarrierState
     /**
      * Acquires a valid token id owned by us or throws.
      */
-    private synchronized int acquireTokenOrThrow()
+    private synchronized int acquireTokenOrThrow() throws BarrierException
     {
         BarrierToken currentToken = currentToken();
         if ( myself.equals( currentToken.owner() ) )
@@ -91,7 +87,7 @@ public class BarrierState
         }
         catch ( ReplicationFailureException e )
         {
-            throw new AcquireBarrierTimeoutException( e, "Replication failure acquiring barrier token.", ReplicationFailure );
+            throw new BarrierException( "Replication failure acquiring barrier token.", e );
         }
 
         try
@@ -103,17 +99,16 @@ public class BarrierState
             }
             else
             {
-                throw new AcquireBarrierTimeoutException( "Failed to acquire barrier token. Was taken by another candidate.",
-                        NotALeader );
+                throw new BarrierException( "Failed to acquire barrier token. Was taken by another candidate." );
             }
         }
         catch ( Exception e )
         {
-            throw new AcquireBarrierTimeoutException( e, "Failed to acquire barrier token.", NotALeader );
+            throw new BarrierException( "Failed to acquire barrier token.", e );
         }
     }
 
-    private void ensureLeader()
+    private void ensureLeader() throws BarrierException
     {
         MemberId leader;
 
@@ -123,12 +118,12 @@ public class BarrierState
         }
         catch ( NoLeaderFoundException e )
         {
-            throw new AcquireBarrierTimeoutException( e, "Could not acquire barrier token.", NoLeaderAvailable );
+            throw new BarrierException( "Could not acquire barrier token.", e );
         }
 
         if ( !leader.equals( myself ) )
         {
-            throw new AcquireBarrierTimeoutException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
+            throw new BarrierException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE );
         }
     }
 }

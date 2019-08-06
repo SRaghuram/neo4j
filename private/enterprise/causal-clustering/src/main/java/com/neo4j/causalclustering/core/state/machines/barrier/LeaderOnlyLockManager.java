@@ -15,6 +15,8 @@ import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
 
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
+
 /**
  * Each member of the cluster uses its own {@link LeaderOnlyLockManager} which wraps a local {@link Locks} manager.
  * The validity of local lock managers is synchronized by using a token which gets requested by each server as necessary
@@ -91,14 +93,28 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceId ) throws AcquireLockTimeoutException
         {
-            barrierState.ensureHoldingToken();
+            try
+            {
+                barrierState.ensureHoldingToken();
+            }
+            catch ( BarrierException e )
+            {
+                throw new AcquireLockTimeoutException( e, NotALeader );
+            }
             localClient.acquireExclusive( tracer, resourceType, resourceId );
         }
 
         @Override
         public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
         {
-            barrierState.ensureHoldingToken();
+            try
+            {
+                barrierState.ensureHoldingToken();
+            }
+            catch ( BarrierException e )
+            {
+                throw new AcquireLockTimeoutException( e, NotALeader );
+            }
             return localClient.tryExclusiveLock( resourceType, resourceId );
         }
 
@@ -117,7 +133,14 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
         {
-            barrierState.ensureHoldingToken();
+            try
+            {
+                barrierState.ensureHoldingToken();
+            }
+            catch ( BarrierException e )
+            {
+                throw new AcquireLockTimeoutException( e, NotALeader );
+            }
             return localClient.reEnterExclusive( resourceType, resourceId );
         }
 

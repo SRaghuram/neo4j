@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.id;
 
 import java.io.IOException;
 
+import com.neo4j.causalclustering.core.state.machines.barrier.BarrierException;
 import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
 
 import org.neo4j.internal.id.FreeIds;
@@ -19,7 +20,7 @@ public class BarrierAwareIdGenerator implements IdGenerator
     private final IdGenerator delegate;
     private final BarrierState barrierState;
 
-    public BarrierAwareIdGenerator( IdGenerator delegate, BarrierState barrierState )
+    BarrierAwareIdGenerator( IdGenerator delegate, BarrierState barrierState )
     {
         this.delegate = delegate;
         this.barrierState = barrierState;
@@ -46,21 +47,42 @@ public class BarrierAwareIdGenerator implements IdGenerator
     @Override
     public void freeId( long id )
     {
-        barrierState.ensureHoldingToken();
+        try
+        {
+            barrierState.ensureHoldingToken();
+        }
+        catch ( BarrierException e )
+        {
+            throw new IdGenerationException( e );
+        }
         delegate.freeId( id );
     }
 
     @Override
     public void deleteId( long id )
     {
-        barrierState.ensureHoldingToken();
+        try
+        {
+            barrierState.ensureHoldingToken();
+        }
+        catch ( BarrierException e )
+        {
+            throw new IdGenerationException( e );
+        }
         delegate.deleteId( id );
     }
 
     @Override
     public void markIdAsUsed( long id )
     {
-        barrierState.ensureHoldingToken();
+        try
+        {
+            barrierState.ensureHoldingToken();
+        }
+        catch ( BarrierException e )
+        {
+            throw new IdGenerationException( e );
+        }
         delegate.markIdAsUsed( id );
     }
 
@@ -115,14 +137,28 @@ public class BarrierAwareIdGenerator implements IdGenerator
     @Override
     public long nextId()
     {
-        barrierState.ensureHoldingToken();
+        try
+        {
+            barrierState.ensureHoldingToken();
+        }
+        catch ( BarrierException e )
+        {
+            throw new IdGenerationException( e );
+        }
         return delegate.nextId();
     }
 
     @Override
     public IdRange nextIdBatch( int size )
     {
-        barrierState.ensureHoldingToken();
+        try
+        {
+            barrierState.ensureHoldingToken();
+        }
+        catch ( BarrierException e )
+        {
+            throw new IdGenerationException( e );
+        }
         return delegate.nextIdBatch( size );
     }
 }
