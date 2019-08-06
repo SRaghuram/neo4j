@@ -37,7 +37,7 @@ public class StoreClient implements AutoCloseable
     public static StoreClient connect( URI boltUri, String username, String password, int retries )
     {
         AuthToken basicAuth = AuthTokens.basic( username, password );
-        Config config = configWithoutEncryption();
+        Config config = configWithEncryption();
         Supplier<Driver> driverSupplier = () -> GraphDatabase.driver( boltUri, basicAuth, config );
         return new QueryRetrier().retry( () ->
         {
@@ -87,9 +87,9 @@ public class StoreClient implements AutoCloseable
         }
     }
 
-    private static Config configWithoutEncryption()
+    private static Config configWithEncryption()
     {
-        return Config.builder().withoutEncryption().build();
+        return Config.builder().build();
     }
 
     private void connect()
