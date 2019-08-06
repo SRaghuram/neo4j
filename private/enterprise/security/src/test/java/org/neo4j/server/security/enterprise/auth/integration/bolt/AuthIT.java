@@ -336,10 +336,9 @@ public class AuthIT extends EnterpriseLdapAuthenticationTestBase
     }
 
     @Before
-    @Override
     public void setup() throws Exception
     {
-        super.setup();
+        startDatabase();
         LdapServer ldapServer = ldapServerRule.getLdapServer();
         ldapServer.setConfidentialityRequired( confidentialityRequired );
 

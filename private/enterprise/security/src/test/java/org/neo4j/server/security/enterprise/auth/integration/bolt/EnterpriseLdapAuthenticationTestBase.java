@@ -6,7 +6,7 @@
 package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
 
@@ -49,8 +49,12 @@ public abstract class EnterpriseLdapAuthenticationTestBase extends AbstractLdapT
 
     String boltUri;
 
-    @Before
-    public void setup() throws Exception
+    void startDatabase() throws Exception
+    {
+        startDatabaseWithSettings( getSettings() );
+    }
+
+    void startDatabaseWithSettings( Map<Setting<?>,String> settings ) throws Exception
     {
         String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, "true" )
@@ -58,19 +62,19 @@ public abstract class EnterpriseLdapAuthenticationTestBase extends AbstractLdapT
               .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).encryption_level, OPTIONAL.name() )
               .withSetting( new BoltConnector( "bolt" ).listen_address, host );
-        dbRule.withSettings( getSettings() );
+        dbRule.withSettings( settings );
         dbRule.ensureStarted();
         dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         boltUri = DriverAuthHelper.boltUri( dbRule );
     }
 
-    protected abstract Map<Setting<?>,String> getSettings();
-
-    void restartServerWithOverriddenSettings( String... configChanges ) throws IOException
+    @After
+    public void teardown()
     {
-        dbRule.restartDatabase( configChanges );
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        dbRule.shutdown();
     }
+
+    protected abstract Map<Setting<?>,String> getSettings();
 
     static void checkIfLdapServerIsReachable( String host, int port )
     {
