@@ -2095,10 +2095,10 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   def getCachedPropertyAt(offset: Int): IntermediateRepresentation = cast[Value](getRefAt(offset))
 
-  protected final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
 
-  protected final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, AnyValue, Int]("getRefAt"), constant(offset))
 
   protected final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =

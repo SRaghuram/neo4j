@@ -193,17 +193,18 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       case BOTH => method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allCursor")
     }
     val resultBoolean = codeGen.namer.nextVariableName()
-
+    val fromNode = codeGen.namer.nextVariableName()
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
-      condition(notEqual(codeGen.getLongAt(fromOffset), constant(-1L))){
+      declareAndAssign(typeRefOf[Long], fromNode, codeGen.getLongFromExecutionContext(fromOffset)),
+      condition(notEqual(load(fromNode), constant(-1L))){
        block(
          loadTypes,
          allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
          allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
          allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-         singleNode(codeGen.getLongAt(fromOffset), loadField(nodeCursorField)),
+         singleNode(load(fromNode), loadField(nodeCursorField)),
          setField(relationshipsField,
                   ///node.next() ? getRelCursor : EMPTY
                   ternary(cursorNext[NodeCursor](loadField(nodeCursorField)),
