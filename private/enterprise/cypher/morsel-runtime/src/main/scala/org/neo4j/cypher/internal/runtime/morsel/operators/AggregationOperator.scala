@@ -264,7 +264,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
 
-  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Updater]]
+  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
 
   // TODO profiling events?
@@ -296,7 +296,6 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
   private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName())
   private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
-  private val collectionHelperField: Field = field[ScalaCollectionHelper](codeGen.namer.nextVariableName())
 
   private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators())
   private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
@@ -310,7 +309,6 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       setField(perArgsField, newInstance(constructor[AggOut])),
       setField(bufferIdField, constant(outputBufferId.x)),
-      setField(collectionHelperField, newInstance(constructor[ScalaCollectionHelper])),
       inner.genInit
     )
   }
@@ -389,10 +387,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         block(
           assign(argVar, load(currentArg)),
           assign(aggPreMapVar, newInstance(constructor[AggMap])),
-          invokeSideEffect(loadField(collectionHelperField),
-                           method[ScalaCollectionHelper, Unit, ArrayBuffer[_], Any]("add"),
-                           loadField(perArgsField),
-                           newInstance(constructor[PerArgument[_], Long, Any], load(argVar), load(aggPreMapVar)))
+          invokeSideEffect(loadField(perArgsField),
+                           method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
+                           newInstance(constructor[PerArgument[AggMap], Long, Any], load(argVar), load(aggPreMapVar)))
         )),
 
       /*
@@ -460,7 +457,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
 
-  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, collectionHelperField)
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggPreMapVar)
 
@@ -471,8 +468,4 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
-}
-
-class ScalaCollectionHelper {
-  def add[T](seq: ArrayBuffer[T], element: T): Unit = seq += element
 }
