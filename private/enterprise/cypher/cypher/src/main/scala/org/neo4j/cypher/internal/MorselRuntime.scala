@@ -79,15 +79,25 @@ class MorselRuntime(parallelExecution: Boolean,
 
     val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution, context.debugOptions)
 
+    val morselSize = selectMorselSize(query, context)
+
     MorselExecutionPlan(executablePipelines,
-      executionGraphDefinition,
-      queryIndexes,
-      physicalPlan.nExpressionSlots,
-      physicalPlan.logicalPlan,
-      physicalPlan.parameterMapping,
-      query.resultColumns,
-      executor,
-      context.runtimeEnvironment.tracer)
+                        executionGraphDefinition,
+                        queryIndexes,
+                        physicalPlan.nExpressionSlots,
+                        physicalPlan.logicalPlan,
+                        physicalPlan.parameterMapping,
+                        query.resultColumns,
+                        executor,
+                        context.runtimeEnvironment.tracer,
+                        morselSize)
+  }
+
+  private def selectMorselSize(query: LogicalQuery,
+                               context: EnterpriseRuntimeContext): Int = {
+    val maxCardinality = query.logicalPlan.flatten.map(plan => query.cardinalities.get(plan.id)).max
+    val morselSize = if (maxCardinality.amount.toLong > context.config.morselSizeBig) context.config.morselSizeBig else context.config.morselSizeSmall
+    morselSize
   }
 
   case class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
@@ -98,7 +108,8 @@ class MorselRuntime(parallelExecution: Boolean,
                                  parameterMapping: ParameterMapping,
                                  fieldNames: Array[String],
                                  queryExecutor: QueryExecutor,
-                                 schedulerTracer: SchedulerTracer) extends ExecutionPlan {
+                                 schedulerTracer: SchedulerTracer,
+                                 morselSize: Int) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -122,7 +133,8 @@ class MorselRuntime(parallelExecution: Boolean,
                               queryExecutor,
                               schedulerTracer,
                               subscriber,
-                              doProfile)
+                              doProfile,
+                              morselSize)
     }
 
     override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
@@ -149,7 +161,8 @@ class MorselRuntime(parallelExecution: Boolean,
                             queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,
                             subscriber: QuerySubscriber,
-                            doProfile: Boolean) extends RuntimeResult {
+                            doProfile: Boolean,
+                            morselSize: Int) extends RuntimeResult {
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
@@ -192,7 +205,8 @@ class MorselRuntime(parallelExecution: Boolean,
           nExpressionSlots,
           prePopulateResults,
           subscriber,
-          doProfile)
+          doProfile,
+          morselSize)
 
         querySubscription = sub
         _queryProfile = prof

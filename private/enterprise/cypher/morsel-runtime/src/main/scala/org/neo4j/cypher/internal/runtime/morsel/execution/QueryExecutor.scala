@@ -32,7 +32,8 @@ trait QueryExecutor {
                               nExpressionSlots: Int,
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber,
-                              doProfile: Boolean): ProfiledQuerySubscription
+                              doProfile: Boolean,
+                              morselSize: Int): ProfiledQuerySubscription
 
   /**
     * Assert that all resources that have been acquired for query execution by any query have also been released

@@ -26,8 +26,7 @@ import scala.concurrent.duration.Duration
   * [[QueryExecutor]] implementation which uses a fixed number (n) of workers to execute
   * query work.
   */
-class FixedWorkersQueryExecutor(morselSize: Int,
-                                threadFactory: ThreadFactory,
+class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
                                 numberOfWorkers: Int,
                                 transactionBinder: TransactionBinder,
                                 queryResourceFactory: () => QueryResources)
@@ -88,7 +87,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        nExpressionSlots: Int,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
-                                       doProfile: Boolean): ProfiledQuerySubscription = {
+                                       doProfile: Boolean,
+                                       morselSize: Int): ProfiledQuerySubscription = {
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 

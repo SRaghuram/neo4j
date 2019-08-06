@@ -85,9 +85,6 @@ class Worker(val workerId: Int,
             executeTask(executingQuery, pipelineTask)
 
             if (pipelineTask.canContinue) {
-              // Put the continuation before unlocking (closeWorkUnit)
-              // so that in serial pipelines we can guarantee that the continuation
-              // is the next thing which is picked up
               state.putContinuation(pipelineTask, wakeUp = false, resources)
             } else {
               pipelineTask.close(resources)

@@ -107,7 +107,8 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], Object] = Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
     GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
   )
@@ -117,7 +118,8 @@ class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceT
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], Object] = Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
     GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
   )

@@ -28,7 +28,8 @@ object ContextHelper extends MockitoSugar {
 
   private val runtimeConfig = CypherRuntimeConfiguration(
     workers = Runtime.getRuntime.availableProcessors(),
-    morselSize = 10000,
+    morselSizeSmall = 10000,
+    morselSizeBig = 10000,
     schedulerTracing = NoSchedulerTracing,
     waitTimeout = Duration(3000, TimeUnit.MILLISECONDS),
     scheduler = CypherMorselRuntimeSchedulerOption.default,

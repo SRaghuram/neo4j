@@ -25,7 +25,8 @@ object ParallelStressSuite {
 abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     ENTERPRISE.PARALLEL.copyWith(
-      GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(MORSEL_SIZE),
+      GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
+      GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
       GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)),
     runtime) {
 

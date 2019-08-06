@@ -189,10 +189,13 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
     if (queryStatus.cancelled) {
-      DebugSupport.ERROR_HANDLING.log("[putContinuation] Closing $task because of query cancellation")
+      DebugSupport.ERROR_HANDLING.log("[putContinuation] Closing %s because of query cancellation", task)
       task.close(resources)
     } else {
       DebugSupport.BUFFERS.log("[putContinuation]   %s <- %s", this, task)
+      // Put the continuation before unlocking (closeWorkUnit)
+      // so that in serial pipelines we can guarantee that the continuation
+      // is the next thing which is picked up
       continuations(task.pipelineState.pipeline.id.x).put(task)
       if (wakeUp && !task.pipelineState.pipeline.serial) {
         // We only wake up other Threads if this pipeline is not serial.

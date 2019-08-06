@@ -36,7 +36,8 @@ object ENTERPRISE {
                                            new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
-    GraphDatabaseSettings.cypher_morsel_size -> Integer.valueOf(4))
+    GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(4),
+    GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(4))
 
   val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
                                          GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> CypherMorselRuntimeScheduler.SINGLE_THREADED)
