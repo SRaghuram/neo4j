@@ -23,7 +23,9 @@ import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
+import org.junit.Assume;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -121,6 +123,13 @@ public class LdapAuthIT extends EnterpriseLdapAuthenticationTestBase
     private static final String REFUSED_IP = "127.0.0.1"; // "0.6.6.6";
     private int ldapPort;
     private int sslLdapPort;
+
+    @BeforeClass
+    public static void ignoreOnWindows()
+    {
+        boolean isWindows = System.getProperty( "os.name" ).toLowerCase().startsWith( "windows" );
+        Assume.assumeFalse( isWindows );
+    }
 
     @Before
     public void setup() throws Exception

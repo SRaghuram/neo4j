@@ -17,6 +17,7 @@ import org.apache.directory.server.core.integ.CreateLdapServerRule;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -332,6 +333,8 @@ public class AuthIT extends EnterpriseLdapAuthenticationTestBase
     @BeforeClass
     public static void classSetup()
     {
+        boolean isWindows = System.getProperty( "os.name" ).toLowerCase().startsWith( "windows" );
+        Assume.assumeFalse( isWindows );
         embeddedTestCertificates = new EmbeddedTestCertificates();
     }
 
