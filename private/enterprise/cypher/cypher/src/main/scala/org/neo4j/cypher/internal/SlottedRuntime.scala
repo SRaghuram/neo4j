@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning._
-import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
@@ -62,16 +62,16 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
             CommunityExpressionConverter(context.tokenContext))
         }
 
-      val queryIndexes = new QueryIndexes(context.schemaRead)
-      val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
-      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
+      val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
+      val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
+      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable, context.tokenContext)
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
       val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan, physicalPlan.availableExpressionVariables)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
       val columns = query.resultColumns
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
-                                                 queryIndexes,
+                                                 queryIndexRegistrator.result(),
                                                  physicalPlan.nExpressionSlots,
                                                  query.readOnly,
                                                  columns,

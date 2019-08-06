@@ -138,7 +138,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                             innermostTemplate,
                                                             slots.getLongOffsetFor(node),
                                                             properties.map(SlottedIndexedProperty(node, _, slots)).toArray,
-                                                            operatorFactory.queryIndexes.registerQueryIndex(label, properties),
+                                                            operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                             asKernelIndexOrder(indexOrder),
                                                             physicalPlan.argumentSizes(id))(expressionCompiler)
 
@@ -162,7 +162,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                                                        properties.head,
                                                                                                        slots),
                                                                                 compile(expr),
-                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                                                operatorFactory.indexRegistrator.registerQueryIndex(label, properties.head),
                                                                                 argumentSize)(expressionCompiler)
                 acc.copy(
                   template = newTemplate,
@@ -180,7 +180,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                                                        properties.head,
                                                                                                        slots),
                                                                                 compile(expr),
-                                                                                operatorFactory.queryIndexes.registerQueryIndex(label, properties.head),
+                                                                                operatorFactory.indexRegistrator.registerQueryIndex(label, properties.head),
                                                                                 argumentSize)(expressionCompiler)
                 acc.copy(
                   template = newTemplate,

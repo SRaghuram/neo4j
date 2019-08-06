@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
@@ -40,8 +40,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
                                                                           CommunityExpressionConverter(TokenContext.EMPTY))
 
-    val fallback = InterpretedPipeMapper(true, converters, tokenContext, mock[QueryIndexes])(table)
-    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true, mock[QueryIndexes])(table, tokenContext)
+    val fallback = InterpretedPipeMapper(true, converters, tokenContext, mock[QueryIndexRegistrator])(table)
+    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true, mock[QueryIndexRegistrator])(table, tokenContext)
     PipeTreeBuilder(pipeBuilder).build(physicalPlan.logicalPlan)
   }
 

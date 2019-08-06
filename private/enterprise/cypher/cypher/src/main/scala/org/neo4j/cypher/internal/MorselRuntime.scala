@@ -59,11 +59,11 @@ class MorselRuntime(parallelExecution: Boolean,
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    val queryIndexes = new QueryIndexes(context.schemaRead)
+    val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
 
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
-    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexes, query.semanticTable)
+    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator, query.semanticTable)
 
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
@@ -83,7 +83,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     MorselExecutionPlan(executablePipelines,
                         executionGraphDefinition,
-                        queryIndexes,
+                        queryIndexRegistrator.result(),
                         physicalPlan.nExpressionSlots,
                         physicalPlan.logicalPlan,
                         physicalPlan.parameterMapping,
@@ -117,12 +117,10 @@ class MorselRuntime(parallelExecution: Boolean,
                      prePopulateResults: Boolean,
                      inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
-      if (queryIndexes.hasLabelScan)
-        queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
       new MorselRuntimeResult(executablePipelines,
                               executionGraphDefinition,
-                              queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+                              queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
                               nExpressionSlots,
                               prePopulateResults,
                               inputDataStream,

@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.runtime.slotted.aggregation.{SlottedGroupingAgg
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
@@ -36,7 +36,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
                         physicalPlan: PhysicalPlan,
                         readOnly: Boolean,
-                        queryIndexes: QueryIndexes)
+                        indexRegistrator: QueryIndexRegistrator)
                        (implicit semanticTable: SemanticTable, tokenContext: TokenContext)
   extends PipeMapper {
 
@@ -54,20 +54,20 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case NodeIndexScan(column, label, properties, _, indexOrder) =>
         NodeIndexScanSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)),
-          queryIndexes.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
+                                 indexRegistrator.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
 
       case NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-          queryIndexes.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id)
+                                 indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id)
 
       case NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-          queryIndexes.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
+                                 indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
 
       case NodeByLabelScan(column, label, _) =>
-        queryIndexes.registerLabelScan()
+        indexRegistrator.registerLabelScan()
         NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, argumentSize)(id)
 
       case _: Argument =>

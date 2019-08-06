@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
-import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
-                      val queryIndexes: QueryIndexes,
+                      val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
@@ -54,7 +54,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.NodeByLabelScan(column, label, _) =>
         val argumentSize = physicalPlan.argumentSizes(id)
-        queryIndexes.registerLabelScan()
+        indexRegistrator.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
                               slots.getLongOffsetFor(column),
                               LazyLabel(label)(semanticTable),
@@ -70,7 +70,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
                                   slots.getLongOffsetFor(column),
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  queryIndexes.registerQueryIndex(label, properties),
+                                  indexRegistrator.registerQueryIndex(label, properties),
                                   asKernelIndexOrder(indexOrder),
                                   argumentSize,
                                   valueExpr.map(converters.toCommandExpression(id, _)),
@@ -82,7 +82,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
                                   slots.getLongOffsetFor(column),
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  queryIndexes.registerQueryIndex(label, properties),
+                                  indexRegistrator.registerQueryIndex(label, properties),
                                   asKernelIndexOrder(indexOrder),
                                   argumentSize,
                                   valueExpr.map(converters.toCommandExpression(id, _)),
@@ -93,7 +93,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new NodeIndexScanOperator(WorkIdentity.fromPlan(plan),
                                   slots.getLongOffsetFor(column),
                                   properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  queryIndexes.registerQueryIndex(labelToken, properties),
+                                  indexRegistrator.registerQueryIndex(labelToken, properties),
                                   asKernelIndexOrder(indexOrder),
                                   argumentSize)
 
@@ -102,7 +102,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new NodeIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
                                           slots.getLongOffsetFor(column),
                                           SlottedIndexedProperty(column, property, slots),
-                                          queryIndexes.registerQueryIndex(labelToken, property),
+                                          indexRegistrator.registerQueryIndex(labelToken, property),
                                           asKernelIndexOrder(indexOrder),
                                           converters.toCommandExpression(id, valueExpr),
                                           argumentSize)
