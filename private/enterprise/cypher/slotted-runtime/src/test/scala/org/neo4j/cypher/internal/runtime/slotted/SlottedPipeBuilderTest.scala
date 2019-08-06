@@ -803,4 +803,38 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
       }
     }
   }
+
+  test("should have correct order for join on many nodes") {
+    // given
+    val leaf = NodeByLabelScan("node1", LabelName("label")(pos), Set.empty)
+    val expand1 = Expand(leaf, "node1", SemanticDirection.INCOMING, Seq.empty, "node2", r)
+    val expand2 = Expand(expand1, "node2", SemanticDirection.INCOMING, Seq.empty, "node3", r)
+    val expand3 = Expand(expand2, "node3", SemanticDirection.INCOMING, Seq.empty, "node4", r)
+
+    val expand4a = Expand(expand3, "node3", SemanticDirection.INCOMING, Seq.empty, "node7", r)
+    val expand5a = Expand(expand4a, "node4", SemanticDirection.INCOMING, Seq.empty, "node5", r)
+    val expand6a = Expand(expand5a, "node5", SemanticDirection.INCOMING, Seq.empty, "node6", r)
+
+    val expand4b = Expand(expand3, "node4", SemanticDirection.OUTGOING, Seq.empty, "node6", r)
+    val expand5b = Expand(expand4b, "node6", SemanticDirection.OUTGOING, Seq.empty, "node5", r)
+    val expand6b = Expand(expand5b, "node6", SemanticDirection.OUTGOING, Seq.empty, "node8", r)
+
+    val nodes = Set("node1", "node2", "node3", "node4", "node5", "node6")
+    val plan = NodeHashJoin(nodes, expand6a, expand6b)
+
+    // when
+    val pipe = build(plan).asInstanceOf[NodeHashJoinSlottedPipe]
+
+    // then
+    val lhsSlots = pipe.left.asInstanceOf[ExpandAllSlottedPipe].slots
+    val rhsSlots = pipe.right.asInstanceOf[ExpandAllSlottedPipe].slots
+
+    val lhsNodes = pipe.lhsOffsets.map(offset => lhsSlots.nameOfLongSlot(offset).get)
+    val rhsNodes = pipe.rhsOffsets.map(offset => rhsSlots.nameOfLongSlot(offset).get)
+
+    for(i <- 0 until 6) {
+      lhsNodes(i) should equal(rhsNodes(i))
+    }
+    lhsNodes.toSet should be(nodes)
+  }
 }
