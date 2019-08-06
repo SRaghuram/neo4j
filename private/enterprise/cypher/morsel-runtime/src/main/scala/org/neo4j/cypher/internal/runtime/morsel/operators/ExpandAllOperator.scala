@@ -194,6 +194,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName()
+
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
@@ -260,6 +261,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         } else {
           noop()
         },
+        codeGen.setLongAt(fromOffset, codeGen.getLongFromExecutionContext(fromOffset, loadField(INPUT_MORSEL))),
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
