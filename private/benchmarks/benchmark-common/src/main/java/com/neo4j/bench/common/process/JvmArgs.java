@@ -5,12 +5,16 @@
  */
 package com.neo4j.bench.common.process;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -19,8 +23,10 @@ import java.util.regex.Pattern;
 import static com.neo4j.bench.common.util.Args.splitArgs;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
+@JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY )
 public class JvmArgs
 {
 
@@ -61,11 +67,17 @@ public class JvmArgs
         return new JvmArgs( jvmArgs );
     }
 
+    @JsonCreator
+    public static JvmArgs from( String[] jvmArgs )
+    {
+        return new JvmArgs( Arrays.asList( jvmArgs ) );
+    }
+
     private final List<String> jvmArgs;
 
     private JvmArgs( List<String> jvmArgs )
     {
-        this.jvmArgs = jvmArgs;
+        this.jvmArgs = requireNonNull( jvmArgs );
     }
 
     /**
@@ -89,6 +101,33 @@ public class JvmArgs
     public List<String> toArgs()
     {
         return ImmutableList.copyOf( jvmArgs );
+    }
+
+    @JsonValue
+    public String[] asArray()
+    {
+        return toArgs().toArray( new String[] {} );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( jvmArgs );
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        if ( this == obj )
+        {
+            return true;
+        }
+        if ( !(obj instanceof JvmArgs) )
+        {
+            return false;
+        }
+        JvmArgs other = (JvmArgs) obj;
+        return Objects.equals( jvmArgs, other.jvmArgs );
     }
 
     private static Function<String,String> mapArg( String newJvmArg )
@@ -123,4 +162,5 @@ public class JvmArgs
 
         throw new IllegalArgumentException( format( "don't know how to handle %s JVM argument", jvmArg ) );
     }
+
 }
