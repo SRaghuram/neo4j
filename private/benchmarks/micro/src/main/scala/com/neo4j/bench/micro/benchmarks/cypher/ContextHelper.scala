@@ -13,6 +13,7 @@ import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
 import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, NoSchedulerTracing, RuntimeEnvironment}
@@ -52,7 +53,7 @@ object ContextHelper extends MockitoSugar {
              cursors: CursorFactory,
              txBridge: ThreadToStatementContextBridge,
              lifeSupport: LifeSupport,
-             dependencyResolver: DependencyResolver): EnterpriseRuntimeContext = {
+             workerManager: WorkerManagement): EnterpriseRuntimeContext = {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
@@ -61,7 +62,7 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, dependencyResolver),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
       compileExpressions = useCompiledExpressions)
   }
 }

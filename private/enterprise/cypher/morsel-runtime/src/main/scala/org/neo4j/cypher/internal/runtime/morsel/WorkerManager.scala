@@ -15,17 +15,54 @@ import org.neo4j.kernel.lifecycle.Lifecycle
 
 import scala.concurrent.duration.Duration
 
-class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerWaker with Lifecycle {
-  val queryManager = new QueryManager
+/**
+ * Management of Workers
+ */
+trait WorkerManagement extends WorkerWaker {
+  /**
+   * @return the query manager
+   */
+  def queryManager: QueryManager
 
-  protected val _workers: Array[Worker] =
+  /**
+   * @return the workers
+   */
+  def workers: Seq[Worker]
+
+  /**
+   * @return the number of workers
+   */
+  def numberOfWorkers: Int
+
+  /**
+   * Throw an exception if any worker is active.
+   */
+  def assertNoWorkerIsActive(): Unit
+}
+
+object ThrowingWorkerManager extends WorkerManagement {
+  override def queryManager: QueryManager = throw new UnsupportedOperationException()
+
+  override def workers: Seq[Worker] = throw new UnsupportedOperationException()
+
+  override def numberOfWorkers: Int = throw new UnsupportedOperationException()
+
+  override def assertNoWorkerIsActive(): Unit = throw new UnsupportedOperationException()
+
+  override def wakeOne(): Unit = throw new UnsupportedOperationException()
+}
+
+class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerManagement with Lifecycle {
+  override val queryManager = new QueryManager
+
+  private val _workers: Array[Worker] =
     (for (workerId <- 0 until numberOfWorkers) yield {
       new Worker(workerId, queryManager, LazyScheduling,  Sleeper.concurrentSleeper(workerId))
     }).toArray
 
-  def workers: Seq[Worker] = _workers
+  override def workers: Seq[Worker] = _workers
 
-  def assertNoWorkerIsActive(): Unit = {
+  override def assertNoWorkerIsActive(): Unit = {
     val activeWorkers =
       for {
         worker <- _workers.filter(_.sleeper.isWorking)

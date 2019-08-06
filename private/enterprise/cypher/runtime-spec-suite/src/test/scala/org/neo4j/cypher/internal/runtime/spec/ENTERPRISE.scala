@@ -10,9 +10,11 @@ import java.lang.Boolean.{FALSE, TRUE}
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselRuntimeScheduler
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
@@ -23,12 +25,14 @@ object ENTERPRISE {
     (runtimeConfig, resolver, lifeSupport) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
+      val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
+      val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
 
       TracingRuntimeContextManager(
         GeneratedQueryStructure,
         NullLog.getInstance(),
         runtimeConfig,
-        RuntimeEnvironment.createQueryExecutor(runtimeConfig, kernel.cursors(), lifeSupport, resolver),
+        RuntimeEnvironment.createQueryExecutor(runtimeConfig, kernel.cursors(), txBridge, lifeSupport, workerManager),
         kernel.cursors(),
         () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
                                            new ParallelismTracer))

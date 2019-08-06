@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
 import org.neo4j.internal.kernel.api.SchemaRead
@@ -33,7 +34,10 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
-    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, graph.getDependencyResolver)
+    val resolver = graph.getDependencyResolver
+    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
+    val workerManager = resolver.resolveDependency(classOf[WorkerManagement], SelectionStrategy.SINGLE)
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), txBridge, spi.lifeSupport, workerManager)
   }
 
   private val log: Log = spi.logProvider().getLog(getClass)

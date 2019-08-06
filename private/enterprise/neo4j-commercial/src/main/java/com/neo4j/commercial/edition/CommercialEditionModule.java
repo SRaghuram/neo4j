@@ -37,6 +37,9 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager;
+import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager$;
+import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManager;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -237,6 +240,11 @@ public class CommercialEditionModule extends CommunityEditionModule
                     new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
             globalModule.getGlobalDependencies().satisfyDependency( workerManager );
             globalModule.getGlobalLife().add( workerManager );
+        }
+        else
+        {
+            WorkerManagement workerManagement = ThrowingWorkerManager$.MODULE$;
+            globalModule.getGlobalDependencies().satisfyDependency( workerManagement );
         }
     }
 }

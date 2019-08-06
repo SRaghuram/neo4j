@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, 
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
 import org.neo4j.cypher.internal.runtime.{NoInput, QueryContext}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
@@ -112,7 +113,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val cursors = dependencyResolver.resolveDependency(classOf[Kernel]).cursors()
       val txBridge = dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
       val lifeSupport = dependencyResolver.resolveDependency( classOf[Database] ).getLife
-      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, lifeSupport)
+      val workerManager = dependencyResolver.resolveDependency( classOf[WorkerManagement] )
+      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, lifeSupport, workerManager)
       val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
       solve(logicalPlan)
       val compilationStateBefore = getLogicalQuery(logicalPlan, semanticTable, resultColumns)
@@ -132,7 +134,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          schemaRead            : SchemaRead,
                          cursors               : CursorFactory,
                          txBridge              : ThreadToStatementContextBridge,
-                         lifeSupport           : LifeSupport): EnterpriseRuntimeContext =
+                         lifeSupport           : LifeSupport,
+                         workerManager         : WorkerManagement): EnterpriseRuntimeContext =
     ContextHelper.create(
       codeStructure = GeneratedQueryStructure,
       planContext = planContext,
@@ -143,7 +146,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       cursors = cursors,
       txBridge = txBridge,
       lifeSupport = lifeSupport,
-      dependencyResolver = dependencyResolver)
+      workerManager = workerManager)
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(
