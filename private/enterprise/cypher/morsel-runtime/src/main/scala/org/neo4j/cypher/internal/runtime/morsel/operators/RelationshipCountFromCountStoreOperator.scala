@@ -5,16 +5,20 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, RelationshipTypes}
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.NameId
-import org.neo4j.values.storable.Values
-
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.values.storable.{LongValue, Values}
 
 class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                               offset: Int,
@@ -114,5 +118,126 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
       // nothing to do here
     }
   }
-
 }
+
+class RelationshipCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTemplate,
+                                                      id: Id,
+                                                      innermost: DelegateOperatorTaskTemplate,
+                                                      offset: Int,
+                                                      startLabel: Option[Either[String,Int]],
+                                                      relationshipTypes: Seq[Either[String, Int]],
+                                                      endLabel: Option[Either[String,Int]],
+                                                      argumentSize: SlotConfiguration.Size)
+                                                     (codeGen: OperatorExpressionCompiler)
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+  import OperatorCodeGenHelperTemplates._
+
+  private val startLabelField = startLabel.collect {
+    case Left(labelName) => labelName -> field[Int](codeGen.namer.variableName(labelName), NO_TOKEN)
+  }.toMap
+  private val relTypesFields = relationshipTypes.collect {
+    case Left(typeName) => typeName -> field[Int](codeGen.namer.nextVariableName(), NO_TOKEN)
+  }.toMap
+
+  private val endLabelField = endLabel.collect {
+    case Left(labelName) => labelName -> field[Int](codeGen.namer.variableName(labelName), NO_TOKEN)
+  }.toMap
+
+  override def genMoreFields: Seq[Field] =
+    startLabelField.values.toSeq ++ relTypesFields.values ++ endLabelField.values
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    val startLabelOps = block(startLabelField.map {
+      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
+    }.toSeq: _*)
+
+    val endLabelOps = block(endLabelField.map {
+      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
+    }.toSeq: _*)
+
+    val relTypesOps = block(relTypesFields.toSeq.map{
+      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
+    }: _*)
+
+    block(
+      startLabelOps,
+      endLabelOps,
+      relTypesOps,
+      setField(canContinue, constant(true)),
+      constant(true))
+  }
+
+  /**
+    *{{{
+    *  setRefAt(offset, Values.longValue( this.start == -1 || this.end == -1 ? 0L : dbAccess.relationshipCountByCountStore(this.start, 42, this.end)  + ....))
+    *  << inner.genOperate >>
+    *  this.canContinue = false
+    *}}}
+    */
+  override protected def genInnerLoop: IntermediateRepresentation = {
+
+    //If label tokens are known statically use it otherwise look up and store in fields, or use wildcard
+    val startOps = startLabel match {
+      case Some(Left(name)) => loadField(startLabelField(name))
+      case Some(Right(token)) => constant(token)
+      case None => constant(-1)
+    }
+    val endOps = endLabel match {
+      case Some(Left(name)) => loadField(endLabelField(name))
+      case Some(Right(token)) => constant(token)
+      case None => constant(-1)
+    }
+
+    //if no relationshipTypes we do a wildcard lookup otherwise we add the contribution from each type
+    val countOps =
+      if (relationshipTypes.isEmpty)
+        invoke(DB_ACCESS, method[DbAccess, Long, Int, Int, Int]("relationshipCountByCountStore"), startOps,
+               constant(-1), endOps)
+      else {
+        relationshipTypes.map {
+          case Left(name) =>
+            ternary(equal(loadField(relTypesFields(name)), constant(-1)), constant(0L),
+                    invoke(DB_ACCESS, method[DbAccess, Long, Int, Int, Int]("relationshipCountByCountStore"), startOps,
+                           loadField(relTypesFields(name)), endOps))
+          case Right(token) =>
+            invoke(DB_ACCESS, method[DbAccess, Long, Int, Int, Int]("relationshipCountByCountStore"), startOps,
+                   constant(token), endOps)
+        }.reduceLeft(add)
+      }
+
+    //if we are accessing start or end labels from fields they might be undefined in which case we must check for -1 and
+    //if so the return 0
+    val condition: IntermediateRepresentation => IntermediateRepresentation = (startLabel, endLabel) match {
+      case (Some(Left(start)), Some(Left(end))) =>
+        ternary(or(equal(loadField(startLabelField(start)), constant(-1)), equal(loadField(endLabelField(end)), constant(-1))), constant(0L), _)
+      case (Some(Left(start)), _) =>
+        ternary(equal(loadField(startLabelField(start)), constant(-1)), constant(0L), _)
+      case (_, Some(Left(end))) =>
+        ternary(equal(loadField(endLabelField(end)), constant(-1)), constant(0L), _)
+      case _ => ops => ops
+    }
+
+    block(
+      if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                         loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+      } else {
+        noop()
+      },
+      codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
+      profileRow(id),
+      inner.genOperateWithExpressions,
+      setField(canContinue, constant(false))
+      )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = noop()
+
+  //TODO
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
+}
+

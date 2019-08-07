@@ -102,10 +102,10 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
 class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTemplate,
                                               id: Id,
-                                              val innermost: DelegateOperatorTaskTemplate,
-                                              val offset: Int,
-                                              val labels: List[Option[Either[String, Int]]],
-                                              val argumentSize: SlotConfiguration.Size)
+                                              innermost: DelegateOperatorTaskTemplate,
+                                              offset: Int,
+                                              labels: List[Option[Either[String, Int]]],
+                                              argumentSize: SlotConfiguration.Size)
                                              (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
