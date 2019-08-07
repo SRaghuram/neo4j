@@ -175,22 +175,25 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       ifElse(equal(loadField(field), constant(-1))){
         assign(countVar, constant(0L))
       }{
-        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field))))
+        block(
+          assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field)))),
+          invoke(loadField(executionEventField), TRACE_DB_HIT))
       }
     }):_*)
 
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
-        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))):_*)
+        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
+        invoke(loadField(executionEventField), TRACE_DB_HITS, constant(knownLabels.size)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {
       val wildCardCount = codeGen.namer.nextVariableName()
-      val ops = (1 to wildCards).map(_ => assign(countVar, multiply(load(countVar), load(wildCardCount))))
+      val ops = block((1 to wildCards).map(_ => assign(countVar, multiply(load(countVar), load(wildCardCount)))) :_*)
       block(
-        declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))) +:
-        ops :_*
-
+        declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))),
+        invoke(loadField(executionEventField), TRACE_DB_HIT),
+        ops
       )
     } else noop()
 
@@ -214,7 +217,6 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = noop()
 
-  //TODO
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 }
 

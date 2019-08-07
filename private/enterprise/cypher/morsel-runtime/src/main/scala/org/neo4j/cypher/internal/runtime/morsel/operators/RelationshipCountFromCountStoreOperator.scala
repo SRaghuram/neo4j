@@ -221,6 +221,10 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
       case _ => ops => ops
     }
 
+    val dbHits =
+      if (relationshipTypes.size <= 1) invoke(loadField(executionEventField), TRACE_DB_HIT)
+      else invoke(loadField(executionEventField), TRACE_DB_HITS, constant(relationshipTypes.size))
+
     block(
       if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
         invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
@@ -229,6 +233,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
         noop()
       },
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
+      dbHits,
       profileRow(id),
       inner.genOperateWithExpressions,
       setField(canContinue, constant(false))
@@ -237,7 +242,6 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = noop()
 
-  //TODO
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 }
 

@@ -115,6 +115,8 @@ object OperatorCodeGenHelperTemplates {
   val NO_KERNEL_TRACER: GetStatic = getStatic[KernelReadTracer, KernelReadTracer]("NONE")
   val NO_OPERATOR_PROFILE_EVENT: GetStatic = getStatic[OperatorProfileEvent, OperatorProfileEvent]("NONE")
   val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
+  val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
+  val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
 
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(
