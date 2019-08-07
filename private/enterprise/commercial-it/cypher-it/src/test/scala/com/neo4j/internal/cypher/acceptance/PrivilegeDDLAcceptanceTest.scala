@@ -98,7 +98,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW ALL PRIVILEGES")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
+      "This is a administration command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   test("should show privileges for specific role") {
@@ -176,7 +176,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW ROLE editor PRIVILEGES")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
+      "This is a administration command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   test("should show privileges for specific user") {
@@ -278,7 +278,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW USER neo4j PRIVILEGES")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: SHOW PRIVILEGE"
+      "This is a administration command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   // Tests for granting and denying privileges
@@ -364,7 +364,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
               // THEN
             } should have message
-              s"This is a DDL command and it should be executed against the system database: $grantOrDenyCommand $commandName"
+              s"This is a administration command and it should be executed against the system database: $grantOrDenyCommand $commandName"
           }
 
           Seq(
@@ -2314,7 +2314,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}TRAVERSE"
+          s"This is a administration command and it should be executed against the system database: REVOKE ${revokeType}TRAVERSE"
       }
 
       test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database with REVOKE $revokeType") {
@@ -2323,7 +2323,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}READ"
+          s"This is a administration command and it should be executed against the system database: REVOKE ${revokeType}READ"
       }
 
       test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
@@ -2332,7 +2332,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
-          s"This is a DDL command and it should be executed against the system database: REVOKE ${revokeType}MATCH"
+          s"This is a administration command and it should be executed against the system database: REVOKE ${revokeType}MATCH"
       }
   }
 

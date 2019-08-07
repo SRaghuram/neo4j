@@ -80,7 +80,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW USERS")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: SHOW USERS"
+      "This is a administration command and it should be executed against the system database: SHOW USERS"
   }
 
   // Tests for creating users
@@ -296,7 +296,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("CREATE USER foo SET PASSWORD 'bar'")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: CREATE USER"
+      "This is a administration command and it should be executed against the system database: CREATE USER"
   }
 
   // Tests for dropping users
@@ -398,7 +398,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("DROP USER foo")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: DROP USER"
+      "This is a administration command and it should be executed against the system database: DROP USER"
   }
 
   // Tests for altering users
@@ -784,7 +784,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN
     } should have message
-      "This is a DDL command and it should be executed against the system database: ALTER USER"
+      "This is a administration command and it should be executed against the system database: ALTER USER"
   }
 
   // Tests for changing own password
@@ -1156,7 +1156,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
        executeOnDefault("neo4j", "neo", "ALTER CURRENT USER SET PASSWORD FROM 'neo' TO 'baz'")
       // THEN
     } should have message
-       "This is a DDL command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
+       "This is a administration command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
   }
 
   // Tests for user management with restricted privileges
