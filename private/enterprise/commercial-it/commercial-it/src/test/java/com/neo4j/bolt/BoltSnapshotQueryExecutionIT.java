@@ -5,8 +5,8 @@
  */
 package com.neo4j.bolt;
 
-import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
-import org.neo4j.snapshot.TestVersionContext;
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmerExtensionFactory;
+import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,14 +32,14 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
+import org.neo4j.snapshot.TestVersionContext;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -66,6 +66,11 @@ class BoltSnapshotQueryExecutionIT
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )
                 .setConfig( GraphDatabaseSettings.snapshot_query, true )
+                //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
+                // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
+                // depending on when the extension marks it as dirty
+                .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
+                                                extension instanceof PageCacheWarmerExtensionFactory )
                 .build();
         prepareCursorContext();
         db = managementService.database( DEFAULT_DATABASE_NAME );

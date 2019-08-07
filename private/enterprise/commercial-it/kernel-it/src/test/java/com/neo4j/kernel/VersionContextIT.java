@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel;
 
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmerExtensionFactory;
+import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -34,7 +36,12 @@ class VersionContextIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        builder.setConfig( GraphDatabaseSettings.snapshot_query, true );
+        builder.setConfig( GraphDatabaseSettings.snapshot_query, true )
+               //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
+               // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
+               // depending on when the extension marks it as dirty
+               .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
+                                                   extension instanceof PageCacheWarmerExtensionFactory );
     }
 
     @BeforeAll

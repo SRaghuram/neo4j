@@ -5,8 +5,8 @@
  */
 package com.neo4j.kernel;
 
-import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
-import org.neo4j.snapshot.TestVersionContext;
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmerExtensionFactory;
+import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +20,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
+import org.neo4j.snapshot.TestVersionContext;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -45,6 +47,11 @@ class QueryRestartIT
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setExternalDependencies( dependencies )
                 .setConfig( GraphDatabaseSettings.snapshot_query, true )
+                //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
+                // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
+                // depending on when the extension marks it as dirty
+                .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
+                                                    extension instanceof PageCacheWarmerExtensionFactory )
                 .build();
     }
 
