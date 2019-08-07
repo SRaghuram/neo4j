@@ -295,7 +295,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def request(numberOfRecords: Long): Unit = {
     // Instead of just adding demand when the state is `Running`, we also do it in the case of error or cancel.
-    // Otherwise we would count down the latch immediatly on any subsequent `await` call, and not allow
+    // Otherwise we would count down the latch immediately on any subsequent `await` call, and not allow
     // for proper cleanup of in-flight tasks.
     if (status.get() != CountReachedZero) {
       //there is new demand make sure to reset the latch
