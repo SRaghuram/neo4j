@@ -33,13 +33,13 @@ import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
 
 /**
-  * This runtime takes on queries that require no planning, such as multidatabase management commands
+  * This runtime takes on queries that require no planning, such as multidatabase administration commands
   */
 case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
   val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine, resolver)
   val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
 
-  override def name: String = "enterprise management-commands"
+  override def name: String = "enterprise administration-commands"
 
   private def throwCantCompile(unknownPlan: LogicalPlan): Nothing = {
     throw new CantCompileQueryException(

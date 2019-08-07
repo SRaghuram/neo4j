@@ -1159,7 +1159,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
        "This is a administration command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
   }
 
-  // Tests for user management with restricted privileges
+  // Tests for user administration with restricted privileges
 
   test("should fail create user for when password change required") {
     // GIVEN
