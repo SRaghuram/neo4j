@@ -149,7 +149,7 @@ public class PropertyExistenceConstraintVerificationIT
             try ( Transaction tx = db.beginTx() )
             {
                 createOffender( db, KEY );
-                tx.success();
+                tx.commit();
             }
 
             // when
@@ -158,7 +158,7 @@ public class PropertyExistenceConstraintVerificationIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     createConstraint( db, KEY, PROPERTY );
-                    tx.success();
+                    tx.commit();
                 }
                 fail( "expected exception" );
             }
@@ -184,7 +184,7 @@ public class PropertyExistenceConstraintVerificationIT
                             waitingWhileIn( getOwner(), offenderCreationMethodName() ),
                             WAIT_TIMEOUT_SECONDS, SECONDS );
 
-                    tx.success();
+                    tx.commit();
                 }
                 nodeCreation.get();
                 fail( "expected exception" );
@@ -219,7 +219,7 @@ public class PropertyExistenceConstraintVerificationIT
                             waitingWhileIn( Operations.class, constraintCreationMethodName() ),
                             WAIT_TIMEOUT_SECONDS, SECONDS );
 
-                    tx.success();
+                    tx.commit();
                 }
                 constraintCreation.get();
                 fail( "expected exception" );
@@ -244,7 +244,7 @@ public class PropertyExistenceConstraintVerificationIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     createOffender( db, KEY );
-                    tx.success();
+                    tx.commit();
                 }
                 return null;
             };
@@ -257,7 +257,7 @@ public class PropertyExistenceConstraintVerificationIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     createConstraint( db, KEY, PROPERTY );
-                    tx.success();
+                    tx.commit();
                 }
                 return null;
             };

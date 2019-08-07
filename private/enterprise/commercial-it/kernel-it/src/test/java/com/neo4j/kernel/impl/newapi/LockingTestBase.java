@@ -41,13 +41,13 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
             nodeProp = tx.tokenWrite().propertyKeyGetOrCreateForName( "nodeProp" );
             constraintProp = tx.tokenWrite().propertyKeyGetOrCreateForName( "constraintProp" );
             label = tx.tokenWrite().labelGetOrCreateForName( "label" );
-            tx.success();
+            tx.commit();
         }
 
         try ( Transaction tx = beginTransaction() )
         {
             tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ) );
-            tx.success();
+            tx.commit();
         }
 
         CountDownLatch createNodeLatch = new CountDownLatch( 1 );
@@ -63,7 +63,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
                 createNodeLatch.countDown();
                 assertTrue( createConstraintLatch.await( 5, TimeUnit.MINUTES) );
 
-                tx.success();
+                tx.commit();
             }
             catch ( Exception e )
             {
@@ -81,7 +81,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
             {
                 assertTrue( createNodeLatch.await( 5, TimeUnit.MINUTES) );
                 tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ) );
-                tx.success();
+                tx.commit();
             }
             catch ( KernelException e )
             {

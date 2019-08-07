@@ -113,7 +113,7 @@ class SystemGraphSecurityReplicationIT
         cluster.systemTx( ( db, tx ) ->
         {
             newUser( db, username, password );
-            tx.success();
+            tx.commit();
         } );
 
         for ( CoreClusterMember core : cluster.coreMembers() )

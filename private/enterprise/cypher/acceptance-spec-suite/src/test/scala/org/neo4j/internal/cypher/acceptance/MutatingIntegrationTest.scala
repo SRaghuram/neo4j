@@ -331,7 +331,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     try {
       executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = {id} set a.foo = 'bar' return a", params = Map("id"->"0"))
     } catch {
-      case _: Throwable => tx.failure()
+      case _: Throwable => tx.rollback()
     }
     finally tx.close()
   }

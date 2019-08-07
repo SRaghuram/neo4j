@@ -103,7 +103,7 @@ public class BatchInsertEnterpriseIT
             assertEquals( relationshipId, single( node1.getRelationships() ).getId() );
             assertEquals( relationshipId, single( node2.getRelationships() ).getId() );
             assertEquals( someProperties( 3 ), single( node1.getRelationships() ).getAllProperties() );
-            tx.success();
+            tx.commit();
         }
         finally
         {
@@ -154,7 +154,7 @@ public class BatchInsertEnterpriseIT
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( expectedNodeCount, Iterables.count( db.getAllNodes() ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -171,7 +171,7 @@ public class BatchInsertEnterpriseIT
             Relationship rel = start.createRelationshipTo( end, MyRelTypes.TEST );
             someProperties( 5 ).forEach( rel::setProperty );
 
-            tx.success();
+            tx.commit();
         }
     }
 

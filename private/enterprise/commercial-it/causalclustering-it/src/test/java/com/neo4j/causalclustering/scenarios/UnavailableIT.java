@@ -47,7 +47,7 @@ public class UnavailableIT
         // then
         try ( Transaction tx = member.defaultDatabase().beginTx() )
         {
-            tx.success();
+            tx.commit();
             fail();
         }
         catch ( Exception e )
@@ -69,7 +69,7 @@ public class UnavailableIT
         // then
         try ( Transaction tx = db.beginTx() )
         {
-            tx.success();
+            tx.commit();
             fail();
         }
         catch ( Exception e )

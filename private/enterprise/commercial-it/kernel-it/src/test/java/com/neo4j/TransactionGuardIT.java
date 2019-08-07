@@ -127,7 +127,6 @@ class TransactionGuardIT
             try ( Transaction transaction = database.beginTx() )
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
-                transaction.success();
                 timeoutMonitor.run();
                 database.createNode();
             }
@@ -165,7 +164,7 @@ class TransactionGuardIT
             fakeClock.forward( 26, TimeUnit.SECONDS );
             timeoutMonitor.run();
             database.createNode();
-            transaction.failure();
+            transaction.rollback();
         }
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
@@ -196,7 +195,6 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                transaction.success();
                 database.execute( "create (n)" );
             }
         } );
@@ -216,7 +214,7 @@ class TransactionGuardIT
             fakeClock.forward( 4, TimeUnit.SECONDS );
             timeoutMonitor.run();
             database.execute( "create (n)" );
-            transaction.failure();
+            transaction.rollback();
         }
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
@@ -225,7 +223,6 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 7, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                transaction.success();
                 database.execute( "create (n)" );
             }
         } );
@@ -352,7 +349,6 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                transaction.success();
                 database.execute( "create (n)" );
             }
         } );
@@ -364,14 +360,14 @@ class TransactionGuardIT
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '5s')" );
-            transaction.success();
+            transaction.commit();
         }
 
         try ( Transaction transaction = database.beginTx() )
         {
             fakeClock.forward( 3, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            transaction.success();
+            transaction.commit();
             database.execute( "create (n)" );
         }
 
@@ -393,7 +389,7 @@ class TransactionGuardIT
                     return node;
                 } );
             }
-            transaction.success();
+            transaction.commit();
         }
     }
 

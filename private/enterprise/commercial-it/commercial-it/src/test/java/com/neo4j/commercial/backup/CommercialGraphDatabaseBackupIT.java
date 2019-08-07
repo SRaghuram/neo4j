@@ -110,7 +110,7 @@ class CommercialGraphDatabaseBackupIT
             {
                 db.createNode( label( "Person" ) ).setProperty( "id", i );
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -132,7 +132,7 @@ class CommercialGraphDatabaseBackupIT
                 assertEquals( i, ids.get( i ).intValue() );
             }
 
-            tx.success();
+            tx.commit();
         }
     }
 }

@@ -48,7 +48,7 @@ public class ReadReplicaHierarchicalCatchupIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.schema().constraintFor( label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
-            tx.success();
+            tx.commit();
         } );
 
         // 0, 1, 2 are core instances

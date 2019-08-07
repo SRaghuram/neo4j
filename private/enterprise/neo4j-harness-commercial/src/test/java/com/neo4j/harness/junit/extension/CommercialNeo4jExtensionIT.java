@@ -45,7 +45,7 @@ class CommercialNeo4jExtensionIT
             try ( Transaction transaction = databaseService.beginTx() )
             {
                 databaseService.createNode();
-                transaction.success();
+                transaction.commit();
             }
         } );
     }

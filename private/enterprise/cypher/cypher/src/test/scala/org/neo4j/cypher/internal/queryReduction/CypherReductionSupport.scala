@@ -154,8 +154,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
       }
       executeInTx(query, statement, parsingBaseState, implicitTx, enterprise)
     } finally {
-      explicitTx.failure()
-      explicitTx.close()
+      explicitTx.rollback()
     }
   }
 

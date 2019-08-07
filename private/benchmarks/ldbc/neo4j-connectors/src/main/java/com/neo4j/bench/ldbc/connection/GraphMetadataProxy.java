@@ -110,7 +110,7 @@ public class GraphMetadataProxy
             node.setProperty( GraphMetadata.DATE_FORMAT, proxy.dateFormat().name() );
             node.setProperty( GraphMetadata.TIMESTAMP_RESOLUTION, proxy.timestampResolution().name() );
             node.setProperty( GraphMetadata.NEO4J_SCHEMA, proxy.neo4jSchema().name() );
-            tx.success();
+            tx.commit();
         }
     }
 

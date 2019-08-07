@@ -65,7 +65,7 @@ class ClusterShutdownIT
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
             node.set( coreGraphDatabase.createNode() );
-            transaction.success();
+            transaction.commit();
         } );
     }
 
@@ -108,7 +108,7 @@ class ClusterShutdownIT
                         acquiredLocksCountdown.countDown();
                         tx.acquireWriteLock( node.get() );
                         locksHolder.await();
-                        tx.success();
+                        tx.commit();
                     }
                     catch ( Exception e )
                     {

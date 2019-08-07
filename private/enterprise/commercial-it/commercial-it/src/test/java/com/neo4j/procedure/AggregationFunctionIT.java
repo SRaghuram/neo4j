@@ -68,7 +68,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ({ prop:'bar'})" );
             db.execute( "CREATE ({prop:'baz'})" );
             db.execute( "CREATE ()" );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -90,7 +90,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ({prop1:42, prop2:'bar'})" );
             db.execute( "CREATE ({prop1:1337, prop2:'baz'})" );
             db.execute( "CREATE ({prop1:1337})" );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -113,7 +113,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ({ prop:'bar'})" );
             db.execute( "CREATE ({prop:42})" );
             db.execute( "CREATE ()" );
-            tx.success();
+            tx.commit();
         }
 
         QueryExecutionException exception =
@@ -131,7 +131,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ({ level:1337})" );
             db.execute( "CREATE ({ level:0})" );
             db.execute( "CREATE ()" );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -153,7 +153,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ()-[:T {level:1337}]->()" );
             db.execute( "CREATE ()-[:T {level:2}]->()" );
             db.execute( "CREATE ()-[:T]->()" );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -174,7 +174,7 @@ class AggregationFunctionIT
             db.execute( "CREATE ()-[:T]->()" );
             db.execute( "CREATE ()-[:T]->()-[:T]->()" );
             db.execute( "CREATE ()-[:T]->()-[:T]->()-[:T]->()" );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -257,7 +257,7 @@ class AggregationFunctionIT
             nodes.add( db.createNode() );
             nodes.add( db.createNode() );
             nodes.add( db.createNode() );
-            tx.success();
+            tx.commit();
         }
 
         // When
@@ -287,7 +287,7 @@ class AggregationFunctionIT
             db.execute( "CREATE (:User {country: 'Mexico'})" );
             db.execute( "CREATE (:User {country: 'Mexico'})" );
             db.execute( "CREATE (:User {country: 'South Korea'})" );
-            tx.success();
+            tx.commit();
         }
 
         // When

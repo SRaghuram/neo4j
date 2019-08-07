@@ -117,7 +117,7 @@ class BoltCausalClusteringIT
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
-            tx.success();
+            tx.commit();
         } );
 
         // when
@@ -129,7 +129,7 @@ class BoltCausalClusteringIT
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -140,7 +140,7 @@ class BoltCausalClusteringIT
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
-            tx.success();
+            tx.commit();
         } );
 
         // when
@@ -152,7 +152,7 @@ class BoltCausalClusteringIT
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
-            tx.success();
+            tx.commit();
         } );
     }
 

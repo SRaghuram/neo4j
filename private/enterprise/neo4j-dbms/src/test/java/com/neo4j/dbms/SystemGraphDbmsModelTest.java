@@ -71,7 +71,7 @@ class SystemGraphDbmsModelTest
             makeDatabaseNode( "A", true, expectedCreated );
             makeDatabaseNode( "B", true, expectedCreated );
             makeDatabaseNode( "C", false, expectedCreated );
-            tx.success();
+            tx.commit();
         }
 
         // then
@@ -87,7 +87,7 @@ class SystemGraphDbmsModelTest
             makeDeletedDatabaseNode( "D", expectedDeleted );
             makeDeletedDatabaseNode( "E", expectedDeleted );
             makeDeletedDatabaseNode( "F", expectedDeleted );
-            tx.success();
+            tx.commit();
         }
 
         // then
@@ -105,7 +105,7 @@ class SystemGraphDbmsModelTest
             makeDatabaseNode( "A", true, expected );
             makeDatabaseNode( "B", false, expected );
             makeDeletedDatabaseNode( "C", expected );
-            tx.success();
+            tx.commit();
         }
 
         try ( var tx = db.beginTx() )
@@ -113,7 +113,7 @@ class SystemGraphDbmsModelTest
             makeDatabaseNode( "D", true, expected );
             makeDeletedDatabaseNode( "E", expected );
             makeDeletedDatabaseNode( "F", expected );
-            tx.success();
+            tx.commit();
         }
 
         // then

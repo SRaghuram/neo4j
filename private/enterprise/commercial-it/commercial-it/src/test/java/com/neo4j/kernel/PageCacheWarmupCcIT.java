@@ -60,7 +60,7 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
         {
             // Create some test data to touch a bunch of pages.
             createTestData( db );
-            tx.success();
+            tx.commit();
         } );
         AtomicLong pagesInMemory = new AtomicLong();
         cluster.coreTx( ( db, tx ) ->

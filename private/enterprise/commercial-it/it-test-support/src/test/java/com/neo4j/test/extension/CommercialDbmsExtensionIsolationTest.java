@@ -26,7 +26,7 @@ class CommercialDbmsExtensionIsolationTest
         {
             assertFalse( db.getAllNodes().iterator().hasNext() );
             db.createNode();
-            tx.success();
+            tx.commit();
         }
     }
 }

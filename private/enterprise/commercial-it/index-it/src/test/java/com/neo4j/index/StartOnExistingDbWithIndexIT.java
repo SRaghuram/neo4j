@@ -48,7 +48,7 @@ public class StartOnExistingDbWithIndexIT
         try ( Transaction transaction = db.beginTx() )
         {
             db.schema().constraintFor( label ).assertPropertyIsUnique( propertyName ).create();
-            transaction.success();
+            transaction.commit();
         }
         waitIndexes( db );
         return db;
@@ -68,7 +68,7 @@ public class StartOnExistingDbWithIndexIT
         try ( Transaction transaction = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
-            transaction.success();
+            transaction.commit();
         }
     }
 }

@@ -423,7 +423,7 @@ class OnlineBackupCommandCcIT
                 Node node = coreGraphDatabase.createNode();
                 node.setProperty( "data", data );
                 coreGraphDatabase.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
-                transaction.success();
+                transaction.commit();
             } );
         }
     }
@@ -499,7 +499,7 @@ class OnlineBackupCommandCcIT
         {
             db.schema().indexFor( label( "Person" ) ).on( "id" ).create();
             db.schema().indexFor( label( "Person" ) ).on( "first_name" ).on( "last_name" ).create();
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -514,7 +514,7 @@ class OnlineBackupCommandCcIT
                 node.setProperty( "first_name", UUID.randomUUID().toString() );
                 node.setProperty( "last_name", UUID.randomUUID().toString() );
                 db.createNode( label( "Person" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
-                tx.success();
+                tx.commit();
             } );
         }
         catch ( Exception e )

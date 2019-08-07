@@ -109,7 +109,7 @@ class SecureClusterIT
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then

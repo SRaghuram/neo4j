@@ -143,7 +143,7 @@ class TransactionLogsMetricsIT
             {
                 Node node = databaseAPI.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", randomAlphabetic( 256 ) );
-                tx.success();
+                tx.commit();
             }
         }
     }

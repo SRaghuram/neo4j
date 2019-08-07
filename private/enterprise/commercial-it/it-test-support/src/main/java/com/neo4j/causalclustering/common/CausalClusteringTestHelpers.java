@@ -176,7 +176,7 @@ public final class CausalClusteringTestHelpers
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "CREATE DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -185,7 +185,7 @@ public final class CausalClusteringTestHelpers
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "START DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -194,7 +194,7 @@ public final class CausalClusteringTestHelpers
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "STOP DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -260,7 +260,7 @@ public final class CausalClusteringTestHelpers
 
         try ( Transaction tx = db.beginTx() )
         {
-            tx.success();
+            tx.commit();
         }
         catch ( DatabaseShutdownException ignored )
         {

@@ -32,7 +32,7 @@ public class TxFactory
         try ( Transaction tx = db.beginTx() )
         {
             pathBuilder.build( db );
-            tx.success();
+            tx.commit();
         }
     }
 

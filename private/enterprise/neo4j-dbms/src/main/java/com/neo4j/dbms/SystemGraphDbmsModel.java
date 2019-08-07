@@ -67,7 +67,7 @@ public class SystemGraphDbmsModel
                     .map( this::getDatabaseId );
 
             updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect(Collectors.toList() );
-            tx.success();
+            tx.commit();
         }
 
         return updatedDatabases;
@@ -85,7 +85,7 @@ public class SystemGraphDbmsModel
             var deletedDatabases = systemDatabase.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
             deletedDatabases.forEach( node -> databases.put( getDatabaseId( node ), DELETED ) );
 
-            tx.success();
+            tx.commit();
         }
 
         // TODO: Declare exceptions!

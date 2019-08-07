@@ -183,7 +183,7 @@ public class HalfAppliedConstraintRecoveryIT
                 {
                     assertEquals( KEY, single( index.getPropertyKeys() ) );
                 }
-                tx.success();
+                tx.commit();
             }
         }
         finally
@@ -319,7 +319,7 @@ public class HalfAppliedConstraintRecoveryIT
                 node.setProperty( KEY, value );
                 node.setProperty( KEY2, value );
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -399,12 +399,12 @@ public class HalfAppliedConstraintRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             constraintCreator.accept( db );
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
-            tx.success();
+            tx.commit();
         }
     }
 }

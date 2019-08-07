@@ -147,7 +147,7 @@ class TokenReplicationStressIT
 
                     node1.createRelationshipTo( node2, type );
                 }
-                tx.success();
+                tx.commit();
             }
             catch ( WriteOperationsNotAllowedException ignore )
             {

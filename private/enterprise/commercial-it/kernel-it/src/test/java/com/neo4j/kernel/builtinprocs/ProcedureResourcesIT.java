@@ -98,7 +98,7 @@ class ProcedureResourcesIT
             Node node2 = db.createNode( unusedLabel );
             node2.setProperty( unusedPropKey, 1 );
             node1.createRelationshipTo( node2, unusedRelType );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -121,7 +121,7 @@ class ProcedureResourcesIT
             assertNotNull( next.get( "mo" ), failureMessage );
             exhaust( result );
             result.close();
-            outer.success();
+            outer.commit();
         }
     }
 
@@ -139,12 +139,12 @@ class ProcedureResourcesIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE INDEX ON " + indexDefinition );
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -154,7 +154,7 @@ class ProcedureResourcesIT
         {
             db.execute( "call db.index.fulltext.createNodeIndex(" + ftsNodesIndex + ", ['Label'], ['prop'])" ).close();
             db.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndex + ", ['Label'], ['prop'])" ).close();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -163,7 +163,7 @@ class ProcedureResourcesIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "MATCH (n) DETACH DELETE n" ).close();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -335,7 +335,7 @@ class ProcedureResourcesIT
             try ( Transaction tx = db.beginTx() )
             {
                 exhaust( db.execute( query ) );
-                tx.success();
+                tx.commit();
             }
         } );
         future.get();

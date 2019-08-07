@@ -99,7 +99,7 @@ class TransactionalWorkload extends Workload
                 node2.setProperty( property, randomString() );
             }
             node1.createRelationshipTo( node2, REL_TYPE );
-            tx.success();
+            tx.commit();
         }
         catch ( DatabaseShutdownException | TransactionFailureException | TransientFailureException ignore )
         {
@@ -126,7 +126,7 @@ class TransactionalWorkload extends Workload
                     node.setProperty( property, randomString() );
                 }
             }
-            tx.success();
+            tx.commit();
         }
         catch ( DatabaseShutdownException | TransactionFailureException | TransientFailureException ignore )
         {
@@ -142,12 +142,12 @@ class TransactionalWorkload extends Workload
             {
                 db.schema().indexFor( LABEL ).on( property ).create();
             }
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
-            tx.success();
+            tx.commit();
         }
     }
 

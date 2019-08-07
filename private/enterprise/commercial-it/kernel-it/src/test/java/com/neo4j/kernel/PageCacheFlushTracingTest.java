@@ -38,7 +38,7 @@ class PageCacheFlushTracingTest
         try ( Transaction transaction = database.beginTx() )
         {
             database.createNode();
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdown();
         logProvider.rawMessageMatcher().assertContains( "Flushing file" );

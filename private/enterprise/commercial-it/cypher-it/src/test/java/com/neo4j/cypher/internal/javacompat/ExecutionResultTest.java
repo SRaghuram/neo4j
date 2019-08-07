@@ -358,7 +358,7 @@ class ExecutionResultTest
         {
             db.createNode();
 
-            tx.success();
+            tx.commit();
         }
 
         for ( String version : new String[]{"3.5", "4.0"} )
@@ -387,7 +387,7 @@ class ExecutionResultTest
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode();
-            tx.success();
+            tx.commit();
         }
     }
 }

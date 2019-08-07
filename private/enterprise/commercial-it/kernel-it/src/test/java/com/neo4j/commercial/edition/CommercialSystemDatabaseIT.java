@@ -93,7 +93,7 @@ class CommercialSystemDatabaseIT
         {
             Node node = systemDb.createNode( systemLabel );
             node.setProperty( "a", "b" );
-            transaction.success();
+            transaction.commit();
         }
         try ( Transaction ignored = defaultDb.beginTx() )
         {
@@ -122,7 +122,7 @@ class CommercialSystemDatabaseIT
                 Node nodeA = systemDb.createNode();
                 Node nodeB = systemDb.createNode();
                 nodeA.createRelationshipTo( nodeB, RelationshipType.withName( valueOf( i ) ) );
-                transaction.success();
+                transaction.commit();
             }
         }
 
@@ -131,7 +131,7 @@ class CommercialSystemDatabaseIT
             try ( Transaction transaction = defaultDb.beginTx() )
             {
                 defaultDb.createNode( label( valueOf( i ) ) );
-                transaction.success();
+                transaction.commit();
             }
         }
 
@@ -165,7 +165,7 @@ class CommercialSystemDatabaseIT
                 Node nodeA = systemDb.createNode();
                 Node nodeB = systemDb.createNode();
                 nodeA.createRelationshipTo( nodeB, RelationshipType.withName( valueOf( i ) ) );
-                transaction.success();
+                transaction.commit();
             }
         }
 
@@ -174,7 +174,7 @@ class CommercialSystemDatabaseIT
             try ( Transaction transaction = defaultDb.beginTx() )
             {
                 defaultDb.createNode( label( valueOf( i ) ) );
-                transaction.success();
+                transaction.commit();
             }
         }
 

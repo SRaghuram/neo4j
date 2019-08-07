@@ -82,7 +82,7 @@ public final class SchemaHelper
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
-            tx.success();
+            tx.commit();
         }
     }
 }

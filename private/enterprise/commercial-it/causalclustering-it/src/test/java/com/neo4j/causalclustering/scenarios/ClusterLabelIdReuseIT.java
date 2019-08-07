@@ -82,7 +82,7 @@ class ClusterLabelIdReuseIT
         return cluster.coreTx( ( db, tx ) ->
         {
             db.createNode( label( name ) );
-            tx.success();
+            tx.commit();
         } );
     }
 }

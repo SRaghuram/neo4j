@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.core;
 
-import java.util.ArrayList;
-
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.id.IdGenerator;
@@ -68,14 +68,14 @@ class IdFilesSanityCheckIT
             for ( var i = 0; i < nodeCount; i++ )
             {
                 nodes.add( db.createNode() );
-                tx.success();
             }
+            tx.commit();
         } );
 
         var leader = cluster.coreTx( ( db, tx ) ->
         {
             nodes.forEach( Node::delete );
-            tx.success();
+            tx.commit();
         } );
 
         // when

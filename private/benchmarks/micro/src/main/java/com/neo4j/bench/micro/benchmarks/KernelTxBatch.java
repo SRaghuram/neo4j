@@ -78,13 +78,6 @@ public class KernelTxBatch
 
     private void commit( Transaction oldTx ) throws TransactionFailureException
     {
-        try
-        {
-            oldTx.success();
-        }
-        finally
-        {
-            oldTx.close();
-        }
+        oldTx.commit();
     }
 }

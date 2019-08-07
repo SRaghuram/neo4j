@@ -5,16 +5,16 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
-import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.helper.Workload;
+
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
@@ -101,7 +101,7 @@ class IdReuse
                             Node end = db.createNode();
                             start.createRelationshipTo( end, RELATIONSHIP_TYPE );
                         }
-                        tx.success();
+                        tx.commit();
                     } );
                 }
                 catch ( WriteOperationsNotAllowedException e )
@@ -131,7 +131,7 @@ class IdReuse
                     Node nodeStart = db.createNode();
                     Node nodeEnd = db.createNode();
                     nodeStart.createRelationshipTo( nodeEnd, RELATIONSHIP_TYPE );
-                    tx.success();
+                    tx.commit();
                 } );
             }
             catch ( Throwable e )
@@ -208,7 +208,7 @@ class IdReuse
                     Iterables.stream( node.getRelationships() ).forEach( Relationship::delete );
                     node.delete();
 
-                    tx.success();
+                    tx.commit();
                 } );
             }
             catch ( NotFoundException e )

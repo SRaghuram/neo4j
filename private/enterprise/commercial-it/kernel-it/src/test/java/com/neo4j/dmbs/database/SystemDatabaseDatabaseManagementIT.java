@@ -134,7 +134,7 @@ class SystemDatabaseDatabaseManagementIT
         try ( Transaction transaction = systemDatabaseFacade.beginTx() )
         {
             systemDatabaseFacade.execute( s );
-            transaction.success();
+            transaction.commit();
         }
     }
 

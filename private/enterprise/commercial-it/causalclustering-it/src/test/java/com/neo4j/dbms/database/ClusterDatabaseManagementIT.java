@@ -199,13 +199,13 @@ class ClusterDatabaseManagementIT
         cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
         {
             db.execute( "CREATE DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         }, timeout, TimeUnit.MINUTES );
         cluster.awaitLeader( databaseName, timeout, TimeUnit.MINUTES );
         cluster.coreTx( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ( db, tx ) ->
         {
             db.createNode( firstLabel );
-            tx.success();
+            tx.commit();
         }, timeout, TimeUnit.MINUTES  );
 
         // Stop a core
@@ -217,17 +217,17 @@ class ClusterDatabaseManagementIT
         cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
         {
             db.execute( "DROP DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         }, timeout, TimeUnit.MINUTES );
         cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
         {
             db.execute( "CREATE DATABASE " + databaseName );
-            tx.success();
+            tx.commit();
         }, timeout, TimeUnit.MINUTES );
         cluster.coreTx( databaseName, ( db, tx ) ->
         {
             db.createNode( secondLabel );
-            tx.success();
+            tx.commit();
         } );
 
         // Restart core

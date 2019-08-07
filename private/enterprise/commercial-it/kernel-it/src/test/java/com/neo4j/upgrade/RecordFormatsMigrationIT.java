@@ -127,7 +127,7 @@ class RecordFormatsMigrationIT
         {
             Node start = db.createNode( LABEL );
             start.setProperty( PROPERTY, VALUE );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -136,7 +136,7 @@ class RecordFormatsMigrationIT
         try ( Transaction tx = db.beginTx() )
         {
             assertNotNull( db.findNode( LABEL, PROPERTY, VALUE ) );
-            tx.success();
+            tx.commit();
         }
     }
 

@@ -39,7 +39,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileUtils;
@@ -646,14 +645,14 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CALL com.neo4j.procedure.writingProcedure()" ).close();
-            tx.success();
+            tx.commit();
         }
 
         // Then
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( 1, db.getAllNodes().stream().count() );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -665,7 +664,7 @@ public class ProcedureIT
         {
             Result result = db.execute( "EXPLAIN CALL com.neo4j.procedure.integrationTestMe()" );
             assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_ONLY );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -677,7 +676,7 @@ public class ProcedureIT
         {
             Result result = db.execute( "EXPLAIN CALL com.neo4j.procedure.integrationTestMe() YIELD someVal as v RETURN v" );
             assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_ONLY );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -689,7 +688,7 @@ public class ProcedureIT
         {
             Result result = db.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n')" );
             assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -701,7 +700,7 @@ public class ProcedureIT
         {
             Result result = db.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n') YIELD node as n RETURN n.prop" );
             assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -737,14 +736,14 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CALL com.neo4j.procedure.writeProcedureCallingWriteProcedure()" ).close();
-            tx.success();
+            tx.commit();
         }
 
         // Then
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( 1, db.getAllNodes().stream().count() );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -796,14 +795,14 @@ public class ProcedureIT
         {
             // When
             db.execute( "CALL com.neo4j.procedure.schemaProcedure" );
-            tx.success();
+            tx.commit();
         }
 
         // Then
         try ( Transaction tx = db.beginTx() )
         {
             assertTrue( db.schema().getConstraints().iterator().hasNext() );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -815,7 +814,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             nodeId = db.createNode().getId();
-            tx.success();
+            tx.commit();
         }
 
         try ( Transaction ignore = db.beginTx() )
@@ -946,7 +945,7 @@ public class ProcedureIT
             long nodeId = db.createNode().getId();
             Node node = Iterators.single( db.execute( "CALL com.neo4j.procedure.node", map( "id", nodeId ) ).columnAs( "node" ) );
             node.setProperty( "name", "Stefan" );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1180,7 +1179,7 @@ public class ProcedureIT
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
                     {
                         db.execute( "CALL com.neo4j.procedure.integrationTestMe()" ).next();
-                        tx.success();
+                        tx.commit();
                     }
                 } );
         assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
@@ -1198,7 +1197,7 @@ public class ProcedureIT
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.read() ) )
                     {
                         db.execute( "CALL com.neo4j.procedure.writingProcedure()" );
-                        tx.success();
+                        tx.commit();
                     }
                 } );
         assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
@@ -1216,7 +1215,7 @@ public class ProcedureIT
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.write() ) )
                     {
                         db.execute( "CALL com.neo4j.procedure.schemaProcedure()" );
-                        tx.success();
+                        tx.commit();
                     }
                 } );
         assertThat( exception.getMessage(), startsWith( "Schema operations are not allowed" ) );
@@ -1374,7 +1373,7 @@ public class ProcedureIT
             db.createNode( Label.label( "Person" ) );
         }
         Result result = db.execute( "CALL com.neo4j.procedure.failingPersonCount" );
-        assertThrows( TransactionFailureException.class, result::next );
+        assertThrows( QueryExecutionException.class, result::next );
     }
 
     public static class Output
@@ -1534,7 +1533,7 @@ public class ProcedureIT
         public Stream<Output> failingPersonCount()
         {
             Result result = db.execute( "MATCH (n:Person) RETURN count(n) as count" );
-            procedureTransaction.failure();
+            procedureTransaction.rollback();
             return Stream.of( new Output( (Long) result.next().get( "count" ) ) );
         }
 
@@ -1787,7 +1786,7 @@ public class ProcedureIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception e )
                 {

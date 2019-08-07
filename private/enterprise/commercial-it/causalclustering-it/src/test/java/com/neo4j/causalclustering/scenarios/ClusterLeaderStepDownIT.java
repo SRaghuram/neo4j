@@ -42,7 +42,7 @@ public class ClusterLeaderStepDownIT
         {
             Node node = db.createNode( Label.label( "bam" ) );
             node.setProperty( "bam", "bam" );
-            tx.success();
+            tx.commit();
         } );
 
         ThrowingSupplier<List<CoreClusterMember>,Exception> followers = () -> cluster.coreMembers().stream().filter(

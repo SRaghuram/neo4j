@@ -342,7 +342,7 @@ class BackupIT
             Node node = db.createNode( Label.label( "Label" ) );
             node.setProperty( "Key", "Value" );
             db.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
-            tx.success();
+            tx.commit();
         }
 
         executeBackup( db );
@@ -355,7 +355,7 @@ class BackupIT
                 Node node = db.createNode( Label.label( "Label" ) );
                 node.setProperty( "Key", "Value" );
                 db.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
-                tx.success();
+                tx.commit();
             }
             executeBackupWithoutFallbackToFull( db );
             assertEquals( lastCommittedTx + i + 1, getLastCommittedTx( backupDatabaseLayout, pageCache ) );
@@ -380,7 +380,7 @@ class BackupIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode( indexedLabels.get( random.nextInt( numberOfIndexedLabels ) ) ).setProperty( "prop", random.nextValueAsObject() );
-                    tx.success();
+                    tx.commit();
                 }
             }
         } );
@@ -593,7 +593,7 @@ class BackupIT
         {
             Node node = db.createNode();
             node.addLabel( markerLabel );
-            transaction.success();
+            transaction.commit();
         }
 
         try ( Transaction transaction = db.beginTx() )
@@ -603,7 +603,7 @@ class BackupIT
             {
                 node.setProperty( "property" + i, "testValue" + i );
             }
-            transaction.success();
+            transaction.commit();
         }
         // propagate to backup node and properties
         executeBackup( db );
@@ -617,7 +617,7 @@ class BackupIT
                 node.removeProperty( "property" + i );
             }
 
-            transaction.success();
+            transaction.commit();
         }
 
         // propagate removed properties
@@ -631,7 +631,7 @@ class BackupIT
                 node.setProperty( "property" + i, "updatedValue" + i );
             }
 
-            transaction.success();
+            transaction.commit();
         }
 
         // propagate to backup new properties with reclaimed ids
@@ -652,7 +652,7 @@ class BackupIT
                     node.setProperty( propertyKey, "updatedClientValue" + propertyKey );
                 }
                 node.setProperty( "newProperty", "updatedClientValue" );
-                transaction.success();
+                transaction.commit();
             }
 
             try ( Transaction ignored = backupDb.beginTx() )
@@ -892,7 +892,7 @@ class BackupIT
                 node.createRelationshipTo( db.createNode(), theOtherType );
             }
             node.createRelationshipTo( db.createNode(), typeToDelete );
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
@@ -901,7 +901,7 @@ class BackupIT
             {
                 relationship.delete();
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1041,7 +1041,7 @@ class BackupIT
             Node node = db.createNode();
             node.setProperty( "backup", "Is great" );
             db.createNode().createRelationshipTo( node, RelationshipType.withName( "LOVES" ) );
-            tx.success();
+            tx.commit();
         }
         finally
         {
@@ -1179,7 +1179,7 @@ class BackupIT
             {
                 node.createRelationshipTo( db.createNode(), TEST );
             }
-            tx.success();
+            tx.commit();
         }
         return DbRepresentation.of( db );
     }
@@ -1191,7 +1191,7 @@ class BackupIT
             Node node = db.createNode( Label.label( "Me" ) );
             node.setProperty( "myKey", "myValue" );
             db.createNode( Label.label( "NotMe" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1264,12 +1264,12 @@ class BackupIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( Label.label( labelName ) ).on( propertyName ).create();
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1278,7 +1278,7 @@ class BackupIT
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( Label.label( LABEL ) ).setProperty( PROPERTY, random.nextString() );
-            tx.success();
+            tx.commit();
         }
     }
 

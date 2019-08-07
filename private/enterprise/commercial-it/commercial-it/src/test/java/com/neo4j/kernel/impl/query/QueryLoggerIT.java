@@ -52,7 +52,6 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.containsString;
@@ -183,7 +182,7 @@ public class QueryLoggerIT
             db.execute( "CALL dbms.procedures() YIELD name RETURN name", emptyMap() ).close();
             db.execute( "MATCH (n) RETURN n", emptyMap() ).close();
             db.execute( QUERY, emptyMap() );
-            tx.success();
+            tx.commit();
         }
 
         // Ensure that old meta data is not retained
@@ -191,7 +190,7 @@ public class QueryLoggerIT
         {
             db.execute( "CALL dbms.setTXMetaData( { Location: 'Sweden' } )", emptyMap() );
             db.execute( "MATCH ()-[r]-() RETURN count(r)", emptyMap() ).close();
-            tx.success();
+            tx.commit();
         }
 
         dbManagementService.shutdown();
@@ -401,9 +400,9 @@ public class QueryLoggerIT
         String query = "CALL dbms.security.changePassword('abc123')";
         try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
         {
-            Result res = facade.execute( tx, query, VirtualValues.EMPTY_MAP );
+            Result res = facade.execute( query );
             res.close();
-            tx.success();
+            tx.commit();
         }
         finally
         {
@@ -568,7 +567,7 @@ public class QueryLoggerIT
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
             resultConsumer.accept( db.execute( call, p ) );
-            tx.success();
+            tx.commit();
         }
     }
 

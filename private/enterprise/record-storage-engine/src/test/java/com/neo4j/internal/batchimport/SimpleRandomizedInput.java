@@ -156,7 +156,7 @@ public class SimpleRandomizedInput implements Input
             }
             assertEquals( nodeCount, actualNodeCount );
             assertEquals( relationshipCount, actualRelationshipCount );
-            tx.success();
+            tx.commit();
         }
     }
 

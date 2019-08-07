@@ -345,7 +345,7 @@ class CatchupServerIT
             node.setProperty( PROP_NAME, "Neo" );
             node.setProperty( PROP, Math.random() * 10000 );
             graphDb.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -354,7 +354,7 @@ class CatchupServerIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( LABEL ).on( PROP_NAME ).create();
-            tx.success();
+            tx.commit();
         }
     }
 

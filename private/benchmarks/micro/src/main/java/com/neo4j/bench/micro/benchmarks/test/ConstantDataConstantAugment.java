@@ -85,7 +85,7 @@ public class ConstantDataConstantAugment extends BaseDatabaseBenchmark
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
-                    tx.success();
+                    tx.commit();
                 }
                 ManagedStore.getManagementService().shutdown();
             }

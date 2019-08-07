@@ -53,7 +53,7 @@ public class TxBatch
     {
         try
         {
-            oldTx.success();
+            oldTx.commit();
         }
         catch ( Throwable e )
         {

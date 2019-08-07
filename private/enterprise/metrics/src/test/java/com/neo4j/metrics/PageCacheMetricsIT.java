@@ -66,7 +66,7 @@ class PageCacheMetricsIT
         {
             Node node = database.createNode( testLabel );
             node.setProperty( "property", "value" );
-            transaction.success();
+            transaction.commit();
         }
 
         try ( Transaction ignored = database.beginTx() )

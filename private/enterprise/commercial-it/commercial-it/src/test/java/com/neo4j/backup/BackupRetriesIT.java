@@ -173,7 +173,7 @@ class BackupRetriesIT
                     createRelationship( previousNode, currentNode );
                     previousNode = currentNode;
                 }
-                tx.success();
+                tx.commit();
             }
         }
     }
@@ -185,13 +185,13 @@ class BackupRetriesIT
             db.schema().indexFor( label( "Person" ) ).on( "id" ).create();
             db.schema().indexFor( label( "Employee" ) ).on( "name" ).create();
             db.schema().indexFor( label( "Employee" ) ).on( "surname" ).create();
-            tx.success();
+            tx.commit();
         }
 
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, MINUTES );
-            tx.success();
+            tx.commit();
         }
     }
 

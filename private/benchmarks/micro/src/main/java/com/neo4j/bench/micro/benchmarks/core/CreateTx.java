@@ -80,7 +80,7 @@ public class CreateTx extends AbstractCoreBenchmark
     {
         try ( Transaction tx = db().beginTx() )
         {
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -91,7 +91,7 @@ public class CreateTx extends AbstractCoreBenchmark
         try ( Transaction tx = db().beginTx() )
         {
             tx.acquireReadLock( txState.node );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -103,7 +103,7 @@ public class CreateTx extends AbstractCoreBenchmark
         {
             Lock lock = tx.acquireReadLock( txState.node );
             lock.release();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -114,7 +114,7 @@ public class CreateTx extends AbstractCoreBenchmark
         try ( Transaction tx = db().beginTx() )
         {
             tx.acquireWriteLock( txState.node );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -126,7 +126,7 @@ public class CreateTx extends AbstractCoreBenchmark
         {
             Lock lock = tx.acquireWriteLock( txState.node );
             lock.release();
-            tx.success();
+            tx.commit();
         }
     }
 }

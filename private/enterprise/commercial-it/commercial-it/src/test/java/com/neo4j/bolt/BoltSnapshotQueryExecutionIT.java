@@ -142,7 +142,7 @@ class BoltSnapshotQueryExecutionIT
             amy.setProperty( "name", "Amy" );
             amy.setProperty( "profession", "Student" );
             amy.setProperty( "planet", "Mars" );
-            transaction.success();
+            transaction.commit();
         }
     }
 

@@ -62,7 +62,7 @@ public class ClusterIndexProcedureIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL db.createIndex( \":Person(name)\", \"lucene+native-3.0\")" ).close();
-            tx.success();
+            tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
@@ -70,7 +70,7 @@ public class ClusterIndexProcedureIT
         {
             Node person = db.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
-            tx.success();
+            tx.commit();
         } );
 
         // node creation is guaranteed to happen after index creation
@@ -93,7 +93,7 @@ public class ClusterIndexProcedureIT
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL db.createUniquePropertyConstraint( \":Person(name)\", \"lucene+native-3.0\")" ).close();
-            tx.success();
+            tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
@@ -101,7 +101,7 @@ public class ClusterIndexProcedureIT
         {
             Node person = db.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
-            tx.success();
+            tx.commit();
         } );
 
         // node creation is guaranteed to happen after constraint creation
@@ -124,7 +124,7 @@ public class ClusterIndexProcedureIT
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL db.createNodeKey( \":Person(name)\", \"lucene+native-3.0\")" ).close();
-            tx.success();
+            tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
@@ -132,7 +132,7 @@ public class ClusterIndexProcedureIT
         {
             Node person = db.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
-            tx.success();
+            tx.commit();
         } );
 
         // node creation is guaranteed to happen after constraint creation
@@ -154,7 +154,7 @@ public class ClusterIndexProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -176,7 +176,7 @@ public class ClusterIndexProcedureIT
             assertEquals( "correct property", "name", property );
             assertCorrectProvider( db, label, property );
 
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -199,7 +199,7 @@ public class ClusterIndexProcedureIT
             assertEquals( "correct property", "name", property );
             assertEquals( "correct constraint type", expectedConstraintType, constraintType );
 
-            tx.success();
+            tx.commit();
         }
     }
 

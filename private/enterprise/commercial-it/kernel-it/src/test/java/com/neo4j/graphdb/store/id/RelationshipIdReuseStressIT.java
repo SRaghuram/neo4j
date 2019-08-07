@@ -127,7 +127,7 @@ class RelationshipIdReuseStressIT
             {
                 createLabeledNamedNode( cityLabel, "city" + i );
             }
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -139,7 +139,7 @@ class RelationshipIdReuseStressIT
             {
                 createLabeledNamedNode( bandLabel, "band" + i );
             }
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -228,7 +228,7 @@ class RelationshipIdReuseStressIT
                     default:
                         throw new IllegalStateException( "Unsupported direction value:" + direction );
                     }
-                    transaction.success();
+                    transaction.commit();
                 }
                 catch ( DeadlockDetectedException ignored )
                 {
@@ -296,7 +296,7 @@ class RelationshipIdReuseStressIT
                 {
                     Node randomBandNode = getRandomBandNode( embeddedDatabase, bandLabel );
                     relationshipSize = Iterables.asList( randomBandNode.getRelationships() ).size();
-                    transaction.success();
+                    transaction.commit();
                 }
                 long millisToWait = ThreadLocalRandom.current().nextLong( 10, 25 );
                 LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( millisToWait ) );
@@ -330,7 +330,7 @@ class RelationshipIdReuseStressIT
                 {
                     Node randomBandNode = getRandomBandNode( embeddedDatabase, bandLabel );
                     relationshipSize = Iterables.asList( randomBandNode.getRelationshipTypes()).size();
-                    transaction.success();
+                    transaction.commit();
                 }
                 long millisToWait = ThreadLocalRandom.current().nextLong( 10, 25 );
                 LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( millisToWait ) );
@@ -370,7 +370,7 @@ class RelationshipIdReuseStressIT
                         deleteRelationshipOnRandomNode();
 
                     }
-                    transaction.success();
+                    transaction.commit();
                     removalCount++;
                 }
                 catch ( DeadlockDetectedException | NotFoundException ignored )

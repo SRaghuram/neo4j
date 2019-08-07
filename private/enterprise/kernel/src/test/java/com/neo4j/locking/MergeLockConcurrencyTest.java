@@ -93,7 +93,7 @@ public class MergeLockConcurrencyTest
 
                 action.accept( node );
 
-                tx.success();
+                tx.commit();
                 return node;
             }
         };

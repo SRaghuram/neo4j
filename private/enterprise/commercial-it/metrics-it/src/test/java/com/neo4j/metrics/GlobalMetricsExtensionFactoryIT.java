@@ -143,7 +143,7 @@ class GlobalMetricsExtensionFactoryIT
         {
             Node node = nullTracerDatabase.createNode();
             node.setProperty( "all", "is well" );
-            tx.success();
+            tx.commit();
         }
         finally
         {
@@ -175,7 +175,7 @@ class GlobalMetricsExtensionFactoryIT
             {
                 Node node = db.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", UUID.randomUUID().toString() );
-                tx.success();
+                tx.commit();
             }
         }
     }

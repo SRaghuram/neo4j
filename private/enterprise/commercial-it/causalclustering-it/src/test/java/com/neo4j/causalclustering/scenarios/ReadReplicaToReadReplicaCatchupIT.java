@@ -53,7 +53,7 @@ public class ReadReplicaToReadReplicaCatchupIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.schema().constraintFor( label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
-            tx.success();
+            tx.commit();
         } );
 
         DataCreator.createLabelledNodesWithProperty( cluster, numberOfNodesToCreate, label( "Foo" ),
@@ -93,7 +93,7 @@ public class ReadReplicaToReadReplicaCatchupIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.schema().constraintFor( label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
-            tx.success();
+            tx.commit();
         } );
 
         DataCreator.createLabelledNodesWithProperty( cluster, numberOfNodes, label( "Foo" ),
@@ -145,7 +145,7 @@ public class ReadReplicaToReadReplicaCatchupIT
                     assertThat( node.getProperty( "foobar" ).toString(), startsWith( "baz_bat" ) );
                 }
 
-                tx.success();
+                tx.commit();
             }
         }
     }

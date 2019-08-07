@@ -32,7 +32,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @ClusterExtension
 public class ClusterFormationIT
@@ -61,19 +60,21 @@ public class ClusterFormationIT
         {
             // (1) BuiltInProcedures from community
             {
-                Result result = gdb.execute( "CALL dbms.procedures()" );
-                assertTrue( result.hasNext() );
-                result.close();
+                try ( Result result = gdb.execute( "CALL dbms.procedures()" ) )
+                {
+                    assertTrue( result.hasNext() );
+                }
             }
 
             // (2) BuiltInProcedures from enterprise
             try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
             {
-                Result result = gdb.execute( tx, "CALL dbms.listQueries()", EMPTY_MAP );
-                assertTrue( result.hasNext() );
-                result.close();
+                try ( Result result = gdb.execute( "CALL dbms.listQueries()" ) )
+                {
+                    assertTrue( result.hasNext() );
+                }
 
-                tx.success();
+                tx.commit();
             }
         } );
     }
@@ -113,7 +114,7 @@ public class ClusterFormationIT
             try ( Transaction tx = leader.beginTx() )
             {
                 leader.createNode();
-                tx.success();
+                tx.commit();
             }
         } );
 

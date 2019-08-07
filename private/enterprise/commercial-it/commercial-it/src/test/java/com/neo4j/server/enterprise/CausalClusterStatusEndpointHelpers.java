@@ -47,7 +47,7 @@ class CausalClusterStatusEndpointHelpers
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( Label.label( "MyNode" ) );
-            tx.success();
+            tx.commit();
         }
     }
 

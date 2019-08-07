@@ -43,7 +43,7 @@ class IdReuseTest
         {
             db.createNode();
 
-            tx.failure();
+            tx.rollback();
         }
 
         restartDatabase();
@@ -54,7 +54,7 @@ class IdReuseTest
         {
             node = db.createNode();
 
-            tx.success();
+            tx.commit();
         }
 
         // Then
@@ -72,14 +72,14 @@ class IdReuseTest
             node1 = db.createNode();
             node2 = db.createNode();
 
-            tx.success();
+            tx.commit();
         }
 
         try ( Transaction tx = db.beginTx() )
         {
             node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) );
 
-            tx.failure();
+            tx.rollback();
         }
 
         restartDatabase();
@@ -92,7 +92,7 @@ class IdReuseTest
             node2 = db.getNodeById( node2.getId() );
             relationship = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) );
 
-            tx.success();
+            tx.commit();
         }
 
         // Then
@@ -151,7 +151,7 @@ class IdReuseTest
             Relationship relationshipTo = node1.createRelationshipTo( node2, TestRelationshipType.MARKER );
 
             assertNotEquals( relationshipId, relationshipTo.getId(), "Relationships should have different ids." );
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -175,7 +175,7 @@ class IdReuseTest
                     relationship.delete();
                 }
             }
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -192,7 +192,7 @@ class IdReuseTest
             Node node2 = db.createNode( label );
 
             Relationship relationshipTo = node1.createRelationshipTo( node2, TestRelationshipType.MARKER );
-            transaction.success();
+            transaction.commit();
             return relationshipTo.getId();
         }
     }

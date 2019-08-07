@@ -9,7 +9,6 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -35,8 +34,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginContext>
@@ -120,7 +117,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
         {
             Map<String,Object> p = (params == null) ? Collections.emptyMap() : params;
             resultConsumer.accept( db.execute( call, p ) );
-            tx.success();
+            tx.commit();
             return "";
         }
         catch ( Exception e )

@@ -91,7 +91,7 @@ public class ConsistencyCheckServiceRecordFormatIT
                 }
                 previous = current;
             }
-            tx.success();
+            tx.commit();
         }
     }
 

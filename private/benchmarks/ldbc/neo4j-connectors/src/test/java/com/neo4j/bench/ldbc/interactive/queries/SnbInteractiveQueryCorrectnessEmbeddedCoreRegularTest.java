@@ -117,7 +117,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         try ( Transaction tx = neo4jConnectionState.db().beginTx() )
         {
             results = query.execute( neo4jConnectionState, operation );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -136,7 +136,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         try ( Transaction tx = neo4jConnectionState.db().beginTx() )
         {
             query.execute( neo4jConnectionState, operation );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {

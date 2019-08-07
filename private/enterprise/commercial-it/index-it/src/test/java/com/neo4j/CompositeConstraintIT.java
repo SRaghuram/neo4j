@@ -54,14 +54,14 @@ class CompositeConstraintIT
             Node node = database.createNode( label );
             node.setProperty( "b", (short) 3 );
             node.setProperty( "a", new double[]{0.6, 0.4, 0.2} );
-            transaction.success();
+            transaction.commit();
         }
 
         try ( Transaction transaction = database.beginTx() )
         {
             String query = format( "CREATE CONSTRAINT ON (n:%s) ASSERT (n.%s,n.%s) IS NODE KEY", label.name(), "a", "b" );
             database.execute( query );
-            transaction.success();
+            transaction.commit();
         }
 
         awaitIndex( database );
@@ -71,7 +71,7 @@ class CompositeConstraintIT
             Node node = database.createNode( label );
             node.setProperty( "a", (short) 7 );
             node.setProperty( "b", new double[]{0.7, 0.5, 0.3} );
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdown();
 
@@ -91,7 +91,7 @@ class CompositeConstraintIT
         try ( Transaction tx = database.beginTx() )
         {
             database.schema().awaitIndexesOnline( 2, TimeUnit.MINUTES );
-            tx.success();
+            tx.commit();
         }
     }
 }

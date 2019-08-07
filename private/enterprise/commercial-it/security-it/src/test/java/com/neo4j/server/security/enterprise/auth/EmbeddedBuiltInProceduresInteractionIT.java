@@ -62,9 +62,9 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         try ( InternalTransaction tx = graph
                 .beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
         {
-            Result result = graph.execute( tx, "CALL dbms.listQueries", EMPTY_MAP );
+            Result result = graph.execute(  "CALL dbms.listQueries" );
             assertFalse( result.hasNext() );
-            tx.success();
+            tx.commit();
         }
     }
 

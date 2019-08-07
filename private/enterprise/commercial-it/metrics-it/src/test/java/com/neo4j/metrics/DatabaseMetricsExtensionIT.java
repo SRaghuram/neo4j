@@ -172,7 +172,7 @@ class DatabaseMetricsExtensionIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
-            tx.success();
+            tx.commit();
         }
 
         //add some data, should make plan stale
@@ -184,7 +184,7 @@ class DatabaseMetricsExtensionIT
             try ( Transaction tx = db.beginTx() )
             {
                 db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
-                tx.success();
+                tx.commit();
             }
             addNodes( 1 );
         }
@@ -264,7 +264,7 @@ class DatabaseMetricsExtensionIT
             Node node1 = db.createNode();
             Node node2 = db.createNode();
             node1.createRelationshipTo( node2, withName( "any" ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -281,7 +281,7 @@ class DatabaseMetricsExtensionIT
             {
                 Node node = db.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", UUID.randomUUID().toString() );
-                tx.success();
+                tx.commit();
             }
         }
     }

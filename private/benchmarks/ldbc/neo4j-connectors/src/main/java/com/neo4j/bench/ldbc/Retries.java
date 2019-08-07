@@ -172,7 +172,7 @@ public class Retries<OPERATION_TYPE extends Operation<OPERATION_RESULT_TYPE>, OP
             try ( Transaction tx = connection.db().beginTx() )
             {
                 result = query.execute( connection, operation );
-                tx.success();
+                tx.commit();
                 succeeded = true;
             }
             catch ( Exception e )

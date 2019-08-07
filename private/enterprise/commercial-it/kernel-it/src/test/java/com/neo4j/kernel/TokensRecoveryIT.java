@@ -48,7 +48,7 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CALL db.index.fulltext.createNodeIndex('nodes', ['Label'], ['prop'] )" ).close();
-            tx.success();
+            tx.commit();
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
@@ -62,7 +62,7 @@ class TokensRecoveryIT
             // Now we should see our index still being there and healthy.
             assertThat( count( db.schema().getIndexes() ), is( 1L ) );
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
-            tx.success();
+            tx.commit();
         }
         managementService.shutdown();
     }
@@ -77,7 +77,7 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().constraintFor( LABEL ).assertPropertyIsUnique( "prop" ).create();
-            tx.success();
+            tx.commit();
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
         EphemeralFileSystemAbstraction crashedFs = fs.snapshot();
@@ -91,7 +91,7 @@ class TokensRecoveryIT
             // Now we should see our index still being there and healthy.
             assertThat( count( db.schema().getIndexes() ), is( 1L ) );
             assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
-            tx.success();
+            tx.commit();
         }
         managementService.shutdown();
     }

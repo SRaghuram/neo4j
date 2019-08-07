@@ -69,7 +69,7 @@ public class DeferringLocksIT
         try ( Transaction tx = db.beginTx() )
         {
             node = db.createNode();
-            tx.success();
+            tx.commit();
         }
 
         // WHEN
@@ -78,7 +78,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 node.setProperty( PROPERTY_KEY, VALUE_1 );
-                tx.success();
+                tx.commit();
                 barrier.reached();
             }
             return null;
@@ -87,14 +87,14 @@ public class DeferringLocksIT
         {
             barrier.await();
             node.setProperty( PROPERTY_KEY, VALUE_2 );
-            tx.success();
+            tx.commit();
             barrier.release();
         }
 
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( 1, count( node.getPropertyKeys() ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -108,7 +108,7 @@ public class DeferringLocksIT
         {
             node = db.createNode();
             node.setProperty( PROPERTY_KEY, VALUE_1 );
-            tx.success();
+            tx.commit();
         }
 
         // WHEN
@@ -117,7 +117,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 node.removeProperty( PROPERTY_KEY );
-                tx.success();
+                tx.commit();
                 barrier.reached();
             }
             return null;
@@ -126,7 +126,7 @@ public class DeferringLocksIT
         {
             barrier.await();
             node.setProperty( PROPERTY_KEY, VALUE_2 );
-            tx.success();
+            tx.commit();
             barrier.release();
         }
 
@@ -134,7 +134,7 @@ public class DeferringLocksIT
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( VALUE_2, node.getProperty( PROPERTY_KEY, VALUE_2 ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -149,7 +149,7 @@ public class DeferringLocksIT
             Node node = db.createNode();
             nodeId = node.getId();
             node.setProperty( PROPERTY_KEY, VALUE_1 );
-            tx.success();
+            tx.commit();
         }
 
         // WHEN
@@ -158,7 +158,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 db.getNodeById( nodeId ).delete();
-                tx.success();
+                tx.commit();
                 barrier.reached();
             }
             return null;
@@ -169,7 +169,7 @@ public class DeferringLocksIT
             {
                 barrier.await();
                 db.getNodeById( nodeId ).setProperty( PROPERTY_KEY, VALUE_2 );
-                tx.success();
+                tx.commit();
                 barrier.release();
             }
         }
@@ -191,7 +191,7 @@ public class DeferringLocksIT
             {
                 // Fine, its gone
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -205,7 +205,7 @@ public class DeferringLocksIT
                 createNodeWithProperty( LABEL, PROPERTY_KEY, VALUE_1 );
                 assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
 
-                tx.success();
+                tx.commit();
             }
             return null;
         } );
@@ -215,7 +215,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 createAndAwaitIndex( LABEL, PROPERTY_KEY );
-                tx.success();
+                tx.commit();
             }
             return null;
         } );
@@ -237,7 +237,7 @@ public class DeferringLocksIT
 
             assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
 
-            tx.success();
+            tx.commit();
         }
 
         assertInTxNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
@@ -248,7 +248,7 @@ public class DeferringLocksIT
         try ( Transaction tx = db.beginTx() )
         {
             assertNodeWith( label, key, value );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -277,7 +277,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 db.schema().indexFor( label ).on( key ).create();
-                tx.success();
+                tx.commit();
             }
             try ( Transaction ignore = db.beginTx() )
             {

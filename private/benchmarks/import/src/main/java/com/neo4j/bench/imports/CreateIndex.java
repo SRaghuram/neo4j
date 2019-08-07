@@ -58,7 +58,7 @@ public class CreateIndex
                     IndexDefinition index = indexCreator.create();
                     indexes.put( index, 0 );
                 }
-                tx.success();
+                tx.commit();
             }
             System.out.println( "Creating indexes:" );
             for ( IndexDefinition index : indexes.keySet() )
@@ -96,7 +96,7 @@ public class CreateIndex
                     }
                 }
                 while ( true );
-                tx.success();
+                tx.commit();
             }
             System.out.println( "Index creation finished:" );
             reportIndexStatus( db, indexes, "  " );
@@ -116,7 +116,7 @@ public class CreateIndex
                 Schema.IndexState state = db.schema().getIndexState( index );
                 System.out.println( format( "%s%s %s", indent, index.toString(), state ) );
             }
-            tx.success();
+            tx.commit();
         }
     }
 

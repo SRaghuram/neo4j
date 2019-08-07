@@ -50,7 +50,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 Node node = db.createNode( label );
                 node.setProperty( "property1", "1" );
                 node.setProperty( "property2", "2" );
-                transaction.success();
+                transaction.commit();
             }
         }, ConstraintViolationException.class,
                 anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties `property2, property3`" ),
@@ -64,7 +64,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 node.setProperty( "property1", "1" );
                 node.setProperty( "property2", "2" );
                 node.setProperty( "property3", "3" );
-                transaction.success();
+                transaction.commit();
             }
         }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) );
     }

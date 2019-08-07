@@ -208,7 +208,7 @@ class DatabaseRebuildToolTest
                 Node node = db.createNode( label( "Label_" + (i % 2) ) );
                 setProperties( node, i );
                 nodes[i] = node;
-                tx.success();
+                tx.commit();
             }
         }
         for ( int i = 0; i < 40; i++ )
@@ -218,7 +218,7 @@ class DatabaseRebuildToolTest
                 Relationship relationship = nodes[i % nodes.length]
                         .createRelationshipTo( nodes[(i + 1) % nodes.length], withName( "TYPE_" + (i % 3) ) );
                 setProperties( relationship, i );
-                tx.success();
+                tx.commit();
             }
         }
         try ( Transaction tx = db.beginTx() )
@@ -229,7 +229,7 @@ class DatabaseRebuildToolTest
                 relationship.delete();
             }
             node.delete();
-            tx.success();
+            tx.commit();
         }
         managementService.shutdown();
     }

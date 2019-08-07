@@ -205,7 +205,7 @@ public abstract class ProcedureInteractionTestBase<S>
                     "DELETE n" );
 
             assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -853,7 +853,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode( Label.label( "VeryUniqueLabel" ) );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception e )
                 {

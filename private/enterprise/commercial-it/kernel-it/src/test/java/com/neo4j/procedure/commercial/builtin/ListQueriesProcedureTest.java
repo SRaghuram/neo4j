@@ -335,7 +335,7 @@ public class ListQueriesProcedureTest
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( label( label ) ).on( property ).create();
-            tx.success();
+            tx.commit();
         }
         ensureIndexesAreOnline();
         shouldListUsedIndexes( label, property );
@@ -346,7 +346,7 @@ public class ListQueriesProcedureTest
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( SECONDS_TIMEOUT, SECONDS );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -359,7 +359,7 @@ public class ListQueriesProcedureTest
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().constraintFor( label( label ) ).assertPropertyIsUnique( property ).create();
-            tx.success();
+            tx.commit();
         }
         ensureIndexesAreOnline();
         shouldListUsedIndexes( label, property );
@@ -373,7 +373,7 @@ public class ListQueriesProcedureTest
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( label( "Node" ) ).on( "value" ).create();
-            tx.success();
+            tx.commit();
         }
         ensureIndexesAreOnline();
         try ( Resource<Node> test = test( () ->
@@ -614,7 +614,7 @@ public class ListQueriesProcedureTest
         try ( Transaction tx = db.beginTx() )
         {
             resource = setup.get();
-            tx.success();
+            tx.commit();
         }
         threads.execute( parameter ->
         {
@@ -636,7 +636,7 @@ public class ListQueriesProcedureTest
                 {
                     db.execute( query ).close();
                 }
-                tx.success();
+                tx.commit();
             }
             catch ( Throwable t )
             {

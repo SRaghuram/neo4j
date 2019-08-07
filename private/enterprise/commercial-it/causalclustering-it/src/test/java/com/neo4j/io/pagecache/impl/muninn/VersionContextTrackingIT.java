@@ -133,7 +133,7 @@ public class VersionContextTrackingIT
             cluster.coreTx( ( coreGraphDatabase, transaction ) ->
             {
                 coreGraphDatabase.createNode();
-                transaction.success();
+                transaction.commit();
             } );
         }
     }

@@ -178,7 +178,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( Label.label( label ) ).on( propertyKey ).create();
-            tx.success();
+            tx.commit();
         }
         awaitIndexOnline();
 
@@ -247,7 +247,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -372,7 +372,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
                 db.createNode( Label.label( label ) );
-                tx.success();
+                tx.commit();
             }
         } );
     }

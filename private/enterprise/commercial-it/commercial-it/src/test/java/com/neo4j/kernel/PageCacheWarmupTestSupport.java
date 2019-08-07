@@ -42,7 +42,7 @@ class PageCacheWarmupTestSupport
                     rel.setProperty( "Max", "Planck" );
                 }
             }
-            tx.success();
+            tx.commit();
         }
     }
 

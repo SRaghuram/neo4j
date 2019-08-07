@@ -141,7 +141,7 @@ public class ClassicNeo4jDatabase
                     Node node1 = db.createNode( Label.label( "Label-" + i ) );
                     Node node2 = db.createNode( Label.label( "Label-" + i ) );
                     node1.createRelationshipTo( node2, RelationshipType.withName( "REL-" + i ) );
-                    tx.success();
+                    tx.commit();
                 }
             }
 

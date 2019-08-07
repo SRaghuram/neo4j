@@ -72,7 +72,7 @@ class CreateNodesWithProperties extends Workload
                 {
                     node.setProperty( prop( i ), randomValues.nextValue().asObject() );
                 }
-                tx.success();
+                tx.commit();
             } );
         }
         catch ( Throwable e )
@@ -101,7 +101,7 @@ class CreateNodesWithProperties extends Workload
                 {
                     db.schema().indexFor( label ).on( prop( i ) ).create();
                 }
-                tx.success();
+                tx.commit();
             } );
         }
         catch ( Throwable t )

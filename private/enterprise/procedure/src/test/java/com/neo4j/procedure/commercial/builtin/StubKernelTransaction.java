@@ -55,12 +55,13 @@ class StubKernelTransaction implements KernelTransaction
     }
 
     @Override
-    public void success()
+    public long commit()
     {
+        return -1;
     }
 
     @Override
-    public void failure()
+    public void rollback()
     {
     }
 

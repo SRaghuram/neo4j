@@ -475,7 +475,7 @@ public class DataGenerator
                 nodeIds[n] = nodeId;
                 if ( ++txStateCounter % TX_SIZE == 0 )
                 {
-                    tx.success();
+                    tx.commit();
                     tx.close();
                     tx = db.beginTx();
                 }
@@ -484,7 +484,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -562,7 +562,7 @@ public class DataGenerator
                     relationshipIdsWriter.write( (int) relationship.getId() );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -572,7 +572,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -633,7 +633,7 @@ public class DataGenerator
                     relationshipIdsWriter.write( (int) relationship.getId() );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -643,7 +643,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -825,7 +825,7 @@ public class DataGenerator
                     node.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -834,7 +834,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -882,7 +882,7 @@ public class DataGenerator
                     node.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -891,7 +891,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -979,7 +979,7 @@ public class DataGenerator
                     relationship.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -988,7 +988,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -1036,7 +1036,7 @@ public class DataGenerator
                     relationship.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -1045,7 +1045,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -1111,7 +1111,7 @@ public class DataGenerator
                     node.addLabel( labels[labelIndexReader.getInt()] );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
-                        tx.success();
+                        tx.commit();
                         tx.close();
                         tx = db.beginTx();
                     }
@@ -1120,7 +1120,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -1147,7 +1147,7 @@ public class DataGenerator
                 }
                 if ( ++txStateCounter % TX_SIZE == 0 )
                 {
-                    tx.success();
+                    tx.commit();
                     tx.close();
                     tx = db.beginTx();
                 }
@@ -1155,7 +1155,7 @@ public class DataGenerator
         }
         finally
         {
-            tx.success();
+            tx.commit();
             tx.close();
         }
     }
@@ -1201,7 +1201,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1215,7 +1215,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE CONSTRAINT ON ()-[r:" + type + "]-() ASSERT exists(r.`" + key + "`)" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1229,7 +1229,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1242,7 +1242,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE " + compositeIndexPattern( label, keys ) );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1256,7 +1256,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CALL db.index.fulltext.createNodeIndex('ftsNodes', ['" + label.name() + "'], ['" + join( "','", propertyKeys ) + "'] )" ).close();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1265,7 +1265,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CALL db.index.fulltext.createRelationshipIndex('ftsRels', ['" + type.name() + "'], ['" + propertyKey + "'])" ).close();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -1274,7 +1274,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "CREATE " + compositeKeyPattern( label, keys ) );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1288,7 +1288,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1302,7 +1302,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "DROP CONSTRAINT ON ()-[r:" + label + "]-() ASSERT exists(r.`" + key + "`)" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1316,7 +1316,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1329,7 +1329,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "DROP " + compositeIndexPattern( label, keys ) );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -1343,7 +1343,7 @@ public class DataGenerator
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( "DROP " + compositeKeyPattern( label, keys ) );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {

@@ -339,7 +339,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             createOffendingDataInRunningTx( db );
-            tx.success();
+            tx.commit();
         }
 
         // when
@@ -348,7 +348,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             var e = assertThrows( QueryExecutionException.class, () ->
             {
                 createConstraintInRunningTx( db, KEY, PROP );
-                tx.success();
+                tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
         }
@@ -358,7 +358,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         {
             assertEquals( Collections.<ConstraintDefinition>emptyList(), asList( db.schema().getConstraints() ) );
             assertEquals( Collections.<IndexDefinition, Schema.IndexState>emptyMap(), indexesWithState( db.schema() ) );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -370,7 +370,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             createOffendingDataInRunningTx( db );
-            tx.success();
+            tx.commit();
         }
 
         // when
@@ -379,7 +379,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             var e = assertThrows( QueryExecutionException.class, () ->
             {
                 createConstraintInRunningTx( db, KEY, PROP );
-                tx.success();
+                tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
         }
@@ -387,7 +387,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             removeOffendingDataInRunningTx( db );
-            tx.success();
+            tx.commit();
         }
 
         // then - this should not fail
@@ -405,7 +405,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
                 createConstraintInRunningTx( db, KEY, PROP );
-                tx.success();
+                tx.commit();
             }
         };
 
@@ -419,7 +419,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 {
                     executorService.submit( constraintCreation ).get();
                     db.createNode();
-                    tx.success();
+                    tx.commit();
                 }
             } );
 

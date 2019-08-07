@@ -97,7 +97,7 @@ class HalfCreatedConstraintIT
             LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( 0, 0 );
             Config config = resolver.resolveDependency( Config.class );
             kernelTransaction.indexUniqueCreate( descriptor, config.get( GraphDatabaseSettings.default_schema_provider ) );
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -110,7 +110,7 @@ class HalfCreatedConstraintIT
                 Node node = database.createNode( marker );
                 node.setProperty( property, "a" );
             }
-            transaction.success();
+            transaction.commit();
         }
     }
 }

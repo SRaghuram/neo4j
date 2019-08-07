@@ -114,7 +114,7 @@ class ReadReplicaReplicationIT
                 var node = readReplica.createNode();
                 node.setProperty( NODE_PROPERTY_1, "baz_bat" );
                 node.addLabel( DataCreator.LABEL );
-                tx.success();
+                tx.commit();
             }
         } );
     }
@@ -182,7 +182,7 @@ class ReadReplicaReplicationIT
                     assertThat( node.getProperty( NODE_PROPERTY_1 ).toString(), startsWith( NODE_PROPERTY_1_PREFIX ) );
                 }
 
-                tx.success();
+                tx.commit();
             }
         }
 
@@ -363,7 +363,7 @@ class ReadReplicaReplicationIT
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
             coreGraphDatabase.createNode();
-            transaction.success();
+            transaction.commit();
         } );
 
         var leader = cluster.awaitLeader();
@@ -470,7 +470,7 @@ class ReadReplicaReplicationIT
             {
                 node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );
             }
-            tx.success();
+            tx.commit();
         } );
 
         var baseVersion = versionBy( cluster.awaitLeader().raftLogDirectory(), Math::max );
@@ -485,7 +485,7 @@ class ReadReplicaReplicationIT
                 {
                     node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );
                 }
-                tx.success();
+                tx.commit();
             } );
         }
 

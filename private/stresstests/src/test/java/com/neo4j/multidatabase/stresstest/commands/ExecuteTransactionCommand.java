@@ -7,11 +7,9 @@ package com.neo4j.multidatabase.stresstest.commands;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public class ExecuteTransactionCommand extends DatabaseManagerCommand
@@ -42,7 +40,7 @@ public class ExecuteTransactionCommand extends DatabaseManagerCommand
             node1.setProperty( "a", "b" );
             node2.setProperty( "c", "d" );
             node1.createRelationshipTo( node2, RelationshipType.withName( "some" ) );
-            transaction.success();
+            transaction.commit();
         }
         catch ( IllegalStateException e )
         {

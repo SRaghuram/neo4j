@@ -69,7 +69,7 @@ class LoadCommandIT extends AbstractCommandIT
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             databaseAPI.createNode( marker );
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );
 
@@ -98,7 +98,7 @@ class LoadCommandIT extends AbstractCommandIT
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             databaseAPI.createNode( marker );
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );
 
@@ -122,7 +122,7 @@ class LoadCommandIT extends AbstractCommandIT
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             databaseAPI.createNode( marker );
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );
 

@@ -129,7 +129,7 @@ class MultiDatabaseProcedureIT
         try ( Transaction tx = facade.beginTx() )
         {
             facade.createNode( MAPPER_LABEL );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -146,7 +146,7 @@ class MultiDatabaseProcedureIT
         try ( Transaction transaction = facade.beginTx() )
         {
             facade.execute( "call db.createLabel(\"" + label + "\")" ).close();
-            transaction.success();
+            transaction.commit();
         }
     }
 

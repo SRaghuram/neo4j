@@ -44,7 +44,7 @@ class Worker implements Runnable
                 {
                     randomMutation.perform();
                 }
-                tx.success();
+                tx.commit();
             }
             catch ( DeadlockDetectedException ignore )
             {

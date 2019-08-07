@@ -71,7 +71,7 @@ class IndexConfigCausalClusterIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.schema().indexFor( label ).on( prop ).create();
-            tx.success();
+            tx.commit();
         } );
 
         Cluster.dataMatchesEventually( cluster.awaitLeader(), cluster.coreMembers() );
@@ -110,7 +110,7 @@ class IndexConfigCausalClusterIT
             {
                 throw new RuntimeException( e );
             }
-            tx.success();
+            tx.commit();
         }
         return indexConfig;
     }

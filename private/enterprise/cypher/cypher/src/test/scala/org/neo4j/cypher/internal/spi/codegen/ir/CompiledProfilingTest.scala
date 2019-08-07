@@ -74,8 +74,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
       val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.write())
       database.createNode()
       database.createNode()
-      tx.success()
-      tx.close()
+      tx.commit()
 
       val lhs = AllNodesScan("a", Set.empty)
       val rhs = AllNodesScan("a", Set.empty)

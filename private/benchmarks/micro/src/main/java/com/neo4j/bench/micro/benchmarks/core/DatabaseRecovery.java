@@ -103,7 +103,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
                 String type = String.valueOf( i % 10 );
                 nodeA.setProperty( type, stringGenerator.next( rng ) );
                 nodeA.createRelationshipTo( nodeB, RelationshipType.withName( type ) );
-                transaction.success();
+                transaction.commit();
             }
         }
 

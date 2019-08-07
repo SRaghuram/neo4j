@@ -167,7 +167,7 @@ class ExistingDatabaseCreationIT
             try ( Transaction transaction = database.beginTx() )
             {
                 database.createNode();
-                transaction.success();
+                transaction.commit();
             }
         }
     }

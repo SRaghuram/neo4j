@@ -129,7 +129,7 @@ class FulltextIndexBackupIT
             nodeId3 = node3.getId();
             nodeId4 = node4.getId();
             relId2 = rel.getId();
-            tx.success();
+            tx.commit();
         }
         verifyData( db );
 
@@ -152,7 +152,7 @@ class FulltextIndexBackupIT
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId2 ) );
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -173,13 +173,13 @@ class FulltextIndexBackupIT
             nodeId1 = node1.getId();
             nodeId2 = node2.getId();
             relId1 = relationship.getId();
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP ) ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
-            tx.success();
+            tx.commit();
         }
         awaitPopulation( db );
     }
@@ -189,7 +189,7 @@ class FulltextIndexBackupIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -206,7 +206,7 @@ class FulltextIndexBackupIT
         try ( Transaction tx = db.beginTx() )
         {
             awaitPopulation( db );
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
@@ -220,7 +220,7 @@ class FulltextIndexBackupIT
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId1 ) );
             }
-            tx.success();
+            tx.commit();
         }
     }
 

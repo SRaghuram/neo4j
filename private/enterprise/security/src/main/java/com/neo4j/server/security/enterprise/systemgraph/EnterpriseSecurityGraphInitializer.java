@@ -341,7 +341,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                         systemGraphOperations.addRoleToUser( role.name(), username );
                     }
                 }
-                transaction.success();
+                transaction.commit();
             }
 
             assert validateImportSucceeded( userRepository, roleRepository );
@@ -414,7 +414,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                 }
             }
 
-            transaction.success();
+            transaction.commit();
         }
         return true;
     }

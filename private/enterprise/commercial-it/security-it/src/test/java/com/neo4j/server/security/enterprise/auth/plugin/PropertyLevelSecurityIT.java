@@ -34,7 +34,6 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
@@ -599,9 +598,9 @@ class PropertyLevelSecurityIT
         Result result;
         try ( InternalTransaction tx = db.beginTransaction( explicit, subject ) )
         {
-            result = db.execute( tx, query, ValueUtils.asMapValue( params ) );
+            result = db.execute( query, params );
             consumer.accept( result );
-            tx.success();
+            tx.commit();
             result.close();
         }
     }
@@ -611,9 +610,9 @@ class PropertyLevelSecurityIT
         Result result;
         try ( InternalTransaction tx = db.beginTransaction( explicit, subject ) )
         {
-            result = db.execute( tx, query, ValueUtils.asMapValue( params ) );
+            result = db.execute( query, params );
             result.resultAsString();
-            tx.success();
+            tx.commit();
         }
         return result;
     }

@@ -64,8 +64,6 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
         String description = String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(),
                 "dbms.security.listUsers only applies to native users." );
         assertThat( containsNotification( result, description ), equalTo( true ) );
-        transaction.success();
-        transaction.close();
     }
 
     @Test
@@ -85,8 +83,6 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
         String description = String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(),
                 "dbms.security.listUsers only applies to native users." );
         assertThat( containsNotification( result, description ), equalTo( false ) );
-        transaction.success();
-        transaction.close();
     }
 
     @Override

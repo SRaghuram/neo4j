@@ -100,7 +100,7 @@ class CausalClusterMetricIT
         {
             var node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then
@@ -186,7 +186,7 @@ class CausalClusterMetricIT
                 assertEquals( "baz_bat", node.getProperty( "foobar" ) );
             }
 
-            tx.success();
+            tx.commit();
         }
     }
 }

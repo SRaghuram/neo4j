@@ -331,7 +331,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( label( "Person" ) ).setProperty( "name", "Buddy Holly" );
-            tx.success();
+            tx.commit();
         }
 
         // Then
@@ -490,7 +490,7 @@ class FunctionIT
                     db.execute( "RETURN com.neo4j.procedure.node({id}) AS node", map( "id", nodeId ) ).columnAs(
                             "node" ) );
             node.setProperty( "name", "Stefan" );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -710,7 +710,7 @@ class FunctionIT
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
                     {
                         db.execute( "RETURN com.neo4j.procedure.integrationTestMe()" ).next();
-                        tx.success();
+                        tx.commit();
                     }
                 } );
         assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
@@ -1060,7 +1060,7 @@ class FunctionIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception e )
                 {

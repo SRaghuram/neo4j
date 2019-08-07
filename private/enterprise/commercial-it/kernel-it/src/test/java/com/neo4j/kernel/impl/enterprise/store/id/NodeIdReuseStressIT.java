@@ -87,7 +87,7 @@ class NodeIdReuseStressIT
             {
                 db.createNode();
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -140,7 +140,7 @@ class NodeIdReuseStressIT
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();
-                    tx.success();
+                    tx.commit();
                 }
 
                 maybeRunIdMaintenance( db, i );
@@ -170,7 +170,7 @@ class NodeIdReuseStressIT
                     try ( Transaction tx = db.beginTx() )
                     {
                         db.getNodeById( id ).delete();
-                        tx.success();
+                        tx.commit();
                     }
                     catch ( NotFoundException ignore )
                     {

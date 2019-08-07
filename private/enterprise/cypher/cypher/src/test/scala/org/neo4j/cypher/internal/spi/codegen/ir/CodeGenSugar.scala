@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSup
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.{InstrumentedGraphStatistics, PlanContext}
+import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
@@ -22,8 +23,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryConte
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
@@ -61,10 +60,9 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
                                                         prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
       result.consumeAll()
-      tx.success()
+      transactionalContext.close(true)
       result
     } finally {
-      transactionalContext.close(true)
       tx.close()
     }
   }

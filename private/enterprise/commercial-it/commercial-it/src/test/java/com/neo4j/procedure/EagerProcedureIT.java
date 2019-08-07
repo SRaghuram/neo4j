@@ -127,7 +127,7 @@ public class EagerProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             createChainOfNodesWithLabelAndProperty( nodes, "FOLLOWS", "User", "key", "value" );
-            tx.success();
+            tx.commit();
         }
     }
 

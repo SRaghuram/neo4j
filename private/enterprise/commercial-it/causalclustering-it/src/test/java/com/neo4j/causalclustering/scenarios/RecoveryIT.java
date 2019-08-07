@@ -125,7 +125,7 @@ class RecoveryIT
             {
                 var node = db.createNode( label( "demo" ) );
                 node.setProperty( "server", prop );
-                tx.success();
+                tx.commit();
             } );
         }
     }

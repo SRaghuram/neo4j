@@ -39,7 +39,7 @@ class BatchInserterEnterpriseConstraintIT
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY" );
-            transaction.success();
+            transaction.commit();
         }
         managementService.shutdown();
 

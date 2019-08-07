@@ -119,7 +119,7 @@ class RebuildFromLogsTest
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             db.createNode();
-            tx.success();
+            tx.commit();
         }
         finally
         {
@@ -225,7 +225,7 @@ class RebuildFromLogsTest
             {
                 applyTx( graphDb );
 
-                tx.success();
+                tx.commit();
             }
         }
 

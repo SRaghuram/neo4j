@@ -93,7 +93,7 @@ class AdminToolCausalClusterBackupIT
         node2.setProperty( "id", 2 );
 
         node1.createRelationshipTo( node2, withName( "KNOWS" ) );
-        tx.success();
+        tx.commit();
     }
 
     private static Config tempDbConfig()

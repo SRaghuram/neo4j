@@ -183,7 +183,7 @@ class RestartIT
     {
         Node node = db.createNode( label( "boo" ) );
         node.setProperty( "foobar", "baz_bat" );
-        tx.success();
+        tx.commit();
     }
 
     private Cluster startCluster( int coreCount, int readReplicaCount ) throws Exception

@@ -186,7 +186,7 @@ class BackupCopyServiceTest
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( label( "Cat" ) ).setProperty( "name", "Tom" );
-            tx.success();
+            tx.commit();
         }
         finally
         {

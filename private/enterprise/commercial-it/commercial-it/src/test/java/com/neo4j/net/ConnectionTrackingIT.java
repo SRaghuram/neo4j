@@ -455,7 +455,7 @@ public class ConnectionTrackingIT
             {
                 lock.release();
             }
-            tx.failure();
+            tx.rollback();
         }
     }
 

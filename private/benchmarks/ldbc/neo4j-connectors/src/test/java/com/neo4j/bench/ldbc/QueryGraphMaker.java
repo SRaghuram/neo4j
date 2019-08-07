@@ -80,7 +80,7 @@ public abstract class QueryGraphMaker
         try ( Transaction tx = db.beginTx() )
         {
             db.execute( createQuery, queryParams );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -95,7 +95,7 @@ public abstract class QueryGraphMaker
                 System.out.println( createIndexQuery );
                 db.execute( createIndexQuery );
             }
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {

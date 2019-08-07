@@ -178,11 +178,11 @@ public class EmbeddedDatabase implements Database
             int rowCount = execute( query, parameters );
             if ( shouldRollback )
             {
-                tx.failure();
+                tx.rollback();
             }
             else
             {
-                tx.success();
+                tx.commit();
             }
             return rowCount;
         }
@@ -252,7 +252,7 @@ public class EmbeddedDatabase implements Database
         {
             db.schema().getConstraints().forEach( ConstraintDefinition::drop );
             db.schema().getIndexes().forEach( IndexDefinition::drop );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -268,7 +268,7 @@ public class EmbeddedDatabase implements Database
                   .stream()
                   .map( Schema.SchemaEntry::createStatement )
                   .forEach( db::execute );
-            tx.success();
+            tx.commit();
         }
         waitForSchema();
     }

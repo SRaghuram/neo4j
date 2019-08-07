@@ -79,7 +79,7 @@ public class LdbcIndexer
         {
             db.schema().getConstraints().forEach( ConstraintDefinition::drop );
             db.schema().getIndexes().forEach( IndexDefinition::drop );
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -99,7 +99,7 @@ public class LdbcIndexer
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.execute( query );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception createException )
                 {
@@ -131,7 +131,7 @@ public class LdbcIndexer
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.execute( query );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception createException )
                 {
@@ -164,7 +164,7 @@ public class LdbcIndexer
                 {
                     db.execute(
                             "CREATE CONSTRAINT ON (node:" + label.name() + ") ASSERT exists(node." + property + ")" );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception createException )
                 {
@@ -189,7 +189,7 @@ public class LdbcIndexer
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.execute( "CREATE CONSTRAINT ON (rel:" + type.name() + ") ASSERT exists(rel." + property + ")" );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( Exception createException )
                 {
@@ -232,7 +232,7 @@ public class LdbcIndexer
                     assertIndexNotFailed( db, def );
                 }
             }
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {

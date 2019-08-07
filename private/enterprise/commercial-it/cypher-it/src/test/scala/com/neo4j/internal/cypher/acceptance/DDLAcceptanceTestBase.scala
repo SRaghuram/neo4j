@@ -174,7 +174,7 @@ abstract class DDLAcceptanceTestBase extends ExecutionEngineFunSuite with Commer
         count = count + 1
         true
       })
-      tx.success()
+      tx.commit()
       count
     } finally {
       tx.close()

@@ -83,7 +83,7 @@ public class ConvertNonCausalClusteringStoreIT
         {
             Node node = coreDB.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         cluster.addReadReplicaWithIdAndRecordFormat( 4, recordFormat ).start();
@@ -104,7 +104,7 @@ public class ConvertNonCausalClusteringStoreIT
 
                 assertEquals( classicNodeCount + 1, count( db.getAllNodes() ) );
 
-                tx.success();
+                tx.commit();
             }
         }
     }

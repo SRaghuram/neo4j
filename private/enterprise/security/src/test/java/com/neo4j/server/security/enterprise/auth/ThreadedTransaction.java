@@ -101,7 +101,7 @@ class ThreadedTransaction<S>
                                 latch.finishAndWaitForAllToFinish();
                             }
                             result.close();
-                            tx.success();
+                            tx.commit();
                             return null;
                         }
                         catch ( Throwable t )

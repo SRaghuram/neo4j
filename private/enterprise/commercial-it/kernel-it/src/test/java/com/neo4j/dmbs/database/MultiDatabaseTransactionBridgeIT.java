@@ -107,7 +107,7 @@ class MultiDatabaseTransactionBridgeIT
         try ( Transaction transaction = systemDb.beginTx() )
         {
             systemNode = systemDb.createNode();
-            transaction.success();
+            transaction.commit();
         }
         try ( Transaction transaction = db.beginTx() )
         {

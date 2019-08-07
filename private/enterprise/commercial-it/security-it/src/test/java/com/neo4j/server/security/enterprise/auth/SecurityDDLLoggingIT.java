@@ -444,7 +444,7 @@ class SecurityDDLLoggingIT
         try ( InternalTransaction transaction = database.beginTransaction( Transaction.Type.explicit, loginContext ) )
         {
             database.execute( query, params );
-            transaction.success();
+            transaction.commit();
         }
     }
 

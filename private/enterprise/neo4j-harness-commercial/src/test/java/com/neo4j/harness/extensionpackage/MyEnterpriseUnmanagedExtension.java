@@ -45,7 +45,7 @@ public class MyEnterpriseUnmanagedExtension
             {
                 // nothing to-do
             }
-            tx.success();
+            tx.commit();
             return Response.status( HttpStatus.CREATED_201 ).build();
         }
         catch ( Exception e )

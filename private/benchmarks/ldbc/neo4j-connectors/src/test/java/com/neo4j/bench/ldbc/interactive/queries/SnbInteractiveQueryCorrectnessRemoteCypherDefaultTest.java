@@ -136,7 +136,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         try ( Transaction tx = connectionState.db().beginTx() )
         {
             query.execute( connectionState, operation );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {

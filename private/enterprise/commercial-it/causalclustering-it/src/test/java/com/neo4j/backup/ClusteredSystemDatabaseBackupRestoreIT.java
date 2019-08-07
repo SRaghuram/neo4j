@@ -96,7 +96,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL dbms.security.createUser('newAdmin', 'testPassword', false)" );
-            tx.success();
+            tx.commit();
         } );
 
         assertNotEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
@@ -115,7 +115,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL dbms.security.createUser('" + preBackupUsername + "', 'testPassword', false)" );
-            tx.success();
+            tx.commit();
         } );
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
@@ -123,7 +123,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         cluster.coreTx( ( db, tx ) ->
         {
             db.execute( "CALL dbms.security.createUser('" + postBackupUsername + "', 'testPassword', false)" );
-            tx.success();
+            tx.commit();
         } );
 
         List<Config> memberConfigs = cluster.coreMembers().stream().map( CoreClusterMember::config ).collect( Collectors.toList() );
@@ -148,7 +148,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
             Set<String> systemUsernames = securityResults.stream().map( r -> (String) r.get( "username" ) ).collect( Collectors.toSet() );
             assertTrue( systemUsernames.contains( preBackupUsername ) );
             assertFalse( systemUsernames.contains( postBackupUsername ) );
-            tx.success();
+            tx.commit();
         } );
     }
 

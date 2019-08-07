@@ -136,7 +136,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         try ( Transaction tx = connection.db().beginTx() )
         {
             results = query.execute( connection, operation );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -155,7 +155,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         try ( Transaction tx = connection.db().beginTx() )
         {
             query.execute( connection, operation );
-            tx.success();
+            tx.commit();
         }
         catch ( Exception e )
         {
@@ -225,7 +225,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
                     }
                 }
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -280,7 +280,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             {
                 hasMemberRelationship.delete();
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -332,7 +332,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
                     }
                 }
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -380,7 +380,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
                     }
                 }
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -458,7 +458,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             {
                 messageIsLocatedInRelationship.delete();
             }
-            tx.success();
+            tx.commit();
         }
     }
 

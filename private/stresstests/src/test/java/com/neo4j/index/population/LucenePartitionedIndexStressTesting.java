@@ -108,7 +108,7 @@ public class LucenePartitionedIndexStressTesting
             Schema schema = db.schema();
             schema.getConstraints().forEach( ConstraintDefinition::drop );
             schema.getIndexes().forEach( IndexDefinition::drop );
-            transaction.success();
+            transaction.commit();
         }
     }
 
@@ -209,7 +209,7 @@ public class LucenePartitionedIndexStressTesting
                     createIndex( i );
                 }
             }
-            transaction.success();
+            transaction.commit();
         }
         awaitIndexesOnline( db );
     }
@@ -342,7 +342,7 @@ public class LucenePartitionedIndexStressTesting
                     node.setProperty( getUniqueStringProperty(), stringValue );
                     node.setProperty( getUniqueLongProperty(), longValue );
                 }
-                transaction.success();
+                transaction.commit();
             }
             return BATCH_SIZE;
         }

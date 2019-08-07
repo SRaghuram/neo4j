@@ -280,7 +280,7 @@ class RestoreDatabaseCommandIT
             {
                 db.createNode();
             }
-            tx.success();
+            tx.commit();
         }
     }
 }

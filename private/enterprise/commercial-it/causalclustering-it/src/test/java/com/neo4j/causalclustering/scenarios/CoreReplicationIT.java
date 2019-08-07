@@ -86,7 +86,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then
@@ -124,7 +124,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then the replication should cause pins on a majority of core members to increase.
@@ -173,7 +173,7 @@ class CoreReplicationIT
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             db.createNode();
-            tx.success();
+            tx.commit();
         } );
 
         awaitForDataToBeApplied( leader );
@@ -210,7 +210,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode();
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // when
@@ -219,7 +219,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode();
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then
@@ -235,7 +235,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode();
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // when
@@ -246,7 +246,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode();
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         // then
@@ -265,7 +265,7 @@ class CoreReplicationIT
             {
                 Node node = db.createNode();
                 node.setProperty( "foobar", "baz_bat" );
-                tx.success();
+                tx.commit();
             } );
         }
 
@@ -285,7 +285,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         cluster.removeCoreMemberWithServerId( 0 );
@@ -295,7 +295,7 @@ class CoreReplicationIT
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             db.schema().indexFor( label( "boo" ) ).on( "foobar" ).create();
-            tx.success();
+            tx.commit();
         } );
 
         // then
@@ -313,7 +313,7 @@ class CoreReplicationIT
         {
             Node node = db.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
-            tx.success();
+            tx.commit();
         } );
 
         CountDownLatch latch = new CountDownLatch( 1 );
@@ -326,7 +326,7 @@ class CoreReplicationIT
                 cluster.coreTx( ( db, tx ) ->
                 {
                     db.createNode();
-                    tx.success();
+                    tx.commit();
 
                     cluster.removeCoreMember( cluster.getMemberWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );
                     cluster.removeCoreMember( cluster.getMemberWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );

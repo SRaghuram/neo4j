@@ -225,12 +225,12 @@ class OnlineBackupIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().indexFor( label ).on( property ).create();
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, MINUTES );
-            tx.success();
+            tx.commit();
         }
 
         int transactions = random.nextInt( 5, 20 );
@@ -252,7 +252,7 @@ class OnlineBackupIT
                     previousNode.createRelationshipTo( node, relType );
                     previousNode = node;
                 }
-                tx.success();
+                tx.commit();
             }
         }
     }

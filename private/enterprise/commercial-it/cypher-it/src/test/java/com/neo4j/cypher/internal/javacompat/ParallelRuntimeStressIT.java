@@ -159,7 +159,6 @@ public class ParallelRuntimeStressIT
             }
             previous = node;
         }
-        tx.success();
-        tx.close();
+        tx.commit();
     }
 }

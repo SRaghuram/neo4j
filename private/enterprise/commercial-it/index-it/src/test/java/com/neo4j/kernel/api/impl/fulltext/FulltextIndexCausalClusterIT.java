@@ -111,7 +111,7 @@ public class FulltextIndexCausalClusterIT
             nodeId1 = node1.getId();
             nodeId2 = node2.getId();
             relId1 = rel.getId();
-            tx.success();
+            tx.commit();
         } );
         cluster.coreTx( ( db, tx ) ->
         {
@@ -119,7 +119,7 @@ public class FulltextIndexCausalClusterIT
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
             db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
-            tx.success();
+            tx.commit();
         } );
 
         awaitCatchup();
@@ -143,7 +143,7 @@ public class FulltextIndexCausalClusterIT
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
             db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) ) ).close();
-            tx.success();
+            tx.commit();
         } );
 
         awaitCatchup();
@@ -162,7 +162,7 @@ public class FulltextIndexCausalClusterIT
             nodeId1 = node1.getId();
             nodeId2 = node2.getId();
             relId1 = rel.getId();
-            tx.success();
+            tx.commit();
         } );
 
         awaitCatchup();
@@ -191,7 +191,7 @@ public class FulltextIndexCausalClusterIT
             String relString = asConfigString( asProcedureConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex ) );
             db.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
             db.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
-            tx.success();
+            tx.commit();
         } );
 
         awaitCatchup();
@@ -221,7 +221,7 @@ public class FulltextIndexCausalClusterIT
         {
             Map<String,Value> actualIndexConfig = getIndexConfig( db, indexName );
             assertEquals( expectedIndexConfig, actualIndexConfig );
-            tx.success();
+            tx.commit();
         }
     }
 

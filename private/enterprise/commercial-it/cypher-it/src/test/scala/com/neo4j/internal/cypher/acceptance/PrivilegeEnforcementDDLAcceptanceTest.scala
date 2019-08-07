@@ -2804,7 +2804,7 @@ class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     try {
       val result: Result = new RichGraphDatabaseQueryService(graph).execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
       result.accept(_ => true)
-      tx.failure()
+      tx.rollback()
     } finally {
       tx.close()
     }

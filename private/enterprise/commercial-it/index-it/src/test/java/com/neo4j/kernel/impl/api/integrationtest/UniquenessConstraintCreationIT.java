@@ -265,7 +265,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
             db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
             db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
             db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
-            tx.success();
+            tx.commit();
         }
 
         // when

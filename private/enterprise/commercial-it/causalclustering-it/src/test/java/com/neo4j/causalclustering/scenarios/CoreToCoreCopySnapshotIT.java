@@ -186,7 +186,7 @@ public class CoreToCoreCopySnapshotIT
                 {
                     Node node = db.createNode();
                     node.setProperty( "that's a bam", string( 1024 ) );
-                    tx.success();
+                    tx.commit();
                 } );
             }
             return last;

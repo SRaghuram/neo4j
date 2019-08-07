@@ -55,7 +55,7 @@ class StoreMigrationTest
         {
             Node node = database.createNode();
             node.setProperty( "key", "value" );
-            transaction.success();
+            transaction.commit();
         }
         finally
         {

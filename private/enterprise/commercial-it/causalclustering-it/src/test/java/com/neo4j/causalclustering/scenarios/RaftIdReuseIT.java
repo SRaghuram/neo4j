@@ -67,7 +67,7 @@ public class RaftIdReuseIT
             node2id.setValue( node2.getId() );
             node3id.setValue( node3.getId() );
 
-            tx.success();
+            tx.commit();
         } );
 
         assumeTrue( leader1.equals( clusterMember ) );
@@ -117,7 +117,7 @@ public class RaftIdReuseIT
             assertTrue( String.format("Created node had id %d, should be %d or %d", node.getId(), first.getValue(), second.getValue() ),
                     node.getId() == first.getValue() || node.getId() == second.getValue());
 
-            tx.success();
+            tx.commit();
         } );
         assumeTrue( newLeader.equals( newCreationLeader ) );
     }
@@ -166,7 +166,7 @@ public class RaftIdReuseIT
             node1id.setValue( node1.getId() );
             node2id.setValue( node2.getId() );
 
-            tx.success();
+            tx.commit();
         } );
         assumeTrue( leader.equals( reuseLeader ) );
 
@@ -194,7 +194,7 @@ public class RaftIdReuseIT
 
             db.getNodeById( second.longValue() ).delete();
 
-            tx.success();
+            tx.commit();
         } );
     }
 
@@ -210,7 +210,7 @@ public class RaftIdReuseIT
 
             db.createNode();
 
-            tx.success();
+            tx.commit();
         } );
     }
 }

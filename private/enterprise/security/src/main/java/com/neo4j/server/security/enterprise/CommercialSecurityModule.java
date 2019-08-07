@@ -690,15 +690,18 @@ public class CommercialSecurityModule extends SecurityModule
             try ( InternalTransaction tx = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
             {
                 MapValue parameters = asParameterMapValue( params );
-                TransactionalContext context = contextFactory.newContext( tx, query, parameters );
-                QueryExecution execution =
-                        engine.executeQuery( query,
-                                parameters,
-                                context,
-                                false,
-                                subscriber );
-                execution.consumeAll();
-                tx.success();
+                try ( InternalTransaction internalTransaction = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
+                {
+                    TransactionalContext context = contextFactory.newContext( internalTransaction, query, parameters );
+                    QueryExecution execution =
+                            engine.executeQuery( query,
+                                    parameters,
+                                    context,
+                                    false,
+                                    subscriber );
+                    execution.consumeAll();
+                }
+                tx.commit();
             }
             catch ( Exception e )
             {

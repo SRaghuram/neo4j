@@ -294,8 +294,7 @@ class GraphDbStructureGuideTest
     {
         if ( bridge.hasTransaction() )
         {
-            tx.failure();
-            tx.close();
+            tx.rollback();
         }
     }
 
@@ -329,13 +328,6 @@ class GraphDbStructureGuideTest
 
     private void commit()
     {
-        try
-        {
-            tx.success();
-        }
-        finally
-        {
-            tx.close();
-        }
+        tx.commit();
     }
 }

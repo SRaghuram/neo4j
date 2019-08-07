@@ -56,8 +56,8 @@ public class DataCreator
 
                 Relationship rel = node1.createRelationshipTo( node2, RELATIONSHIP_TYPE );
                 rel.setProperty( RELATIONSHIP_PROPERTY, UUID.randomUUID().toString() );
-                tx.success();
             }
+            tx.commit();
         } );
     }
 
@@ -71,7 +71,7 @@ public class DataCreator
             {
                 Node node = db.createNode( label );
                 node.setProperty( propertyPair.get().first(), propertyPair.get().other() );
-                tx.success();
+                tx.commit();
             } );
         }
         return last;
@@ -85,7 +85,7 @@ public class DataCreator
             last = cluster.coreTx( ( db, tx ) ->
             {
                 db.createNode();
-                tx.success();
+                tx.commit();
             } );
         }
         return last;
@@ -98,7 +98,7 @@ public class DataCreator
         try ( Transaction tx = db.beginTx() )
         {
             count = count( db.getAllNodes() );
-            tx.success();
+            tx.commit();
         }
         return count;
     }
@@ -108,7 +108,7 @@ public class DataCreator
         cluster.coreTx( ( db, tx ) ->
         {
             db.schema().constraintFor( LABEL ).assertPropertyIsUnique( NODE_PROPERTY_1 ).create();
-            tx.success();
+            tx.commit();
         } );
     }
 

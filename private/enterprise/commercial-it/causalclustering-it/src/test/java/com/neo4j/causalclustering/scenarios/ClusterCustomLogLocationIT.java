@@ -42,7 +42,7 @@ public class ClusterCustomLogLocationIT
             cluster.coreTx( ( db, tx ) ->
             {
                 db.createNode();
-                tx.success();
+                tx.commit();
             } );
         }
 
