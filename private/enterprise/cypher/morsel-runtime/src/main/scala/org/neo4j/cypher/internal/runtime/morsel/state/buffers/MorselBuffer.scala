@@ -26,10 +26,10 @@ class MorselBuffer(id: BufferId,
                    override val argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater
-  with Sink[MorselExecutionContext]
-  with Source[MorselParallelizer]
-  with SinkByOrigin
-  with DataHolder {
+                    with Sink[MorselExecutionContext]
+                    with Source[MorselParallelizer]
+                    with SinkByOrigin
+                    with DataHolder {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
