@@ -12,11 +12,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.functions.{Filename, Linenumbe
 
 object MorselBlacklist {
 
-  private val BLACKLISTED_FUNCTIONS = Seq(Linenumber,
-                                          Filename,
-                                          Type) // type() uses thread-unsafe RelationshipProxy.type()
-
-  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan): Unit = {
+  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean): Unit = {
     val unsupport =
       logicalPlan.fold(Set[String]()) {
         //Queries containing these expression cant be handled by morsel runtime yet
@@ -26,7 +22,11 @@ object MorselBlacklist {
         case _: ResolvedFunctionInvocation =>
           _ + "User-defined functions"
 
-        case f: FunctionInvocation if BLACKLISTED_FUNCTIONS.contains(f.function) =>
+        case f: FunctionInvocation if f.function == Linenumber || f.function == Filename =>
+          _ + (f.functionName.name+"()")
+
+        // type() uses thread-unsafe RelationshipProxy.type()
+        case f: FunctionInvocation if f.function == Type && parallelExecution =>
           _ + (f.functionName.name+"()")
       }
     if (unsupport.nonEmpty) {

@@ -46,7 +46,7 @@ class MorselRuntime(parallelExecution: Boolean,
                                             context.config.transactionMaxMemory,
                                             allocateArgumentSlots = true)
 
-    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan)
+    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
