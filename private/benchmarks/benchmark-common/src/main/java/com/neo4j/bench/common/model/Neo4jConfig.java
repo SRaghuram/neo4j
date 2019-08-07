@@ -79,7 +79,7 @@ public class Neo4jConfig
 
     public Neo4jConfig addJvmArgs( List<String> additionalJvmArgs )
     {
-        Neo4jConfig newNeo4jConig = new Neo4jConfig( new HashMap<>( config ), jvmArgs );
+        Neo4jConfig newNeo4jConig = new Neo4jConfig( new HashMap<>( config ), jvmArgs.toArgs() );
         for ( String jvmArg : additionalJvmArgs )
         {
             newNeo4jConig = newNeo4jConig.addJvmArg( jvmArg );
@@ -102,7 +102,7 @@ public class Neo4jConfig
     {
         HashMap<String,String> newConfig = new HashMap<>( config );
         newConfig.put( setting, value );
-        return new Neo4jConfig( newConfig, jvmArgs );
+        return new Neo4jConfig( newConfig, jvmArgs.toArgs() );
     }
 
     public Neo4jConfig mergeWith( Neo4jConfig otherNeo4jConfig )

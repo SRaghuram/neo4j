@@ -54,7 +54,6 @@ public class ForkRunner
     {
         BenchmarkDirectory benchmarkDir = groupDir.findOrCreate( query.benchmark() );
         boolean doFork = measurementForkCount != 0;
-
         try
         {
             // profiler forks: each profiler run in separate fork

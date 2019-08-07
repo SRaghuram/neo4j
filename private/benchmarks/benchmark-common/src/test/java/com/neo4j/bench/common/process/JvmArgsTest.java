@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.common.process;
 
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
 
 import static java.util.Collections.emptyList;
@@ -23,11 +23,11 @@ public class JvmArgsTest
         // when
         jvmArgs = jvmArgs.set( "-Xmx4g" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-Xmx4g" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-Xmx4g" ) );
         // when
         jvmArgs = jvmArgs.set( "-Xms4g" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-Xmx4g", "-Xms4g" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-Xmx4g", "-Xms4g" ) );
     }
 
     @Test
@@ -39,7 +39,7 @@ public class JvmArgsTest
         // when
         jvmArgs = jvmArgs.set( "-Xmx8g" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-Xmx8g" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-Xmx8g" ) );
     }
 
     @Test
@@ -51,7 +51,7 @@ public class JvmArgsTest
         // when
         jvmArgs = jvmArgs.set( "-XX:-PrintFlagFinal" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-XX:-PrintFlagFinal" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-XX:-PrintFlagFinal" ) );
     }
 
     @Test
@@ -63,7 +63,7 @@ public class JvmArgsTest
         // when
         jvmArgs = jvmArgs.set( "-XX:NativeMemorySummary=summary" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-XX:NativeMemorySummary=summary" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-XX:NativeMemorySummary=summary" ) );
     }
 
     @Test
@@ -75,7 +75,19 @@ public class JvmArgsTest
         // when
         jvmArgs = jvmArgs.set( "-Dapp=name1" );
         // then
-        assertThat( jvmArgs.toArgs(), Matchers.contains( "-Dapp=name1" ) );
+        assertThat( jvmArgs.toArgs(), contains( "-Dapp=name1" ) );
+    }
+
+    @Test
+    public void overwriteJvmSettingIfExists()
+    {
+        // given
+        JvmArgs jvmArgs = JvmArgs.from( emptyList() );
+        jvmArgs = jvmArgs.set( "-Xloggc:/tmp/gc.log" );
+        // when
+        jvmArgs = jvmArgs.set( "-Xloggc:gc.log" );
+        // then
+        assertThat( jvmArgs.toArgs(), contains( "-Xloggc:gc.log" ) );
     }
 
     @Test( expected = IllegalArgumentException.class )

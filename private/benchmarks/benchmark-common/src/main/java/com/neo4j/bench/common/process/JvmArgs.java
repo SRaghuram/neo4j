@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 import static com.neo4j.bench.common.util.Args.splitArgs;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -32,11 +33,13 @@ public class JvmArgs
     private static final String ARGNAME_CAPTURING_GROUP = "argname";
 
     private static final Pattern MEMORY_SETTING = Pattern.compile( "-X(?<argname>ms|mx|ss)(\\d+)(k|K|m|M|g|G)" );
+    private static final Pattern JVM_SETTING = Pattern.compile( "-X(?<argname>[^:]+)(:.+)?" );
     private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]+)" );
     private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>[^=]+)=.*" );
     private static final Pattern PROPERTY = Pattern.compile( "-D(?<argname>[^=]+)(=.+)?" );
 
-    private static final List<Pattern> PATTERNS = Arrays.asList( MEMORY_SETTING,BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY );
+    private static final List<Pattern> PATTERNS =
+            asList( MEMORY_SETTING, JVM_SETTING, BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY );
 
     public static List<String> standardArgs( ForkDirectory forkDirectory )
     {
@@ -94,12 +97,12 @@ public class JvmArgs
      */
     public JvmArgs set( String jvmArg )
     {
-        List<String> list = jvmArgs.stream().map( mapArg( jvmArg ) ).collect( toList() );
-        if ( !list.contains( jvmArg ) )
+        List<String> args = jvmArgs.stream().map( mapArg( jvmArg ) ).collect( toList() );
+        if ( !args.contains( jvmArg ) )
         {
-            list.add( jvmArg );
+            args.add( jvmArg );
         }
-        return new JvmArgs( list );
+        return new JvmArgs( args );
     }
 
     public List<String> toArgs()
@@ -134,12 +137,16 @@ public class JvmArgs
         return Objects.equals( jvmArgs, other.jvmArgs );
     }
 
+    /**
+     * If argument names are equal return new JVM argument value,
+     * else return old one. If we cannot parse argument, throw an error,
+     *
+     * @param newJvmArg
+     * @return
+     */
     private static Function<String,String> mapArg( String newJvmArg )
     {
-
         String newArgName = extractArgName( newJvmArg );
-        // if arg names are equal return new jvm arg, else return old one
-        // if we cannot parse argument, throw error
         return oldJvmArg -> {
             String oldArgName = extractArgName( oldJvmArg );
             if ( oldArgName.equals( newArgName ) )
@@ -150,15 +157,23 @@ public class JvmArgs
         };
     }
 
+    /**
+     * JVM argument can come in many flavors.
+     * In order to extract JVM argument name we go through list
+     * of possible patterns, and extract argument name from
+     * first pattern that matches.
+     *
+     * @param jvmArg
+     * @return
+     */
     private static String extractArgName( String jvmArg )
     {
-
         return PATTERNS.stream()
                 .map( p -> p.matcher( jvmArg ) )
                 .filter( Matcher::matches )
                 .map( m -> m.group( ARGNAME_CAPTURING_GROUP) )
                 .findFirst()
-                .orElseThrow( () -> new IllegalArgumentException( format( "don't know how to handle %s JVM argument", jvmArg ) ) );
+                .orElseThrow( () -> new IllegalArgumentException( format( "Don't know how to handle JVM argument: '%s'", jvmArg ) ) );
     }
 
 }
