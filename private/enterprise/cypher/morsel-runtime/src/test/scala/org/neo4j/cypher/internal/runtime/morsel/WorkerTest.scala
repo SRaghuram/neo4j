@@ -5,15 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.mockito.Mockito.{never, times, verify}
+import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutingQuery, QueryManager, QueryResources, SchedulingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class WorkerTest extends CypherFunSuite {
 
   test("should not reset sleeper when no queries") {
+
     val ATTEMPTS = 100
-    val countDown = new CountDown[ExecutingQuery](ATTEMPTS, null)
+    val countDown = new CountDown[ExecutingQuery](ATTEMPTS, mockExecutingQuery)
     val queryManager: QueryManager =
       new QueryManager {
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = countDown.next()
@@ -36,7 +38,7 @@ class WorkerTest extends CypherFunSuite {
     val ATTEMPTS = 100
     val queryManager: QueryManager =
       new QueryManager {
-        override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = mock[ExecutingQuery]
+        override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = mockExecutingQuery
       }
 
     val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
@@ -65,5 +67,14 @@ class WorkerTest extends CypherFunSuite {
         worker.stop()
       t
     }
+  }
+
+  private def mockExecutingQuery = {
+    val executingQuery = mock[ExecutingQuery]
+    val provider = mock[WorkerResourceProvider]
+    when(executingQuery.workerResourceProvider).thenReturn(provider)
+    when(provider.resourcesForWorker(anyInt())).thenReturn(null)
+
+    executingQuery
   }
 }
