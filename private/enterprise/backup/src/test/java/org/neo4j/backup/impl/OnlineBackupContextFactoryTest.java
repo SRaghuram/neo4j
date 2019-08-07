@@ -39,6 +39,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 
 public class OnlineBackupContextFactoryTest
@@ -51,6 +52,7 @@ public class OnlineBackupContextFactoryTest
     public SuppressOutput suppress = SuppressOutput.suppressAll();
 
     private Path homeDir;
+    private Path backupDir;
     private Path configDir;
     private Path configFile;
 
@@ -58,6 +60,7 @@ public class OnlineBackupContextFactoryTest
     public void setUp() throws IOException
     {
         homeDir = testDirectory.directory( "home" ).toPath();
+        backupDir = testDirectory.directory( "backup" ).toPath();
         configDir = testDirectory.directory( "config" ).toPath();
         configFile = configDir.resolve( "neo4j.conf" );
         String neo4jConfContents = "dbms.backup.address = localhost:1234";
@@ -122,6 +125,14 @@ public class OnlineBackupContextFactoryTest
         expected.expect( IncorrectUsage.class );
         expected.expectMessage( "Missing argument 'backup-dir'" );
         new OnlineBackupContextFactory( homeDir, configDir ).createContext();
+    }
+
+    @Test
+    public void backupCommandDataDirectoryIsTheBackupDirectory() throws Exception
+    {
+        OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
+        OnlineBackupContext context = handler.createContext( requiredAnd( "--from=:1234" ) );
+        assertEquals( backupDir, context.getConfig().get( logs_directory ).toPath() );
     }
 
     @Test
@@ -337,7 +348,7 @@ public class OnlineBackupContextFactoryTest
     private String[] requiredAnd( String... additionalArgs )
     {
         List<String> args = new ArrayList<>();
-        args.add( "--backup-dir=/" );
+        args.add( "--backup-dir=" + backupDir );
         args.add( "--name=mybackup" );
         Collections.addAll( args, additionalArgs );
         return args.toArray( new String[0] );
