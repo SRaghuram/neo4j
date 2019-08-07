@@ -3,13 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher
+package com.neo4j.cypher
 
 import java.util
 
 import org.neo4j.collection.RawIterator
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
+import org.neo4j.cypher.{GraphIcing, SyntaxException}
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite

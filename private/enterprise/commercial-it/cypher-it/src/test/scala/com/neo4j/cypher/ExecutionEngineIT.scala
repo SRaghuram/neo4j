@@ -3,12 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher
+package com.neo4j.cypher
 
 import java.util
 
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
 import org.neo4j.collection.RawIterator
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.cypher.GraphIcing
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
@@ -18,7 +20,6 @@ import org.neo4j.internal.kernel.api.procs._
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.{CallableProcedure, Context}
 import org.neo4j.procedure.Mode
-import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
@@ -28,7 +29,7 @@ import scala.collection.mutable.ArrayBuffer
 class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
   test("should be possible to close compiled result after it is consumed") {
-    val managementService = new TestDatabaseManagementServiceBuilder().impermanent().build()
+    val managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build()
     // given
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {

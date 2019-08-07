@@ -3,14 +3,15 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher
+package com.neo4j.cypher
 
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, DPPlannerName, IDPPlannerName}
-import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
+import org.neo4j.cypher.{CypherVersion, ExecutionEngineFunSuite}
+import org.neo4j.graphdb.ExecutionPlanDescription
 
-class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite {
+class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
 
   test("query that does not go through the morsel runtime") {
     given("MATCH (n) RETURN n, count(*) SKIP 2")

@@ -3,13 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compiled_runtime
+package com.neo4j.cypher
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 
-class TypeConversionTest extends ExecutionEngineFunSuite {
+class TypeConversionTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   test("should not allow adding node and number") {
     val x = createNode()
     val failure = intercept[CypherTypeException] {
