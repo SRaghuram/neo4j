@@ -45,61 +45,39 @@ case class ArgumentStateDefinition(id: ArgumentStateMapId,
                                    planId: Id,
                                    argumentSlotOffset: Int)
 
-/**
-  * Different types of operators that keep argument state and are interesting to the current (upstream) operator
-  * because of different reasons.
-  */
-sealed trait DownstreamStateOperator
-
-/**
-  * An operator needs to count tasks towards a downstream reducer.
-  */
-case class DownstreamReduce(id: ArgumentStateMapId) extends DownstreamStateOperator
-
-/**
-  * An operator needs to check if work has been cancelled with a downstream work canceller.
-  */
-case class DownstreamWorkCanceller(id: ArgumentStateMapId) extends DownstreamStateOperator
-
-/**
-  * An operator needs to initiate argument states for other downstream state operators.
-  */
-case class DownstreamState(id: ArgumentStateMapId) extends DownstreamStateOperator
-
 
 // -- BUFFERS
 
 /**
-  * Common superclass of all buffer definitions.
+  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a MorselBuffer.
   */
-sealed trait BufferDefinition {
-  def id: BufferId
+case class BufferDefinition(id: BufferId,
+                            // We need multiple reducers because a buffer might need to
+                            // reference count for multiple downstream reduce operators,
+                            // at potentially different argument depths
+                            reducers: IndexedSeq[ArgumentStateMapId],
+                            workCancellers: IndexedSeq[ArgumentStateMapId],
+                            downstreamStates: IndexedSeq[ArgumentStateMapId],
+                            variant: BufferVariant) {
+  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(reducers = reducers)
 
-  def downstreamStates: IndexedSeq[DownstreamStateOperator]
-
-  def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): BufferDefinition
-
+  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(workCancellers = workCancellers)
 }
 
 /**
-  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a MorselBuffer.
+  * Common superclass of all buffer variants.
   */
-case class MorselBufferDefinition(id: BufferId,
-                                  downstreamStates: IndexedSeq[DownstreamStateOperator])
-  extends BufferDefinition {
+sealed trait BufferVariant
 
-  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): MorselBufferDefinition = copy(downstreamStates = downstreamStates)
-}
+/**
+  * Regular morsel buffer.
+  */
+case object RegularBufferVariant extends BufferVariant
 
 /**
   * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalMorselBuffer.
   */
-case class OptionalMorselBufferDefinition(id: BufferId,
-                                          argumentStateMapId: ArgumentStateMapId,
-                                          downstreamStates: IndexedSeq[DownstreamStateOperator])
-  extends BufferDefinition {
-  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): OptionalMorselBufferDefinition = copy(downstreamStates = downstreamStates)
-}
+case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 /**
   * Sits between the LHS and RHS of an apply.
@@ -108,41 +86,23 @@ case class OptionalMorselBufferDefinition(id: BufferId,
   *
   * @param reducersOnRHS these are ArgumentStates of reducers on the RHS
   */
-case class ApplyBufferDefinition(id: BufferId,
-                                 argumentSlotOffset: Int,
-                                 downstreamStates: IndexedSeq[DownstreamStateOperator],
-                                 reducersOnRHS: IndexedSeq[ArgumentStateDefinition],
-                                 delegates: IndexedSeq[BufferId])
-  extends BufferDefinition {
-
-  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): ApplyBufferDefinition = copy(downstreamStates = downstreamStates)
-}
+case class ApplyBufferVariant(argumentSlotOffset: Int,
+                              reducersOnRHS: IndexedSeq[ArgumentStateDefinition],
+                              delegates: IndexedSeq[BufferId]) extends BufferVariant
 
 /**
   * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
   * Maps to a MorselArgumentStateBuffer.
   */
-case class ArgumentStateBufferDefinition(id: BufferId,
-                                         argumentStateMapId: ArgumentStateMapId,
-                                         downstreamStates: IndexedSeq[DownstreamStateOperator])
-  extends BufferDefinition {
-
-  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): ArgumentStateBufferDefinition = copy(downstreamStates = downstreamStates)
-}
+case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 /**
   * This buffer maps to a LHSAccumulatingRHSStreamingBuffer. It sits before a hash join.
   */
-case class LHSAccumulatingRHSStreamingBufferDefinition(id: BufferId,
-                                                       lhsPipelineId: PipelineId,
-                                                       rhsPipelineId: PipelineId,
-                                                       lhsArgumentStateMapId: ArgumentStateMapId,
-                                                       rhsArgumentStateMapId: ArgumentStateMapId,
-                                                       downstreamStates: IndexedSeq[DownstreamStateOperator])
-  extends BufferDefinition {
-
-  override def withDownstreamStates(downstreamStates: IndexedSeq[DownstreamStateOperator]): LHSAccumulatingRHSStreamingBufferDefinition = copy(downstreamStates = downstreamStates)
-}
+case class LHSAccumulatingRHSStreamingBufferVariant(lhsPipelineId: PipelineId,
+                                                    rhsPipelineId: PipelineId,
+                                                    lhsArgumentStateMapId: ArgumentStateMapId,
+                                                    rhsArgumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 // -- OUTPUT
 sealed trait OutputDefinition

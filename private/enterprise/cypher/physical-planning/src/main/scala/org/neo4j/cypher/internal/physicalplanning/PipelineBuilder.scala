@@ -40,26 +40,38 @@ object PipelineBuilder {
   }
 
   private def mapBuffer(bufferDefinition: BufferDefinitionBuild): BufferDefinition = {
-    bufferDefinition match {
+    val downstreamReducers = bufferDefinition.downstreamStates.collect { case d: DownstreamReduce => d.id }
+    val workCancellerIDs = bufferDefinition.downstreamStates.collect { case d: DownstreamWorkCanceller => d.id }
+    val downstreamStateIDs = bufferDefinition.downstreamStates.collect { case d: DownstreamState => d.id }
+
+    val variant = bufferDefinition match {
       case b: ApplyBufferDefinitionBuild =>
-        ApplyBufferDefinition(b.id, b.argumentSlotOffset, bufferDefinition.downstreamStates, b.reducersOnRHS.map(mapArgumentStateDefinition), b.delegates)
+        ApplyBufferVariant(b.argumentSlotOffset,
+                           b.reducersOnRHS.map(mapArgumentStateDefinition),
+                           b.delegates)
+
       case b: ArgumentStateBufferDefinitionBuild =>
-        ArgumentStateBufferDefinition(b.id, b.argumentStateMapId, bufferDefinition.downstreamStates)
+        ArgumentStateBufferVariant(b.argumentStateMapId)
+
       case b: MorselBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
+        RegularBufferVariant
+
       case b: OptionalMorselBufferDefinitionBuild =>
-        OptionalMorselBufferDefinition(b.id, b.argumentStateMapId, bufferDefinition.downstreamStates)
+        OptionalBufferVariant(b.argumentStateMapId)
+
       case b: DelegateBufferDefinitionBuild =>
-        MorselBufferDefinition(b.id, bufferDefinition.downstreamStates)
+        RegularBufferVariant
+
       case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>
-        LHSAccumulatingRHSStreamingBufferDefinition(b.id, b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId, bufferDefinition.downstreamStates)
+        LHSAccumulatingRHSStreamingBufferVariant(b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId)
+
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }
+    BufferDefinition(bufferDefinition.id, downstreamReducers, workCancellerIDs, downstreamStateIDs, variant)
   }
 
   private def mapArgumentStateDefinition(build: ArgumentStateDefinitionBuild): ArgumentStateDefinition =
     ArgumentStateDefinition(build.id, build.planId, build.argumentSlotOffset)
-
 
 }

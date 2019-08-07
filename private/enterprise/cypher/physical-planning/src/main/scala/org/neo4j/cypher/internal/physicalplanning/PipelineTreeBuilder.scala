@@ -41,6 +41,11 @@ object PipelineTreeBuilder {
                                           argumentSlotOffset: Int,
                                           counts: Boolean)
 
+  sealed trait DownstreamStateOperator
+  case class DownstreamReduce(id: ArgumentStateMapId) extends DownstreamStateOperator
+  case class DownstreamWorkCanceller(id: ArgumentStateMapId) extends DownstreamStateOperator
+  case class DownstreamState(id: ArgumentStateMapId) extends DownstreamStateOperator
+
   /**
     * Builder for [[BufferDefinition]]
     */
@@ -49,13 +54,13 @@ object PipelineTreeBuilder {
   }
 
   /**
-    * Builder for [[MorselBufferDefinition]]
+    * Builder for [[RegularBufferVariant]]
     */
   class MorselBufferDefinitionBuild(id: BufferId,
                                     val producingPipelineId: PipelineId) extends BufferDefinitionBuild(id)
 
   /**
-    * Builder for [[OptionalMorselBufferDefinition]]
+    * Builder for [[OptionalBufferVariant]]
     */
   class OptionalMorselBufferDefinitionBuild(id: BufferId,
                                             val producingPipelineId: PipelineId,
@@ -63,13 +68,13 @@ object PipelineTreeBuilder {
                                             val argumentSlotOffset: Int) extends BufferDefinitionBuild(id)
 
   /**
-    * Builder for [[MorselBufferDefinition]], that is a delegate.
+    * Builder for [[RegularBufferVariant]], that is a delegate.
     */
   class DelegateBufferDefinitionBuild(id: BufferId,
                                       val applyBuffer: ApplyBufferDefinitionBuild) extends BufferDefinitionBuild(id)
 
   /**
-    * Builder for [[ApplyBufferDefinition]]
+    * Builder for [[ApplyBufferVariant]]
     */
   class ApplyBufferDefinitionBuild(id: BufferId,
                                    producingPipelineId: PipelineId,
@@ -81,14 +86,14 @@ object PipelineTreeBuilder {
   }
 
   /**
-    * Builder for [[ArgumentStateBufferDefinition]]
+    * Builder for [[ArgumentStateBufferVariant]]
     */
   class ArgumentStateBufferDefinitionBuild(id: BufferId,
                                            producingPipelineId: PipelineId,
                                            val argumentStateMapId: ArgumentStateMapId) extends MorselBufferDefinitionBuild(id, producingPipelineId)
 
   /**
-    * Builder for [[LHSAccumulatingRHSStreamingBufferDefinition]]
+    * Builder for [[LHSAccumulatingRHSStreamingBufferVariant]]
     */
   class LHSAccumulatingRHSStreamingBufferDefinitionBuild(id: BufferId,
                                                          val lhsPipelineId: PipelineId,

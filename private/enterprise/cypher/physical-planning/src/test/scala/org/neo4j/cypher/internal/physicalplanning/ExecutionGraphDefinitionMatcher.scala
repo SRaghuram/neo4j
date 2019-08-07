@@ -94,41 +94,43 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   class StartSequence {
 
     def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, ApplyBufferVariant(argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty)))
       new ApplyBufferSequence(bd)
     }
 
     def morselBuffer(id: Int): MorselBufferSequence = {
       // This buffer must have been specified before
-      new MorselBufferSequence(buffers(id).asInstanceOf[MorselBufferDefinition])
+      new MorselBufferSequence(buffers(id))
     }
   }
 
   abstract class BufferSequence(bufferDefinition: BufferDefinition) {
     def reducer(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.withDownstreamStates(bufferDefinition.downstreamStates :+ DownstreamReduce(asd.id)))
+      buffers.put(bufferDefinition.id.x, bufferDefinition.withReducers(bufferDefinition.reducers :+ asd.id))
       ExecutionGraphDefinitionMatcher.this
     }
 
     def canceller(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.withDownstreamStates(bufferDefinition.downstreamStates :+ DownstreamWorkCanceller(asd.id)))
+      buffers.put(bufferDefinition.id.x, bufferDefinition.withWorkCancellers(bufferDefinition.workCancellers :+ asd.id))
       ExecutionGraphDefinitionMatcher.this
     }
   }
 
-  class ApplyBufferSequence(applyBufferDefinition: ApplyBufferDefinition) extends BufferSequence(applyBufferDefinition) {
+  class ApplyBufferSequence(bufferDefinition: BufferDefinition) extends BufferSequence(bufferDefinition) {
+
+    private val variant = bufferDefinition.variant.asInstanceOf[ApplyBufferVariant]
 
     def delegateToMorselBuffer(id: Int): MorselBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, MorselBufferDefinition(BufferId(id), IndexedSeq.empty)).asInstanceOf[MorselBufferDefinition]
-      buffers(applyBufferDefinition.id.x) = applyBufferDefinition.copy(delegates = applyBufferDefinition.delegates :+ bd.id)
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, RegularBufferVariant))
+      buffers(bufferDefinition.id.x) = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))
       new MorselBufferSequence(bd)
     }
 
     def reducerOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(applyBufferDefinition.id.x, applyBufferDefinition.copy(reducersOnRHS = applyBufferDefinition.reducersOnRHS :+ asd))
+      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHS = variant.reducersOnRHS :+ asd)))
       ExecutionGraphDefinitionMatcher.this
     }
   }
@@ -141,31 +143,31 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   }
 
-  class MorselBufferSequence(morselBufferDefinition: MorselBufferDefinition) extends BufferBeforePipelineSequence(morselBufferDefinition)
+  class MorselBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
-  class ArgumentStateBufferSequence(argumentStateBufferDefinition: ArgumentStateBufferDefinition) extends BufferBeforePipelineSequence(argumentStateBufferDefinition)
+  class ArgumentStateBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
-  class OptionalBufferSequence(argumentStateBufferDefinition: OptionalMorselBufferDefinition) extends BufferBeforePipelineSequence(argumentStateBufferDefinition)
+  class OptionalBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
-  class JoinBufferSequence(joinBufferDefinition: LHSAccumulatingRHSStreamingBufferDefinition) extends BufferBeforePipelineSequence(joinBufferDefinition)
+  class JoinBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
   class PipelineSequence(matchablePipeline: MatchablePipeline) {
     def argumentStateBuffer(id: Int, asmId: Int = -1): ArgumentStateBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ArgumentStateBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty)).asInstanceOf[ArgumentStateBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, ArgumentStateBufferVariant(ArgumentStateMapId(asmId))))
       val out = ReduceOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ArgumentStateBufferSequence(bd)
     }
 
     def optionalBuffer(id: Int, argumentSlotOffset: Int,  asmId: Int = -1): OptionalBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, OptionalMorselBufferDefinition(BufferId(id), ArgumentStateMapId(asmId), IndexedSeq.empty)).asInstanceOf[OptionalMorselBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, OptionalBufferVariant(ArgumentStateMapId(asmId))))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new OptionalBufferSequence(bd)
     }
 
     def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id, ApplyBufferDefinition(BufferId(id), argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty)).asInstanceOf[ApplyBufferDefinition]
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, ApplyBufferVariant(argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty)))
       val out = MorselBufferOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ApplyBufferSequence(bd)
@@ -174,8 +176,9 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
-      val updatedBD = bd.copy(lhsPipelineId = matchablePipeline.id)
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, LHSAccumulatingRHSStreamingBufferVariant(PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId))))
+      val variant = bd.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+      val updatedBD = bd.copy(variant = variant.copy(lhsPipelineId = matchablePipeline.id))
       // Update lhs pipeline ID
       buffers.update(id, updatedBD)
       new JoinBufferSequence(updatedBD)
@@ -184,8 +187,9 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     def rightOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
       val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id, LHSAccumulatingRHSStreamingBufferDefinition(BufferId(id), PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId), IndexedSeq.empty)).asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
-      val updatedBD = bd.copy(rhsPipelineId = matchablePipeline.id)
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id), IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, LHSAccumulatingRHSStreamingBufferVariant(PipelineId(-1), PipelineId(-1), ArgumentStateMapId(lhsAsmId), ArgumentStateMapId(rhsAsmId))))
+      val variant = bd.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+      val updatedBD = bd.copy(variant = variant.copy(rhsPipelineId = matchablePipeline.id))
       // Update rhs pipeline ID
       buffers.update(id, updatedBD)
       new JoinBufferSequence(updatedBD)

@@ -160,7 +160,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               lazyTypes)
 
       case plans.Optional(source, protectedSymbols) =>
-        val argumentStateMapId = inputBuffer.asInstanceOf[OptionalMorselBufferDefinition].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
         val nullableKeys = source.availableSymbols -- protectedSymbols
         val nullableSlots: Array[Slot] = nullableKeys.map(k => slots.get(k).get).toArray
         val argumentSize = physicalPlan.argumentSizes(plan.id)
@@ -199,7 +199,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val refsToCopy = copyRefsFromRHS.result()
         val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result()
 
-        val buffer = inputBuffer.asInstanceOf[LHSAccumulatingRHSStreamingBufferDefinition]
+        val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
         new NodeHashJoinOperator(
           WorkIdentity.fromPlan(plan),
           buffer.lhsArgumentStateMapId,
@@ -226,14 +226,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val ordering = sortItems.map(translateColumnOrder(slots, _))
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
-        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
         new SortMergeOperator(argumentStateMapId,
                               WorkIdentity.fromPlan(plan),
                               ordering,
                               argumentSlot)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
-        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
 
         val aggregators = Array.newBuilder[Aggregator]
         val outputSlots = Array.newBuilder[Int]
@@ -250,7 +250,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                      outputSlots.result())
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
-        val argumentStateMapId = inputBuffer.asInstanceOf[ArgumentStateBufferDefinition].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
 
         val aggregators = Array.newBuilder[Aggregator]
