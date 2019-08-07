@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -84,6 +85,8 @@ public class SubmitTestRunsAndPlansIT
     @RegisterExtension
     static final Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
                                                                          .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                                                                         .withConfig( BoltConnector.enabled, true )
+                                                                         .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
                                                                          .build();
 
     private static final String USERNAME = "neo4j";

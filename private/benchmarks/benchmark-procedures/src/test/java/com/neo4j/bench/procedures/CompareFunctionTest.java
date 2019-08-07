@@ -25,6 +25,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -49,11 +50,13 @@ public class CompareFunctionTest
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
-            .withProcedure( VarianceProcedure.class )
-            .withFunction( CompareFunction.class )
-            .withFunction( DateTimeFunction.class )
-            .withConfig( GraphDatabaseSettings.auth_enabled, false )
-            .build();
+                                                                   .withProcedure( VarianceProcedure.class )
+                                                                   .withConfig( BoltConnector.enabled, true )
+                                                                   .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
+                                                                   .withFunction( CompareFunction.class )
+                                                                   .withFunction( DateTimeFunction.class )
+                                                                   .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                                                                   .build();
 
     private URI boltUri;
 

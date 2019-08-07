@@ -55,6 +55,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
@@ -86,7 +87,11 @@ class EndToEndIT
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension =
-            CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, false ).build();
+            CommercialNeo4jExtension.builder()
+                                    .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                                    .withConfig( BoltConnector.enabled, true )
+                                    .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
+                                    .build();
 
     @Inject
     private TestDirectory temporaryFolder;

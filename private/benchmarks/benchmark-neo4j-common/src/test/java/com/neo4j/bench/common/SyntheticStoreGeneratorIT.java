@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
@@ -56,6 +57,8 @@ public class SyntheticStoreGeneratorIT
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+                                                                   .withConfig( BoltConnector.enabled, true )
+                                                                   .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
                                                                    .withConfig( GraphDatabaseSettings.auth_enabled, false )
                                                                    .build();
 
