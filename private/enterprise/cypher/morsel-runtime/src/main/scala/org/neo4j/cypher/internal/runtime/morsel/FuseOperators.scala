@@ -58,51 +58,19 @@ class FuseOperators(operatorFactory: OperatorFactory,
   private def fuseOperators(headPlan: LogicalPlan,
                             middlePlans: Seq[LogicalPlan],
                             output: OutputDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {
-
-    // TODO ===================================================================================================================================================
-    //      obviously a filthy hack.
-    //      for some reason the slots needed by aggregation are not available in start operator.
-    //      this merges all pipeline operator slots configurations, rather than using start operator slot configuration.
-    def getSlots: SlotConfiguration = {
-      val slotsHead = physicalPlan.slotConfigurations(headPlan.id)
-      output match {
-        case ReduceOutput(_, p@Aggregation(_, groupingExpressions, _)) if groupingExpressions.nonEmpty =>
-          val slotsAll = slotsHead.copy()
-          val nonHeadPlanIds = middlePlans.map(_.id) :+ p.id
-          nonHeadPlanIds.foreach(id => {
-            val operatorSlots = physicalPlan.slotConfigurations(id)
-            operatorSlots.foreachSlot[Unit](
-              slotInfo => {
-                slotsAll.get(slotInfo._1) match {
-                  case None =>
-                    slotsAll.add(slotInfo._1, slotInfo._2)
-                  case _ =>
-                }
-              },
-              cachedSlotInfo => {
-                slotsAll.getCachedPropertySlot(cachedSlotInfo._1) match {
-                  case None =>
-                    throw new RuntimeException(s"Surprising! Cached property slot missing from later operator of same pipeline. Missing slot: $cachedSlotInfo")
-                }
-              })
-          })
-          slotsAll
-        case _ =>
-          slotsHead
-      }
-    }
-    // TODO ===================================================================================================================================================
-
     val id = headPlan.id
-    val slots = getSlots
-    val namer = new VariableNamer
-    val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots are the same within an entire pipeline // TODO <-- not true
-    def compile(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileExpression(astExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
+    val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
-    def compileGroupingKey(astExpressions: Map[String, org.neo4j.cypher.internal.v4_0.expressions.Expression]): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileGrouping(astExpressions)
-                              .map(_.computeKey)
+    val namer = new VariableNamer
+    val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots are the same within an entire pipeline
+
+    def compileExpression(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
+      () => expressionCompiler.intermediateCompileExpression(astExpression)
+                              .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
+
+    def compileGroupingKey(astExpressions: Map[String, org.neo4j.cypher.internal.v4_0.expressions.Expression],
+                           slots: SlotConfiguration): () => IntermediateExpression =
+      () => expressionCompiler.intermediateCompileGroupingKey(astExpressions, slots)
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
 
     generateSlotAccessorFunctions(slots)
@@ -125,47 +93,36 @@ class FuseOperators(operatorFactory: OperatorFactory,
           val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(expressionCompiler)
           (template, List(p), NoOutput)
 
-        case reduceOutput@ReduceOutput(bufferId, p) =>
-          p match {
-            case plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap) if groupingExpressions.nonEmpty =>
+        case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
+          innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
+          innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
+          val argumentDepth = physicalPlan.applyPlans(id)
+          val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
 
-              innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
-              innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
-              val argumentDepth = physicalPlan.applyPlans(id)
-              val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+          // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
+          val outputSlots = physicalPlan.slotConfigurations(p.id)
 
-              val aggregators = Array.newBuilder[Aggregator]
-              val aggregationExpressions = Array.newBuilder[Expression]
-              aggregationExpressionsMap.foreach {
-                case (key, astExpression) =>
-                  val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
-                  aggregators += aggregator
-                  aggregationExpressions += innerAstExpression
-              }
-
-              /*
-              TODO the grouping expression seems to be generated inline in the operator, but also a separate class is created and never used. why?
-                   e.g.,
-                   package org.neo4j.codegen;
-                   /** Generated by org.neo4j.codegen.source.SourceCodeGenerator */
-                   public class Expression0 extends java.lang.Object
-                       implements org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
-               */
-
-              val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
-              val template = new AggregationMapperOperatorTaskTemplate(innermostTemplate,
-                                                                       p.id,
-                                                                       argumentSlotOffset,
-                                                                       aggregators.result(),
-                                                                       bufferId,
-                                                                       aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compile(e)()),
-                                                                       groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions),
-                                                                       aggregationAstExpressions)(expressionCompiler)
-              (template, List(p), NoOutput)
-
-            case _ =>
-              (innermostTemplate, List.empty[LogicalPlan], reduceOutput)
+          val aggregators = Array.newBuilder[Aggregator]
+          val aggregationExpressions = Array.newBuilder[Expression]
+          aggregationExpressionsMap.foreach {
+            case (key, astExpression) =>
+              val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
+              aggregators += aggregator
+              aggregationExpressions += innerAstExpression
           }
+
+          val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
+          val template =
+            new AggregationMapperOperatorTaskTemplate(innermostTemplate,
+                                                      p.id,
+                                                      argumentSlotOffset,
+                                                      aggregators.result(),
+                                                      bufferId,
+                                                      aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
+                                                      groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots),
+                                                      aggregationAstExpressions)(expressionCompiler)
+          (template, List(p), NoOutput)
+
         case unhandled =>
           (innermostTemplate, List.empty[LogicalPlan], unhandled)
       }
@@ -186,6 +143,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_ eq outputPlan) ::: acc.unhandledPlans,
         unhandledOutput = output)
     }
+
     def indexSeek(node: String,
                   label: LabelToken,
                   properties: Seq[IndexedProperty],
@@ -205,7 +163,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                              SlottedIndexedProperty(node,
                                                                                     properties.head,
                                                                                     slots),
-                                                             compile(expr),
+                                                             compileExpression(expr),
                                                              operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                              physicalPlan.argumentSizes(id))(expressionCompiler))
 
@@ -221,7 +179,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                              SlottedIndexedProperty(node,
                                                                                     properties.head,
                                                                                     slots),
-                                                             compile(expr),
+                                                             compileExpression(expr),
                                                              operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                              physicalPlan.argumentSizes(id))(expressionCompiler))
 
@@ -399,7 +357,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case plan@plans.Selection(predicate, _) =>
             acc.copy(
-              template = new FilterOperatorTemplate(acc.template, plan.id, compile(predicate)),
+              template = new FilterOperatorTemplate(acc.template, plan.id, compileExpression(predicate)),
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Projection(_, projections) =>
