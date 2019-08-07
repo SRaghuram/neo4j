@@ -23,6 +23,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: NodeIndexScan |
            _: NodeByIdSeek |
            _: DirectedRelationshipByIdSeek |
+           _: UndirectedRelationshipByIdSeek |
            _: NodeCountFromCountStore |
            _: RelationshipCountFromCountStore |
            _: Input |

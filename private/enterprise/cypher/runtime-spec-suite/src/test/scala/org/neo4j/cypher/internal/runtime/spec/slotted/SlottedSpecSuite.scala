@@ -18,6 +18,7 @@ object SlottedSpecSuite {
 class SlottedAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeByIdSeekTest extends NodeByIdSeekTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedAggregationTest extends AggregationTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)

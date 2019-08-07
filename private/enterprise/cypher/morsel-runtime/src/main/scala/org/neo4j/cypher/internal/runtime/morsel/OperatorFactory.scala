@@ -121,6 +121,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                                  converters.toCommandSeekArgs(id, relIds),
                                                  physicalPlan.argumentSizes(id))
 
+      case plans.UndirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
+        new UndirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
+                                                 slots.getLongOffsetFor(column),
+                                                 slots.getLongOffsetFor(startNode),
+                                                 slots.getLongOffsetFor(endNode),
+                                                 converters.toCommandSeekArgs(id, relIds),
+                                                 physicalPlan.argumentSizes(id))
+
       case plans.NodeCountFromCountStore(idName, labelNames, _) =>
         val labels = labelNames.map(label => label.map(LazyLabel(_)(semanticTable)))
         new NodeCountFromCountStoreOperator(WorkIdentity.fromPlan(plan),

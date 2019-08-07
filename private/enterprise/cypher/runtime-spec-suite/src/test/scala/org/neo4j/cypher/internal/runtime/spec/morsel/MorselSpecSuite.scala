@@ -32,6 +32,10 @@ class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(SINGLE_THREADE
 class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// UNDIRECTED RELATIONSHIP BY ID SEEK
+class MorselUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // NODE COUNT FROM COUNT STORE
 class MorselNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(SINGLE_THREADED, MORSEL)
 class MorselNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
