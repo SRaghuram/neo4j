@@ -5,10 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import java.io.File
 import java.lang.Boolean.TRUE
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
+import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
@@ -21,7 +20,6 @@ import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.query.{QueryExecution, QuerySubscriber, RecordingQuerySubscriber, TransactionalContext}
 import org.neo4j.monitoring.Monitors
-import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.neo4j.values.virtual.MapValue
 
 import scala.util.{Failure, Success, Try}
@@ -66,11 +64,9 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
         GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
     )
   }
-
-  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = new TestCommercialDatabaseManagementServiceBuilder(databaseRootDir)
 }
 
-trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport {
+trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with CommercialGraphDatabaseTestSupport {
 
   // abstract, can be defined through CypherComparisonSupport
   def eengineExecute(query: String, params: Map[String, Any]): Result

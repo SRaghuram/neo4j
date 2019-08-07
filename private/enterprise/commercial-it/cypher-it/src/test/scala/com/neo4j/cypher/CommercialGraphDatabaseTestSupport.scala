@@ -12,7 +12,10 @@ import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
-
+/**
+ * Use this trait when you want GraphDatabaseTestSupport functionality with
+ * enterprise Databases.
+ */
 trait CommercialGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
   self: CypherFunSuite =>
 
