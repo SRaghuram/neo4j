@@ -39,11 +39,13 @@ The best way to develop and debug worker is to do it through docker container
 
 	docker run -v $HOME/.aws:/root/.aws 535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:latest /work/bootstrap-worker.sh \
 
+    # *** Schedule/Run Worker ***
     --worker-artifact-uri  \
     s3://benchmarking.neo4j.com/artifacts/benchmark-infra-worker.jar \
 
     run-worker,
-
+    
+    # *** Run Workload ***    
     --workload \
     accesscontrol \
     --db-edition \
@@ -72,7 +74,8 @@ The best way to develop and debug worker is to do it through docker container
     -Xmx4g \
     --neo4j-deployment \
     embedded \
-
+    
+    # *** Project Version ***
     --neo4j-commit \
     f3fb07ec92527f740e527e4d128c5c1faf12b8a9 \
     --neo4j-version \
@@ -94,6 +97,7 @@ The best way to develop and debug worker is to do it through docker container
     --triggered-by \
     new_infra \
 
+    # *** AWS ***
     --workspace-dir \
     /work/run \
     --aws-secret \
@@ -105,6 +109,7 @@ The best way to develop and debug worker is to do it through docker container
     --db-name \
     accesscontrol \
 
+    # *** Benchmark Results Store ***
     --results_store_user \
     client \
     --results_store_pass \
