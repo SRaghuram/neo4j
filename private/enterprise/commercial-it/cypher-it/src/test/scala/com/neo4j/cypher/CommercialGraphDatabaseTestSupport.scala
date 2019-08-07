@@ -16,7 +16,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder
 trait CommercialGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
   self: CypherFunSuite =>
 
-  override protected def graphDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
+  override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
     new TestCommercialDatabaseManagementServiceBuilder(databaseRootDir)
   }
 }
