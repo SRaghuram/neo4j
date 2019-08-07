@@ -267,8 +267,6 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
 
-  // TODO profiling events?
-
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
   private def createAggregators(): IntermediateRepresentation = {

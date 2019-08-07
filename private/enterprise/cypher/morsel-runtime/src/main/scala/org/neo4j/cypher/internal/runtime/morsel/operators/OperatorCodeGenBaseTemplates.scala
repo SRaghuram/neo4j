@@ -101,13 +101,23 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   }
 
   /**
+   * Method of [[OutputOperatorState]] trait. Override to prevent creation of profiler event, which is not necessary when output operator is fused.
+   */
+  override final def prepareOutputWithProfile(output: MorselExecutionContext,
+                                              context: QueryContext,
+                                              state: QueryState,
+                                              resources: QueryResources,
+                                              queryProfiler: QueryProfiler): PreparedOutput = this
+
+  /**
     * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
     */
   override protected final def prepareOutput(outputMorsel: MorselExecutionContext,
                                              context: QueryContext,
                                              state: QueryState,
                                              resources: QueryResources,
-                                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = this
+                                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput =
+    throw new IllegalStateException("Fused operators should be called via prepareOutputWithProfile.")
 
   /**
     * Method of [[PreparedOutput]] trait. Implementing this allows fused reducing operators to write to [[ExecutionState]].
