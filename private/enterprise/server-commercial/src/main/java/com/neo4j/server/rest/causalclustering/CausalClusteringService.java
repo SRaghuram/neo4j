@@ -12,11 +12,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.server.database.DatabaseService;
-import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 @Path( CausalClusteringService.BASE_PATH )
-public class CausalClusteringService implements AdvertisableService
+public class CausalClusteringService
 {
     public static final Pattern URI_WHITELIST = Pattern.compile( "/db/manage/server/causalclustering.*" );
 
@@ -66,17 +65,5 @@ public class CausalClusteringService implements AdvertisableService
     public Response status()
     {
         return status.description();
-    }
-
-    @Override
-    public String getName()
-    {
-        return "causalclustering";
-    }
-
-    @Override
-    public String getServerPath()
-    {
-        return BASE_PATH;
     }
 }
