@@ -5,13 +5,11 @@
  */
 package org.neo4j.cypher.internal.javacompat;
 
-import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.cypher.internal.CompilerFactory;
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration;
 import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration;
 
-@ServiceProvider
 public class EnterpriseCypherEngineProvider extends CommunityCypherEngineProvider
 {
     @Override

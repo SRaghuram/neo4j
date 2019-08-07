@@ -41,6 +41,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -52,6 +53,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -118,6 +120,13 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         CommercialEditionModule.satisfyCommercialOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
+    }
+
+    @Override
+    public QueryEngineProvider defaultEngineProvider()
+    {
+        // Clustering is enterprise only
+        return new EnterpriseCypherEngineProvider();
     }
 
     @Override

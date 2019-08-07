@@ -37,7 +37,7 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager;
+import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager$;
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -61,6 +61,7 @@ import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
+import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -89,6 +90,12 @@ public class CommercialEditionModule extends CommunityEditionModule
         satisfyCommercialOnlyDependencies( this.globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
+    }
+
+    @Override
+    public QueryEngineProvider defaultEngineProvider()
+    {
+        return new EnterpriseCypherEngineProvider();
     }
 
     @Override
