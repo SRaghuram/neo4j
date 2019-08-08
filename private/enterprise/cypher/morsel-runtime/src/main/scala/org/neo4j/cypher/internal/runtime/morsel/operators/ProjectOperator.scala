@@ -58,18 +58,17 @@ class ProjectOperatorTemplate(override val inner: OperatorTaskTemplate,
     block(
       projections.ir,
       profileRow(id),
-      inner.genOperateWithExpressions
+      inner.genOperate
       )
   }
 
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
-    inner.genSetExecutionEvent(event)
+  override def genLocalVariables: Seq[LocalVariable] = {
+    projections.variables ++ inner.genLocalVariables
+  }
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq(projections)
-
-  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-
-  override def genFields: Seq[Field] = Seq.empty
+  override def genFields: Seq[Field] = {
+    projections.fields ++ inner.genFields
+  }
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
