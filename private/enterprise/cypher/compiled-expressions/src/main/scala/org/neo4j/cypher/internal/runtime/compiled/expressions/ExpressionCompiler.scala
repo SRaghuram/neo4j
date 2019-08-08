@@ -135,11 +135,12 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     * @param groupings the groupings to compile
     * @return an instance of [[CompiledGroupingExpression]] corresponding to the provided groupings
     */
-  def compileGrouping(groupings: Map[String, Expression]): Option[CompiledGroupingExpression] = {
+  def compileGrouping(groupings: Map[String, Expression], orderToLeverage: Seq[Expression]): Option[CompiledGroupingExpression] = {
     def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
       declareAndAssign(v.typ, v.name, v.value)
     }: _*)
-    val compiled = for {(k, v) <- groupings
+    val orderedGroupings = groupings.toSeq.sortBy(e => (!orderToLeverage.contains(e._2), slots(e._1).offset))
+    val compiled = for {(k, v) <- orderedGroupings
                         c <- intermediateCompileExpression(v)} yield slots(k) -> c
     if (compiled.size < groupings.size) None
     else {
@@ -187,27 +188,22 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   /**
     * Compiles the given grouping keys to an instance of [[IntermediateExpression]]
-    * @param groupings the groupings to compile
-    * @param outputSlots the slot configuration of the pipeline that will perform the final reduce of the grouping
+    * @param orderedGroupings the groupings to compile, already sorted in correct grouping key order
     * @return an instance of [[IntermediateGroupingExpression]] corresponding to the provided groupings
     */
-  def intermediateCompileGroupingKey(groupings: Map[String, Expression], outputSlots: SlotConfiguration): Option[IntermediateExpression] = {
-    val projections = for {(k, v) <- groupings
-                           c <- intermediateCompileExpression(v)} yield outputSlots(k) -> c
-    if (projections.size < groupings.size) None
+  def intermediateCompileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression] = {
+    val projections = orderedGroupings.flatMap(intermediateCompileExpression)
+    if (projections.size < orderedGroupings.size) None
     else {
       assert(projections.nonEmpty)
-      val listVar = namer.nextVariableName()
       val singleValue = projections.size == 1
 
-      val groupingsOrdered = projections.toSeq.sortBy(_._1.offset)
-
-      val computeKeyOps = groupingsOrdered.map(_._2).map(p => nullCheckIfRequired(p)).toArray
+      val computeKeyOps = projections.map(p => nullCheckIfRequired(p)).toArray
       val computeKey =
         if (singleValue) computeKeyOps.head
         else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps: _*))
 
-      Some(IntermediateExpression(computeKey, projections.values.flatMap(_.fields).toSeq, projections.values.flatMap(_.variables).toSeq, Set.empty))
+      Some(IntermediateExpression(computeKey, projections.flatMap(_.fields), projections.flatMap(_.variables), Set.empty))
     }
   }
 
@@ -1964,10 +1960,10 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
     }
   }
 
-  private def intermediateCompileGroupingExpression(projections: Map[Slot, IntermediateExpression]): IntermediateGroupingExpression = {
-    assert(projections.nonEmpty)
+  private def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)]): IntermediateGroupingExpression = {
+    assert(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
-    val singleValue = projections.size == 1
+    val singleValue = orderedGroupings.size == 1
     def id[T](value: IntermediateRepresentation, nullable: Boolean)(implicit m: Manifest[T]) =  {
       val getId = invoke(cast[T](value), method[T, Long]("id"))
       if (!nullable) getId
@@ -1978,9 +1974,8 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       if (singleValue) load("key")
       else invoke(load(listVar), method[ListValue, AnyValue, Int]("value"), constant(i))
     }
-    val groupingsOrdered = projections.toSeq.sortBy(_._1.offset)
 
-    val projectKeyOps = groupingsOrdered.map(_._1).zipWithIndex.map {
+    val projectKeyOps = orderedGroupings.map(_._1).zipWithIndex.map {
       case (LongSlot(offset, nullable, CTNode), index) =>
         setLongAt(offset, id[VirtualNodeValue](accessValue(index), nullable))
       case (LongSlot(offset, nullable, CTRelationship), index) =>
@@ -1994,7 +1989,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       if (singleValue) projectKeyOps
       else Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load("key")))) ++ projectKeyOps
 
-    val getKeyOps = groupingsOrdered.map(_._1).map {
+    val getKeyOps = orderedGroupings.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
         val getter = invokeStatic(method[VirtualValues, NodeReference, Long]("node"), getLongAt(offset))
         if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
@@ -2012,14 +2007,15 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       if (singleValue) getKeyOps.head
       else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](getKeyOps:_*))
 
-    val computeKeyOps = groupingsOrdered.map(_._2).map(p => nullCheckIfRequired(p)).toArray
+    val computeKeyOps = orderedGroupings.map(_._2).map(p => nullCheckIfRequired(p)).toArray
     val computeKey =
       if (singleValue) computeKeyOps.head
       else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps:_*))
 
+    val orderedGroupingExpressions = orderedGroupings.map(_._2)
     IntermediateGroupingExpression(
       IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty),
-      IntermediateExpression(computeKey, projections.values.flatMap(_.fields).toSeq, projections.values.flatMap(_.variables).toSeq, Set.empty),
+      IntermediateExpression(computeKey, orderedGroupingExpressions.flatMap(_.fields), orderedGroupingExpressions.flatMap(_.variables), Set.empty),
       IntermediateExpression(getKey, Seq.empty, Seq.empty, Set.empty))
   }
 

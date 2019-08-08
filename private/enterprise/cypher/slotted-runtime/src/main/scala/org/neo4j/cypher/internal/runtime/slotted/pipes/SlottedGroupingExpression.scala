@@ -159,7 +159,7 @@ case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression])
 
   override type KeyType = ListValue
 
-  private val sortedGroupingExpression = groupingExpressions.sortBy(!_.ordered)
+  private val sortedGroupingExpression = groupingExpressions.sortBy(s => (!s.ordered, s.slot.offset))
   private val setters = sortedGroupingExpression.map(e => makeSetValueInSlotFunctionFor(e.slot))
   private val getters = sortedGroupingExpression.map(e => makeGetValueFromSlotFunctionFor(e.slot))
   // First the ordered columns, then the unordered ones

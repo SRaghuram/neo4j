@@ -82,7 +82,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
       } else {
         log.debug(s" Compiling projection: $projections")
         defaultGenerator(physicalPlan.slotConfigurations(id))
-          .compileGrouping(projections)
+          .compileGrouping(projections, orderToLeverage)
           .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
       }
     }

@@ -69,9 +69,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
 
     def compileGroupingKey(astExpressions: Map[String, org.neo4j.cypher.internal.v4_0.expressions.Expression],
-                           slots: SlotConfiguration): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileGroupingKey(astExpressions, slots)
+                           slots: SlotConfiguration,
+                           orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
+      val orderedGroupingExpressions = astExpressions.toSeq.sortBy(e => (!orderToLeverage.contains(e._2), slots(e._1).offset)).map(_._2)
+      () => expressionCompiler.intermediateCompileGroupingKey(orderedGroupingExpressions)
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
+    }
 
     generateSlotAccessorFunctions(slots)
 
@@ -119,7 +122,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                       aggregators.result(),
                                                       bufferId,
                                                       aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
-                                                      groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots),
+                                                      groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
                                                       aggregationAstExpressions)(expressionCompiler)
           (template, List(p), NoOutput)
 

@@ -3780,7 +3780,7 @@ class CompiledExpressionsIT extends ExpressionsIT {
 
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    defaultGenerator(slots).compileGrouping(projections).getOrElse(fail(s"Failed to compile grouping $projections"))
+    defaultGenerator(slots).compileGrouping(projections, orderToLeverage = Seq.empty).getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
 class InterpretedExpressionIT extends ExpressionsIT {
