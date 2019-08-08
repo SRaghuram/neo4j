@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.neo4j.causalclustering.identity.MemberId;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
@@ -13,28 +14,30 @@ import java.util.Collection;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseManagePath;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static javax.ws.rs.core.Response.status;
 
-abstract class BaseStatus implements CausalClusteringStatus
+abstract class ClusterMemberStatus implements CausalClusteringStatus
 {
-    private final OutputFormat output;
+    protected final OutputFormat output;
+    protected final GraphDatabaseAPI db;
 
-    BaseStatus( OutputFormat output )
+    ClusterMemberStatus( OutputFormat output, GraphDatabaseAPI db )
     {
         this.output = output;
+        this.db = db;
     }
 
     @Override
-    public Response discover()
+    public final Response discover()
     {
-        return output.ok( new CausalClusteringDiscovery( BASE_PATH ) );
+        return output.ok( new CausalClusteringDiscovery( relativeDatabaseManagePath( db.databaseName() ) ) );
     }
 
     Response statusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,

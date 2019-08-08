@@ -14,8 +14,8 @@ import org.neo4j.test.server.ExclusiveServerTestBase;
 import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.server.enterprise.helpers.CommercialServerBuilder.serverOnRandomPorts;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
@@ -52,42 +52,7 @@ public class CommercialDiscoveryServiceIT extends ExclusiveServerTestBase
         assertEquals( 200, res.status() );
         assertThat( res.get( "neo4j_edition" ).asText(), equalTo( "enterprise" ) );
         assertThat( res.get( "neo4j_version" ).asText(), equalTo( releaseVersion ) );
+
+        assertThat( res.get( "management" ), nullValue() ); // no management URI in standalone
     }
-
-    @Test
-    public void shouldReportManagementApi() throws Exception
-    {
-        // When
-        server = serverOnRandomPorts()
-                .usingDataDir( folder.directory( name.getMethodName() ).getAbsolutePath() )
-                .persistent()
-                .build();
-        server.start();
-
-        HTTP.Response res = HTTP.GET( server.baseUri().toASCIIString() );
-
-        // Then
-        assertEquals( 200, res.status() );
-        assertThat( res.get( "management" ).asText(), containsString( "/db/manage" ) );
-    }
-
-    @Test
-    public void shouldAllowResetManagementApi() throws Exception
-    {
-        // When
-        var uri = "a/different/manage/uri";
-        server = serverOnRandomPorts()
-                .usingDataDir( folder.directory( name.getMethodName() ).getAbsolutePath() )
-                .withRelativeManagementApiUriPath( uri )
-                .persistent()
-                .build();
-        server.start();
-
-        HTTP.Response res = HTTP.GET( server.baseUri().toASCIIString() );
-
-        // Then
-        assertEquals( 200, res.status() );
-        assertThat( res.get( "management" ).asText(), containsString( uri ) );
-    }
-
 }

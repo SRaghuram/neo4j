@@ -1,0 +1,337 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.server.enterprise;
+
+import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.Map;
+
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getLeader;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryAvailabilityEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryDiscoveryEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryReadOnlyEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryStatusEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryWritableEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.startCluster;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.writeSomeData;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.coreFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.healthFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.lastAppliedRaftIndexFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.leaderFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.memberIdFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.millisSinceLastLeaderMessageSanityCheck;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.participatingInRaftGroup;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.raftMessageThroughputPerSecondFieldIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.FieldMatchers.votingMemberSetIs;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allReplicaFieldValues;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allStatusEndpointValues;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.allValuesEqual;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.asCollection;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.canVote;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.lastAppliedRaftIndex;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointMatchers.statusEndpoint;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.OK;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.core.Every.everyItem;
+import static org.hamcrest.core.IsNot.not;
+import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
+
+@TestInstance( PER_CLASS )
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+class CausalClusterRestEndpointsIT
+{
+    private static final String KNOWN_DB = DEFAULT_DATABASE_NAME;
+    private static final String UNKNOWN_DB = "foobar";
+
+    @Inject
+    private static TestDirectory testDirectory;
+
+    private static CausalClusterInProcessBuilder.CausalCluster cluster;
+
+    @BeforeAll
+    static void setupClass() throws Exception
+    {
+        cluster = startCluster( testDirectory );
+
+        for ( var core : cluster.getCores() )
+        {
+            assertEventually( canVote( statusEndpoint( core, KNOWN_DB ) ), equalTo( true ), 1, MINUTES );
+        }
+    }
+
+    @AfterAll
+    static void shutdownClass()
+    {
+        if ( cluster != null )
+        {
+            cluster.shutdown();
+        }
+    }
+
+    @Test
+    void discoveryEndpointsAreReachable()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryDiscoveryEndpoint( neo4j, KNOWN_DB );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+
+            var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/manage/causalclustering/" );
+
+            var expectedBody = Map.of(
+                    "available", baseUri.resolve( "available" ).toString(),
+                    "writable", baseUri.resolve( "writable" ).toString(),
+                    "read-only", baseUri.resolve( "read-only" ).toString(),
+                    "status", baseUri.resolve( "status" ).toString() );
+
+            assertEquals( expectedBody, response.body() );
+        }
+    }
+
+    @Test
+    void discoveryEndpointsAreNotReachableForUnknownDatabase()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryDiscoveryEndpoint( neo4j, UNKNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertThat( response.body(), is( anEmptyMap() ) );
+        }
+    }
+
+    @Test
+    void availabilityEndpointsAreReachable()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryAvailabilityEndpoint( neo4j, KNOWN_DB );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+            assertTrue( response.body() );
+        }
+    }
+
+    @Test
+    void availabilityEndpointsAreNotReachableForUnknownDatabase()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryAvailabilityEndpoint( neo4j, UNKNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void writableEndpointsAreReachable()
+    {
+        for ( var core : cluster.getCores() )
+        {
+            var response = queryWritableEndpoint( core, KNOWN_DB );
+
+            if ( core == getLeader( cluster ) )
+            {
+                assertEquals( OK.getStatusCode(), response.statusCode() );
+                assertTrue( response.body() );
+            }
+            else
+            {
+                assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+                assertFalse( response.body() );
+            }
+        }
+
+        for ( var replica : cluster.getReadReplicas() )
+        {
+            var response = queryWritableEndpoint( replica, KNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void writableEndpointsAreNotReachableForUnknownDatabase()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryWritableEndpoint( neo4j, UNKNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void readOnlyEndpointsAreReachable()
+    {
+        for ( var core : cluster.getCores() )
+        {
+            var response = queryReadOnlyEndpoint( core, KNOWN_DB );
+
+            if ( core == getLeader( cluster ) )
+            {
+                assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+                assertFalse( response.body() );
+            }
+            else
+            {
+                assertEquals( OK.getStatusCode(), response.statusCode() );
+                assertTrue( response.body() );
+            }
+        }
+
+        for ( var replica : cluster.getReadReplicas() )
+        {
+            var response = queryReadOnlyEndpoint( replica, KNOWN_DB );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+            assertTrue( response.body() );
+        }
+    }
+
+    @Test
+    void readOnlyEndpointsAreNotReachableForUnknownDatabase()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryReadOnlyEndpoint( neo4j, UNKNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void statusEndpointsAreNotReachableForUnknownDatabase()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryStatusEndpoint( neo4j, UNKNOWN_DB );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertThat( response.body(), is( anEmptyMap() ) );
+        }
+    }
+
+    @Test
+    void statusEndpointIsReachableAndReadable() throws Exception
+    {
+        // given there is data
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 0L ) ),
+                3, MINUTES );
+
+        // then cores are valid
+        for ( var core : cluster.getCores() )
+        {
+            writeSomeData( cluster );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), coreFieldIs( equalTo( true ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), healthFieldIs( equalTo( true ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), leaderFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), votingMemberSetIs( hasSize( 3 ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), participatingInRaftGroup( true ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), millisSinceLastLeaderMessageSanityCheck( true ), 1, MINUTES );
+        }
+
+        // and replicas are valid
+        for ( var replica : cluster.getReadReplicas() )
+        {
+            writeSomeData( cluster );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), coreFieldIs( equalTo( false ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), healthFieldIs( equalTo( true ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), leaderFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), votingMemberSetIs( hasSize( 3 ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), participatingInRaftGroup( false ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), millisSinceLastLeaderMessageSanityCheck( false ), 1, MINUTES );
+        }
+    }
+
+    @Test
+    void replicasContainTheSameRaftIndexAsCores() throws Exception
+    {
+        // given starting conditions
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, MINUTES );
+        var initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection(
+                statusEndpoint( getLeader( cluster ), KNOWN_DB ) ) ).get()
+                .stream()
+                .findFirst()
+                .orElseThrow( () -> new RuntimeException( "List is empty" ) );
+        assertThat( initialLastAppliedRaftIndex, greaterThan( 0L ) );
+
+        // when more data is added
+        writeSomeData( cluster );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 1L ) ), 1,
+                MINUTES );
+
+        // then all status endpoints have a matching last appliedRaftIndex
+        assertEventually( lastAppliedRaftIndex( allStatusEndpointValues( cluster, KNOWN_DB ) ), allValuesEqual(), 1, MINUTES );
+
+        // and endpoint last applied raft index has incremented
+        assertEventually( statusEndpoint( getLeader( cluster ), KNOWN_DB ),
+                lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ), 1,
+                MINUTES );
+    }
+
+    @Test
+    void participatingInRaftGroupFalseWhenNotInGroup() throws InterruptedException
+    {
+        try
+        {
+            var cores = cluster.getCores();
+            assertThat( cores, hasSize( greaterThan( 1 ) ) );
+
+            // stop all cores except the first one
+            for ( var i = 1; i < cores.size(); i++ )
+            {
+                cores.get( i ).close();
+            }
+
+            var remainingCore = cores.get( 0 );
+            assertEventually( canVote( statusEndpoint( remainingCore, KNOWN_DB ) ), equalTo( false ), 1, MINUTES );
+        }
+        finally
+        {
+            cluster.shutdown();
+            cluster = startCluster( testDirectory );
+        }
+    }
+
+    @Test
+    void throughputIsPositive() throws InterruptedException
+    {
+        writeSomeData( cluster );
+        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
+                1, MINUTES );
+        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ),
+                90, SECONDS );
+    }
+}

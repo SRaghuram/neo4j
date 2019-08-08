@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class ReadReplicaStatusTest
 {
@@ -70,14 +71,16 @@ class ReadReplicaStatusTest
     @BeforeEach
     void setup() throws Exception
     {
-        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        DatabaseService database = mock( DatabaseService.class );
-        GraphDatabaseFacade db = mock( GraphDatabaseFacade.class );
-        when( database.getDatabase() ).thenReturn( db );
+        var databaseName = DEFAULT_DATABASE_NAME;
+        var output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
+        var dbService = mock( DatabaseService.class );
+        var db = mock( GraphDatabaseFacade.class );
+        when( db.databaseName() ).thenReturn( databaseName );
+        when( dbService.getDatabase( databaseName ) ).thenReturn( db );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
         dependencyResolver.satisfyDependency( DatabaseInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
-        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        var jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         dependencyResolver.satisfyDependency( jobScheduler );
 
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
@@ -87,11 +90,11 @@ class ReadReplicaStatusTest
         dependencyResolver.satisfyDependency(
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
-        org.neo4j.kernel.database.Database internalDatabase = mock( org.neo4j.kernel.database.Database.class );
+        var internalDatabase = mock( org.neo4j.kernel.database.Database.class );
         when( internalDatabase.getDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
         dependencyResolver.satisfyDependency( internalDatabase );
 
-        status = CausalClusteringStatusFactory.build( output, database );
+        status = CausalClusteringStatusFactory.build( output, dbService, DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -104,9 +107,9 @@ class ReadReplicaStatusTest
     void testAnswers()
     {
         // when
-        Response available = status.available();
-        Response readonly = status.readonly();
-        Response writable = status.writable();
+        var available = status.available();
+        var readonly = status.readonly();
+        var writable = status.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -126,26 +129,26 @@ class ReadReplicaStatusTest
         commandIndexTracker.setAppliedCommandIndex( 321 );
 
         // when
-        Response description = status.description();
+        var description = status.description();
 
         // then
-        Map<String,Object> responseJson = responseAsMap( description );
+        var responseJson = responseAsMap( description );
         assertEquals( 321, responseJson.get( "lastAppliedRaftIndex" ) );
     }
 
     @Test
     void responseIncludesAllCores() throws IOException
     {
-        Response description = status.description();
+        var description = status.description();
 
         assertEquals( Response.Status.OK.getStatusCode(), description.getStatus() );
-        List<String> expectedVotingMembers = topologyService.allCoreServers()
+        var expectedVotingMembers = topologyService.allCoreServers()
                 .keySet()
                 .stream()
                 .map( memberId -> memberId.getUuid().toString() )
                 .collect( toList() );
-        Map<String,Object> responseJson = responseAsMap( description );
-        List<String> actualVotingMembers = (List<String>) responseJson.get( "votingMembers" );
+        var responseJson = responseAsMap( description );
+        var actualVotingMembers = (List<String>) responseJson.get( "votingMembers" );
         Collections.sort( expectedVotingMembers );
         Collections.sort( actualVotingMembers );
         assertEquals( expectedVotingMembers, actualVotingMembers );
@@ -154,7 +157,7 @@ class ReadReplicaStatusTest
     @Test
     void dbHealthIsIncludedInResponse() throws IOException
     {
-        Response description = status.description();
+        var description = status.description();
         assertEquals( true, responseAsMap( description ).get( "healthy" ) );
 
         databaseHealth.panic( new RuntimeException() );
@@ -165,17 +168,17 @@ class ReadReplicaStatusTest
     @Test
     void includesMemberId() throws IOException
     {
-        Response description = status.description();
+        var description = status.description();
         assertEquals( myself.getUuid().toString(), responseAsMap( description ).get( "memberId" ) );
     }
 
     @Test
     void leaderIsNullWhenUnknown() throws IOException
     {
-        Response description = status.description();
+        var description = status.description();
         assertNull( responseAsMap( description ).get( "leader" ) );
 
-        MemberId selectedLead = topologyService.allCoreServers()
+        var selectedLead = topologyService.allCoreServers()
                 .keySet()
                 .stream()
                 .findFirst()
@@ -188,7 +191,7 @@ class ReadReplicaStatusTest
     @Test
     void isNotCore() throws IOException
     {
-        Response description = status.description();
+        var description = status.description();
         assertTrue( responseAsMap( description ).containsKey( "core" ) );
         assertEquals( false, responseAsMap( status.description() ).get( "core" ) );
     }
@@ -196,13 +199,13 @@ class ReadReplicaStatusTest
     @Test
     void throughputNullWhenUnknown() throws IOException
     {
-        ThroughputMonitor throughputMonitor = mock( ThroughputMonitor.class );
+        var throughputMonitor = mock( ThroughputMonitor.class );
         when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
         dependencyResolver.satisfyDependency( throughputMonitor );
 
-        Response description = status.description();
+        var description = status.description();
 
-        Map<String,Object> response = responseAsMap( description );
+        var response = responseAsMap( description );
         assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 

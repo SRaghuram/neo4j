@@ -16,44 +16,29 @@ import java.util.Collection;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;
-
-class ReadReplicaStatus extends BaseStatus
+class ReadReplicaStatus extends ClusterMemberStatus
 {
-    private final OutputFormat output;
-
     private final ThroughputMonitor throughputMonitor;
 
     // Dependency resolved
-    private final DatabaseId databaseId;
     private final TopologyService topologyService;
     private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
 
     ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
     {
-        super( output );
-        this.output = output;
+        super( output, databaseAPI );
 
         DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
-        this.databaseId = dependencyResolver.resolveDependency( Database.class ).getDatabaseId();
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
         this.throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
-    }
-
-    @Override
-    public Response discover()
-    {
-        return output.ok( new CausalClusteringDiscovery( BASE_PATH ) );
     }
 
     @Override
@@ -81,7 +66,7 @@ class ReadReplicaStatus extends BaseStatus
         boolean isHealthy = dbHealth.isHealthy();
         MemberId myId = topologyService.memberId();
         MemberId leaderId = votingMembers.stream()
-                .filter( memberId -> topologyService.coreRole( databaseId, memberId ) == RoleInfo.LEADER )
+                .filter( memberId -> topologyService.coreRole( db.databaseId(), memberId ) == RoleInfo.LEADER )
                 .findFirst()
                 .orElse( null );
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();

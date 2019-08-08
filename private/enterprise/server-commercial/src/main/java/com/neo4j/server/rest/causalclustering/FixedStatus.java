@@ -7,45 +7,47 @@ package com.neo4j.server.rest.causalclustering;
 
 import javax.ws.rs.core.Response;
 
-import org.neo4j.server.rest.repr.OutputFormat;
-
-import static javax.ws.rs.core.Response.Status.FORBIDDEN;
-import static javax.ws.rs.core.Response.status;
-
-class NotCausalClustering extends BaseStatus
+class FixedStatus implements CausalClusteringStatus
 {
-    NotCausalClustering( OutputFormat output )
+    private final Response.Status status;
+
+    FixedStatus( Response.Status status )
     {
-        super( output );
+        this.status = status;
     }
 
     @Override
     public Response discover()
     {
-        return status( FORBIDDEN ).build();
+        return buildResponse();
     }
 
     @Override
     public Response available()
     {
-        return status( FORBIDDEN ).build();
+        return buildResponse();
     }
 
     @Override
     public Response readonly()
     {
-        return status( FORBIDDEN ).build();
+        return buildResponse();
     }
 
     @Override
     public Response writable()
     {
-        return status( FORBIDDEN ).build();
+        return buildResponse();
     }
 
     @Override
     public Response description()
     {
-        return Response.status( FORBIDDEN ).build();
+        return buildResponse();
+    }
+
+    private Response buildResponse()
+    {
+        return Response.status( status ).build();
     }
 }

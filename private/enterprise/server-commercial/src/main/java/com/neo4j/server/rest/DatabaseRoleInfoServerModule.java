@@ -7,7 +7,6 @@ package com.neo4j.server.rest;
 
 import com.neo4j.server.rest.causalclustering.CausalClusteringService;
 
-import java.net.URI;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
@@ -33,29 +32,24 @@ public class DatabaseRoleInfoServerModule implements ServerModule
     @Override
     public void start()
     {
-        URI baseUri = managementApiUri();
-        server.addJAXRSClasses( getClasses(), baseUri.toString(), null );
-
-        log.info( "Mounted REST API at: %s", baseUri.toString() );
+        var mountPoint = mountPoint();
+        server.addJAXRSClasses( jaxRsClasses(), mountPoint, null );
+        log.info( "Mounted REST API at: %s", mountPoint );
     }
 
     @Override
     public void stop()
     {
-        URI baseUri = managementApiUri();
-        server.removeJAXRSClasses( getClasses(), baseUri.toString() );
+        server.removeJAXRSClasses( jaxRsClasses(), mountPoint() );
     }
 
-    private List<Class<?>> getClasses()
+    private String mountPoint()
     {
-        return List.of(
-                CausalClusteringService.class
-        );
+        return config.get( ServerSettings.db_api_path ).toString();
     }
 
-    // TODO move this under /db/{db_name}/management for example
-    private URI managementApiUri()
+    private static List<Class<?>> jaxRsClasses()
     {
-        return config.get( ServerSettings.management_api_path );
+        return List.of( CausalClusteringService.class );
     }
 }

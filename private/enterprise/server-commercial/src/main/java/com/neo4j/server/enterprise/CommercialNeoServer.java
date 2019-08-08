@@ -114,7 +114,7 @@ public class CommercialNeoServer extends CommunityNeoServer
         var result = new ArrayList<>( super.getUriWhitelist() );
         if ( !getConfig().get( CausalClusteringSettings.status_auth_enabled ) )
         {
-            result.add( CausalClusteringService.URI_WHITELIST );
+            result.add( CausalClusteringService.databaseManageUriPattern( getConfig() ) );
         }
         return result;
     }

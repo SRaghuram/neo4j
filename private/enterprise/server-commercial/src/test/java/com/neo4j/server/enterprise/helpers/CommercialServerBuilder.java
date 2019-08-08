@@ -12,8 +12,6 @@ import com.neo4j.server.enterprise.CommercialNeoServer;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
@@ -23,15 +21,12 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
-import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 public class CommercialServerBuilder extends CommunityServerBuilder
 {
-    private String managementUri = "/db/manage/";
-
     protected CommercialServerBuilder( LogProvider logProvider )
     {
         super( logProvider );
@@ -104,32 +99,10 @@ public class CommercialServerBuilder extends CommunityServerBuilder
     {
         Map<String, String> configuration = super.createConfiguration( temporaryFolder );
 
-        configuration.put( ServerSettings.management_api_path.name(), managementUri );
         configuration.put( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         configuration.putIfAbsent( MetricsSettings.csvPath.name(), new File( temporaryFolder, "metrics" ).getAbsolutePath() );
         configuration.put( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
 
         return configuration;
-    }
-
-    public CommercialServerBuilder withRelativeManagementApiUriPath( String uri )
-    {
-        try
-        {
-            URI theUri = new URI( uri );
-            if ( theUri.isAbsolute() )
-            {
-                this.managementUri = theUri.getPath();
-            }
-            else
-            {
-                this.managementUri = theUri.toString();
-            }
-        }
-        catch ( URISyntaxException e )
-        {
-            throw new RuntimeException( e );
-        }
-        return this;
     }
 }

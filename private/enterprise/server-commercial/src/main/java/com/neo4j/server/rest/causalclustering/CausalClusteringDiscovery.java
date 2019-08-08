@@ -9,28 +9,28 @@ import org.neo4j.server.rest.repr.MappingRepresentation;
 import org.neo4j.server.rest.repr.MappingSerializer;
 
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.AVAILABLE;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.DESCRIPTION;
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.READ_ONLY;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.STATUS;
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.WRITABLE;
 
 public class CausalClusteringDiscovery extends MappingRepresentation
 {
     private static final String DISCOVERY_REPRESENTATION_TYPE = "discovery";
 
-    private final String basePath;
+    private final String databasePath;
 
-    CausalClusteringDiscovery( String basePath )
+    CausalClusteringDiscovery( String databasePath )
     {
         super( DISCOVERY_REPRESENTATION_TYPE );
-        this.basePath = basePath;
+        this.databasePath = databasePath;
     }
 
     @Override
     protected void serialize( MappingSerializer serializer )
     {
-        serializer.putRelativeUri( AVAILABLE, basePath + "/" + AVAILABLE );
-        serializer.putRelativeUri( READ_ONLY, basePath + "/" + READ_ONLY );
-        serializer.putRelativeUri( WRITABLE, basePath + "/" + WRITABLE );
-        serializer.putRelativeUri( DESCRIPTION, basePath + "/" + DESCRIPTION );
+        serializer.putRelativeUri( AVAILABLE, databasePath + "/" + AVAILABLE );
+        serializer.putRelativeUri( READ_ONLY, databasePath + "/" + READ_ONLY );
+        serializer.putRelativeUri( WRITABLE, databasePath + "/" + WRITABLE );
+        serializer.putRelativeUri( STATUS, databasePath + "/" + STATUS );
     }
 }

@@ -28,12 +28,8 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;
-
-class CoreStatus extends BaseStatus
+class CoreStatus extends ClusterMemberStatus
 {
-    private final OutputFormat output;
-
     // Dependency resolved
     private final RaftMembershipManager raftMembershipManager;
     private final Health databaseHealth;
@@ -46,8 +42,7 @@ class CoreStatus extends BaseStatus
 
     CoreStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
     {
-        super( output );
-        this.output = output;
+        super( output, databaseAPI );
 
         DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
@@ -58,12 +53,6 @@ class CoreStatus extends BaseStatus
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
         this.roleProvider = dependencyResolver.resolveDependency( RoleProvider.class );
-    }
-
-    @Override
-    public Response discover()
-    {
-        return output.ok( new CausalClusteringDiscovery( BASE_PATH ) );
     }
 
     @Override

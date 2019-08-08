@@ -18,9 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -32,7 +32,7 @@ import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static java.util.Collections.synchronizedList;
+import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 
@@ -227,8 +227,8 @@ public class CausalClusterInProcessBuilder
         private final Map<Setting<Object>, Object> config;
         private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
-        private final List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
-        private final List<InProcessNeo4j> replicaControls = synchronizedList( new ArrayList<>() );
+        private final List<InProcessNeo4j> cores = new CopyOnWriteArrayList<>();
+        private final List<InProcessNeo4j> readReplicas = new CopyOnWriteArrayList<>();
 
         private CausalCluster( CausalClusterInProcessBuilder.Builder builder )
         {
@@ -292,7 +292,7 @@ public class CausalClusterInProcessBuilder
                 int finalCoreId = coreId;
                 coreStartActions.add( () ->
                 {
-                    coreNeo4j.add( builder.build() );
+                    cores.add( builder.build() );
                     log.info( "Core " + finalCoreId + " started." );
                 } );
             }
@@ -330,7 +330,7 @@ public class CausalClusterInProcessBuilder
                 int finalReplicaId = replicaId;
                 replicaStartActions.add( () ->
                 {
-                    replicaControls.add( builder.build() );
+                    readReplicas.add( builder.build() );
                     log.info( "Read replica " + finalReplicaId + " started." );
                 } );
             }
@@ -353,19 +353,26 @@ public class CausalClusterInProcessBuilder
             builder.withConfig( HttpConnector.advertised_address, specifyPortOnly( httpPort ) );
         }
 
-        public List<InProcessNeo4j> getCoreNeo4j()
+        public List<InProcessNeo4j> getCores()
         {
-            return coreNeo4j;
+            return unmodifiableList( cores );
         }
 
-        public List<InProcessNeo4j> getReplicaControls()
+        public List<InProcessNeo4j> getReadReplicas()
         {
-            return replicaControls;
+            return unmodifiableList( readReplicas );
+        }
+
+        public List<InProcessNeo4j> getCoresAndReadReplicas()
+        {
+            var result = new ArrayList<>( cores );
+            result.addAll( readReplicas );
+            return unmodifiableList( result );
         }
 
         public void shutdown()
         {
-            var shutdownActions = Stream.concat( coreNeo4j.stream(), replicaControls.stream() )
+            var shutdownActions = getCoresAndReadReplicas().stream()
                     .map( control -> (Runnable) control::close )
                     .collect( toList() );
 

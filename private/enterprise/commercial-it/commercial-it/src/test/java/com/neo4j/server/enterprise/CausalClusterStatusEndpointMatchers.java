@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import com.neo4j.harness.internal.CausalClusterInProcessBuilder.CausalCluster;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -15,17 +15,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4j;
 
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getCcEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getStatus;
+import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 class CausalClusterStatusEndpointMatchers
 {
@@ -170,9 +168,9 @@ class CausalClusterStatusEndpointMatchers
         };
     }
 
-    static ThrowingSupplier<Map<String,Object>,RuntimeException> serverStatusEndpoint( Neo4j server )
+    static ThrowingSupplier<Map<String,Object>,RuntimeException> statusEndpoint( Neo4j server, String databaseName )
     {
-        return () -> getStatus( getCcEndpoint( server.httpURI() ) );
+        return () -> queryStatusEndpoint( server, databaseName ).body();
     }
 
     static ThrowingSupplier<Boolean,RuntimeException> canVote( ThrowingSupplier<Map<String,Object>,RuntimeException> statusDescription )
@@ -202,25 +200,20 @@ class CausalClusterStatusEndpointMatchers
                 .stream()
                 .map( status -> status.get( FIELD_LAST_INDEX ).toString() )
                 .map( Long::parseLong )
-                .collect( Collectors.toList() );
+                .collect( toList() );
     }
 
-    static ThrowingSupplier<Collection<Map<String,Object>>,RuntimeException> allEndpointsFieldValues( CausalClusterInProcessBuilder.CausalCluster cluster )
+    static ThrowingSupplier<Collection<Map<String,Object>>,RuntimeException> allStatusEndpointValues( CausalCluster cluster, String databaseName )
     {
-        List<Neo4j> allServerControls =
-                Stream.of( cluster.getCoreNeo4j(), cluster.getReplicaControls() ).flatMap( Collection::stream ).collect( Collectors.toList() );
-        return allEndpointsFieldValues( allServerControls );
+        return () -> cluster.getCoresAndReadReplicas()
+                .stream()
+                .map( controls -> queryStatusEndpoint( controls, databaseName ).body() )
+                .collect( toList() );
     }
 
-    static ThrowingSupplier<Collection<Map<String,Object>>,RuntimeException> allEndpointsFieldValues( Collection<Neo4j> clusterServerControls )
-
-    {
-        return () -> clusterServerControls.stream().map( controls -> getStatus( getCcEndpoint( controls.httpURI() ) ) ).collect( Collectors.toList() );
-    }
-
-    static <T> ThrowingSupplier<Collection<T>,RuntimeException> allReplicaFieldValues( CausalClusterInProcessBuilder.CausalCluster cluster,
+    static <T> ThrowingSupplier<Collection<T>,RuntimeException> allReplicaFieldValues( CausalCluster cluster,
             Function<Neo4j,T> mapper )
     {
-        return () -> cluster.getReplicaControls().stream().map( mapper ).collect( Collectors.toList() );
+        return () -> cluster.getReadReplicas().stream().map( mapper ).collect( toList() );
     }
 }

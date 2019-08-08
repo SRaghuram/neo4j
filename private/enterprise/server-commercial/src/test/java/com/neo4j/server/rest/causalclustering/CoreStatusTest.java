@@ -14,11 +14,11 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
-import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Test;
+import org.hamcrest.TypeSafeMatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,18 +26,14 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -49,21 +45,22 @@ import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.server.rest.causalclustering.ReadReplicaStatusTest.responseAsMap;
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class CoreStatusTest
+class CoreStatusTest
 {
     private CausalClusteringStatus status;
 
-    private GraphDatabaseFacade databaseFacade;
-    private Dependencies dependencyResolver = new Dependencies();
+    private final Dependencies dependencyResolver = new Dependencies();
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final FakeClock clock = new FakeClock();
 
@@ -81,14 +78,16 @@ public class CoreStatusTest
     private final MemberId core3 = new MemberId( UUID.randomUUID() );
     private final MemberId replica = new MemberId( UUID.randomUUID() );
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
-        DatabaseService database = mock( DatabaseService.class );
-        databaseFacade = mock( GraphDatabaseFacade.class );
-        when( database.getDatabase() ).thenReturn( databaseFacade );
+        var databaseName = DEFAULT_DATABASE_NAME;
+        var output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
+        var dbService = mock( DatabaseService.class );
+        var databaseFacade = mock( GraphDatabaseFacade.class );
+        when( databaseFacade.databaseName() ).thenReturn( databaseName );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
+        when( dbService.getDatabase( databaseName ) ).thenReturn( databaseFacade );
 
         raftMembershipManager = dependencyResolver.satisfyDependency( fakeRaftMembershipManager( new HashSet<>( Arrays.asList( myself, core2, core3 ) ) ) );
 
@@ -102,22 +101,21 @@ public class CoreStatusTest
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
-        dependencyResolver.satisfyDependency( JobSchedulerFactory.createInitialisedScheduler() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
-        status = CausalClusteringStatusFactory.build( output, database );
+        status = CausalClusteringStatusFactory.build( output, dbService, databaseName );
     }
 
     @Test
-    public void testAnswersWhenLeader()
+    void testAnswersWhenLeader()
     {
         // given
         when( raftMachine.currentRole() ).thenReturn( Role.LEADER );
 
         // when
-        Response available = status.available();
-        Response readonly = status.readonly();
-        Response writable = status.writable();
+        var available = status.available();
+        var readonly = status.readonly();
+        var writable = status.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -131,15 +129,15 @@ public class CoreStatusTest
     }
 
     @Test
-    public void testAnswersWhenCandidate()
+    void testAnswersWhenCandidate()
     {
         // given
         when( raftMachine.currentRole() ).thenReturn( Role.CANDIDATE );
 
         // when
-        Response available = status.available();
-        Response readonly = status.readonly();
-        Response writable = status.writable();
+        var available = status.available();
+        var readonly = status.readonly();
+        var writable = status.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -153,15 +151,15 @@ public class CoreStatusTest
     }
 
     @Test
-    public void testAnswersWhenFollower()
+    void testAnswersWhenFollower()
     {
         // given
         when( raftMachine.currentRole() ).thenReturn( Role.FOLLOWER );
 
         // when
-        Response available = status.available();
-        Response readonly = status.readonly();
-        Response writable = status.writable();
+        var available = status.available();
+        var readonly = status.readonly();
+        var writable = status.writable();
 
         // then
         assertEquals( OK.getStatusCode(), available.getStatus() );
@@ -175,7 +173,7 @@ public class CoreStatusTest
     }
 
     @Test
-    public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException
+    void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
@@ -185,12 +183,15 @@ public class CoreStatusTest
         clock.forward( Duration.ofSeconds( 1 ) );
 
         // and helpers
-        List<String> votingMembers =
-                raftMembershipManager.votingMembers().stream().map( memberId -> memberId.getUuid().toString() ).sorted().collect( Collectors.toList() );
+        var votingMembers = raftMembershipManager.votingMembers()
+                .stream()
+                .map( memberId -> memberId.getUuid().toString() )
+                .sorted()
+                .collect( toList() );
 
         // when
-        Response description = status.description();
-        Map<String,Object> response = responseAsMap( description );
+        var description = status.description();
+        var response = responseAsMap( description );
 
         // then
         assertThat( response, containsAndEquals( "core", true ) );
@@ -205,91 +206,90 @@ public class CoreStatusTest
     }
 
     @Test
-    public void notParticipatingInRaftGroupWhenNotInVoterSet() throws IOException
+    void notParticipatingInRaftGroupWhenNotInVoterSet() throws IOException
     {
         // given not in voting set
         topologyService.replaceWithRole( core2, RoleInfo.LEADER );
         when( raftMembershipManager.votingMembers() ).thenReturn( new HashSet<>( Arrays.asList( core2, core3 ) ) );
 
         // when
-        Response description = status.description();
+        var description = status.description();
 
         // then
-        Map<String,Object> response = responseAsMap( description );
+        var response = responseAsMap( description );
         assertThat( response, containsAndEquals( "participatingInRaftGroup", false ) );
     }
 
     @Test
-    public void notParticipatingInRaftGroupWhenLeaderUnknown() throws IOException
+    void notParticipatingInRaftGroupWhenLeaderUnknown() throws IOException
     {
         // given leader is unknown
         topologyService.replaceWithRole( null, RoleInfo.LEADER );
 
         // when
-        Response description = status.description();
+        var description = status.description();
 
         // then
-        Map<String,Object> response = responseAsMap( description );
+        var response = responseAsMap( description );
         assertThat( response, containsAndEquals( "participatingInRaftGroup", false ) );
     }
 
     @Test
-    public void databaseHealthIsReflected() throws IOException
+    void databaseHealthIsReflected() throws IOException
     {
         // given database is not healthy
         databaseHealth.panic( new RuntimeException() );
 
         // when
-        Response description = status.description();
-        Map<String,Object> response = responseAsMap( description );
+        var description = status.description();
+        var response = responseAsMap( description );
 
         // then
         assertThat( response, containsAndEquals( "healthy", false ) );
     }
 
     @Test
-    public void leaderNullWhenUnknown() throws IOException
+    void leaderNullWhenUnknown() throws IOException
     {
         // given no leader
         topologyService.replaceWithRole( null, RoleInfo.LEADER );
 
         // when
-        Response description = status.description();
+        var description = status.description();
 
         // then
-        Map<String,Object> response = responseAsMap( description );
+        var response = responseAsMap( description );
         assertNull( response.get( "leader" ) );
     }
 
     @Test
-    public void throughputNullWhenUnknown() throws IOException
+    void throughputNullWhenUnknown() throws IOException
     {
         when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
 
-        Response description = status.description();
+        var description = status.description();
 
-        Map<String,Object> response = responseAsMap( description );
+        var response = responseAsMap( description );
         assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
     private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
     {
-        RaftMembershipManager raftMembershipManager = mock( RaftMembershipManager.class );
+        var raftMembershipManager = mock( RaftMembershipManager.class );
         when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers );
         return raftMembershipManager;
     }
 
     private static Matcher<Map<String,Object>> containsAndEquals( String key, Object target )
     {
-        return new BaseMatcher<>()
+        return new TypeSafeMatcher<>()
         {
             private boolean containsKey;
             private boolean areEqual;
 
             @Override
-            public boolean matches( Object item )
+            public boolean matchesSafely( Map<String,Object> map )
             {
-                Map<String,Object> map = (Map<String,Object>) item;
                 if ( !map.containsKey( key ) )
                 {
                     return false;

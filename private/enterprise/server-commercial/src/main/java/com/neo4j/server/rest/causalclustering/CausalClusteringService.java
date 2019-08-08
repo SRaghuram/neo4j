@@ -8,29 +8,33 @@ package com.neo4j.server.rest.causalclustering;
 import java.util.regex.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-@Path( CausalClusteringService.BASE_PATH )
+@Path( CausalClusteringService.DB_MANAGE_PATH )
 public class CausalClusteringService
 {
-    public static final Pattern URI_WHITELIST = Pattern.compile( "/db/manage/server/causalclustering.*" );
+    private static final String DB_NAME = "databaseName";
+    private static final String MANAGE_PATH = "/manage/causalclustering";
 
-    static final String BASE_PATH = "server/causalclustering/";
+    static final String DB_MANAGE_PATH = "/{" + DB_NAME + "}" + MANAGE_PATH;
 
     static final String AVAILABLE = "available";
     static final String WRITABLE = "writable";
     static final String READ_ONLY = "read-only";
-    static final String DESCRIPTION = "status";
+    static final String STATUS = "status";
 
     private final CausalClusteringStatus status;
 
-    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseService database )
+    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseService dbService, @PathParam( DB_NAME ) String databaseName )
     {
-        this.status = CausalClusteringStatusFactory.build( output, database );
+        this.status = CausalClusteringStatusFactory.build( output, dbService, databaseName );
     }
 
     @GET
@@ -61,9 +65,24 @@ public class CausalClusteringService
     }
 
     @GET
-    @Path( DESCRIPTION )
+    @Path( STATUS )
     public Response status()
     {
         return status.description();
+    }
+
+    public static Pattern databaseManageUriPattern( Config config )
+    {
+        return Pattern.compile( config.get( ServerSettings.db_api_path ).getPath() + "/[^/]*" + MANAGE_PATH );
+    }
+
+    public static String absoluteDatabaseManagePath( Config config )
+    {
+        return config.get( ServerSettings.db_api_path ).getPath() + DB_MANAGE_PATH;
+    }
+
+    static String relativeDatabaseManagePath( String databaseName )
+    {
+        return databaseName + MANAGE_PATH;
     }
 }
