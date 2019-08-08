@@ -14,6 +14,8 @@ import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -26,6 +28,8 @@ import static org.neo4j.util.Preconditions.checkState;
 
 public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements RaftMessageLogger<MEMBER>
 {
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss.SSSZ" );
+
     private enum Direction
     {
         INFO( "---" ),
@@ -44,7 +48,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     private final File logFile;
     private final FileSystemAbstraction fs;
     private final Clock clock;
-    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern( "yyyy-MM-dd HH:mm:ss.SSSZ" );
+    private final ReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
 
     private PrintWriter printWriter;
 
@@ -59,23 +63,32 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     @Override
     public void start() throws IOException
     {
-        checkState( printWriter == null, "Already started" );
-        printWriter = openPrintWriter();
-        log( me, Direction.INFO, me, "Info", "I am " + me );
+        lifecycleLock.writeLock().lock();
+        try
+        {
+            checkState( printWriter == null, "Already started" );
+            printWriter = openPrintWriter();
+            log( me, Direction.INFO, me, "Info", "I am " + me );
+        }
+        finally
+        {
+            lifecycleLock.writeLock().unlock();
+        }
     }
 
     @Override
     public void stop()
     {
-        closeAllSilently( printWriter );
-        printWriter = null;
-    }
-
-    private void log( MEMBER me, Direction direction, MEMBER remote, String type, String message )
-    {
-        printWriter.println( format( "%s %s %s %s %s \"%s\"",
-                ZonedDateTime.now( clock ).format( dateTimeFormatter ), me, direction.arrow, remote, type, message ) );
-        printWriter.flush();
+        lifecycleLock.writeLock().lock();
+        try
+        {
+            closeAllSilently( printWriter );
+            printWriter = null;
+        }
+        finally
+        {
+            lifecycleLock.writeLock().unlock();
+        }
     }
 
     @Override
@@ -95,6 +108,24 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     {
         fs.mkdirs( logFile.getParentFile() );
         return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
+    }
+
+    private void log( MEMBER me, Direction direction, MEMBER remote, String type, String message )
+    {
+        lifecycleLock.readLock().lock();
+        try
+        {
+            if ( printWriter != null )
+            {
+                var timestamp = ZonedDateTime.now( clock ).format( DATE_TIME_FORMATTER );
+                printWriter.println( format( "%s %s %s %s %s \"%s\"", timestamp, me, direction.arrow, remote, type, message ) );
+                printWriter.flush();
+            }
+        }
+        finally
+        {
+            lifecycleLock.readLock().unlock();
+        }
     }
 
     private static String nullSafeMessageType( RaftMessage message )
