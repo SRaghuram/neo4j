@@ -152,7 +152,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW ROLES")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: SHOW ALL ROLES"
+      "This is an administration command and it should be executed against the system database: SHOW ALL ROLES"
   }
 
   // Tests for creating roles
@@ -320,7 +320,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("CREATE ROLE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: CREATE ROLE"
+      "This is an administration command and it should be executed against the system database: CREATE ROLE"
   }
 
   // Tests for dropping roles
@@ -375,7 +375,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("DROP ROLE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: DROP ROLE"
+      "This is an administration command and it should be executed against the system database: DROP ROLE"
   }
 
   // Tests for granting roles to users
@@ -578,7 +578,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("GRANT ROLE dragon TO Bar")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: GRANT ROLE"
+      "This is an administration command and it should be executed against the system database: GRANT ROLE"
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -591,7 +591,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("GRANT ROLE dragon TO Bar")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: GRANT ROLE"
+      "This is an administration command and it should be executed against the system database: GRANT ROLE"
   }
 
   // Tests for revoking roles from users
@@ -776,7 +776,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: REVOKE ROLE"
+      "This is an administration command and it should be executed against the system database: REVOKE ROLE"
 
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -790,6 +790,6 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: REVOKE ROLE"
+      "This is an administration command and it should be executed against the system database: REVOKE ROLE"
   }
 }

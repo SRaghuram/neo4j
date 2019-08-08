@@ -121,7 +121,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           // WHEN
           execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
-        } should have message s"This is a administration command and it should be executed against the system database: $grantOrDenyCommand WRITE"
+        } should have message s"This is an administration command and it should be executed against the system database: $grantOrDenyCommand WRITE"
       }
 
       // Tests for revoke grant and revoke deny write privileges
@@ -239,7 +239,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
           // WHEN
           execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
           // THEN
-        } should have message s"This is a administration command and it should be executed against the system database: REVOKE $grantOrDenyCommand WRITE"
+        } should have message s"This is an administration command and it should be executed against the system database: REVOKE $grantOrDenyCommand WRITE"
       }
   }
 
@@ -357,7 +357,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       // WHEN
       execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
       // THEN
-    } should have message s"This is a administration command and it should be executed against the system database: REVOKE WRITE"
+    } should have message s"This is an administration command and it should be executed against the system database: REVOKE WRITE"
   }
 
   // Mixed tests for write privileges

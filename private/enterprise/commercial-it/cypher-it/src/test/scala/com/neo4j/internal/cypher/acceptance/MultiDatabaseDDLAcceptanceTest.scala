@@ -220,7 +220,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: SHOW DATABASE"
+      "This is an administration command and it should be executed against the system database: SHOW DATABASE"
   }
 
   test("should show default databases") {
@@ -278,7 +278,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW DATABASES")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: SHOW DATABASES"
+      "This is an administration command and it should be executed against the system database: SHOW DATABASES"
   }
 
   test("should show default database") {
@@ -343,7 +343,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("SHOW DEFAULT DATABASE")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: SHOW DEFAULT DATABASE"
+      "This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE"
   }
 
   // Tests for creating databases
@@ -622,7 +622,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("CREATE DATABASE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: CREATE DATABASE"
+      "This is an administration command and it should be executed against the system database: CREATE DATABASE"
   }
 
   // Tests for dropping databases
@@ -794,7 +794,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("DROP DATABASE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: DROP DATABASE"
+      "This is an administration command and it should be executed against the system database: DROP DATABASE"
   }
 
   // Tests for starting databases
@@ -937,7 +937,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("START DATABASE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: START DATABASE"
+      "This is an administration command and it should be executed against the system database: START DATABASE"
   }
 
   // Tests for stopping databases
@@ -1133,7 +1133,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
       execute("STOP DATABASE foo")
       // THEN
     } should have message
-      "This is a administration command and it should be executed against the system database: STOP DATABASE"
+      "This is an administration command and it should be executed against the system database: STOP DATABASE"
   }
 
   private def db(name: String, status: String = onlineStatus, default: Boolean = false) =
