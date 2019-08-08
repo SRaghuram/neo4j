@@ -668,8 +668,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("should return empty result when there are no relationship with the given id") {
     executeWith(Configs.RelationshipById, "MATCH ()-[r]->() WHERE id(r) = 42 RETURN r") shouldBe empty
     executeWith(Configs.RelationshipById, "MATCH ()<-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
-    //TODO undirected relById not supported yet
-    executeWith(Configs.RelationshipById - Configs.Morsel, "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.RelationshipById , "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
   }
 
   // Not TCK material -- id()
