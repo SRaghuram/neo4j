@@ -35,8 +35,8 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
-    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge], SelectionStrategy.SINGLE)
-    val workerManager = resolver.resolveDependency(classOf[WorkerManagement], SelectionStrategy.SINGLE)
+    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
+    val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
     RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), txBridge, spi.lifeSupport, workerManager)
   }
 

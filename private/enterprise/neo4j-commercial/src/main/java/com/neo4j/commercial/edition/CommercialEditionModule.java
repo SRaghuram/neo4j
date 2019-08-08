@@ -238,10 +238,11 @@ public class CommercialEditionModule extends CommunityEditionModule
     public static void satisfyCommercialOnlyDependencies( GlobalModule globalModule )
     {
         // Create Cypher workers
-        if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
+        Config globalConfig = globalModule.getGlobalConfig();
+        if ( globalConfig.get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
              GraphDatabaseSettings.CypherMorselRuntimeScheduler.SINGLE_THREADED )
         {
-            int configuredWorkers = globalModule.getGlobalConfig().get( GraphDatabaseSettings.cypher_worker_count );
+            int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
             int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
             WorkerManager workerManager =
                     new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
