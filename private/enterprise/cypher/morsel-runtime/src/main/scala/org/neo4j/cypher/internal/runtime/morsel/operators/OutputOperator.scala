@@ -56,7 +56,7 @@ trait OutputOperatorState extends HasWorkIdentity {
                               resources: QueryResources,
                               operatorExecutionEvent: OperatorProfileEvent): PreparedOutput
 
-  def canContinue: Boolean = false
+  def canContinueOutput: Boolean = false
 }
 
 trait PreparedOutput {

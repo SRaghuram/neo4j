@@ -81,7 +81,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 
   //==========================================================================
-  // This is called whe ProduceResult is the final operator of a pipeline
+  // This is called when ProduceResult is the final operator of a pipeline
 
   class OutputOOperatorState extends OutputOperatorState with PreparedOutput {
 
@@ -89,7 +89,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     override def toString: String = "ProduceResultOutputTask"
 
-    override def canContinue: Boolean = _canContinue
+    override def canContinueOutput: Boolean = _canContinue
 
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 

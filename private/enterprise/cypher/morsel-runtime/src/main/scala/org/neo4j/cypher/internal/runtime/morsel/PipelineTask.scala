@@ -70,7 +70,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
     DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
     val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, queryContext, state, resources, queryProfiler)
-    if (!outputOperatorState.canContinue) {
+    if (!outputOperatorState.canContinueOutput) {
       // There is no continuation on the output operator,
       // next-time around we need a new output morsel
       _output = null
@@ -106,7 +106,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   override def workDescription: String = pipelineState.pipeline.workDescription
 
-  override def canContinue: Boolean = startTask.canContinue || outputOperatorState.canContinue
+  override def canContinue: Boolean = startTask.canContinue || outputOperatorState.canContinueOutput
 
   override def estimatedHeapUsage: Long = startTask.estimatedHeapUsage
 }

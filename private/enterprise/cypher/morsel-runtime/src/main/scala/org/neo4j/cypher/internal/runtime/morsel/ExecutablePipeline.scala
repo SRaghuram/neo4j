@@ -123,7 +123,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
           currentRow = 0,
           slots,
           producingWorkUnitEvent)
-      } else  MorselExecutionContext.empty
+      } else MorselExecutionContext.empty
   }
 
   private def innerNextTask(context: QueryContext,
