@@ -27,6 +27,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     nodeList += createLabeledNode(Map("age" -> 4, "name" -> "F", "foo" -> 1, "gender" -> "male"), "A")
   }
 
+  override def afterEach(): Unit = {
+    super.afterEach()
+    nodeList.clear()
+  }
+
   test("should sort first unaliased and then aliased columns in the right order") {
     val result = executeWith(Configs.CachedProperty, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
