@@ -1274,7 +1274,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       else {
         val variableName = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
-        val cacheProperty = setCachedPropertyAt(cachedPropertyOffset, load(variableName))
         val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
 
         /**
@@ -1306,7 +1305,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                         assign(variableName,
                                invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor,
                                       PROPERTY_CURSOR, constant(true))),
-                        cacheProperty)
+                        setCachedPropertyAt(cachedPropertyOffset, load(variableName)))
                       )
                     )
                   )
