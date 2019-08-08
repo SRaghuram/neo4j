@@ -126,7 +126,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
   test("should abort first tx when failing on first batch during periodic commit") {
     // given
     val url = createTempCSVFile(20)
-    val query = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: (toInt(line[0]) - 8)/0})"
+    val query = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: (toInteger(line[0]) - 8)/0})"
 
     // when
     val (_, txCounts) = prepareAndTrackTxCounts(intercept[ArithmeticException](
@@ -154,7 +154,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
   test("should commit first tx and abort second tx when failing on second batch during periodic commit") {
     // given
     val url = createTempCSVFile(20)
-    val queryText = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: 1 / (toInt(line[0]) - 16)})"
+    val queryText = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: 1 / (toInteger(line[0]) - 16)})"
 
     // when
     val (_, txCounts) = prepareAndTrackTxCounts(intercept[ArithmeticException](
@@ -208,7 +208,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
 
     val queryText =
       s"USING PERIODIC COMMIT 1 LOAD CSV FROM '$url' AS line " +
-        s"CREATE ({name: 1/toInt(line[0])})"
+        s"CREATE ({name: 1/toInteger(line[0])})"
 
     // when executing 5 updates
     val e = intercept[CypherException](execute(queryText))
@@ -234,11 +234,11 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val query = s"""CYPHER runtime=interpreted USING PERIODIC COMMIT 2 LOAD CSV WITH HEADERS FROM '$url' AS row
                   |MERGE (n {name: row.name})
                   |ON CREATE SET
-                  |n.flows = toInt(row.flows),
+                  |n.flows = toInteger(row.flows),
                   |n.kbytes = toFloat(row.kbytes)
                   |
                   |ON MATCH SET
-                  |n.flows = n.flows + toInt(row.flows),
+                  |n.flows = n.flows + toInteger(row.flows),
                   |n.kbytes = n.kbytes + toFloat(row.kbytes)""".stripMargin
 
     def nodesWithFlow(i: Int) = s"MATCH (n {flows: $i}) RETURN count(*)"

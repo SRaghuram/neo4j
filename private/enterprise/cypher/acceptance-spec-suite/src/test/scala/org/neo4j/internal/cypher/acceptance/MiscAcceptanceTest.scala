@@ -71,7 +71,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |WITH   head(filter( child IN row.children WHERE child._type = "browseNodeId" ))._text as nodeId,
                   |       head(filter( child IN row.children WHERE child._type = "childNodes" )) as childElement
                   |
-                  |MERGE  (parent:Category { id: toInt(nodeId) })
+                  |MERGE  (parent:Category { id: toInteger(nodeId) })
                   |
                   |RETURN *""".stripMargin
 

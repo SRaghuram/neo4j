@@ -488,7 +488,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         writer.println("1337")
     })
 
-    val query = s"LOAD CSV WITH HEADERS FROM '$url' AS row MATCH (n:Awesome) WHERE toInt(row.Value) > 20 RETURN count(n.prop1)"
+    val query = s"LOAD CSV WITH HEADERS FROM '$url' AS row MATCH (n:Awesome) WHERE toInteger(row.Value) > 20 RETURN count(n.prop1)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should

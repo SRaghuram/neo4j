@@ -75,10 +75,10 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
-  test("cant use toInt() on booleans") {
+  test("cant use toInteger() on booleans") {
     executeAndEnsureError(
-      "RETURN toInt(true)",
-      "Type mismatch: expected Float, Integer, Number or String but was Boolean (line 1, column 14 (offset: 13))"
+      "RETURN toInteger(true)",
+      "Type mismatch: expected Float, Integer, Number or String but was Boolean (line 1, column 18 (offset: 17))"
     )
   }
 
@@ -437,7 +437,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("fail when parsing larger than 64 bit integers") {
     executeAndEnsureError(
-      "RETURN toInt('10508455564958384115')",
+      "RETURN toInteger('10508455564958384115')",
       "integer, 10508455564958384115, is too large")
   }
 

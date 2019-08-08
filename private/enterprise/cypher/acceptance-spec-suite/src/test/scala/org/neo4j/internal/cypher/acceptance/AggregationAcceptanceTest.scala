@@ -21,11 +21,11 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     relate(createNode(), userId, "FRIEND", Map("propFive" -> 4))
 
     val query1 = """MATCH (user:User {userId: 11})-[friendship:FRIEND]-()
-                   |WITH user, collect(friendship)[toInt({param} * count(friendship))] AS selectedFriendship
+                   |WITH user, collect(friendship)[toInteger({param} * count(friendship))] AS selectedFriendship
                    |RETURN id(selectedFriendship) AS friendshipId, selectedFriendship.propFive AS propertyValue""".stripMargin
     val query2 = """MATCH (user:User {userId: 11})-[friendship:FRIEND]-()
                    |WITH user, collect(friendship) AS friendships
-                   |WITH user, friendships[toInt({param} * size(friendships))] AS selectedFriendship
+                   |WITH user, friendships[toInteger({param} * size(friendships))] AS selectedFriendship
                    |RETURN id(selectedFriendship) AS friendshipId, selectedFriendship.propFive AS propertyValue""".stripMargin
     val params = Map("param" -> 3)
 

@@ -38,14 +38,14 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should estimate rows when independent expression without parameters") {
     (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(ceil(cos(0))) + 4")
+    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInteger(ceil(cos(0))) + 4")
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(5)
   }
 
   test("should estimate rows by default value when expression contains parameter") {
     (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInt(sin({limit}))",
+    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInteger(sin({limit}))",
                                params = Map("limit" -> 1))
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
@@ -54,7 +54,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
   test("should estimate rows by default value when expression contains rand()") {
     (0 until 100).map(_ => createLabeledNode("Person"))
     // NOTE: We cannot executeWith because of random result
-    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 AS x, p RETURN p LIMIT toInt(rand()*10)", Map.empty)
+    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 AS x, p RETURN p LIMIT toInteger(rand()*10)", Map.empty)
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }

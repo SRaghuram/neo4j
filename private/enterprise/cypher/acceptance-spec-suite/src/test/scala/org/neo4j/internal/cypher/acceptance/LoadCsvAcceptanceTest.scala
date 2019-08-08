@@ -665,7 +665,7 @@ class LoadCsvAcceptanceTest
       val query =
         s"""LOAD CSV WITH HEADERS FROM '$url' AS csvLine
            |MERGE (country:Country {name: csvLine.country})
-           |CREATE (movie:Movie {id: toInt(csvLine.id), title: csvLine.title, year:toInt(csvLine.year)})
+           |CREATE (movie:Movie {id: toInteger(csvLine.id), title: csvLine.title, year:toInteger(csvLine.year)})
            |CREATE (movie)-[:MADE_IN]->(country)""".stripMargin
       executeSingle(query, Map.empty)
       resourceMonitor.assertClosedAndClear(1)
@@ -702,7 +702,7 @@ class LoadCsvAcceptanceTest
     }).cypherEscape
     val query  = s"""LOAD CSV FROM '$url' as row
                    |WITH row where row[0] = 10
-                   |WITH distinct toInt(row[0]) as data
+                   |WITH distinct toInteger(row[0]) as data
                    |MERGE (c:City {data:data})
                    |RETURN count(*) as c""".stripMargin
 

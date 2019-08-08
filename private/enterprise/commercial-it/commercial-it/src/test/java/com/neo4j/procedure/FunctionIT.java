@@ -566,7 +566,7 @@ class FunctionIT
         //WHEN
         Result result = db.execute( "USING PERIODIC COMMIT 1 " +
                                     "LOAD CSV FROM '" + url + "' AS line " +
-                                    "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInt(line[0]))}) " +
+                                    "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " +
                                     "RETURN n.prop" );
         // THEN
         for ( long i = 1; i <= 100L; i++ )
@@ -590,7 +590,7 @@ class FunctionIT
                 assertThrows( QueryExecutionException.class, () ->
                         db.execute( "USING PERIODIC COMMIT 1 " +
                     "LOAD CSV FROM '" + url + "' AS line " +
-                    "WITH com.neo4j.procedure.simpleArgument(toInt(line[0])) AS val " +
+                    "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " +
                     "RETURN val" ) );
         assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
     }
