@@ -160,7 +160,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
     }.toSeq: _*)
 
     val relTypesOps = block(relTypesFields.toSeq.map{
-      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
+      case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, relationshipTypeId(name)))
     }: _*)
 
     block(

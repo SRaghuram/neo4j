@@ -182,6 +182,7 @@ object OperatorCodeGenHelperTemplates {
     invoke(cursor, method[CURSOR, Boolean]("next"))
 
   def nodeLabelId(labelName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(labelName))
+  def relationshipTypeId(typeName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName))
 
   // Profiling
   def profileRow(id: Id): IntermediateRepresentation = {
