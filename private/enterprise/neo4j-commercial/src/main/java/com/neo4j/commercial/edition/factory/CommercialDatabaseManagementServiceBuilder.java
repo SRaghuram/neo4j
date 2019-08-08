@@ -47,8 +47,7 @@ public class CommercialDatabaseManagementServiceBuilder extends DatabaseManageme
                 .dependencies( dependencies )
                 .urlAccessRules( urlAccessRules )
                 .extensions( extensions )
-                .databaseEventListeners( databaseEventListeners )
-                .queryEngineProviders( Collections.singletonList( new EnterpriseCypherEngineProvider() ) );
+                .databaseEventListeners( databaseEventListeners );
     }
 
     @Override

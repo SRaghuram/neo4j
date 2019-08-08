@@ -96,7 +96,7 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         Config config = globalModule.getGlobalConfig();
         var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         var globalProcedures = edition.getGlobalProcedures();
-        QueryEngineProvider queryEngineProvider = edition.chooseEngineProvider( globalModule.getQueryEngineProviders() );
+        QueryEngineProvider queryEngineProvider = edition.queryEngineProvider();
         return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
                                                    coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, queryEngineProvider );
     }
