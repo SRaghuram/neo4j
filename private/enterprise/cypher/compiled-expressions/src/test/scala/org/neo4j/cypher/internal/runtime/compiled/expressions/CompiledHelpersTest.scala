@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values._
+import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
 class CompiledHelpersTest extends CypherFunSuite {
 
@@ -263,5 +264,43 @@ class CompiledHelpersTest extends CypherFunSuite {
                    propertyCursor) should equal(Values.TRUE)
 
     verify(context, times(1)).setCachedPropertyAt(propertyOffset, PI)
+  }
+
+  test("nodeOrNoValue") {
+    //given
+    val nodeOffset = 42
+    val noNodeOffset = 43
+    val context = mock[ExecutionContext]
+    val nodeId = 1
+    val access = mock[DbAccess]
+    val node = mock[NodeValue]
+
+    //when
+    when(context.getLongAt(nodeOffset)).thenReturn(nodeId)
+    when(context.getLongAt(noNodeOffset)).thenReturn(-1L)
+    when(access.nodeById(nodeId)).thenReturn(node)
+
+    //then
+    nodeOrNoValue(context, access, nodeOffset) should equal(node)
+    nodeOrNoValue(context, access, noNodeOffset) should equal(NO_VALUE)
+  }
+
+  test("relationshipOrNoValue") {
+    //given
+    val relOffset = 42
+    val noRelOffset = 43
+    val context = mock[ExecutionContext]
+    val relId = 1
+    val access = mock[DbAccess]
+    val relationship = mock[RelationshipValue]
+
+    //when
+    when(context.getLongAt(relOffset)).thenReturn(relId)
+    when(context.getLongAt(noRelOffset)).thenReturn(-1L)
+    when(access.relationshipById(relId)).thenReturn(relationship)
+
+    //then
+    relationshipOrNoValue(context, access, relOffset) should equal(relationship)
+    relationshipOrNoValue(context, access, noRelOffset) should equal(NO_VALUE)
   }
 }

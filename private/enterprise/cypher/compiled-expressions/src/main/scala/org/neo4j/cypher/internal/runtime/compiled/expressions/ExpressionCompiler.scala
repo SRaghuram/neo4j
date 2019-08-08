@@ -2275,15 +2275,16 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
     slots.get(name) match {
       case Some(LongSlot(offset, nullable, CTNode)) =>
-        computeRepresentation(ir = ternary(equal(getLongAt(offset), constant(-1L)), noValue,
-                                        invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"),
-                                               getLongAt(offset))),
+        computeRepresentation(ir =
+                                invokeStatic(
+                                  method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("nodeOrNoValue"),
+                                  LOAD_CONTEXT, DB_ACCESS, constant(offset)),
                               nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
                               nullable = nullable)
       case Some(LongSlot(offset, nullable, CTRelationship)) =>
-        computeRepresentation(ir = ternary(equal(getLongAt(offset), constant(-1L)), noValue,
-                                        invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"),
-                                               getLongAt(offset))),
+        computeRepresentation(ir = invokeStatic(
+                                  method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("relationshipOrNoValue"),
+                                  LOAD_CONTEXT, DB_ACCESS, constant(offset)),
                               nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
                               nullable = nullable)
 
