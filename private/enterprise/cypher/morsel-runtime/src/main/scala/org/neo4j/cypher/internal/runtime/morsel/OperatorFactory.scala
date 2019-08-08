@@ -174,9 +174,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         val slotConfigs = physicalPlan.slotConfigurations
         val argumentSize = physicalPlan.argumentSizes(plan.id)
-        val lhsOffsets: Array[Int] = joinPlan.nodes.map(k => slots.getLongOffsetFor(k)).toArray
+        val nodes = joinPlan.nodes.toArray
+        val lhsOffsets: Array[Int] = nodes.map(k => slots.getLongOffsetFor(k))
         val rhsSlots = slotConfigs(joinPlan.right.id)
-        val rhsOffsets: Array[Int] = joinPlan.nodes.map(k => rhsSlots.getLongOffsetFor(k)).toArray
+        val rhsOffsets: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
         val copyLongsFromRHS = Array.newBuilder[(Int,Int)]
         val copyRefsFromRHS = Array.newBuilder[(Int,Int)]
         val copyCachedPropertiesFromRHS = Array.newBuilder[(Int,Int)]

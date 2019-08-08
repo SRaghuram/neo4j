@@ -178,7 +178,7 @@ test("larger optional match join should not crash") {
         |(f00)-[:bottom{name: "f00f10"}]->(f10)-[:bottom{name: "f10f20"}]->(f20),
         |(f01)-[:bottom{name: "f01f11"}]->(f11)-[:bottom{name: "f11f00"}]->(f21),
         |(f02)-[:bottom{name: "f02f12"}]->(f12)-[:bottom{name: "f12f00"}]->(f22),
-        |(b:Board {name: "b"})
+        |(:Board {name: "b"})
       """.stripMargin)
 
     // The board points to all fields
@@ -228,7 +228,7 @@ test("larger optional match join should not crash") {
       """.stripMargin
 
     // WHEN
-    // TODO Morsel currently gives 0 results, will be fixed in follow up pr
+    // Morsel currently gives 0 results due to not handling such big MATCH cases properly
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, expectedDifferentResults = Configs.Morsel)
 
     // THEN
