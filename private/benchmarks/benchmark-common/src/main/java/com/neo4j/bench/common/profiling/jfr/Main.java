@@ -19,13 +19,7 @@ import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toCollection;
 
 /**
  * Simple utility class, which converts any JFR recording into stack collapsed file
@@ -41,39 +35,32 @@ public class Main
             System.out.println( "this command requires one argument, no more, no less" );
         }
         File file = new File( args[0] );
-
         IItemCollection loadEvents = JfrLoaderToolkit.loadEvents( file );
-
         Iterator<IItemIterable> itemIterables = loadEvents
-                .apply( ItemFilters.type( JdkTypeIDs.ALLOC_INSIDE_TLAB, JdkTypeIDs.ALLOC_OUTSIDE_TLAB ) )
-                .iterator();
-
-        while ( itemIterables.hasNext() )
+                .apply( ItemFilters.type( JdkTypeIDs.ALLOC_INSIDE_TLAB, JdkTypeIDs.ALLOC_OUTSIDE_TLAB ) ).iterator();
+        try ( StackCollapse stackCollapse = new StackCollapse() )
         {
-            IItemIterable itermIterable = itemIterables.next();
-            Iterator<IItem> items = itermIterable.iterator();
-            while ( items.hasNext() )
+            while ( itemIterables.hasNext() )
             {
-                IItem item = items.next();
-                IType<?> type = item.getType();
-
-                @SuppressWarnings( "unchecked" )
-                IMemberAccessor<IQuantity,Object> allocationSize =
-                        (IMemberAccessor<IQuantity,Object>) JdkAttributes.ALLOCATION_SIZE.getAccessor( type );
-                @SuppressWarnings( "unchecked" )
-                IMemberAccessor<IMCStackTrace,Object> stackTrace =
-                        (IMemberAccessor<IMCStackTrace,Object>) JfrAttributes.EVENT_STACKTRACE.getAccessor( type );
-
-                IMCStackTrace mcStackTrace = stackTrace.getMember( item );
-                if ( mcStackTrace != null /*native stack*/ )
+                IItemIterable itermIterable = itemIterables.next();
+                Iterator<IItem> items = itermIterable.iterator();
+                while ( items.hasNext() )
                 {
-                    System.out.println( stackTrace.getMember( item ).getFrames().stream()
-                            .map( m -> m.getMethod().getType().getFullName() + "#" + m.getMethod().getMethodName() )
-                            .collect( collectingAndThen( toCollection( ArrayList::new ), lst -> {
-                                Collections.reverse( lst );
-                                return lst.stream();
-                            } ) ).collect( Collectors.joining( ";" ) ) + " "
-                            + allocationSize.getMember( item ).longValue() );
+                    IItem item = items.next();
+                    IType<?> type = item.getType();
+                    @SuppressWarnings( "unchecked" )
+                    IMemberAccessor<IQuantity,Object> allocationSize =
+                            (IMemberAccessor<IQuantity,Object>) JdkAttributes.ALLOCATION_SIZE.getAccessor( type );
+                    @SuppressWarnings( "unchecked" )
+                    IMemberAccessor<IMCStackTrace,Object> stackTrace =
+                            (IMemberAccessor<IMCStackTrace,Object>) JfrAttributes.EVENT_STACKTRACE.getAccessor( type );
+                    IMCStackTrace mcStackTrace = stackTrace.getMember( item );
+                    if ( mcStackTrace != null /*native stack*/ )
+                    {
+
+                        stackCollapse.addStackTrace( stackTrace.getMember( item ).getFrames(), allocationSize.getMember( item )::longValue);
+
+                    }
                 }
             }
         }
