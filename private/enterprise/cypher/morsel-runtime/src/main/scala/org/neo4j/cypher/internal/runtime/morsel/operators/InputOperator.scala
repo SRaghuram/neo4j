@@ -180,7 +180,8 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))
           )
         ),
-      innermost.onExit)
+      innermost.onExit
+    )
   }
 
   override def genInit: IntermediateRepresentation = inner.genInit

@@ -99,6 +99,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
           innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
           innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
+          innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
           val argumentDepth = physicalPlan.applyPlans(id)
           val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
 

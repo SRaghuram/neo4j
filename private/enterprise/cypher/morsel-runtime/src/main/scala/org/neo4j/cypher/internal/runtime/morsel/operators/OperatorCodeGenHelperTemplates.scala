@@ -60,6 +60,7 @@ object OperatorCodeGenHelperTemplates {
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
   val QUERY_STATE: IntermediateRepresentation = load("state")
   val QUERY_RESOURCES: IntermediateRepresentation = load("resources")
+
   val CURSOR_POOL_V: LocalVariable =
     variable[CursorPools]("cursorPools",
                           invoke(QUERY_RESOURCES,
@@ -123,6 +124,11 @@ object OperatorCodeGenHelperTemplates {
   val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
   val UPDATE_DEMAND: IntermediateRepresentation =
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
+
+  // This is used as bound on the work unit for pipelines that does not write to output morsels, e.g. ends with pre-aggregation
+  val OUTPUT_COUNTER: LocalVariable = variable[Int]("outputCounter", invoke(QUERY_STATE, method[QueryState, Int]("morselSize")))
+  val UPDATE_OUTPUT_COUNTER: IntermediateRepresentation = assign(OUTPUT_COUNTER, subtract(load(OUTPUT_COUNTER), constant(1)))
+  val HAS_REMAINING_OUTPUT: IntermediateRepresentation = greaterThan(load(OUTPUT_COUNTER), constant(0))
 
   val NO_TOKEN: GetStatic = getStatic[TokenConstants, Int]("NO_TOKEN")
 

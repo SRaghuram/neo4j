@@ -177,7 +177,8 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
           )
           )
       ),
-      innermost.onExit)
+      innermost.onExit
+    )
   }
 
   /**

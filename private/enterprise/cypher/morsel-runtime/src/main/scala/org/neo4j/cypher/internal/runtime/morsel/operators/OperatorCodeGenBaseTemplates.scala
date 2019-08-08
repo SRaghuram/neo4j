@@ -26,6 +26,8 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.{KernelReadTracer, Read}
 import org.neo4j.values.AnyValue
 
+import scala.collection.mutable.ArrayBuffer
+
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                 val taskFactory: CompiledTaskFactory) extends StreamingOperator {
   /**
@@ -463,9 +465,9 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
-                                   var shouldCheckDemand: Boolean = true)
+                                   var shouldCheckDemand: Boolean = true,
+                                   var shouldCheckOutputCounter: Boolean = false)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-
   override def inner: OperatorTaskTemplate = null
 
   override val id: Id = Id.INVALID_ID
@@ -479,48 +481,72 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genCloseProfileEvents: IntermediateRepresentation = noop()
 
   override protected def genOperate: IntermediateRepresentation = {
-    if (shouldWriteToContext) {
-      block(
-        codeGen.writeLocalsToSlots(),
-        OUTPUT_ROW_MOVE_TO_NEXT
-      )
-    } else {
+    val ops = new ArrayBuffer[IntermediateRepresentation]
+
+    if (shouldWriteToContext)
+      ops += block(codeGen.writeLocalsToSlots(), OUTPUT_ROW_MOVE_TO_NEXT)
+    if (shouldCheckOutputCounter)
+      ops += UPDATE_OUTPUT_COUNTER
+
+    if (ops.nonEmpty)
+      block(ops: _*)
+    else
       noop()
-    }
   }
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  def predicate: IntermediateRepresentation =
+  def predicate: IntermediateRepresentation = {
+    val conditions = new ArrayBuffer[IntermediateRepresentation]
+
     if (shouldWriteToContext)
-      OUTPUT_ROW_IS_VALID
-    else if (shouldCheckDemand)
-      HAS_DEMAND
-    else
-      constant(true)
+      conditions += OUTPUT_ROW_IS_VALID
+    if (shouldCheckDemand)
+      conditions += HAS_DEMAND
+    if (shouldCheckOutputCounter)
+      conditions += HAS_REMAINING_OUTPUT
+
+    and(conditions)
+  }
+
+  def onEnter: IntermediateRepresentation =
+    noop()
 
   /**
     * If we need to care about demand (produceResult part of the fused operator)
     * we need to update the demand after having produced data.
     */
-  def onExit: IntermediateRepresentation =
+  def onExit: IntermediateRepresentation = {
+    val updates = new ArrayBuffer[IntermediateRepresentation]
+
     if (shouldWriteToContext)
-      OUTPUT_ROW_FINISHED_WRITING
-    else if (shouldCheckDemand)
-      UPDATE_DEMAND
+      updates += OUTPUT_ROW_FINISHED_WRITING
+    if (shouldCheckDemand)
+      updates += UPDATE_DEMAND
+
+    if (updates.nonEmpty)
+      block(updates: _*)
     else
       noop()
+  }
 
   override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] = {
-    codeGen.locals.getAllLocalsForLongSlots.map {
-      case (_, name) =>
-        variable[Long](name, constant(-1L))
-    } ++
-    codeGen.locals.getAllLocalsForRefSlots.map {
-      case (_, name) =>
-        variable[AnyValue](name, noValue)
+    val localsForSlots =
+      codeGen.locals.getAllLocalsForLongSlots.map {
+        case (_, name) =>
+          variable[Long](name, constant(-1L))
+      } ++
+      codeGen.locals.getAllLocalsForRefSlots.map {
+        case (_, name) =>
+          variable[AnyValue](name, noValue)
+      }
+
+    if (shouldCheckOutputCounter) {
+      localsForSlots :+ OUTPUT_COUNTER
+    } else {
+      localsForSlots
     }
   }
 
