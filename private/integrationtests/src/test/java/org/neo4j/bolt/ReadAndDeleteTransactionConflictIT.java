@@ -70,8 +70,8 @@ public class ReadAndDeleteTransactionConflictIT
         // See CIP2018-10-19 for the details of these plans: https://github.com/opencypher/openCypher/pull/332
         try ( Session session = driver.session() )
         {
-            Value nodeId = session.run( "create (n {a: 'b'}) return id(n)" ).single().get( 0 );
-            Record record = session.run( "match (n) where id(n) = {nodeId} delete n return n", Values.parameters( "nodeId", nodeId ) ).single();
+            Value nodeId = session.run( "create (n:L1 {a: 'b'}) return id(n)" ).single().get( 0 );
+            Record record = session.run( "match (n:L1) where id(n) = {nodeId} delete n return n", Values.parameters( "nodeId", nodeId ) ).single();
             Map<String,Object> map = record.get( 0 ).asMap();
             assertThat( map, equalTo( new HashMap<>() ) );
         }
@@ -82,8 +82,9 @@ public class ReadAndDeleteTransactionConflictIT
     {
         try ( Session session = driver.session() )
         {
-            Value nodeId = session.run( "create (n)-[:REL]->(m) return id(n)" ).single().get( 0 );
-            StatementResult result = session.run( "match (n)-[r]->(m) where id(n) = {nodeId} delete n, m, r return r", Values.parameters( "nodeId", nodeId ) );
+            Value nodeId = session.run( "create (n:L2)-[:REL]->(m) return id(n)" ).single().get( 0 );
+            StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = {nodeId} delete n, m, r return r",
+                    Values.parameters( "nodeId", nodeId ) );
             try
             {
                 result.single();
@@ -101,9 +102,9 @@ public class ReadAndDeleteTransactionConflictIT
     {
         try ( Session session = driver.session() )
         {
-            Value nodeId = session.run( "create (n)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
+            Value nodeId = session.run( "create (n:L3)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
             StatementResult result = session.run( "" +
-                    "match (n)-[r]->(m) " +
+                    "match (n:L3)-[r]->(m) " +
                     "where id(n) = {nodeId} " +
                     "with n, m, r, properties(r) as props " +
                     "delete n, m, r " +
@@ -120,7 +121,7 @@ public class ReadAndDeleteTransactionConflictIT
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "create (n) with n unwind range(1, 1000) as x create (n)-[:REL]->(n)" );
+                    "create (n:L4) with n unwind range(1, 1000) as x create (n)-[:REL]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
             assertThat( counters.relationshipsCreated(), is( 1000 ) );
@@ -131,8 +132,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match ()-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n) detach delete n" );
+                    readResult = reader.run( "match (:L4)-[r]->() return 1 as whatever, r" );
+                    StatementResult deleteResult = deleter.run( "match (n:L4) detach delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -160,7 +161,7 @@ public class ReadAndDeleteTransactionConflictIT
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "create (n) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
+                    "create (n:L5) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
             assertThat( counters.relationshipsCreated(), is( 1000 ) );
@@ -171,8 +172,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match ()-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n) detach delete n" );
+                    readResult = reader.run( "match (:L5)-[r]->() return 1 as whatever, r" );
+                    StatementResult deleteResult = deleter.run( "match (n:L5) detach delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -200,7 +201,7 @@ public class ReadAndDeleteTransactionConflictIT
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "unwind range(1, 1000) as x create (n:A:B:C:D:E:F:G:H:I:J:K:L:O:P:Q)" );
+                    "unwind range(1, 1000) as x create (n:L6:A:B:C:D:E:F:G:H:I:J:K:L:O:P:Q)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
             assertThat( counters.relationshipsCreated(), is( 0 ) );
@@ -211,8 +212,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match (n) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n) delete n" );
+                    readResult = reader.run( "match (n:L6) return 1 as whatever, n" );
+                    StatementResult deleteResult = deleter.run( "match (n:L6) delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -240,7 +241,7 @@ public class ReadAndDeleteTransactionConflictIT
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "unwind range(1, 1000) as x create (n {a: 1})" );
+                    "unwind range(1, 1000) as x create (n:L7 {a: 1})" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
             assertThat( counters.relationshipsCreated(), is( 0 ) );
@@ -251,8 +252,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match (n) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n) delete n" );
+                    readResult = reader.run( "match (n:L7) return 1 as whatever, n" );
+                    StatementResult deleteResult = deleter.run( "match (n:L7) delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
