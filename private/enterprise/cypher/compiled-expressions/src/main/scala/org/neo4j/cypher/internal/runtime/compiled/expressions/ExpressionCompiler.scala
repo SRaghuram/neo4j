@@ -1908,11 +1908,10 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   }
 
   def intermediateCompileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
-    val removed = projections.keys.count(slots(_).isLongSlot)
     val compiled = for {(k, v) <- projections
                         c <- intermediateCompileExpression(v) if !slots(k).isLongSlot}
       yield slots(k).offset -> c
-    if (compiled.size + removed < projections.size) None
+    if (compiled.size < projections.size) None
     else {
       val all = compiled.toSeq.map {
         case (slot, value) => setRefAt(slot, nullCheckIfRequired(value))
