@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, MaxAggregator, MinAggregator, Reducer, SumAggregator, Updater}
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, Aggregators, MaxAggregator, MinAggregator, Reducer, SumAggregator, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
@@ -271,13 +271,13 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   private def createAggregators(): IntermediateRepresentation = {
     val newAggregators = aggregators.map {
-      case CountStarAggregator() => newInstance(constructor[CountStarAggregator])
-      case CountAggregator() => newInstance(constructor[CountAggregator])
-      case SumAggregator() => newInstance(constructor[SumAggregator])
-      case AvgAggregator() => newInstance(constructor[AvgAggregator])
-      case MaxAggregator() => newInstance(constructor[MaxAggregator])
-      case MinAggregator() => newInstance(constructor[MinAggregator])
-      case CollectAggregator() => newInstance(constructor[CollectAggregator])
+      case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
+      case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
+      case SumAggregator => getStatic[Aggregators,Aggregator]("SUM")
+      case AvgAggregator => getStatic[Aggregators,Aggregator]("AVG")
+      case MaxAggregator => getStatic[Aggregators,Aggregator]("MAX")
+      case MinAggregator => getStatic[Aggregators,Aggregator]("MIN")
+      case CollectAggregator => getStatic[Aggregators,Aggregator]("COLLECT")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }

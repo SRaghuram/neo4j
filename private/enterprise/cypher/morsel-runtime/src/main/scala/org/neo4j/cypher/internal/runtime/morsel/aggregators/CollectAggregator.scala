@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Aggregator for collect(...).
   */
-case class CollectAggregator() extends Aggregator {
+case object CollectAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CollectUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)

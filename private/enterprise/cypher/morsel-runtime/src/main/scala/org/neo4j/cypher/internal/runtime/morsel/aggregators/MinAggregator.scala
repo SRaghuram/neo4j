@@ -15,14 +15,12 @@ import org.neo4j.values.{AnyValue, AnyValues}
 /**
   * Aggregator for min(...).
   */
-case class MinAggregator() extends Aggregator {
+case object MinAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MinUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MinStandardReducer
   override def newConcurrentReducer: Reducer = new MinConcurrentReducer
-}
 
-object MinAggregator {
   def shouldUpdate(min: AnyValue, value: AnyValue): Boolean =
     (min eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(min, value) > 0
 }
