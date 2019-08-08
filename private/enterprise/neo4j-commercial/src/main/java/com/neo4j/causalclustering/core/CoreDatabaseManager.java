@@ -28,7 +28,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
-import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -96,9 +95,8 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         Config config = globalModule.getGlobalConfig();
         var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         var globalProcedures = edition.getGlobalProcedures();
-        QueryEngineProvider queryEngineProvider = edition.queryEngineProvider();
         return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
-                                                   coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, queryEngineProvider );
+                                                   coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig );
     }
 
 }

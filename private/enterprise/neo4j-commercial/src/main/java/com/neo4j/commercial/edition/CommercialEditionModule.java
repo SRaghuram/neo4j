@@ -93,7 +93,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public QueryEngineProvider queryEngineProvider()
+    public QueryEngineProvider getQueryEngineProvider()
     {
         return new EnterpriseCypherEngineProvider();
     }

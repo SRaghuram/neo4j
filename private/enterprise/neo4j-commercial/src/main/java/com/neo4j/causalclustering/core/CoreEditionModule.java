@@ -215,7 +215,7 @@ public class CoreEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public QueryEngineProvider queryEngineProvider()
+    public QueryEngineProvider getQueryEngineProvider()
     {
         // Clustering is enterprise only
         return new EnterpriseCypherEngineProvider();
