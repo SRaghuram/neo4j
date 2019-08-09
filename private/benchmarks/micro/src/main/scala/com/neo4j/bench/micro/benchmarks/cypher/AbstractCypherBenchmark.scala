@@ -52,7 +52,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
-  private val databaseIdRepository = new TestDatabaseIdRepository()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
     var count: Int = 0
@@ -182,7 +181,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val metaData = new util.HashMap[String, AnyRef]()
     val threadToStatementContextBridge =
       dependencyResolver.provideDependency(classOf[ThreadToStatementContextBridge]).get
-    val initialStatement: Statement = threadToStatementContextBridge.get(db.asInstanceOf[GraphDatabaseAPI].databaseId())
+    val databaseId = db.asInstanceOf[GraphDatabaseAPI].databaseId()
+    val initialStatement: Statement = threadToStatementContextBridge.get(databaseId)
     val threadExecutingTheQuery = Thread.currentThread()
     val activeLockCount: LongSupplier = new LongSupplier {
       override def getAsLong = 0
@@ -193,7 +193,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       threadToStatementContextBridge,
       tx,
       initialStatement,
-      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, databaseIdRepository.defaultDatabase(), "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
+      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, databaseId, "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
       new DefaultValueMapper(proxySpi)) {
       override def close(success: Boolean): Unit = ()
     }
