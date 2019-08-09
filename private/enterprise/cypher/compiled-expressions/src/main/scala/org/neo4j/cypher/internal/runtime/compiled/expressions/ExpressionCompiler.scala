@@ -132,17 +132,17 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   /**
     * Compiles the given groupings to an instance of [[CompiledGroupingExpression]]
-    * @param groupings the groupings to compile
+    * @param orderedGroupings the groupings to compile
     * @return an instance of [[CompiledGroupingExpression]] corresponding to the provided groupings
     */
-  def compileGrouping(groupings: Map[String, Expression], orderToLeverage: Seq[Expression]): Option[CompiledGroupingExpression] = {
+  def compileGrouping(orderedGroupings: SlotConfiguration => Seq[(String, Expression, Boolean)]): Option[CompiledGroupingExpression] = {
     def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
       declareAndAssign(v.typ, v.name, v.value)
     }: _*)
-    val orderedGroupings = groupings.toSeq.sortBy(e => (!orderToLeverage.contains(e._2), slots(e._1).offset))
-    val compiled = for {(k, v) <- orderedGroupings
+    val orderedGroupingsBySlots = orderedGroupings(slots) // Apply the slot configuration to get the complete order
+    val compiled = for {(k, v, _) <- orderedGroupingsBySlots
                         c <- intermediateCompileExpression(v)} yield slots(k) -> c
-    if (compiled.size < groupings.size) None
+    if (compiled.size < orderedGroupingsBySlots.size) None
     else {
       val grouping = intermediateCompileGroupingExpression(compiled)
       val classDeclaration =

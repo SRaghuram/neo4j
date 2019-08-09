@@ -155,11 +155,10 @@ case class SlottedGroupingExpression3(groupingExpression1: SlotExpression,
   }
 }
 
-case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression]) extends GroupingExpression {
+case class SlottedGroupingExpression(sortedGroupingExpression: Array[SlotExpression]) extends GroupingExpression {
 
   override type KeyType = ListValue
 
-  private val sortedGroupingExpression = groupingExpressions.sortBy(s => (!s.ordered, s.slot.offset))
   private val setters = sortedGroupingExpression.map(e => makeSetValueInSlotFunctionFor(e.slot))
   private val getters = sortedGroupingExpression.map(e => makeGetValueFromSlotFunctionFor(e.slot))
   // First the ordered columns, then the unordered ones
@@ -167,7 +166,7 @@ case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression])
   private val numberOfSortedColumns = sortedGroupingExpression.count(_.ordered)
 
   override def registerOwningPipe(pipe: Pipe): Unit = {
-    groupingExpressions.foreach(e => e.expression.registerOwningPipe(pipe))
+    sortedGroupingExpression.foreach(e => e.expression.registerOwningPipe(pipe))
   }
   override def computeGroupingKey(context: ExecutionContext, state: QueryState): ListValue = {
     val values = new Array[AnyValue](expressions.length)

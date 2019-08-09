@@ -5,18 +5,31 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, ast => runtimeAst}
+import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, SlotConfiguration, ast => runtimeAst}
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath._
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+
+object SlottedExpressionConverters {
+  // This is a shared method to provide consistent ordering of grouping keys for all slot-based runtimes
+  def orderGroupingKeyExpressions(groupings: Iterable[(String, Expression)], orderToLeverage: Seq[Expression])
+                                 (slots: SlotConfiguration): Seq[(String, Expression, Boolean)] = {
+    // SlotConfiguration is a separate parameter list so it can be applied at a later stage
+    groupings.toSeq.map(a => (a._1, a._2, orderToLeverage.contains(a._2)))
+      // Sort grouping key (1) by expressions with provided order first, followed by unordered expressions
+      //          and then (2) by slot offset
+      .sortBy(b => (!b._3, slots(b._1).offset))
+  }
+}
 
 case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends ExpressionConverter {
 
@@ -32,13 +45,15 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
                                     orderToLeverage: Seq[Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     val slots = physicalPlan.slotConfigurations(id)
-    val projected = for {(k, v) <- projections} yield (slots.get(k).get, self.toCommandExpression(id, v), orderToLeverage.contains(v))
-    projected.toList match {
+    val orderedGroupings = orderGroupingKeyExpressions(projections, orderToLeverage)(slots)
+      .map(e => (slots(e._1), self.toCommandExpression(id, e._2), e._3))
+
+    orderedGroupings.toList match {
       case Nil => Some(EmptyGroupingExpression)
       case (slot, e, ordered)::Nil => Some(SlottedGroupingExpression1(SlotExpression(slot, e, ordered)))
       case (s1, e1, o1)::(s2, e2, o2)::Nil => Some(SlottedGroupingExpression2(SlotExpression(s1, e1, o1), SlotExpression(s2, e2, o2)))
       case (s1, e1, o1)::(s2, e2, o2)::(s3, e3, o3)::Nil => Some(SlottedGroupingExpression3(SlotExpression(s1, e1, o1), SlotExpression(s2, e2, o2), SlotExpression(s3, e3, o3)))
-      case _ => Some(SlottedGroupingExpression(projected.map(t => SlotExpression(t._1, t._2, t._3)).toArray))
+      case _ => Some(SlottedGroupingExpression(orderedGroupings.map(t => SlotExpression(t._1, t._2, t._3)).toArray))
     }
   }
 

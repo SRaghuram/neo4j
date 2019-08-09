@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util._
@@ -71,7 +72,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     def compileGroupingKey(astExpressions: Map[String, Expression],
                            slots: SlotConfiguration,
                            orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
-      val orderedGroupingExpressions = astExpressions.toSeq.sortBy(e => (!orderToLeverage.contains(e._2), slots(e._1).offset)).map(_._2)
+      val orderedGroupingExpressions = orderGroupingKeyExpressions(astExpressions, orderToLeverage)(slots).map(_._2)
       () => expressionCompiler.intermediateCompileGroupingKey(orderedGroupingExpressions)
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
     }

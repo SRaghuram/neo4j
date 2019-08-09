@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContex
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedQueryState}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -3780,7 +3781,8 @@ class CompiledExpressionsIT extends ExpressionsIT {
 
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    defaultGenerator(slots).compileGrouping(projections, orderToLeverage = Seq.empty).getOrElse(fail(s"Failed to compile grouping $projections"))
+    defaultGenerator(slots).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+      .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
 class InterpretedExpressionIT extends ExpressionsIT {

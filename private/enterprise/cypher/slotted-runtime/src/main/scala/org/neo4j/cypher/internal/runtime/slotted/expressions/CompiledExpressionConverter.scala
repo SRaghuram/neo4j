@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expre
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -78,11 +79,12 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     try {
       if(orderToLeverage.nonEmpty) {
         // TODO Support compiled ordered GroupingExpression
+        // UPDATE: In theory this should now be supported...
         None
       } else {
-        log.debug(s" Compiling projection: $projections")
+        log.debug(s" Compiling grouping expression: $projections")
         defaultGenerator(physicalPlan.slotConfigurations(id))
-          .compileGrouping(projections, orderToLeverage)
+          .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
           .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
       }
     }
@@ -92,7 +94,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
         if (shouldThrow) throw t
-        else log.debug(s"Failed to compile projection: $projections", t)
+        else log.debug(s"Failed to compile grouping expression: $projections", t)
         None
     }
   }
