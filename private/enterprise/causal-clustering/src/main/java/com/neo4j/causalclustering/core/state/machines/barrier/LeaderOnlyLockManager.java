@@ -5,17 +5,15 @@
  */
 package com.neo4j.causalclustering.core.state.machines.barrier;
 
-import java.util.stream.Stream;
-
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
+
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
-
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
 
 /**
  * Each member of the cluster uses its own {@link LeaderOnlyLockManager} which wraps a local {@link Locks} manager.
@@ -93,28 +91,14 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceId ) throws AcquireLockTimeoutException
         {
-            try
-            {
-                barrierState.ensureHoldingToken();
-            }
-            catch ( BarrierException e )
-            {
-                throw new AcquireLockTimeoutException( e, NotALeader );
-            }
+            ensureExclusiveLockCanBeAcquired();
             localClient.acquireExclusive( tracer, resourceType, resourceId );
         }
 
         @Override
         public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
         {
-            try
-            {
-                barrierState.ensureHoldingToken();
-            }
-            catch ( BarrierException e )
-            {
-                throw new AcquireLockTimeoutException( e, NotALeader );
-            }
+            ensureExclusiveLockCanBeAcquired();
             return localClient.tryExclusiveLock( resourceType, resourceId );
         }
 
@@ -133,14 +117,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
         {
-            try
-            {
-                barrierState.ensureHoldingToken();
-            }
-            catch ( BarrierException e )
-            {
-                throw new AcquireLockTimeoutException( e, NotALeader );
-            }
+            ensureExclusiveLockCanBeAcquired();
             return localClient.reEnterExclusive( resourceType, resourceId );
         }
 
@@ -190,6 +167,19 @@ public class LeaderOnlyLockManager implements Locks
         public long activeLockCount()
         {
             return localClient.activeLockCount();
+        }
+
+        void ensureExclusiveLockCanBeAcquired()
+        {
+            try
+            {
+                barrierState.ensureHoldingToken();
+            }
+            catch ( BarrierException e )
+            {
+                throw new AcquireLockTimeoutException( "This instance is no longer able to acquire exclusive locks because of leader re-election",
+                        e, e.status() );
+            }
         }
     }
 }

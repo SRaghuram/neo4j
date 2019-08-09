@@ -5,12 +5,21 @@
  */
 package com.neo4j.causalclustering.core.state.machines.id;
 
-import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.kernel.api.exceptions.Status;
 
-public class IdGenerationException extends TransactionFailureException
+public class IdGenerationException extends RuntimeException implements Status.HasStatus
 {
-    IdGenerationException( Throwable cause )
+    private final Status status;
+
+    IdGenerationException( String message, Throwable cause, Status status )
     {
-        super( "Failed to generate record id", cause );
+        super( message, cause );
+        this.status = status;
+    }
+
+    @Override
+    public Status status()
+    {
+        return status;
     }
 }

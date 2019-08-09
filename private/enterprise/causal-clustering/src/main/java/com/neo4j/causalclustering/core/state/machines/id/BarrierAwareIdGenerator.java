@@ -5,10 +5,10 @@
  */
 package com.neo4j.causalclustering.core.state.machines.id;
 
-import java.io.IOException;
-
 import com.neo4j.causalclustering.core.state.machines.barrier.BarrierException;
 import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
+
+import java.io.IOException;
 
 import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdGenerator;
@@ -47,42 +47,21 @@ public class BarrierAwareIdGenerator implements IdGenerator
     @Override
     public void freeId( long id )
     {
-        try
-        {
-            barrierState.ensureHoldingToken();
-        }
-        catch ( BarrierException e )
-        {
-            throw new IdGenerationException( e );
-        }
+        ensureCanManageIds();
         delegate.freeId( id );
     }
 
     @Override
     public void deleteId( long id )
     {
-        try
-        {
-            barrierState.ensureHoldingToken();
-        }
-        catch ( BarrierException e )
-        {
-            throw new IdGenerationException( e );
-        }
+        ensureCanManageIds();
         delegate.deleteId( id );
     }
 
     @Override
     public void markIdAsUsed( long id )
     {
-        try
-        {
-            barrierState.ensureHoldingToken();
-        }
-        catch ( BarrierException e )
-        {
-            throw new IdGenerationException( e );
-        }
+        ensureCanManageIds();
         delegate.markIdAsUsed( id );
     }
 
@@ -137,19 +116,18 @@ public class BarrierAwareIdGenerator implements IdGenerator
     @Override
     public long nextId()
     {
-        try
-        {
-            barrierState.ensureHoldingToken();
-        }
-        catch ( BarrierException e )
-        {
-            throw new IdGenerationException( e );
-        }
+        ensureCanManageIds();
         return delegate.nextId();
     }
 
     @Override
     public IdRange nextIdBatch( int size )
+    {
+        ensureCanManageIds();
+        return delegate.nextIdBatch( size );
+    }
+
+    private void ensureCanManageIds()
     {
         try
         {
@@ -157,8 +135,7 @@ public class BarrierAwareIdGenerator implements IdGenerator
         }
         catch ( BarrierException e )
         {
-            throw new IdGenerationException( e );
+            throw new IdGenerationException( "This instance is no longer able to manage IDs because of leader re-election", e, e.status() );
         }
-        return delegate.nextIdBatch( size );
     }
 }

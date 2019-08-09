@@ -33,7 +33,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
@@ -49,6 +48,9 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
+import static org.neo4j.kernel.api.exceptions.Status.HasStatus;
 
 @ClusterExtension
 class TokenReplicationStressIT
@@ -149,15 +151,26 @@ class TokenReplicationStressIT
                 }
                 tx.commit();
             }
-            catch ( WriteOperationsNotAllowedException ignore )
-            {
-                // this can happen because other thread is forcing elections
-            }
             catch ( Throwable t )
             {
+                if ( isLeaderUnavailableError( t ) )
+                {
+                    // this can happen because other thread is forcing elections
+                    continue;
+                }
                 throw new RuntimeException( "Failed to create tokens", t );
             }
         }
+    }
+
+    private static boolean isLeaderUnavailableError( Throwable error )
+    {
+        if ( error instanceof HasStatus )
+        {
+            var status = ((HasStatus) error).status();
+            return status == NotALeader || status == NoLeaderAvailable;
+        }
+        return false;
     }
 
     private static void triggerElections( Cluster cluster, AtomicBoolean stop )

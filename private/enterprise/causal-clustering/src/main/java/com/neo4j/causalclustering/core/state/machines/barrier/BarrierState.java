@@ -14,6 +14,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
+import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
+
 public class BarrierState
 {
     public static final String TOKEN_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take token when leader.";
@@ -48,7 +52,7 @@ public class BarrierState
         }
         else if ( barrierTokenId != currentToken().id() )
         {
-            throw new BarrierException( "Local instance lost barrier token." );
+            throw new BarrierException( "Local instance lost barrier token.", NotALeader );
         }
     }
 
@@ -87,7 +91,7 @@ public class BarrierState
         }
         catch ( ReplicationFailureException e )
         {
-            throw new BarrierException( "Replication failure acquiring barrier token.", e );
+            throw new BarrierException( "Replication failure acquiring barrier token.", e, ReplicationFailure );
         }
 
         try
@@ -97,15 +101,13 @@ public class BarrierState
             {
                 return barrierTokenRequest.id();
             }
-            else
-            {
-                throw new BarrierException( "Failed to acquire barrier token. Was taken by another candidate." );
-            }
         }
         catch ( Exception e )
         {
-            throw new BarrierException( "Failed to acquire barrier token.", e );
+            throw new BarrierException( "Failed to acquire barrier token.", e, NotALeader );
         }
+
+        throw new BarrierException( "Failed to acquire barrier token. Was taken by another candidate.", NotALeader );
     }
 
     private void ensureLeader() throws BarrierException
@@ -118,12 +120,12 @@ public class BarrierState
         }
         catch ( NoLeaderFoundException e )
         {
-            throw new BarrierException( "Could not acquire barrier token.", e );
+            throw new BarrierException( "Could not acquire barrier token.", e, NoLeaderAvailable );
         }
 
         if ( !leader.equals( myself ) )
         {
-            throw new BarrierException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE );
+            throw new BarrierException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
         }
     }
 }

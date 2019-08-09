@@ -5,15 +5,26 @@
  */
 package com.neo4j.causalclustering.core.state.machines.barrier;
 
-public class BarrierException extends Exception
+import org.neo4j.kernel.api.exceptions.Status;
+
+public class BarrierException extends Exception implements Status.HasStatus
 {
-    BarrierException( String message, Throwable cause )
+    private final Status status;
+
+    BarrierException( String message, Status status )
     {
-        super( message, cause );
+        this( message, null, status );
     }
 
-    BarrierException( String message )
+    BarrierException( String message, Throwable cause, Status status )
     {
-        super( message );
+        super( message, cause );
+        this.status = status;
+    }
+
+    @Override
+    public Status status()
+    {
+        return status;
     }
 }
