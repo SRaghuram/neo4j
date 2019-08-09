@@ -34,6 +34,7 @@ import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_i
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_label_scan_store;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_property_owners;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
@@ -98,10 +99,12 @@ class OnlineBackupContextFactory
             "Perform additional consistency checks on property ownership. This check is *very* expensive in time and " +
             "memory.";
 
+    private final Path homeDir;
     private final Path configDir;
 
-    OnlineBackupContextFactory( Path configDir )
+    OnlineBackupContextFactory( Path homeDir, Path configDir )
     {
+        this.homeDir = homeDir;
         this.configDir = configDir;
     }
 
@@ -172,13 +175,8 @@ class OnlineBackupContextFactory
             Path configFile = configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
             Config.Builder builder = Config.fromFile( configFile );
             Path logPath = requiredArguments.getResolvedLocationFromName();
-            /*
-             * The configuration for the backup classes, including temporary databases started for recovery, must
-             * have as home setting the backup location and not what is extracted by the environment. Otherwise,
-             * we risk having the backup database using, for example, the log file location of the running server
-             * if the backup command is executed from the same installation as the backup server.
-             */
-            Config config = builder.withHome( folder )
+            Config config = builder.withHome( homeDir )
+                                   .withSetting( logs_directory, folder.toString() )
                                    .withSetting( logical_logs_location, logPath.toString() )
                                    .withConnectorsDisabled()
                                    .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
