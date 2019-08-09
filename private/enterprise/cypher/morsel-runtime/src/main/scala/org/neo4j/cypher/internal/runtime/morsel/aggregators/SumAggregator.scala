@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.aggregators
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.runtime.MemoryTracker
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
+import org.neo4j.cypher.CypherTypeException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{DurationValue, NumberValue, Values}
 import org.neo4j.values.utils.ValueMath.overflowSafeAdd

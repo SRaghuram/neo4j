@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 import java.time.Clock
 import java.util
 
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities

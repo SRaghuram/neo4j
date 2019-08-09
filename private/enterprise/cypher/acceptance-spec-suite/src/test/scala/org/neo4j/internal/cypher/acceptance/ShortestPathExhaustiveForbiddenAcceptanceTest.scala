@@ -8,8 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.lang.Boolean.TRUE
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{ExhaustiveShortestPathForbiddenException => InternalExhaustiveShortestPathForbiddenException}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, ExhaustiveShortestPathForbiddenException}
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.impl.notification.NotificationCode.EXHAUSTIVE_SHORTEST_PATH
@@ -28,7 +27,7 @@ class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSu
       s"""MATCH p = shortestPath((src:$topLeft)-[*0..]-(dst:$topLeft))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      List(InternalExhaustiveShortestPathForbiddenException.ERROR_MSG)
+      List(ExhaustiveShortestPathForbiddenException.ERROR_MSG)
     )
   }
 

@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{LessThan, LessThanEqual, MethodStructure}
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
-import org.neo4j.cypher.internal.v4_0.util.InvalidArgumentException
+import org.neo4j.cypher.InvalidArgumentException
 
 case class DecreaseAndReturnWhenZero(opName: String, variableName: String, action: Instruction, startValue: CodeGenExpression)
   extends Instruction {

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -17,9 +18,9 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{DbAccess, NoMemoryTracker, QueryContext, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
+import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.result.QueryResult
-import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer}
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue}

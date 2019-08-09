@@ -7,7 +7,7 @@ package com.neo4j.cypher
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
+import org.neo4j.cypher.CypherTypeException
 
 class TypeConversionTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
   test("should not allow adding node and number") {

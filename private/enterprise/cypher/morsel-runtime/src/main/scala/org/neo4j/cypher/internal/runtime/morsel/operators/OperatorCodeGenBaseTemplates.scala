@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperT
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.{KernelReadTracer, Read}
 import org.neo4j.values.AnyValue

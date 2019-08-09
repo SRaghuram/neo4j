@@ -17,8 +17,8 @@ import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.DatabaseAdministrationException
+import org.neo4j.cypher.{CantCompileQueryException, DatabaseAdministrationException}
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._

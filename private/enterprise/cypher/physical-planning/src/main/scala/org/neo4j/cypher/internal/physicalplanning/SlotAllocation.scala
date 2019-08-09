@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.ir.{HasHeaders, NoHeaders, ShortestPathPattern}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
@@ -15,7 +16,7 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.{Foldable, InternalException, UnNamedNameGenerator}
+import org.neo4j.cypher.internal.v4_0.util.{Foldable, UnNamedNameGenerator}
 import org.neo4j.cypher.internal.v4_0.{expressions => parserAst}
 
 import scala.collection.mutable

@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber, ValuePopulation}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue

@@ -27,13 +27,13 @@
         <moduleName>org.neo4j.cypher.enterprise</moduleName>
     </properties>
 
-  <dependencies>
+    <dependencies>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>annotations</artifactId>
         </dependency>
 
-    <!-- shared versions are defined in the parent pom -->
+        <!-- shared versions are defined in the parent pom -->
 
         <!-- scala -->
 
@@ -74,6 +74,11 @@
         <!-- neo4j -->
 
         <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-exceptions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-commercial-kernel</artifactId>
             <version>${project.version}</version>
@@ -98,11 +103,11 @@
             <artifactId>neo4j-cypher-slotted-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>
-          <dependency>
-              <groupId>com.neo4j</groupId>
-              <artifactId>neo4j-cypher-morsel-runtime</artifactId>
-              <version>${project.version}</version>
-          </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-cypher-morsel-runtime</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-cypher-physical-planning</artifactId>
@@ -114,7 +119,7 @@
             <version>${project.version}</version>
         </dependency>
 
-      <!-- neo4j testing -->
+        <!-- neo4j testing -->
 
         <dependency>
             <groupId>org.neo4j</groupId>

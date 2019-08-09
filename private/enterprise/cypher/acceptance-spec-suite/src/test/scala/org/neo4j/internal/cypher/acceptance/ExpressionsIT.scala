@@ -9,7 +9,7 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.{CypherTypeException, ExecutionEngineFunSuite, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.ast._

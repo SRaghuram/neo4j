@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 
 import java.nio.file.{Path, Paths}
 
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 
 /**
   * Configuration modes for code generation

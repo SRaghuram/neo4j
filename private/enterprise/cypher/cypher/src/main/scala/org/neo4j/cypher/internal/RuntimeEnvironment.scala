@@ -9,7 +9,7 @@ import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.tracing._
 import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerResourceProvider}
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.lifecycle.LifeSupport

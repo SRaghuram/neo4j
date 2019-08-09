@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import org.neo4j.cypher.TransactionOutOfMemoryException
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
-import org.neo4j.cypher.internal.v4_0.util.TransactionOutOfMemoryException
 
 import scala.collection.mutable.ArrayBuffer
 

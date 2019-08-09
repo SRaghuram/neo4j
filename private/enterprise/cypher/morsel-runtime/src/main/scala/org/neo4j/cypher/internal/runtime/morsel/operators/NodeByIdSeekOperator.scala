@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression

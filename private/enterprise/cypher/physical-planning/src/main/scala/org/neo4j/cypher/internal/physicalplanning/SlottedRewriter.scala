@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.{CantCompileQueryException, InternalException}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.v4_0.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
 import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.{InternalException, Rewriter, topDown}
+import org.neo4j.cypher.internal.v4_0.util.{Rewriter, topDown}
 
 /**
   * This class rewrites logical plans so they use slotted variable access instead of using key-based. It will also

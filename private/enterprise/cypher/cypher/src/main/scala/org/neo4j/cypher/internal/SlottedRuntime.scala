@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal
 
+import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper

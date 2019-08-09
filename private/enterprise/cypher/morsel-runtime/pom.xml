@@ -55,7 +55,11 @@
         </dependency>
 
         <!-- neo4j -->
-
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-exceptions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-cypher-slotted-runtime</artifactId>

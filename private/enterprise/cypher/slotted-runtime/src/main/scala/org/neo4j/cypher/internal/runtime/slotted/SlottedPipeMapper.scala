@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrato
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.{expressions => frontEndAst}

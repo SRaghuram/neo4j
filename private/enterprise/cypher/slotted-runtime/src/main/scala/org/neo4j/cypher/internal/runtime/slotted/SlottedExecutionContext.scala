@@ -5,12 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
-import org.neo4j.cypher.internal.v4_0.util.{AssertionRunner, InternalException}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue

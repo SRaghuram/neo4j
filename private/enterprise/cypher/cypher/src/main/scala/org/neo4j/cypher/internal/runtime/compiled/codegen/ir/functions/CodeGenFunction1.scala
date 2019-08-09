@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.InternalException
 
 sealed trait CodeGenFunction1 {
   def apply(arg: CodeGenExpression): CodeGenExpression

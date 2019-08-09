@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions.functionConverter

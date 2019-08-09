@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
@@ -21,7 +20,7 @@ import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.{CantCompileQueryException, InternalException}
 
 /**
   * Responsible for a mapping from LogicalPlans to Operators.

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.{CantCompileQueryException, InternalException}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.AggregationConverter.aggregateExpressionConverter
@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.logical.plans.ColumnOrder
 import org.neo4j.cypher.internal.v4_0.util.Eagerly.immutableMapValues
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
-import org.neo4j.cypher.internal.v4_0.util.{InternalException, One, ZeroOneOrMany, symbols}
+import org.neo4j.cypher.internal.v4_0.util.{One, ZeroOneOrMany, symbols}
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
 object LogicalPlanConverter {

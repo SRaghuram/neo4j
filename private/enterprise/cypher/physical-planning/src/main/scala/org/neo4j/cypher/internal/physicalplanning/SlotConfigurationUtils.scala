@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.{InternalException, ParameterWrongTypeException}
+import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
+import org.neo4j.cypher.internal.v4_0.util.AssertionUtils
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
-import org.neo4j.cypher.internal.v4_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
-import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue, VirtualValues}

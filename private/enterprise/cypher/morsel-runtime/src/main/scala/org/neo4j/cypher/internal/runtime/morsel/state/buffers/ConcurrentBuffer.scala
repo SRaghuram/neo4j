@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
+import org.neo4j.cypher.TransactionOutOfMemoryException
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
-import org.neo4j.cypher.internal.v4_0.util.TransactionOutOfMemoryException
 
 /**
   * Implementation of a concurrent [[Buffer]] of elements of type `T`.

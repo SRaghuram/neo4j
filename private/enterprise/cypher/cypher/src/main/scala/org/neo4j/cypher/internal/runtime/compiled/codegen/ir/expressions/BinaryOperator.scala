@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
+import org.neo4j.cypher.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 
 trait BinaryOperator {

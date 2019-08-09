@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.v4_0.util.ArithmeticException
+import org.neo4j.cypher.ArithmeticException
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.util.{Failure, Success, Try}

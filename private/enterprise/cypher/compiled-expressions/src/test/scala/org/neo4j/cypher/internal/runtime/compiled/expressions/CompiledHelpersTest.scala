@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
+import org.neo4j.cypher.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.values.storable.Values
