@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
@@ -26,15 +27,16 @@ object MorselExecutionContext {
 
   val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), 0, 0, 0, 0, SlotConfiguration.empty)
 
-  private val EMPTY_SINGLE_ROW =
+  def createInitialRow(): MorselExecutionContext =
     new MorselExecutionContext(
-      Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)
-  def createSingleRow(): MorselExecutionContext = EMPTY_SINGLE_ROW.shallowCopy()
+      Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
+      INITIAL_SLOT_CONFIGURATION.numberOfLongs, INITIAL_SLOT_CONFIGURATION.numberOfReferences, 1, 0, INITIAL_SLOT_CONFIGURATION) {
+      //TODO hmm...
 
-  private val INITIAL_ROW =
-    new MorselExecutionContext(
-      Morsel.create(SlotAllocation.INITIAL_SLOT_CONFIGURATION, 1), 1, 0, 1, 0, SlotAllocation.INITIAL_SLOT_CONFIGURATION)
-  def createInitialRow(): MorselExecutionContext = INITIAL_ROW.shallowCopy()
+      //it is ok to asked for a cached value even though nothing is allocated for it
+      override def getCachedPropertyAt(offset: Int): Value = null
+      override def shallowCopy(): MorselExecutionContext = createInitialRow()
+    }
 }
 
 class MorselExecutionContext(private val morsel: Morsel,

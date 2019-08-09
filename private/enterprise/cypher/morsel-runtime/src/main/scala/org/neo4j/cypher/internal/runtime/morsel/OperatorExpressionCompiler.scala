@@ -122,7 +122,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNa
       if (local == null) {
         local = locals.addCachedProperty(offset)
         block(
-          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+          assign(local, getCachedPropertyFromExecutionContext(offset, loadField(INPUT_MORSEL))),
           load(local)
           )
       } else {

@@ -14,8 +14,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, n
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
-import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
@@ -2090,9 +2090,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
-  def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = setRefAt(offset, value)
+  protected def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
-  def getCachedPropertyAt(offset: Int): IntermediateRepresentation = cast[Value](getRefAt(offset))
+  protected def getCachedPropertyAt(offset: Int): IntermediateRepresentation
 
   final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
@@ -2100,12 +2100,19 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
   final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, AnyValue, Int]("getRefAt"), constant(offset))
 
+  final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+    invoke(context, method[ExecutionContext, Value, Int]("getCachedPropertyAt"), constant(offset))
+
   protected final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
   protected final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
+                     constant(offset), value)
+
+  protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Value]("setCachedPropertyAt"),
                      constant(offset), value)
 
   //==================================================================================================
@@ -2737,7 +2744,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
         val existsVariable = namer.nextVariableName()
         val propertyVariable = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
-        val cacheProperty = setCachedPropertyAt(propertyOffset, load(propertyVariable))
         val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
 
         val hasChanges = namer.nextVariableName()
@@ -2775,7 +2781,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                         assign(propertyVariable,
                                invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
                                       PROPERTY_CURSOR, constant(true))),
-                        cacheProperty
+                        setCachedPropertyAt(propertyOffset, load(propertyVariable))
                         )
                       ),
                     assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
@@ -2960,4 +2966,10 @@ private class DefaultExpressionCompiler(slots: SlotConfiguration) extends Expres
   override protected def setLongAt(offset: Int,
                                    value: IntermediateRepresentation): IntermediateRepresentation =
     setLongInExecutionContext(offset, value)
+
+  override protected def setCachedPropertyAt(offset: Int,
+                                             value: IntermediateRepresentation): IntermediateRepresentation =
+    setCachedPropertyInExecutionContext(offset, value)
+
+  override protected def getCachedPropertyAt(offset: Int): IntermediateRepresentation = getCachedPropertyFromExecutionContext(offset)
 }
