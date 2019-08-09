@@ -8,10 +8,26 @@ package com.neo4j.bench.common.profiling.jfr;
 import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openjdk.jmc.common.IMCFrame;
+import org.openjdk.jmc.common.IMCStackTrace;
+import org.openjdk.jmc.common.item.IItem;
+import org.openjdk.jmc.common.item.IItemCollection;
+import org.openjdk.jmc.common.item.IItemIterable;
+import org.openjdk.jmc.common.item.IMemberAccessor;
+import org.openjdk.jmc.common.item.IType;
+import org.openjdk.jmc.common.item.ItemFilters;
+import org.openjdk.jmc.common.unit.IQuantity;
+import org.openjdk.jmc.flightrecorder.JfrAttributes;
+import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
+import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
+import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.LongSupplier;
 import java.util.stream.Stream;
@@ -34,10 +50,60 @@ public class StackCollapse implements AutoCloseable
     private final PrintWriter printWriter;
     private final Stream.Builder<Pair<String,Long>> streamBuilder;
 
+    /**
+     * Collapse stacks for memoary allocation.
+     *
+     * @param jfrRecording
+     * @param stackCollapsedFile
+     * @throws Exception
+     */
+    public static void forMemoryAllocation( Path jfrRecording, Path stackCollapsedFile ) throws Exception
+    {
+        IItemCollection loadEvents = JfrLoaderToolkit.loadEvents( jfrRecording.toFile() );
+        Iterator<IItemIterable> itemIterables = loadEvents
+                .apply( ItemFilters.type( JdkTypeIDs.ALLOC_INSIDE_TLAB, JdkTypeIDs.ALLOC_OUTSIDE_TLAB ) ).iterator();
+        try ( StackCollapse stackCollapse = new StackCollapse( stackCollapsedFile.toFile() ) )
+        {
+            while ( itemIterables.hasNext() )
+            {
+                IItemIterable itermIterable = itemIterables.next();
+                Iterator<IItem> items = itermIterable.iterator();
+                while ( items.hasNext() )
+                {
+                    IItem item = items.next();
+                    IType<?> type = item.getType();
+                    @SuppressWarnings( "unchecked" )
+                    IMemberAccessor<IQuantity,Object> allocationSize =
+                            (IMemberAccessor<IQuantity,Object>) JdkAttributes.ALLOCATION_SIZE.getAccessor( type );
+                    @SuppressWarnings( "unchecked" )
+                    IMemberAccessor<IMCStackTrace,Object> stackTrace =
+                            (IMemberAccessor<IMCStackTrace,Object>) JfrAttributes.EVENT_STACKTRACE.getAccessor( type );
+                    IMCStackTrace mcStackTrace = stackTrace.getMember( item );
+                    if ( mcStackTrace != null /*native stack*/ )
+                    {
+
+                        stackCollapse.addStackTrace( stackTrace.getMember( item ).getFrames(), allocationSize.getMember( item )::longValue);
+
+                    }
+                }
+            }
+        }
+    }
+
     public StackCollapse()
     {
         // prevents System.out from being closed
-        printWriter = new PrintWriter( new CloseShieldOutputStream( System.out ) );
+        this( new PrintWriter( new CloseShieldOutputStream( System.out ) ) );
+    }
+
+    public StackCollapse( File file ) throws FileNotFoundException
+    {
+        this( new PrintWriter( file ) );
+    }
+
+    public StackCollapse( PrintWriter printWriter )
+    {
+        this.printWriter = printWriter;
         streamBuilder = Stream.builder();
     }
 

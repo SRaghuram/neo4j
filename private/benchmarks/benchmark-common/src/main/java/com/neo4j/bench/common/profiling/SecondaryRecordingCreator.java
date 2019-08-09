@@ -8,6 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.process.ProcessWrapper;
+import com.neo4j.bench.common.profiling.jfr.StackCollapse;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
@@ -18,6 +19,8 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
+import static java.lang.String.format;
 
 abstract class SecondaryRecordingCreator
 {
@@ -51,6 +54,41 @@ abstract class SecondaryRecordingCreator
         {
             // do nothing
         }
+    }
+
+    static class MemoryAllocationFlamegrapCreator extends SecondaryRecordingCreator
+    {
+
+        @Override
+        Set<String> requiredEnvironmentVariables()
+        {
+            return Sets.newHashSet( "FLAMEGRAPH_DIR" );
+        }
+
+        @Override
+        Set<RecordingType> recordingTypes()
+        {
+            return null;
+        }
+
+        @Override
+        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        {
+            Path jfrRecording = forkDirectory.pathFor( recordingDescriptor );
+
+            try
+            {
+                StackCollapse.forMemoryAllocation(
+                        jfrRecording,
+                        forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.JFR_FLAMEGRAPH ) ) );
+            }
+            catch ( Exception e )
+            {
+                System.out.println( format( "Unable to collapse stacks for memory allocation from JFR recording %s", jfrRecording ) );
+            }
+
+        }
+
     }
 
     static class GcLogProcessor extends SecondaryRecordingCreator
