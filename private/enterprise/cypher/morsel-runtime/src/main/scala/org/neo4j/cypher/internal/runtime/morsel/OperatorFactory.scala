@@ -115,11 +115,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.DirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new DirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
-                                                 slots.getLongOffsetFor(column),
-                                                 slots.getLongOffsetFor(startNode),
-                                                 slots.getLongOffsetFor(endNode),
-                                                 converters.toCommandSeekArgs(id, relIds),
-                                                 physicalPlan.argumentSizes(id))
+                                         slots.getLongOffsetFor(column),
+                                         slots.getLongOffsetFor(startNode),
+                                         slots.getLongOffsetFor(endNode),
+                                         converters.toCommandSeekArgs(id, relIds),
+                                         physicalPlan.argumentSizes(id))
 
       case plans.UndirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new UndirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
