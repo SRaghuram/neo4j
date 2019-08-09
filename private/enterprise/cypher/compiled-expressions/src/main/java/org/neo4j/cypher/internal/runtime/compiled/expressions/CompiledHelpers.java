@@ -5,25 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
-<<<<<<< HEAD
-import java.util.Optional;
-
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.internal.kernel.api.PropertyCursor;
-import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
-import org.neo4j.values.storable.Values;
-import org.neo4j.values.virtual.VirtualNodeValue;
-import org.neo4j.values.virtual.VirtualRelationshipValue;
+
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
 /**
@@ -36,6 +27,7 @@ public final class CompiledHelpers
     {
         throw new UnsupportedOperationException( "do not instantiate" );
     }
+
     private static ValueGroup[] RANGE_SEEKABLE_VALUE_GROUPS = KernelAPISupport$.MODULE$.RANGE_SEEKABLE_VALUE_GROUPS();
 
     public static Value assertBooleanOrNoValue( AnyValue value )
@@ -48,17 +40,29 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
-   public static boolean possibleRangePredicate( IndexQuery query )
-   {
-       ValueGroup valueGroup = query.valueGroup();
+    public static AnyValue nodeOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
+    {
+        long nodeId = context.getLongAt( offset );
+        return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
+    }
 
-       for ( ValueGroup rangeSeekableValueGroup : RANGE_SEEKABLE_VALUE_GROUPS )
-       {
-           if ( valueGroup == rangeSeekableValueGroup )
-           {
-               return true;
-           }
-       }
-       return false;
-   }
+    public static AnyValue relationshipOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
+    {
+        long relationshipId = context.getLongAt( offset );
+        return relationshipId == -1 ? NO_VALUE : dbAccess.relationshipById( relationshipId );
+    }
+
+    public static boolean possibleRangePredicate( IndexQuery query )
+    {
+        ValueGroup valueGroup = query.valueGroup();
+
+        for ( ValueGroup rangeSeekableValueGroup : RANGE_SEEKABLE_VALUE_GROUPS )
+        {
+            if ( valueGroup == rangeSeekableValueGroup )
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }
