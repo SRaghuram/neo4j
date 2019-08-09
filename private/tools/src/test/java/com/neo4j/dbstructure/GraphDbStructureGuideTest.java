@@ -18,7 +18,6 @@ import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
-import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
@@ -147,8 +146,7 @@ class GraphDbStructureGuideTest
 
         // THEN
         verify( visitor ).visitIndex( descriptor, ":Person(name)", 1.0d, 0L );
-        verify( visitor ).visitUniqueConstraint( (UniquenessConstraintDescriptor) constraint, "CONSTRAINT ON ( person:Person ) ASSERT person.name IS " +
-                "UNIQUE" );
+        verify( visitor ).visitUniqueConstraint( constraint.asUniquenessConstraint(), "CONSTRAINT ON ( person:Person ) ASSERT person.name IS UNIQUE" );
     }
 
     @Test
@@ -235,7 +233,7 @@ class GraphDbStructureGuideTest
         KernelTransaction ktx = ktx();
 
         return ktx.schemaWrite()
-                .uniquePropertyConstraintCreate( SchemaDescriptor.forLabel( labelId, pkId ) );
+                .uniquePropertyConstraintCreate( SchemaDescriptor.forLabel( labelId, pkId ), null );
     }
 
     private int createLabeledNodes( String labelName, int amount ) throws Exception

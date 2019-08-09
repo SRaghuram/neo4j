@@ -18,7 +18,7 @@ import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
-import org.neo4j.internal.schema.constraints.NodeKeyConstraintDescriptor;
+import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 
 class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor,LabelSchemaDescriptor>
 {
@@ -32,17 +32,17 @@ class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Constrain
     ConstraintDescriptor createConstraint( SchemaWrite writeOps, LabelSchemaDescriptor descriptor )
             throws Exception
     {
-        return writeOps.nodeKeyConstraintCreate( descriptor );
+        return writeOps.nodeKeyConstraintCreate( descriptor, null );
     }
 
     @Override
-    void createConstraintInRunningTx( GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
     {
-        SchemaHelper.createNodeKeyConstraint( db, type, property );
+        helper.createNodeKeyConstraint( db, type, property );
     }
 
     @Override
-    NodeKeyConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
+    IndexBackedConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
     {
         return ConstraintDescriptorFactory.nodeKeyForSchema( descriptor );
     }

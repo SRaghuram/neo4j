@@ -41,7 +41,6 @@ import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.storageengine.api.ConstraintRule;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
@@ -82,13 +81,13 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     ConstraintDescriptor createConstraint( SchemaWrite writeOps, LabelSchemaDescriptor descriptor )
             throws Exception
     {
-        return writeOps.uniquePropertyConstraintCreate( descriptor );
+        return writeOps.uniquePropertyConstraintCreate( descriptor, null );
     }
 
     @Override
-    void createConstraintInRunningTx( GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
     {
-        SchemaHelper.createUniquenessConstraint( db, type, property );
+        helper.createUniquenessConstraint( db, type, property );
     }
 
     @Override
@@ -155,7 +154,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         var e = assertThrows( CreateConstraintFailureException.class, () ->
         {
             SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
-            schemaWriteOperations.uniquePropertyConstraintCreate( descriptor );
+            schemaWriteOperations.uniquePropertyConstraintCreate( descriptor, "constraint name" );
         } );
 
         assertEquals( ConstraintDescriptorFactory.uniqueForSchema( descriptor ), e.constraint() );
@@ -172,7 +171,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // when
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
-        schemaWriteOperations.uniquePropertyConstraintCreate( descriptor );
+        schemaWriteOperations.uniquePropertyConstraintCreate( descriptor, "constraint name" );
         commit();
 
         // then
@@ -186,7 +185,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
-        transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor );
+        transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
 
         // when
@@ -204,7 +203,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
-        schemaWriteOperations.nodePropertyExistenceConstraintCreate( descriptor );
+        schemaWriteOperations.nodePropertyExistenceConstraintCreate( descriptor, "constraint name" );
         commit();
 
         // when
@@ -240,19 +239,19 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // when
         SchemaWrite statement = schemaWriteInNewTransaction();
-        statement.uniquePropertyConstraintCreate( descriptor );
+        statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
         commit();
 
         // then
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
         IndexDescriptor indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) ) );
-        ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
+        ConstraintDescriptor constraintRule = schemaRuleAccess.constraintsGetSingle(
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
         OptionalLong owningConstraintId = indexRule.getOwningConstraintId();
         assertTrue( owningConstraintId.isPresent() );
         assertEquals( constraintRule.getId(), owningConstraintId.getAsLong() );
-        assertEquals( indexRule.getId(), constraintRule.ownedIndexReference() );
+        assertEquals( indexRule.getId(), constraintRule.asIndexBackedConstraint().ownedIndexId() );
     }
 
     @Test
@@ -272,7 +271,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         var e = assertThrows( Exception.class, () ->
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            statement.uniquePropertyConstraintCreate( descriptor );
+            statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
             commit();
         } );
 
@@ -299,7 +298,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         // given
         Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
         ConstraintDescriptor constraint =
-                transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor );
+                transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
         commit();
 

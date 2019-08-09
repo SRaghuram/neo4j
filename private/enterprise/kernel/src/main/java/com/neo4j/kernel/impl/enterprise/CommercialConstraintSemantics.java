@@ -21,7 +21,6 @@ import org.neo4j.internal.schema.constraints.NodeKeyConstraintDescriptor;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.storageengine.api.ConstraintRule;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
@@ -43,24 +42,24 @@ public class CommercialConstraintSemantics extends StandardConstraintSemantics
         return "commercialConstraints";
     }
     @Override
-    protected ConstraintDescriptor readNonStandardConstraint( ConstraintRule rule, String errorMessage )
+    protected ConstraintDescriptor readNonStandardConstraint( ConstraintDescriptor constraint, String errorMessage )
     {
-        if ( !rule.getConstraintDescriptor().enforcesPropertyExistence() )
+        if ( !constraint.enforcesPropertyExistence() )
         {
-            throw new IllegalStateException( "Unsupported constraint type: " + rule );
+            throw new IllegalStateException( "Unsupported constraint type: " + constraint );
         }
-        return rule.getConstraintDescriptor();
+        return constraint;
     }
 
     @Override
-    public ConstraintRule createNodeKeyConstraintRule(
+    public ConstraintDescriptor createNodeKeyConstraintRule(
             long ruleId, NodeKeyConstraintDescriptor descriptor, long indexId )
     {
         return accessor.createNodeKeyConstraintRule( ruleId, descriptor, indexId );
     }
 
     @Override
-    public ConstraintRule createExistenceConstraint( long ruleId, ConstraintDescriptor descriptor )
+    public ConstraintDescriptor createExistenceConstraint( long ruleId, ConstraintDescriptor descriptor )
     {
         return accessor.createExistenceConstraint( ruleId, descriptor );
     }

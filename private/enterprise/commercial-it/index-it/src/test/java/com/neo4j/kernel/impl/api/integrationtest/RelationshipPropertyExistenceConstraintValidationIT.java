@@ -31,7 +31,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
         commit();
 
         SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-        schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelType( relTypeId, propertyKeyId ) );
+        schemaWrite.relationshipPropertyExistenceConstraintCreate( forRelType( relTypeId, propertyKeyId ), null );
         commit();
     }
 

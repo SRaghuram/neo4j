@@ -24,6 +24,9 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.internal.schema.SchemaRule;
+import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
+import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
@@ -83,7 +86,8 @@ class HalfCreatedConstraintIT
             }
         } );
         assertThat( exception.getMessage(), containsString(
-                    "Index IndexDefinition[label:MARKER on:property] (Index( 1, 'index_1', UNIQUE, :label[0](property[0]), native-btree-1.0 )) " +
+                    "Index IndexDefinition[label:MARKER on:property] " +
+                            "(Index( 1, 'Uniqueness constraint on :Label (prop)', UNIQUE, :label[0](property[0]), native-btree-1.0 )) " +
                             "entered a FAILED state. Please see database logs.: Cause of failure:" ) );
     }
 
@@ -94,9 +98,11 @@ class HalfCreatedConstraintIT
             DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
             ThreadToStatementContextBridge statementBridge = resolver.provideDependency( ThreadToStatementContextBridge.class ).get();
             KernelTransaction kernelTransaction = statementBridge.getKernelTransactionBoundToThisThread( true, ((GraphDatabaseAPI) database).databaseId() );
-            LabelSchemaDescriptor descriptor = SchemaDescriptor.forLabel( 0, 0 );
+            LabelSchemaDescriptor schema = SchemaDescriptor.forLabel( 0, 0 );
+            UniquenessConstraintDescriptor constraint = ConstraintDescriptorFactory.uniqueForSchema( schema );
+            constraint = constraint.withName( SchemaRule.generateName( constraint, new String[]{"Label"}, new String[]{"prop"} ) );
             Config config = resolver.resolveDependency( Config.class );
-            kernelTransaction.indexUniqueCreate( descriptor, config.get( GraphDatabaseSettings.default_schema_provider ) );
+            kernelTransaction.indexUniqueCreate( constraint, config.get( GraphDatabaseSettings.default_schema_provider ) );
             transaction.commit();
         }
     }

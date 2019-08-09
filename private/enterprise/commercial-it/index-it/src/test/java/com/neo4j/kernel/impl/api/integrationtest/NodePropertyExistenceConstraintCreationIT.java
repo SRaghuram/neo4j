@@ -44,13 +44,13 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
     ConstraintDescriptor createConstraint( SchemaWrite writeOps, LabelSchemaDescriptor descriptor )
             throws Exception
     {
-        return writeOps.nodePropertyExistenceConstraintCreate( descriptor );
+        return writeOps.nodePropertyExistenceConstraintCreate( descriptor, null );
     }
 
     @Override
-    void createConstraintInRunningTx( GraphDatabaseService db, String label, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String label, String property )
     {
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label, property );
+        helper.createNodePropertyExistenceConstraint( db, label, property );
     }
 
     @Override
@@ -98,7 +98,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
         ConstraintDescriptor constraint;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = statement.uniquePropertyConstraintCreate( descriptor );
+            constraint = statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
             commit();
         }
 

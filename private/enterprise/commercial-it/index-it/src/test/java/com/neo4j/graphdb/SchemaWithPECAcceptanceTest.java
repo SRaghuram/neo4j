@@ -7,23 +7,23 @@ package com.neo4j.graphdb;
 
 import com.neo4j.SchemaHelper;
 import com.neo4j.test.extension.CommercialDbmsExtension;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import java.util.Collection;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
-import org.neo4j.kernel.impl.coreapi.schema.InternalSchemaActions;
-import org.neo4j.kernel.impl.coreapi.schema.NodeKeyConstraintDefinition;
-import org.neo4j.kernel.impl.coreapi.schema.NodePropertyExistenceConstraintDefinition;
-import org.neo4j.kernel.impl.coreapi.schema.RelationshipPropertyExistenceConstraintDefinition;
-import org.neo4j.kernel.impl.coreapi.schema.UniquenessConstraintDefinition;
 import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
 
@@ -50,93 +50,133 @@ class SchemaWithPECAcceptanceTest
         MY_OTHER_TYPE
     }
 
-    @Test
-    void shouldCreateNodePropertyExistenceConstraint()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldCreateNodePropertyExistenceConstraint( SchemaHelper helper )
     {
         // When
-        ConstraintDefinition constraint = createNodePropertyExistenceConstraint( label, propertyKey );
+        ConstraintDefinition constraint = createNodePropertyExistenceConstraint( helper, label, propertyKey );
 
         // Then
         assertThat( getConstraints( db ), containsOnly( constraint ) );
     }
 
-    @Test
-    void shouldCreateRelationshipPropertyExistenceConstraint()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldCreateRelationshipPropertyExistenceConstraint( SchemaHelper helper )
     {
         // When
-        ConstraintDefinition constraint = createRelationshipPropertyExistenceConstraint( Types.MY_TYPE, propertyKey );
+        ConstraintDefinition constraint = createRelationshipPropertyExistenceConstraint( helper, Types.MY_TYPE, propertyKey );
 
         // Then
         assertThat( getConstraints( db ), containsOnly( constraint ) );
     }
 
-    @Test
-    void shouldListAddedConstraintsByLabel()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldListAddedConstraintsByLabel( SchemaHelper helper )
     {
         // GIVEN
-        ConstraintDefinition constraint1 = createUniquenessConstraint( label, propertyKey );
-        ConstraintDefinition constraint2 = createNodePropertyExistenceConstraint( label, propertyKey );
-        ConstraintDefinition constraint3 = createNodeKeyConstraint( label, propertyKey2 );
-        createNodeKeyConstraint( label2, propertyKey2 );
-        createNodePropertyExistenceConstraint( Labels.MY_OTHER_LABEL, propertyKey );
+        ConstraintDefinition constraint1 = createUniquenessConstraint( helper, label, propertyKey );
+        ConstraintDefinition constraint2 = createNodePropertyExistenceConstraint( helper, label, propertyKey );
+        ConstraintDefinition constraint3 = createNodeKeyConstraint( helper, label, propertyKey2 );
+        createNodeKeyConstraint( helper, label2, propertyKey2 );
+        createNodePropertyExistenceConstraint( helper, Labels.MY_OTHER_LABEL, propertyKey );
 
         // WHEN THEN
         assertThat( getConstraints( db, label ), containsOnly( constraint1, constraint2, constraint3 ) );
     }
 
-    @Test
-    void shouldListAddedConstraintsByRelationshipType()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldListAddedConstraintsByRelationshipType( SchemaHelper helper )
     {
         // GIVEN
-        ConstraintDefinition constraint1 = createRelationshipPropertyExistenceConstraint( Types.MY_TYPE, propertyKey );
-        createRelationshipPropertyExistenceConstraint( Types.MY_OTHER_TYPE, propertyKey );
+        ConstraintDefinition constraint1 = createRelationshipPropertyExistenceConstraint( helper, Types.MY_TYPE, propertyKey );
+        createRelationshipPropertyExistenceConstraint( helper, Types.MY_OTHER_TYPE, propertyKey );
 
         // WHEN THEN
         assertThat( getConstraints( db, Types.MY_TYPE ), containsOnly( constraint1 ) );
     }
 
-    @Test
-    void shouldListAddedConstraints()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldListAddedConstraints( SchemaHelper helper )
     {
         // GIVEN
-        ConstraintDefinition constraint1 = createUniquenessConstraint( label, propertyKey );
-        ConstraintDefinition constraint2 = createNodePropertyExistenceConstraint( label, propertyKey );
-        ConstraintDefinition constraint3 = createRelationshipPropertyExistenceConstraint( Types.MY_TYPE, propertyKey );
-        ConstraintDefinition constraint4 = createNodeKeyConstraint( label, propertyKey2 );
+        ConstraintDefinition constraint1 = createUniquenessConstraint( helper, label, propertyKey );
+        ConstraintDefinition constraint2 = createNodePropertyExistenceConstraint( helper, label, propertyKey );
+        ConstraintDefinition constraint3 = createRelationshipPropertyExistenceConstraint( helper, Types.MY_TYPE, propertyKey );
+        ConstraintDefinition constraint4 = createNodeKeyConstraint( helper, label, propertyKey2 );
 
         // WHEN THEN
         assertThat( getConstraints( db ), containsOnly( constraint1, constraint2, constraint3, constraint4 ) );
     }
 
-    private ConstraintDefinition createUniquenessConstraint( Label label, String propertyKey )
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void uniquenessConstraintIndexesMustBeNamedAfterTheirConstraints( SchemaHelper helper )
     {
-        SchemaHelper.createUniquenessConstraint( db, label, propertyKey );
-        SchemaHelper.awaitIndexes( db );
-        InternalSchemaActions actions = mock( InternalSchemaActions.class );
-        IndexDefinition index = new IndexDefinitionImpl( actions, null, new Label[]{label}, new String[]{propertyKey}, true );
-        return new UniquenessConstraintDefinition( actions, index );
+        createNodeKeyConstraint( helper, "MySchema", label, propertyKey );
+        try ( Transaction tx = db.beginTx() )
+        {
+            IndexDefinition index = db.schema().getIndexByName( "MySchema" );
+            assertTrue( index.isConstraintIndex() );
+            assertTrue( index.isNodeIndex() );
+            assertEquals( "MySchema", index.getName() );
+            tx.commit();
+        }
     }
 
-    private ConstraintDefinition createNodeKeyConstraint( Label label, String propertyKey )
+    private ConstraintDefinition createUniquenessConstraint( SchemaHelper helper, Label label, String propertyKey )
     {
-        SchemaHelper.createNodeKeyConstraint( db, label, propertyKey );
-        SchemaHelper.awaitIndexes( db );
-        InternalSchemaActions actions = mock( InternalSchemaActions.class );
-        IndexDefinition index = new IndexDefinitionImpl( actions, null, new Label[]{label}, new String[]{propertyKey}, true );
-        return new NodeKeyConstraintDefinition( actions, index );
+        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+        helper.createUniquenessConstraint( db, label, propertyKey );
+        helper.awaitIndexes( db );
+        return getCreatedConstraint( before );
     }
 
-    private ConstraintDefinition createNodePropertyExistenceConstraint( Label label, String propertyKey )
+    private ConstraintDefinition getCreatedConstraint( Collection<ConstraintDefinition> before )
     {
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label, propertyKey );
-        return new NodePropertyExistenceConstraintDefinition( mock( InternalSchemaActions.class ), label,
-                new String[]{propertyKey} );
+        Collection<ConstraintDefinition> after = getConstraints( db ).collection();
+        after.removeAll( before );
+        if ( after.size() == 1 )
+        {
+            return after.iterator().next();
+        }
+        return fail( "Expected to only find a single constraint in the after set, but found " + after );
     }
 
-    private ConstraintDefinition createRelationshipPropertyExistenceConstraint( Types type, String propertyKey )
+    private ConstraintDefinition createNodeKeyConstraint( SchemaHelper helper, Label label, String propertyKey )
     {
-        SchemaHelper.createRelPropertyExistenceConstraint( db, type, propertyKey );
-        return new RelationshipPropertyExistenceConstraintDefinition( mock( InternalSchemaActions.class ), type,
-                propertyKey );
+        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+        helper.createNodeKeyConstraint( db, label, propertyKey );
+        helper.awaitIndexes( db );
+        return getCreatedConstraint( before );
+    }
+
+    private ConstraintDefinition createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
+    {
+        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+        ConstraintDefinition constraint = helper.createNodeKeyConstraint( db, name, label, propertyKey );
+
+        helper.awaitIndexes( db );
+        ConstraintDefinition foundConstraint = getCreatedConstraint( before );
+        assertEquals( constraint, foundConstraint );
+        return foundConstraint;
+    }
+
+    private ConstraintDefinition createNodePropertyExistenceConstraint( SchemaHelper helper, Label label, String propertyKey )
+    {
+        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+        helper.createNodePropertyExistenceConstraint( db, label, propertyKey );
+        return getCreatedConstraint( before );
+    }
+
+    private ConstraintDefinition createRelationshipPropertyExistenceConstraint( SchemaHelper helper, Types type, String propertyKey )
+    {
+        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+        helper.createRelPropertyExistenceConstraint( db, type, propertyKey );
+        return getCreatedConstraint( before );
     }
 }

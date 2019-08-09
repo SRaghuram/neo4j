@@ -34,13 +34,13 @@ class RelationshipPropertyExistenceConstraintCreationIT
     ConstraintDescriptor createConstraint( SchemaWrite writeOps,
             RelationTypeSchemaDescriptor descriptor ) throws Exception
     {
-        return writeOps.relationshipPropertyExistenceConstraintCreate( descriptor );
+        return writeOps.relationshipPropertyExistenceConstraintCreate( descriptor, null );
     }
 
     @Override
-    void createConstraintInRunningTx( GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
     {
-        SchemaHelper.createRelPropertyExistenceConstraint( db, type, property );
+        helper.createRelPropertyExistenceConstraint( db, type, property );
     }
 
     @Override

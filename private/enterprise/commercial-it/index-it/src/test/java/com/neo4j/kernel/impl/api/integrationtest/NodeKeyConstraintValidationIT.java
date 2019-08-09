@@ -6,7 +6,8 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
@@ -31,17 +32,18 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
         commit();
 
         SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-        schemaWrite.nodeKeyConstraintCreate( forLabel( label, propertyKey ) );
+        schemaWrite.nodeKeyConstraintCreate( forLabel( label, propertyKey ), "constraint name" );
         commit();
     }
 
-    @Test
-    void requirePropertyFromMultipleNodeKeys()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void requirePropertyFromMultipleNodeKeys( SchemaHelper helper )
     {
         Label label = Label.label( "multiNodeKeyLabel" );
-        SchemaHelper.createNodeKeyConstraint( db, label,  "property1", "property2" );
-        SchemaHelper.createNodeKeyConstraint( db, label,  "property2", "property3" );
-        SchemaHelper.createNodeKeyConstraint( db, label,  "property3", "property4" );
+        helper.createNodeKeyConstraint( db, label,  "property1", "property2" );
+        helper.createNodeKeyConstraint( db, label,  "property2", "property3" );
+        helper.createNodeKeyConstraint( db, label,  "property3", "property4" );
 
         assertException( () ->
         {
@@ -53,8 +55,8 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 transaction.commit();
             }
         }, ConstraintViolationException.class,
-                anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties `property2, property3`" ),
-                        containsString( "with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) ) );
+                anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties `(property2, property3)`" ),
+                        containsString( "with label `multiNodeKeyLabel` must have the properties `(property3, property4)`" ) ) );
 
         assertException( () ->
         {
@@ -66,6 +68,6 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 node.setProperty( "property3", "3" );
                 transaction.commit();
             }
-        }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) );
+        }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties `(property3, property4)`" ) );
     }
 }

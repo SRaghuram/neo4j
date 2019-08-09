@@ -46,7 +46,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
 
         try ( Transaction tx = beginTransaction() )
         {
-            tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ) );
+            tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "constraint name" );
             tx.commit();
         }
 
@@ -80,7 +80,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
             try ( Transaction tx = beginTransaction() )
             {
                 assertTrue( createNodeLatch.await( 5, TimeUnit.MINUTES) );
-                tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ) );
+                tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "other constraint name" );
                 tx.commit();
             }
             catch ( KernelException e )

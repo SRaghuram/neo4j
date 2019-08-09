@@ -45,7 +45,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
         commit();
 
         SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-        schemaWrite.nodePropertyExistenceConstraintCreate( forLabel( label, propertyKey ) );
+        schemaWrite.nodePropertyExistenceConstraintCreate( forLabel( label, propertyKey ), null );
         commit();
     }
 

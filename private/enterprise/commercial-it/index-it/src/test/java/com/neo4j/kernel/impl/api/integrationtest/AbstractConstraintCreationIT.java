@@ -5,9 +5,12 @@
  */
 package com.neo4j.kernel.impl.api.integrationtest;
 
+import com.neo4j.SchemaHelper;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
 import java.util.Collections;
@@ -19,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
@@ -40,8 +44,9 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -67,7 +72,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
     abstract Constraint createConstraint( SchemaWrite writeOps, DESCRIPTOR descriptor ) throws Exception;
 
-    abstract void createConstraintInRunningTx( GraphDatabaseService db, String type, String property );
+    abstract void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property );
 
     abstract Constraint newConstraintObject( DESCRIPTOR descriptor );
 
@@ -332,8 +337,9 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
     }
 
-    @Test
-    void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldNotLeaveAnyStateBehindAfterFailingToCreateConstraint( SchemaHelper helper )
     {
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -345,12 +351,13 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // when
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            var e = assertThrows( QueryExecutionException.class, () ->
+            var e = assertThrows( Exception.class, () ->
             {
-                createConstraintInRunningTx( db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, KEY, PROP );
                 tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
+            assertThat( e, anyOf( instanceOf( ConstraintViolationException.class ), instanceOf( QueryExecutionException.class ) ) );
         }
 
         // then
@@ -362,8 +369,9 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
     }
 
-    @Test
-    void shouldBeAbleToResolveConflictsAndRecreateConstraintAfterFailingToCreateItDueToConflict()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void shouldBeAbleToResolveConflictsAndRecreateConstraintAfterFailingToCreateItDueToConflict( SchemaHelper helper )
             throws Exception
     {
         // given
@@ -376,12 +384,13 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // when
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            var e = assertThrows( QueryExecutionException.class, () ->
+            var e = assertThrows( Exception.class, () ->
             {
-                createConstraintInRunningTx( db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, KEY, PROP );
                 tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
+            assertThat( e, anyOf( instanceOf( ConstraintViolationException.class ), instanceOf( QueryExecutionException.class ) ) );
         }
 
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -396,15 +405,16 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         commit();
     }
 
-    @Test
-    void changedConstraintsShouldResultInTransientFailure()
+    @ParameterizedTest
+    @EnumSource( SchemaHelper.class )
+    void changedConstraintsShouldResultInTransientFailure( SchemaHelper helper )
     {
         // Given
         Runnable constraintCreation = () ->
         {
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
-                createConstraintInRunningTx( db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, KEY, PROP );
                 tx.commit();
             }
         };
