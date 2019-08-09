@@ -465,7 +465,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 // Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
-                                   var shouldCheckDemand: Boolean = true,
+                                   var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   override def inner: OperatorTaskTemplate = null

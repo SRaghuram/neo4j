@@ -93,6 +93,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       output match {
         case ProduceResultOutput(p) =>
           innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
+          innermostTemplate.shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
           val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(expressionCompiler)
           (template, List(p), NoOutput)
 
@@ -109,7 +110,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
           val aggregators = Array.newBuilder[Aggregator]
           val aggregationExpressions = Array.newBuilder[Expression]
           aggregationExpressionsMap.foreach {
-            case (key, astExpression) =>
+            case (_, astExpression) =>
               val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
               aggregators += aggregator
               aggregationExpressions += innerAstExpression
