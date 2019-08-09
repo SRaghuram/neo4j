@@ -42,7 +42,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;

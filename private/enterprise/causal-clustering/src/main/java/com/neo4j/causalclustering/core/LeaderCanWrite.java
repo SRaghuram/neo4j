@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 
-import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 

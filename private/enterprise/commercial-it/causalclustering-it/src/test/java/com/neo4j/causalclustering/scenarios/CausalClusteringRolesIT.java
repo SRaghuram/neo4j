@@ -11,7 +11,7 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
