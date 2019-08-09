@@ -68,7 +68,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       () => expressionCompiler.intermediateCompileExpression(astExpression)
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
 
-    def compileGroupingKey(astExpressions: Map[String, org.neo4j.cypher.internal.v4_0.expressions.Expression],
+    def compileGroupingKey(astExpressions: Map[String, Expression],
                            slots: SlotConfiguration,
                            orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
       val orderedGroupingExpressions = astExpressions.toSeq.sortBy(e => (!orderToLeverage.contains(e._2), slots(e._1).offset)).map(_._2)
