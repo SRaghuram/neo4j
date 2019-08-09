@@ -20,6 +20,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 
 import static com.neo4j.bench.ldbc.Domain.Rels;
 
@@ -65,8 +66,7 @@ public abstract class Neo4jQuery14<CONNECTION extends DbConnectionState>
         double weight = 0;
         for ( Node comment : startPersonComments )
         {
-            Node replyOfMessage = comment.getRelationships( Direction.OUTGOING, Rels.REPLY_OF_COMMENT,
-                                                            Rels.REPLY_OF_POST ).iterator().next().getEndNode();
+            Node replyOfMessage = repliesTo( comment );
             if ( endPersonPosts.contains( replyOfMessage ) )
             {
                 weight = weight + 1.0;
@@ -78,8 +78,7 @@ public abstract class Neo4jQuery14<CONNECTION extends DbConnectionState>
         }
         for ( Node comment : endPersonComments )
         {
-            Node replyOfMessage = comment.getRelationships( Direction.OUTGOING, Rels.REPLY_OF_COMMENT,
-                                                            Rels.REPLY_OF_POST ).iterator().next().getEndNode();
+            Node replyOfMessage = repliesTo( comment );
             if ( startPersonPosts.contains( replyOfMessage ) )
             {
                 weight = weight + 1.0;
@@ -90,6 +89,16 @@ public abstract class Neo4jQuery14<CONNECTION extends DbConnectionState>
             }
         }
         return weight;
+    }
+
+    private static Node repliesTo( Node message )
+    {
+        try ( ResourceIterator<Relationship> replyOfRels = (ResourceIterator<Relationship>) message.getRelationships( Direction.OUTGOING,
+                                                                                                                      Rels.REPLY_OF_COMMENT,
+                                                                                                                      Rels.REPLY_OF_POST ).iterator() )
+        {
+            return replyOfRels.next().getEndNode();
+        }
     }
 
     private static Set<Node> personMessages( Node person, RelationshipType[] messageHasCreatorRelationshipType )

@@ -29,6 +29,7 @@ import java.util.Map;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class ShortQuery2EmbeddedCore_0_1 extends Neo4jShortQuery2<Neo4jConnectionState>
 {
@@ -224,38 +225,39 @@ public class ShortQuery2EmbeddedCore_0_1 extends Neo4jShortQuery2<Neo4jConnectio
             }
             else
             {
-                Iterator<Relationship> replyOfs = message.getRelationships(
+                try ( ResourceIterator<Relationship> replyOfs = (ResourceIterator<Relationship>) message.getRelationships(
                         Direction.OUTGOING,
                         Rels.REPLY_OF_POST,
-                        Rels.REPLY_OF_COMMENT ).iterator();
-
-                if ( !replyOfs.hasNext() )
+                        Rels.REPLY_OF_COMMENT ).iterator() )
                 {
-                    // Original message: (message:Post)
-                    originalPostMap.put( message, message );
-                    return message;
-                }
-                else
-                {
-                    Relationship replyOf = replyOfs.next();
-                    if ( replyOf.isType( Rels.REPLY_OF_POST ) )
+                    if ( !replyOfs.hasNext() )
                     {
-                        // Original message: (message:Comment)-->(Post)
-                        post = replyOf.getEndNode();
-                        originalPostMap.put( message, post );
-                        return post;
+                        // Original message: (message:Post)
+                        originalPostMap.put( message, message );
+                        return message;
                     }
                     else
                     {
-                        // Original message: (message:Comment)-->(Comment)
-                        List<Node> intermediaryComments = new ArrayList<>();
-                        intermediaryComments.add( message );
-                        post = innerGetPost( replyOf.getEndNode(), intermediaryComments );
-                        for ( Node comment : intermediaryComments )
+                        Relationship replyOf = replyOfs.next();
+                        if ( replyOf.isType( Rels.REPLY_OF_POST ) )
                         {
-                            originalPostMap.put( comment, post );
+                            // Original message: (message:Comment)-->(Post)
+                            post = replyOf.getEndNode();
+                            originalPostMap.put( message, post );
+                            return post;
                         }
-                        return post;
+                        else
+                        {
+                            // Original message: (message:Comment)-->(Comment)
+                            List<Node> intermediaryComments = new ArrayList<>();
+                            intermediaryComments.add( message );
+                            post = innerGetPost( replyOf.getEndNode(), intermediaryComments );
+                            for ( Node comment : intermediaryComments )
+                            {
+                                originalPostMap.put( comment, post );
+                            }
+                            return post;
+                        }
                     }
                 }
             }
@@ -272,29 +274,30 @@ public class ShortQuery2EmbeddedCore_0_1 extends Neo4jShortQuery2<Neo4jConnectio
             {
                 intermediaryComments.add( message );
 
-                Iterator<Relationship> replyOfs = message.getRelationships(
+                try ( ResourceIterator<Relationship> replyOfs = (ResourceIterator<Relationship>) message.getRelationships(
                         Direction.OUTGOING,
                         Rels.REPLY_OF_POST,
-                        Rels.REPLY_OF_COMMENT ).iterator();
-
-                if ( !replyOfs.hasNext() )
+                        Rels.REPLY_OF_COMMENT ).iterator() )
                 {
-                    // Original message: (message:Post)
-                    return message;
-                }
-                else
-                {
-                    intermediaryComments.add( message );
-                    Relationship replyOf = replyOfs.next();
-                    if ( replyOf.isType( Rels.REPLY_OF_POST ) )
+                    if ( !replyOfs.hasNext() )
                     {
-                        // Original message: (message:Comment)-->(Post)
-                        return replyOf.getEndNode();
+                        // Original message: (message:Post)
+                        return message;
                     }
                     else
                     {
-                        // Original message: (message:Comment)-->(Comment)
-                        return innerGetPost( replyOf.getEndNode(), intermediaryComments );
+                        intermediaryComments.add( message );
+                        Relationship replyOf = replyOfs.next();
+                        if ( replyOf.isType( Rels.REPLY_OF_POST ) )
+                        {
+                            // Original message: (message:Comment)-->(Post)
+                            return replyOf.getEndNode();
+                        }
+                        else
+                        {
+                            // Original message: (message:Comment)-->(Comment)
+                            return innerGetPost( replyOf.getEndNode(), intermediaryComments );
+                        }
                     }
                 }
             }

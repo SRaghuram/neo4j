@@ -29,6 +29,7 @@ import java.util.Map;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectionState>
 {
@@ -62,46 +63,49 @@ public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectio
             messageAuthor = message.getSingleRelationship( Rels.POST_HAS_CREATOR, Direction.OUTGOING ).getEndNode();
         }
 
-        KnowsCache messageAuthorKnowsCache = new KnowsCache( messageAuthor );
-
-        List<LdbcShortQuery7MessageRepliesResult> results = new ArrayList<>();
-        for ( Relationship replyOf : message
-                .getRelationships( Direction.INCOMING, Rels.REPLY_OF_POST, Rels.REPLY_OF_COMMENT ) )
+        try ( KnowsCache messageAuthorKnowsCache = new KnowsCache( messageAuthor ) )
         {
-            Node replyComment = replyOf.getStartNode();
-            Node replyCommentAuthor = replyComment.getSingleRelationship(
-                    Rels.COMMENT_HAS_CREATOR,
-                    Direction.OUTGOING ).getEndNode();
-            Map<String,Object> replyCommentAuthorProperties = replyCommentAuthor.getProperties( PERSON_PROPERTIES );
-            Map<String,Object> replyCommentProperties = replyComment.getProperties( MESSAGE_PROPERTIES );
-            results.add(
-                    new LdbcShortQuery7MessageRepliesResult(
-                            (long) replyCommentProperties.get( Message.ID ),
-                            (String) replyCommentProperties.get( Message.CONTENT ),
-                            dateUtil.formatToUtc( (long) replyCommentProperties.get( Message.CREATION_DATE ) ),
-                            (long) replyCommentAuthorProperties.get( Person.ID ),
-                            (String) replyCommentAuthorProperties.get( Person.FIRST_NAME ),
-                            (String) replyCommentAuthorProperties.get( Person.LAST_NAME ),
-                            messageAuthorKnowsCache.knows( replyCommentAuthor )
-                    )
-            );
+            List<LdbcShortQuery7MessageRepliesResult> results = new ArrayList<>();
+            for ( Relationship replyOf : message
+                    .getRelationships( Direction.INCOMING, Rels.REPLY_OF_POST, Rels.REPLY_OF_COMMENT ) )
+            {
+                Node replyComment = replyOf.getStartNode();
+                Node replyCommentAuthor = replyComment.getSingleRelationship(
+                        Rels.COMMENT_HAS_CREATOR,
+                        Direction.OUTGOING ).getEndNode();
+                Map<String,Object> replyCommentAuthorProperties = replyCommentAuthor.getProperties( PERSON_PROPERTIES );
+                Map<String,Object> replyCommentProperties = replyComment.getProperties( MESSAGE_PROPERTIES );
+                results.add(
+                        new LdbcShortQuery7MessageRepliesResult(
+                                (long) replyCommentProperties.get( Message.ID ),
+                                (String) replyCommentProperties.get( Message.CONTENT ),
+                                dateUtil.formatToUtc( (long) replyCommentProperties.get( Message.CREATION_DATE ) ),
+                                (long) replyCommentAuthorProperties.get( Person.ID ),
+                                (String) replyCommentAuthorProperties.get( Person.FIRST_NAME ),
+                                (String) replyCommentAuthorProperties.get( Person.LAST_NAME ),
+                                messageAuthorKnowsCache.knows( replyCommentAuthor )
+                        )
+                );
+            }
+
+            Collections.sort( results, DESCENDING_CREATION_DATE_DESCENDING_AUTHOR_ID_COMPARATOR );
+
+            return results;
         }
-
-        Collections.sort( results, DESCENDING_CREATION_DATE_DESCENDING_AUTHOR_ID_COMPARATOR );
-
-        return results;
     }
 
-    private static class KnowsCache
+    private static class KnowsCache implements AutoCloseable
     {
         private final Node person;
-        private final Iterator<Relationship> knows;
+        private final ResourceIterator<Relationship> knows;
+        private boolean knowsIsClosed;
         private final LongSet friends;
 
         private KnowsCache( Node person )
         {
             this.person = person;
-            this.knows = person.getRelationships( Rels.KNOWS, Direction.BOTH ).iterator();
+            this.knows = (ResourceIterator<Relationship>) person.getRelationships( Rels.KNOWS, Direction.BOTH ).iterator();
+            this.knowsIsClosed = false;
             this.friends = new LongOpenHashSet();
         }
 
@@ -123,6 +127,15 @@ public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectio
                     }
                 }
                 return false;
+            }
+        }
+
+        @Override
+        public void close()
+        {
+            if (!knowsIsClosed) {
+                knowsIsClosed = true;
+                knows.close();
             }
         }
     }

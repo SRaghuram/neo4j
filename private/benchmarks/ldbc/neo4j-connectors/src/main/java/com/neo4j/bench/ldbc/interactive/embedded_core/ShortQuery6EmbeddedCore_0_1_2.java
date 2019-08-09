@@ -22,6 +22,7 @@ import java.util.Map;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 
 public class ShortQuery6EmbeddedCore_0_1_2 extends Neo4jShortQuery6<Neo4jConnectionState>
 {
@@ -58,17 +59,23 @@ public class ShortQuery6EmbeddedCore_0_1_2 extends Neo4jShortQuery6<Neo4jConnect
 
     Node getParentPostOfComment( Node message )
     {
-        Relationship replyOf = message.getRelationships(
+        try ( ResourceIterator<Relationship> replyOfRels = (ResourceIterator<Relationship>) message.getRelationships(
                 Direction.OUTGOING,
                 Rels.REPLY_OF_COMMENT,
-                Rels.REPLY_OF_POST ).iterator().next();
-        while ( replyOf.isType( Rels.REPLY_OF_COMMENT ) )
+                Rels.REPLY_OF_POST ).iterator() )
         {
-            replyOf = replyOf.getEndNode().getRelationships(
-                    Direction.OUTGOING,
-                    Rels.REPLY_OF_COMMENT,
-                    Rels.REPLY_OF_POST ).iterator().next();
+            Relationship replyOf = replyOfRels.next();
+            while ( replyOf.isType( Rels.REPLY_OF_COMMENT ) )
+            {
+                try ( ResourceIterator<Relationship> nextReplyOfRels = (ResourceIterator<Relationship>) replyOf.getEndNode().getRelationships(
+                        Direction.OUTGOING,
+                        Rels.REPLY_OF_COMMENT,
+                        Rels.REPLY_OF_POST ).iterator() )
+                {
+                    replyOf = nextReplyOfRels.next();
+                }
+            }
+            return replyOf.getEndNode();
         }
-        return replyOf.getEndNode();
     }
 }
