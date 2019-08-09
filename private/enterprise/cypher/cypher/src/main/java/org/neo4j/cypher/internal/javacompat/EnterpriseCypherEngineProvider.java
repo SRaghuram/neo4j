@@ -13,12 +13,6 @@ import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration;
 public class EnterpriseCypherEngineProvider extends CommunityCypherEngineProvider
 {
     @Override
-    public String getName()
-    {
-        return "enterprise-cypher";
-    }
-
-    @Override
     protected int enginePriority()
     {
         return 1; // Lower means better. The enterprise version will have a lower number

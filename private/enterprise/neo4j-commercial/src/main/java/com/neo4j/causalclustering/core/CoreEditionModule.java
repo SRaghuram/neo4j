@@ -51,7 +51,7 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
-import com.neo4j.commercial.edition.CommercialEditionModule;
+import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
@@ -107,7 +107,7 @@ import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
  * This implementation of {@link AbstractEditionModule} creates the service instances
  * which are specific to the Core members of a causal cluster.
  */
-public class CoreEditionModule extends ClusteringEditionModule
+public class CoreEditionModule extends ClusteringEditionModule implements AbstractCommercialEditionModule
 {
     private final IdentityModule identityModule;
     private final SslPolicyLoader sslPolicyLoader;
@@ -190,7 +190,7 @@ public class CoreEditionModule extends ClusteringEditionModule
 
         this.raftSender = new RaftSender( logProvider, raftChannelPoolService );
 
-        CommercialEditionModule.satisfyCommercialOnlyDependencies( this.globalModule );
+        satisfyCommercialOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }

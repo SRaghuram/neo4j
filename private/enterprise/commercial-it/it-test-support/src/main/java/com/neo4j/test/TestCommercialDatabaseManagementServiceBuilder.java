@@ -75,18 +75,6 @@ public class TestCommercialDatabaseManagementServiceBuilder extends TestDatabase
         return Edition.COMMERCIAL.toString();
     }
 
-    @Override
-    protected ExternalDependencies databaseDependencies()
-    {
-        return newDependencies()
-                .monitors( monitors )
-                .userLogProvider( userLogProvider )
-                .dependencies( dependencies )
-                .urlAccessRules( urlAccessRules )
-                .extensions( extensions )
-                .databaseEventListeners( databaseEventListeners );
-    }
-
     // Override to allow chaining
 
     @Override

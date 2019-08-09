@@ -8,11 +8,9 @@ package com.neo4j.commercial.edition;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
-import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
-import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
@@ -38,10 +36,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
-import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager$;
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManager;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
@@ -66,7 +61,6 @@ import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
@@ -78,7 +72,7 @@ import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 
-public class CommercialEditionModule extends CommunityEditionModule
+public class CommercialEditionModule extends CommunityEditionModule implements AbstractCommercialEditionModule
 {
     private final GlobalModule globalModule;
     private final ReconciledTransactionTracker reconciledTxTracker;
@@ -229,30 +223,5 @@ public class CommercialEditionModule extends CommunityEditionModule
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
-    }
-
-    /**
-     * Satisfy any commercial only dependencies, that are also needed in other Editions,
-     * e.g. {@link CoreEditionModule} and {@link ReadReplicaEditionModule}.
-     */
-    public static void satisfyCommercialOnlyDependencies( GlobalModule globalModule )
-    {
-        // Create Cypher workers
-        Config globalConfig = globalModule.getGlobalConfig();
-        if ( globalConfig.get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
-             GraphDatabaseSettings.CypherMorselRuntimeScheduler.SINGLE_THREADED )
-        {
-            int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
-            int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
-            WorkerManager workerManager =
-                    new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
-            globalModule.getGlobalDependencies().satisfyDependency( workerManager );
-            globalModule.getGlobalLife().add( workerManager );
-        }
-        else
-        {
-            WorkerManagement workerManagement = ThrowingWorkerManager$.MODULE$;
-            globalModule.getGlobalDependencies().satisfyDependency( workerManagement );
-        }
     }
 }

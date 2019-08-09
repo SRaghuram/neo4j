@@ -24,7 +24,7 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
-import com.neo4j.commercial.edition.CommercialEditionModule;
+import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDatabaseOnlyTransactionEventService;
@@ -68,7 +68,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
  * that are specific to the Commercial Read Replica edition.
  */
-public class ReadReplicaEditionModule extends ClusteringEditionModule
+public class ReadReplicaEditionModule extends ClusteringEditionModule implements AbstractCommercialEditionModule
 {
     protected final LogProvider logProvider;
     private final Config globalConfig;
@@ -117,7 +117,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         PipelineBuilders pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
-        CommercialEditionModule.satisfyCommercialOnlyDependencies( this.globalModule );
+        satisfyCommercialOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }
