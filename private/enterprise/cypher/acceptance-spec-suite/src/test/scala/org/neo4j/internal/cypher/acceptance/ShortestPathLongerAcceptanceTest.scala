@@ -207,8 +207,8 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     results.executionPlanDescription() should executeShortestPathFallbackWith(minRows = 0, maxRows = 0)
   }
 
-  // expanderSolverStep does not currently take on predicates using rels(p), but it should!
-  // In the regular var expand planning, ALL and NONE predicates with rels(p) are handled, but it depends on
+  // expanderSolverStep does not currently take on predicates using relationships(p), but it should!
+  // In the regular var expand planning, ALL and NONE predicates with relationships(p) are handled, but it depends on
   // that p then is an AST PathExpression. But in the case of shortest path, p will just be a Variable.
   // So to fix this we need another case in extractPredicates that can figure out a mapping between the variable name
   // and the shortest path expression and then determine that the path expression does not depend on the whole path.
@@ -218,7 +218,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val start = System.currentTimeMillis
     val results = executeWith(Configs.All,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE ALL(r in rels(p) WHERE type(r) = "DOWN")
+         |WHERE ALL(r in relationships(p) WHERE type(r) = "DOWN")
          |  AND ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
@@ -448,7 +448,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     addDiagonal()
     val results = executeUsingCostPlannerOnly(
       s"""MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE ALL(r in rels(p) WHERE type(r) = 'DIAG')
+         |WHERE ALL(r in relationships(p) WHERE type(r) = 'DIAG')
          |RETURN nodes(p) AS nodes""".stripMargin)
 
     val result = results.columnAs[List[Node]]("nodes").toList
@@ -460,7 +460,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   test("Shortest path from first to last node with NONE predicate") {
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE NONE(r in rels(p) WHERE exists(r.blocked))
+         |WHERE NONE(r in relationships(p) WHERE exists(r.blocked))
          |RETURN nodes(p) AS nodes""".stripMargin)
 
     val result = results.columnAs[Seq[Node]]("nodes").toList
@@ -472,7 +472,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   test("Shortest path from first to last node with NONE predicate with a composite predicate") {
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE NONE(r in rels(p) WHERE exists(r.blocked) AND src:$bottomLeft) AND src:$topLeft
+         |WHERE NONE(r in relationships(p) WHERE exists(r.blocked) AND src:$bottomLeft) AND src:$topLeft
          |RETURN nodes(p) AS nodes""".stripMargin)
 
     val result = results.columnAs[Seq[Node]]("nodes").toList

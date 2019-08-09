@@ -136,7 +136,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   test("AllRelationships") {
     graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
     val query = """MATCH p = (pA)-[:REL*3..3  {foo:'bar'}]->(pB)
-                  |WHERE all(i IN rels(p) WHERE i.foo = 'bar')
+                  |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
     val result = executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
@@ -148,7 +148,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   test("AllRelationshipsInPath") {
     graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
-                  |WHERE all(i IN rels(p) WHERE i.foo = 'bar')
+                  |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
     val result = executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
@@ -172,7 +172,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   test("NoRelationshipInPath") {
     graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
-                  |WHERE none(i IN rels(p) WHERE i.foo = 'barz')
+                  |WHERE none(i IN relationships(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin
     val result = executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
@@ -286,7 +286,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     path.endNode() should equal(node2)
   }
 
-  test("AllRelationshipsInPath with inner predicate using rels of the path") {
+  test("AllRelationshipsInPath with inner predicate using relationships of the path") {
     val node1 = createLabeledNode("NODE")
     val node2 = createLabeledNode("NODE")
     relate(node1,node2)
@@ -294,7 +294,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query =
       """
         | MATCH p = (:NODE)-[*1]->(:NODE)
-        | WHERE ALL(x IN rels(p) WHERE single(y IN rels(p) WHERE y = x))
+        | WHERE ALL(x IN relationships(p) WHERE single(y IN relationships(p) WHERE y = x))
         | RETURN p
       """.stripMargin
 
@@ -312,7 +312,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query =
       """
         | MATCH p = (:NODE)-[*1]->(:NODE)
-        | WHERE ALL(x IN rels(p) WHERE length(p) = 1)
+        | WHERE ALL(x IN relationships(p) WHERE length(p) = 1)
         | RETURN p
       """.stripMargin
 
@@ -348,7 +348,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query =
       """
         | MATCH p = (:NODE)-[*1..2]->(:NODE)
-        | WHERE NONE(x IN rels(p) WHERE length(p) = 2)
+        | WHERE NONE(x IN relationships(p) WHERE length(p) = 2)
         | RETURN p
       """.stripMargin
 
