@@ -21,6 +21,8 @@ import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
+import org.neo4j.kernel.impl.factory.AccessCapabilityFactory;
+import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -41,6 +43,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     private final CommitProcessFactory commitProcessFactory;
     private final DatabaseTransactionStats transactionMonitor;
     private final ReadReplicaEditionModule editionModule;
+    private final AccessCapabilityFactory accessCapabilityFactory;
 
     public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, DatabaseId databaseId )
     {
@@ -60,6 +63,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
         this.commitProcessFactory = ( appender, storageEngine, config ) -> new ReadOnlyTransactionCommitProcess();
         this.transactionMonitor = editionModule.createTransactionMonitor();
+        this.accessCapabilityFactory = AccessCapabilityFactory.fixed( new ReadOnly() );
     }
 
     @Override
@@ -120,5 +124,11 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     public DatabaseTransactionStats getTransactionMonitor()
     {
         return transactionMonitor;
+    }
+
+    @Override
+    public AccessCapabilityFactory getAccessCapabilityFactory()
+    {
+        return accessCapabilityFactory;
     }
 }

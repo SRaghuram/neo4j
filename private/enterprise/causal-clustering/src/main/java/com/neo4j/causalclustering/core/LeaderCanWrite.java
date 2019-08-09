@@ -16,10 +16,11 @@ import static java.lang.String.format;
 
 public class LeaderCanWrite implements AccessCapability
 {
-    private RaftMachine raftMachine;
     public static final String NOT_LEADER_ERROR_MSG =
             "No write operations are allowed directly on this database. Writes must pass through the leader. " +
-                    "The role of this server is: %s";
+            "The role of this server is: %s";
+
+    private final RaftMachine raftMachine;
 
     public LeaderCanWrite( RaftMachine raftMachine )
     {
