@@ -11,6 +11,8 @@ import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
+import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
+
 class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {

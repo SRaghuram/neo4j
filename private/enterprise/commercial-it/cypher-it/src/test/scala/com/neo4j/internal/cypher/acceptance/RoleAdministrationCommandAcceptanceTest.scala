@@ -10,6 +10,8 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.{DatabaseAdministrationException, InvalidArgumentException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
+import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
+
 class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   private val defaultRoles = Set(
     Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true),

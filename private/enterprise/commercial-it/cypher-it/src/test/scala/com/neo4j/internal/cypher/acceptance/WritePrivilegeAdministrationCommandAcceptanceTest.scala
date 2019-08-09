@@ -12,6 +12,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.Map
+import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 

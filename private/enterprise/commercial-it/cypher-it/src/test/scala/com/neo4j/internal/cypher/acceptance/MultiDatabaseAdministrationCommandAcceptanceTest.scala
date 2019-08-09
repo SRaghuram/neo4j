@@ -26,6 +26,7 @@ import org.neo4j.server.security.auth.SecureHasher
 import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
 
 import scala.collection.Map
+import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 //TODO: Reinstate ignored tests after database Id work is merged
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {

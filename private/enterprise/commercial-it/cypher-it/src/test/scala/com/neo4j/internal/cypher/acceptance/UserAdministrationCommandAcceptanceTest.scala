@@ -16,6 +16,7 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.Map
+import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
