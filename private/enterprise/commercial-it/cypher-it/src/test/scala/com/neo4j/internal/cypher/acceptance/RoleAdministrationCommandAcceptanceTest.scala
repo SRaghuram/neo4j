@@ -7,10 +7,10 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.{DatabaseManagementException, InvalidArgumentException}
+import org.neo4j.cypher.{DatabaseAdministrationException, InvalidArgumentException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
-class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   private val defaultRoles = Set(
     Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true),
     Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true),
@@ -147,7 +147,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing roles when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ROLES")
       // THEN
@@ -315,7 +315,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
       // THEN
@@ -370,7 +370,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
@@ -573,7 +573,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when granting role to user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -586,7 +586,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE ROLE dragon")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
       // THEN
@@ -771,7 +771,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when revoking role from user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN
@@ -785,7 +785,7 @@ class RoleManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("GRANT ROLE dragon TO Bar")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
       // THEN

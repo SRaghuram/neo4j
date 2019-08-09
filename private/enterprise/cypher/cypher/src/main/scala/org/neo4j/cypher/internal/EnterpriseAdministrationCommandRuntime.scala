@@ -16,7 +16,7 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.DatabaseAdministrationException
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
@@ -35,8 +35,8 @@ import org.neo4j.values.virtual.VirtualValues
 /**
   * This runtime takes on queries that require no planning, such as multidatabase administration commands
   */
-case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends ManagementCommandRuntime {
-  val communityCommandRuntime: CommunityManagementCommandRuntime = CommunityManagementCommandRuntime(normalExecutionEngine, resolver)
+case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
+  val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
   val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
 
   override def name: String = "enterprise administration-commands"
@@ -513,7 +513,7 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     case EnsureValidNonSystemDatabase(normalizedName, action) => (_, _, _) =>
       val dbName = normalizedName.name
       if (dbName.equals(SYSTEM_DATABASE_NAME))
-        throw new DatabaseManagementException(s"Not allowed to $action system database.")
+        throw new DatabaseAdministrationException(s"Not allowed to $action system database.")
 
       SystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
@@ -689,6 +689,6 @@ case class EnterpriseManagementCommandRuntime(normalExecutionEngine: ExecutionEn
     s"$start$actionName $res ON GRAPH $db $segment"
   }
 
-  override def isApplicableManagementCommand(logicalPlanState: LogicalPlanState): Boolean =
+  override def isApplicableAdministrationCommand(logicalPlanState: LogicalPlanState): Boolean =
     (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).isDefinedAt(logicalPlanState.maybeLogicalPlan.get)
 }

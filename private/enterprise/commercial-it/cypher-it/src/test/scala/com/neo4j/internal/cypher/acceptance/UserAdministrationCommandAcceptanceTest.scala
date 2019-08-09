@@ -17,7 +17,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.Map
 
-class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("GraphStatistics should tell us if a query contains system updates or not"){
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -75,7 +75,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing users when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW USERS")
       // THEN
@@ -291,7 +291,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when creating user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
       // THEN
@@ -393,7 +393,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when dropping user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("DROP USER foo")
       // THEN
@@ -779,7 +779,7 @@ class UserManagementDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when altering user when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
       // THEN

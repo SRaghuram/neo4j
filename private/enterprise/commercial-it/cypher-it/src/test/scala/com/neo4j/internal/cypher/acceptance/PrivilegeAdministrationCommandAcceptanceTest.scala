@@ -6,12 +6,12 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.DatabaseAdministrationException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
-class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -93,7 +93,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for all users when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
       // THEN
@@ -171,7 +171,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for roles when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
       // THEN
@@ -273,7 +273,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when showing privileges for users when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW USER neo4j PRIVILEGES")
       // THEN
@@ -359,7 +359,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
             val commandName = actionCommand.split(" ").head
-            the[DatabaseManagementException] thrownBy {
+            the[DatabaseAdministrationException] thrownBy {
               // WHEN
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
               // THEN
@@ -2309,7 +2309,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE $revokeType") {
-        the[DatabaseManagementException] thrownBy {
+        the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
           // THEN
@@ -2318,7 +2318,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database with REVOKE $revokeType") {
-        the[DatabaseManagementException] thrownBy {
+        the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN
@@ -2327,7 +2327,7 @@ class PrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
-        the[DatabaseManagementException] thrownBy {
+        the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES * (*) FROM custom")
           // THEN

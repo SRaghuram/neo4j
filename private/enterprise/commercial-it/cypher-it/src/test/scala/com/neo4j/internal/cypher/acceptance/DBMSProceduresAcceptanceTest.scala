@@ -11,7 +11,7 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
 import scala.collection.JavaConverters._
 
-class DBMSProceduresAcceptanceTest extends DDLAcceptanceTestBase {
+class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should execute dbms.security.createUser on system") {
     // GIVEN

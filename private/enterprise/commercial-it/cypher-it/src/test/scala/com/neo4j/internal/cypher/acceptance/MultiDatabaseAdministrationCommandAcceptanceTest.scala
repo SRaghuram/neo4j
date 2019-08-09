@@ -12,7 +12,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.DatabaseAdministrationException
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
@@ -28,7 +28,7 @@ import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExe
 import scala.collection.Map
 
 //TODO: Reinstate ignored tests after database Id work is merged
-class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   private val onlineStatus = DatabaseStatus.Online.stringValue()
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
   private val defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
@@ -215,7 +215,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when showing a database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
       // THEN
@@ -273,7 +273,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when showing databases when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW DATABASES")
       // THEN
@@ -338,7 +338,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when showing default database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the [DatabaseManagementException] thrownBy {
+    the [DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW DEFAULT DATABASE")
       // THEN
@@ -617,7 +617,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when creating a database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
       // THEN
@@ -732,7 +732,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
 
     // GIVEN
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
@@ -789,7 +789,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("CREATE DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
@@ -932,7 +932,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     execute("STOP DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("START DATABASE foo")
       // THEN
@@ -1044,7 +1044,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
     setup(defaultConfig)
 
     // GIVEN
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute(s"STOP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
@@ -1128,7 +1128,7 @@ class MultiDatabaseDDLAcceptanceTest extends DDLAcceptanceTestBase {
   test("should fail when stopping a database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("STOP DATABASE foo")
       // THEN

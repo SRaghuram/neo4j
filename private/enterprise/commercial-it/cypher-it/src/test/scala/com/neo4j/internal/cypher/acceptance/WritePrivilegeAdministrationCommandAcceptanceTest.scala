@@ -6,14 +6,14 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.cypher.DatabaseManagementException
+import org.neo4j.cypher.DatabaseAdministrationException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.Map
 
-class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -117,7 +117,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
-        the[DatabaseManagementException] thrownBy {
+        the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
@@ -235,7 +235,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
       }
 
       test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
-        the[DatabaseManagementException] thrownBy {
+        the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
           // THEN
@@ -353,7 +353,7 @@ class WritePrivilegeDDLAcceptanceTest extends DDLAcceptanceTestBase {
   }
 
   test("should fail when revoking write privilege to custom role when not on system database") {
-    the[DatabaseManagementException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
       // THEN

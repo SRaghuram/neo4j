@@ -69,7 +69,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
     }
 
     val runtime = if (plannerConfig.planSystemCommands)
-      EnterpriseManagementCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
+      EnterpriseAdministrationCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
     else
       EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings)
 

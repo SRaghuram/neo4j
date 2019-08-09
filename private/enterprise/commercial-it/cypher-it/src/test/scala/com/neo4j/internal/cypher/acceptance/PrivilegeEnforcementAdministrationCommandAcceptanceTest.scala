@@ -14,7 +14,7 @@ import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 
 // Tests for actual behaviour of authorization rules for restricted users based on privileges
-class PrivilegeEnforcementDDLAcceptanceTest extends DDLAcceptanceTestBase {
+class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   // Tests for node privileges
 

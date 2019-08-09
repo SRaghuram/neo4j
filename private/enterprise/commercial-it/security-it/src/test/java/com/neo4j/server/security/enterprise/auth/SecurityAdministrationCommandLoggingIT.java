@@ -44,7 +44,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.internal.helpers.Strings.escape;
 
 @ExtendWith( {TestDirectoryExtension.class} )
-class SecurityDDLLoggingIT
+class SecurityAdministrationCommandLoggingIT
 {
     private DatabaseManagementService managementService;
     private GraphDatabaseFacade database;
