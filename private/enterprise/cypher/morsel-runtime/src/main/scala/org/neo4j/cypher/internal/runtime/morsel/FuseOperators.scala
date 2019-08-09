@@ -142,7 +142,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         case _ => null
       }
       // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
-      innermostTemplate.shouldWriteToContext = true
+      innermostTemplate.reset()
       acc.copy(
         template = innermostTemplate,
         fusedPlans = List.empty,

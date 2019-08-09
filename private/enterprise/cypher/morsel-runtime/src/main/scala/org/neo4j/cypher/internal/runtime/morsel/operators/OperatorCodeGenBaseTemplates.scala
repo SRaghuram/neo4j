@@ -468,6 +468,13 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false)
                                   (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+  // Reset configuration to the default settings
+  def reset(): Unit = {
+    shouldWriteToContext = true
+    shouldCheckDemand = false
+    shouldCheckOutputCounter = false
+  }
+
   override def inner: OperatorTaskTemplate = null
 
   override val id: Id = Id.INVALID_ID
