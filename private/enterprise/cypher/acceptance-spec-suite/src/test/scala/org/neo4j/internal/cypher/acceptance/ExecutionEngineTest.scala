@@ -462,7 +462,7 @@ order by a.COL1""".format(a, b))
     val b = createNode()
     relate(a, b)
 
-    val q = "match p = (n)-[*1..]->(m) where id(n)= 0 return p, last(nodes(p)) order by length(nodes(p)) asc"
+    val q = "match p = (n)-[*1..]->(m) where id(n)= 0 return p, last(nodes(p)) order by size(nodes(p)) asc"
     executeWith(Configs.VarExpand, q).toList should have size 1
   }
 
@@ -505,7 +505,7 @@ order by a.COL1""".format(a, b))
 
   test("params should survive with") {
     val n = createNode()
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 WITH collect(n) as coll where length(coll)={id} RETURN coll", params = Map("id"->1))
+    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 WITH collect(n) as coll where size(coll)={id} RETURN coll", params = Map("id"->1))
 
     result.toList should equal(List(Map("coll" -> List(n))))
   }

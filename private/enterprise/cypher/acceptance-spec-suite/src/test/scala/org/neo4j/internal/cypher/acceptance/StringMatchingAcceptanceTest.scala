@@ -76,7 +76,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
     graph.execute("CREATE (:Label{prop:'1 2'})")
     graph.execute("CREATE (:Label{prop:'1  2'})")
 
-    val result = executeSingle("MATCH (n:Label) RETURN length(n.prop) as l", Map.empty)
+    val result = executeSingle("MATCH (n:Label) RETURN size(n.prop) as l", Map.empty)
     result.toSet should equal(Set(Map("l" -> 3), Map("l" -> 4)))
   }
 }
