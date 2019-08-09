@@ -118,7 +118,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
     executor.assertAllReleased()
   }
 
-  class RandomExecutor extends FixedWorkersQueryExecutor(0,
+  class RandomExecutor extends FixedWorkersQueryExecutor(
     null,
     new WorkerResourceProvider(3, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))),
     new WorkerManager(3, null)) {

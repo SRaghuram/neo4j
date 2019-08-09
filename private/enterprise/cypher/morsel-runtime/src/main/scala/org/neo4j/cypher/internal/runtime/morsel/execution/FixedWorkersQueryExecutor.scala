@@ -21,8 +21,7 @@ import org.neo4j.values.AnyValue
   * [[QueryExecutor]] implementation which uses a fixed number (n) of workers to execute
   * query work.
   */
-class FixedWorkersQueryExecutor(morselSize: Int,
-                                transactionBinder: TransactionBinder,
+class FixedWorkersQueryExecutor(transactionBinder: TransactionBinder,
                                 val workerResourceProvider: WorkerResourceProvider,
                                 val workerManager: WorkerManagement)
   extends QueryExecutor {

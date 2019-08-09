@@ -5,12 +5,10 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.common.DependencyResolver
-import org.neo4j.common.DependencyResolver.SelectionStrategy
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.tracing._
-import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager, WorkerResourceProvider}
+import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerResourceProvider}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -48,7 +46,7 @@ object RuntimeEnvironment {
         val resourceFactory = () => new QueryResources(cursors)
         val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
         lifeSupport.add(workerResourceProvider)
-        val queryExecutor = new FixedWorkersQueryExecutor(config.morselSize, txBinder, workerResourceProvider, workerManager)
+        val queryExecutor = new FixedWorkersQueryExecutor(txBinder, workerResourceProvider, workerManager)
         queryExecutor
     }
 
