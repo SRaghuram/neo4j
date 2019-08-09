@@ -38,9 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.legacy_certificates_directory;
-import static org.neo4j.server.ServerTestUtils.createTempDir;
-import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
 @SkipThreadLeakageGuard
@@ -52,28 +49,20 @@ class CommercialNeo4jExtensionRegisterIT
 
     static
     {
-        try
-        {
-            neo4jExtension = CommercialNeo4jExtension.builder()
-                    .withFolder( createTempDirectory() )
-                    .withFixture( "CREATE (u:User)" )
-                    .withConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
-                    .withConfig( legacy_certificates_directory, getRelativePath( createTempDir(), legacy_certificates_directory ) )
-                    .withFixture( graphDatabaseService ->
+        neo4jExtension = CommercialNeo4jExtension.builder()
+                .withFolder( createTempDirectory() )
+                .withFixture( "CREATE (u:User)" )
+                .withConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
+                .withFixture( graphDatabaseService ->
+                {
+                    try ( Transaction tx = graphDatabaseService.beginTx() )
                     {
-                        try ( Transaction tx = graphDatabaseService.beginTx() )
-                        {
-                            graphDatabaseService.createNode( Label.label( "User" ) );
-                            tx.commit();
-                        }
-                        return null;
-                    } )
-                    .build();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
+                        graphDatabaseService.createNode( Label.label( "User" ) );
+                        tx.commit();
+                    }
+                    return null;
+                } )
+                .build();
     }
 
     @Test

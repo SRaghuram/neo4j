@@ -40,6 +40,7 @@ import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.ssl.SslPolicyScope.BOLT;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
@@ -50,7 +51,7 @@ public class BoltTlsIT
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
-    private PemSslPolicyConfig sslPolicy = PemSslPolicyConfig.group( "bolt" );
+    private PemSslPolicyConfig sslPolicy = PemSslPolicyConfig.forScope( BOLT );
 
     private GraphDatabaseAPI db;
     private SslResource sslResource;
@@ -119,7 +120,6 @@ public class BoltTlsIT
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )
                 .setConfig( BoltConnector.encryption_level, EncryptionLevel.OPTIONAL )
-                .setConfig( BoltConnector.ssl_policy, "bolt" )
                 .setConfig( sslPolicy.base_directory, Path.of( "certificates" ) )
                 .setConfig( sslPolicy.tls_versions, Arrays.asList( setup.boltTlsVersions.split( "," ) ) )
                 .setConfig( sslPolicy.client_auth, ClientAuth.NONE )
@@ -141,7 +141,7 @@ public class BoltTlsIT
     {
         // given
         SslContextFactory.SslParameters params = protocols( setup.clientTlsVersions.split( "," ) ).ciphers();
-        SecureClient client = new SecureClient( makeSslPolicy( sslResource, params ) );
+        SecureClient client = new SecureClient( makeSslPolicy( sslResource, params, BOLT ) );
 
         // when
         client.connect( getBoltPort( db ) );

@@ -41,7 +41,6 @@ public class BoltQueryLoggingIT
         Path tmpDir = ServerTestUtils.createTempDir().toPath().toAbsolutePath();
         this.neo4j = new Neo4jRule()
             .withConfig( ServerSettings.http_logging_enabled, true )
-            .withConfig( GraphDatabaseSettings.legacy_certificates_directory, tmpDir )
             .withConfig( GraphDatabaseSettings.auth_enabled, false )
             .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
             .withConfig( GraphDatabaseSettings.log_queries, true)

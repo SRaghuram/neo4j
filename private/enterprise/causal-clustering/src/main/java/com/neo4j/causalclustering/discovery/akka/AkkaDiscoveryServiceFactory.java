@@ -29,6 +29,8 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
+
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     private static final long RESTART_RETRY_DELAY_MS = 1000L;
@@ -82,7 +84,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 
     protected static ActorSystemFactory actorSystemFactory( SslPolicyLoader sslPolicyLoader, Executor executor, Config config, LogProvider logProvider )
     {
-        SslPolicy sslPolicy = sslPolicyLoader.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
+
+        SslPolicy sslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
         Optional<SSLEngineProvider> sslEngineProvider = Optional.ofNullable( sslPolicy ).map( AkkaDiscoverySSLEngineProvider::new );
         return new ActorSystemFactory( sslEngineProvider, executor, config, logProvider );
     }

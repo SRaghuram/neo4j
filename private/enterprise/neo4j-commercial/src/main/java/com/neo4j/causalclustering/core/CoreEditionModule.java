@@ -174,7 +174,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
+        pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
 
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( globalConfig, logProvider );

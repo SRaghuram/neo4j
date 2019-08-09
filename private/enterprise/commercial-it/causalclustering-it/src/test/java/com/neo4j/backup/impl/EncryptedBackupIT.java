@@ -64,6 +64,8 @@ import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -462,8 +464,7 @@ class EncryptedBackupIT
             File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
             backupPolicyLocation.mkdirs();
             Properties properties = new Properties();
-            SslPolicyConfig backupSslConfigGroup = PemSslPolicyConfig.group( backupPolicyName );
-            properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
+            SslPolicyConfig backupSslConfigGroup = PemSslPolicyConfig.forScope( BACKUP );
             properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
             config.getParentFile().mkdirs();
 
@@ -542,14 +543,12 @@ class EncryptedBackupIT
 
         private static void configureClusterConfigEncryptedCluster( Map<Setting<?>,String> settings )
         {
-            settings.put( CausalClusteringSettings.ssl_policy, clusterPolicyName );
-            settings.put( PemSslPolicyConfig.group( clusterPolicyName ).base_directory, Path.of( "certificates/" + clusterPolicyName ).toString() );
+            settings.put( PemSslPolicyConfig.forScope( CLUSTER ).base_directory, Path.of( "certificates/" + clusterPolicyName ).toString() );
         }
 
         private static void configureClusterConfigEncryptedBackup( Map<Setting<?>,String> settings )
         {
-            settings.put( OnlineBackupSettings.ssl_policy, backupPolicyName );
-            settings.put( PemSslPolicyConfig.group( backupPolicyName ).base_directory, Path.of( "certificates/" + backupPolicyName ).toString() );
+            settings.put( PemSslPolicyConfig.forScope( BACKUP ).base_directory, Path.of( "certificates/" + backupPolicyName ).toString() );
         }
 
         private static Collection<ClusterMember> allMembers( Cluster cluster )

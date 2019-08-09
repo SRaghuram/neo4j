@@ -47,6 +47,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.causalclustering.discovery.RetryStrategyTest.testRetryStrategy;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 public class KubernetesResolverIT
@@ -192,7 +193,7 @@ public class KubernetesResolverIT
         String keyStorePass = "key store pass";
         String privateKeyPass = "private key pass";
         SslResource server1 = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "k8s" ) );
-        SslPolicy sslPolicy = com.neo4j.ssl.SslContextFactory.makeSslPolicy( server1 );
+        SslPolicy sslPolicy = com.neo4j.ssl.SslContextFactory.makeSslPolicy( server1, CLUSTER );
         KeyStore keyStore = sslPolicy.getKeyStore( keyStorePass.toCharArray(), privateKeyPass.toCharArray() );
 
         SslContextFactory sslContextFactory = new SslContextFactory();

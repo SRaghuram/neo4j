@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.ssl.config.SslPolicyLoader;
+
+import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 
 public final class PipelineBuilders
 {
@@ -18,13 +18,10 @@ public final class PipelineBuilders
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final NettyPipelineBuilderFactory backupServerPipelineBuilderFactory;
 
-    public PipelineBuilders( Config config, SslPolicyLoader sslPolicyLoader )
+    public PipelineBuilders( SslPolicyLoader sslPolicyLoader )
     {
-        var clusterSslPolicyName = config.get( CausalClusteringSettings.ssl_policy );
-        var backupSslPolicyName = config.get( OnlineBackupSettings.ssl_policy );
-
-        var clusterSslPolicy = sslPolicyLoader.getPolicy( clusterSslPolicyName );
-        var backupSslPolicy = sslPolicyLoader.getPolicy( backupSslPolicyName );
+        var clusterSslPolicy = sslPolicyLoader.hasPolicyForSource( CLUSTER ) ? sslPolicyLoader.getPolicy( CLUSTER ) : null;
+        var backupSslPolicy = sslPolicyLoader.hasPolicyForSource( BACKUP ) ? sslPolicyLoader.getPolicy( BACKUP ) : null;
 
         clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( clusterSslPolicy );
         serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( clusterSslPolicy );

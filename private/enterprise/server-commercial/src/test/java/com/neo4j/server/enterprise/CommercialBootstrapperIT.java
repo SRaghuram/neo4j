@@ -31,7 +31,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
-import static org.neo4j.configuration.GraphDatabaseSettings.legacy_certificates_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.internal.helpers.collection.MapUtil.store;
@@ -66,8 +65,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( CommercialEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.storeDir(), data_directory ).toString() ),
-                "-c", configOption( logs_directory, testDirectory.storeDir().getAbsolutePath() ),
-                "-c", configOption( legacy_certificates_directory, getRelativePath( folder.storeDir(), legacy_certificates_directory ).toString() ) ) );
+                "-c", configOption( logs_directory, testDirectory.storeDir().getAbsolutePath() ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );

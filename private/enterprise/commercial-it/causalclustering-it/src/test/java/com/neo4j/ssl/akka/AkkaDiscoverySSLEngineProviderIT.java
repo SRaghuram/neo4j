@@ -44,8 +44,8 @@ import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.ssl.ClientAuth;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
@@ -53,10 +53,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
-import static com.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
-import static com.neo4j.ssl.HostnameVerificationHelper.SSL_POLICY_CONFIG;
 import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static com.neo4j.ssl.HostnameVerificationHelper.trust;
 import static com.neo4j.ssl.SslContextFactory.SslParameters.protocols;
@@ -64,6 +61,7 @@ import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
@@ -155,8 +153,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
-        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers() );
-        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv12 ).ciphers() );
+        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
+        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv12 ).ciphers(), CLUSTER );
 
         testConnection( clientSslPolicy, serverSslPolicy, this::accept );
     }
@@ -166,8 +164,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
-        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers() );
-        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv11 ).ciphers() );
+        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
+        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv11 ).ciphers(), CLUSTER );
 
         testConnection( clientSslPolicy, serverSslPolicy, this::decline );
     }
@@ -177,8 +175,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
-        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ) );
-        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_A ) );
+        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
+        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
 
         testConnection( clientSslPolicy, serverSslPolicy, this::accept );
     }
@@ -188,8 +186,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
-        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ) );
-        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_B ) );
+        SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
+        SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_B ), CLUSTER );
 
         testConnection( clientSslPolicy, serverSslPolicy, this::decline );
     }
@@ -197,15 +195,15 @@ public class AkkaDiscoverySSLEngineProviderIT
     @Test
     public void shouldNotConnectIfInvalidCommonNameOnServer() throws Throwable
     {
-        Config serverConfig = aConfig( "invalid", testDir );
+        Config serverConfig = aConfig( "invalid", testDir, CLUSTER );
 
-        Config clientConfig = aConfig( "localhost", testDir );
+        Config clientConfig = aConfig( "localhost", testDir, CLUSTER );
 
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
+        trust( serverConfig, clientConfig, CLUSTER );
+        trust( clientConfig, serverConfig, CLUSTER );
 
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
         testConnection( clientPolicy, serverPolicy, this::decline );
     }
@@ -213,34 +211,15 @@ public class AkkaDiscoverySSLEngineProviderIT
     @Test
     public void shouldConnectIfValidCommonName() throws Throwable
     {
-        Config serverConfig = aConfig( "localhost", testDir );
+        Config serverConfig = aConfig( "localhost", testDir, CLUSTER );
 
-        Config clientConfig = aConfig( "localhost", testDir );
+        Config clientConfig = aConfig( "localhost", testDir, CLUSTER );
 
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
+        trust( serverConfig, clientConfig, CLUSTER );
+        trust( clientConfig, serverConfig, CLUSTER );
 
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-
-        testConnection( clientPolicy, serverPolicy, this::accept );
-    }
-
-    @Test
-    public void shouldConnectIfLegacyPolicyRegardlessOfHostname() throws Throwable
-    {
-
-        Config serverConfig = aConfig( "invalid-server", testDir );
-        SelfSignedCertificateFactory.create( serverConfig.get( GraphDatabaseSettings.legacy_certificates_directory ).toFile() );
-
-        Config clientConfig = aConfig( "invalid-client", testDir );
-        SelfSignedCertificateFactory.create( clientConfig.get( GraphDatabaseSettings.legacy_certificates_directory ).toFile() );
-
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
-
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( "legacy" );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( "legacy" );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
         testConnection( clientPolicy, serverPolicy, this::accept );
     }
@@ -248,17 +227,19 @@ public class AkkaDiscoverySSLEngineProviderIT
     @Test
     public void shouldConnectWithHostnameVerificationAndClientAuth() throws Throwable
     {
-        Config serverConfig = aConfig( "localhost", testDir );
-        serverConfig.set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE );
+        PemSslPolicyConfig policy = PemSslPolicyConfig.forScope( CLUSTER );
 
-        Config clientConfig = aConfig( "localhost", testDir );
-        clientConfig.set( SSL_POLICY_CONFIG.client_auth, ClientAuth.REQUIRE );
+        Config serverConfig = aConfig( "localhost", testDir, CLUSTER );
+        serverConfig.set( policy.client_auth, ClientAuth.REQUIRE );
 
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
+        Config clientConfig = aConfig( "localhost", testDir, CLUSTER );
+        clientConfig.set( policy.client_auth, ClientAuth.REQUIRE );
 
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        trust( serverConfig, clientConfig, CLUSTER );
+        trust( clientConfig, serverConfig, CLUSTER );
+
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
         testConnection( clientPolicy, serverPolicy, this::accept );
     }
@@ -298,7 +279,7 @@ public class AkkaDiscoverySSLEngineProviderIT
     private void testConnection( SslResource clientSslResource, SslResource serverSslResource, BiConsumer<TestProbe,TestProbe> verify )
             throws InterruptedException, ExecutionException
     {
-        testConnection( makeSslPolicy( clientSslResource ), makeSslPolicy( serverSslResource ), verify );
+        testConnection( makeSslPolicy( clientSslResource, CLUSTER ), makeSslPolicy( serverSslResource, CLUSTER ), verify );
     }
 
     private void testConnection( SslPolicy clientSslPolicy, SslPolicy serverSslPolicy, BiConsumer<TestProbe,TestProbe> verify )

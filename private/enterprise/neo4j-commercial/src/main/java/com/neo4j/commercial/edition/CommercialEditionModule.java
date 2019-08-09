@@ -208,7 +208,7 @@ public class CommercialEditionModule extends CommunityEditionModule implements A
         LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( config, sslPolicyLoader );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
 
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),

@@ -12,13 +12,10 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.Arrays;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
-import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -55,10 +52,7 @@ class CommercialInProcessServerBuilderIT
 
     private Neo4jBuilder getTestServerBuilder( File workDir )
     {
-        Path certificatesDirectoryValue = ServerTestUtils.getRelativePath( testDir.directory(), GraphDatabaseSettings.legacy_certificates_directory );
-
         return CommercialTestNeo4jBuilders.newInProcessBuilder( workDir )
-                .withConfig( GraphDatabaseSettings.legacy_certificates_directory, certificatesDirectoryValue )
                 .withConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 }

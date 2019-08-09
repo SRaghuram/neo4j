@@ -25,14 +25,13 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
-import static com.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
 import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static com.neo4j.ssl.HostnameVerificationHelper.trust;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 
 public class PemSslPolicyLoaderIT
 {
@@ -45,17 +44,17 @@ public class PemSslPolicyLoaderIT
     public void certificatesWithInvalidCommonNameAreRejected() throws Exception
     {
         // given server has a certificate that matches an invalid hostname
-        Config serverConfig = aConfig( "invalid-not-localhost", testDirectory );
+        Config serverConfig = aConfig( "invalid-not-localhost", testDirectory, TESTING );
 
         // and client has any certificate (valid), since hostname validation is done from the client side
-        Config clientConfig = aConfig( "localhost", testDirectory );
+        Config clientConfig = aConfig( "localhost", testDirectory, TESTING );
 
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
+        trust( serverConfig, clientConfig, TESTING );
+        trust( clientConfig, serverConfig, TESTING );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -68,41 +67,17 @@ public class PemSslPolicyLoaderIT
     public void normalBehaviourIfServerCertificateMatchesClientExpectation() throws Exception
     {
         // given server has valid hostname
-        Config serverConfig = aConfig( "localhost", testDirectory );
+        Config serverConfig = aConfig( "localhost", testDirectory, TESTING );
 
         // and client has invalid hostname (which is irrelevant for hostname verification)
-        Config clientConfig = aConfig( "invalid-localhost", testDirectory );
+        Config clientConfig = aConfig( "invalid-localhost", testDirectory, TESTING );
 
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
-
-        // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( POLICY_NAME );
-        SecureServer secureServer = new SecureServer( serverPolicy );
-        secureServer.start();
-        SecureClient secureClient = new SecureClient( clientPolicy );
-
-        // then
-        clientCanCommunicateWithServer( secureClient, secureServer );
-    }
-
-    @Test
-    public void legacyPolicyDoesNotHaveHostnameVerification() throws Exception
-    {
-        // given server has an invalid hostname
-        Config serverConfig = aConfig( "invalid-localhost", testDirectory );
-
-        // and client has invalid hostname (which is irrelevant for hostname verification)
-        Config clientConfig = aConfig( "invalid-localhost", testDirectory );
-
-        trust( serverConfig, clientConfig );
-        trust( clientConfig, serverConfig );
+        trust( serverConfig, clientConfig, TESTING );
+        trust( clientConfig, serverConfig, TESTING );
 
         // and setup
-        SelfSignedCertificateFactory.create( testDirectory.directory( "certificates" ) );
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( "legacy" );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( "legacy" );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, LOG_PROVIDER ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );

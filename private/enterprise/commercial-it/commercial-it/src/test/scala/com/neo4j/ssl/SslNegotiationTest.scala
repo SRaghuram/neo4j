@@ -12,6 +12,7 @@ import com.neo4j.ssl.SslNegotiationTest._
 import javax.net.ssl.{SSLSocket, SSLSocketFactory}
 import org.junit.runner.{Description, RunWith}
 import org.junit.runners.model.Statement
+import org.neo4j.configuration.ssl.SslPolicyScope
 import org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId
 import org.neo4j.test.rule.TestDirectory
 import org.scalacheck.Gen
@@ -90,9 +91,9 @@ class SslNegotiationTest extends WordSpecLike with GeneratorDrivenPropertyChecks
     var client: SecureClient = null
 
     try {
-      server = new SecureServer(SslContextFactory.makeSslPolicy(sslServerResource, toSslParameters(serverSetup)))
+      server = new SecureServer(SslContextFactory.makeSslPolicy(sslServerResource, toSslParameters(serverSetup), SslPolicyScope.TESTING))
       server.start()
-      client = new SecureClient(SslContextFactory.makeSslPolicy(sslClientResource, toSslParameters(clientSetup)))
+      client = new SecureClient(SslContextFactory.makeSslPolicy(sslClientResource, toSslParameters(clientSetup), SslPolicyScope.TESTING))
       client.connect(server.port)
 
       test(client)

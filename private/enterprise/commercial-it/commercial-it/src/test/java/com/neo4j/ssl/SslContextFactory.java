@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
@@ -64,27 +65,28 @@ public class SslContextFactory
         }
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslParameters params )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslParameters params, SslPolicyScope scope )
     {
-        return makeSslPolicy( sslResource, SslProvider.JDK, params.protocols, params.ciphers );
+        return makeSslPolicy( sslResource, SslProvider.JDK, params.protocols, params.ciphers, scope );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, SslPolicyScope scope )
     {
-        return makeSslPolicy( sslResource, sslProvider, null, null );
+        return makeSslPolicy( sslResource, sslProvider, null, null, scope );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslPolicyScope scope )
     {
-        return makeSslPolicy( sslResource, SslProvider.JDK, null, null );
+        return makeSslPolicy( sslResource, SslProvider.JDK, null, null, scope );
     }
 
-    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, List<String> protocols, List<String> ciphers )
+    public static SslPolicy makeSslPolicy( SslResource sslResource, SslProvider sslProvider, List<String> protocols, List<String> ciphers,
+            SslPolicyScope scope )
     {
         Config.Builder config = Config.newBuilder();
         config.set( SslSystemSettings.netty_ssl_provider, sslProvider );
 
-        PemSslPolicyConfig policyConfig = PemSslPolicyConfig.group( "default" );
+        PemSslPolicyConfig policyConfig = PemSslPolicyConfig.forScope( scope );
         File baseDirectory = sslResource.privateKey().getParentFile();
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
@@ -109,6 +111,6 @@ public class SslContextFactory
         SslPolicyLoader sslPolicyFactory =
                 SslPolicyLoader.create( config.build(), NullLogProvider.getInstance() );
 
-        return sslPolicyFactory.getPolicy( "default" );
+        return sslPolicyFactory.getPolicy( scope );
     }
 }

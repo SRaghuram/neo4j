@@ -114,7 +114,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( globalConfig, sslPolicyLoader );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
         satisfyCommercialOnlyDependencies( this.globalModule );

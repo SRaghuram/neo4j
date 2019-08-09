@@ -14,7 +14,6 @@ import org.neo4j.graphdb.config.Setting;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
-import static org.neo4j.configuration.SettingValueParsers.STRING;
 
 @ServiceProvider
 public class OnlineBackupSettings implements SettingsDeclaration
@@ -28,9 +27,5 @@ public class OnlineBackupSettings implements SettingsDeclaration
     @Description( "Network interface and port for the backup server to listen on." )
     public static final Setting<SocketAddress> online_backup_listen_address =
             newBuilder( "dbms.backup.listen_address", SOCKET_ADDRESS, new SocketAddress( "127.0.0.1", DEFAULT_BACKUP_PORT ) ).build();
-
-    @Description( "Name of the SSL policy to be used by backup, as defined under the dbms.ssl.policy.* settings." +
-            " If no policy is configured then the communication will not be secured." )
-    public static final Setting<String> ssl_policy = newBuilder( "dbms.backup.ssl_policy", STRING, null ).build();
 
 }

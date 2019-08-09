@@ -40,6 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.ssl.PemSslPolicyLoaderIT.clientCanCommunicateWithServer;
 import static com.neo4j.ssl.PemSslPolicyLoaderIT.clientCannotCommunicateWithServer;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 
 @RunWith( Parameterized.class )
 public class KeyStoreSslPolicyLoaderIT
@@ -51,7 +52,6 @@ public class KeyStoreSslPolicyLoaderIT
     private static final String TLSV1_2 = "TLSv1.2";
     private static final String TLSV1_3 = "TLSv1.3";
     private static final String TRUSTED_ALIAS = "trusted";
-    private static final String POLICY_NAME = "fakePolicy";
     private final KeyStoreSslPolicyConfig SSL_POLICY_CONFIG;
     private static final String KEYPAIR_ALIAS = "test";
     private static final String KEYSTORE = "keystore";
@@ -82,12 +82,12 @@ public class KeyStoreSslPolicyLoaderIT
         if ( format.equals( PKCS12 ) )
         {
             keyPass = KEYSTORE_PASS;
-            policyConfig = Pkcs12SslPolicyConfig.group( POLICY_NAME );
+            policyConfig = Pkcs12SslPolicyConfig.forScope( TESTING );
         }
         else if ( format.equals( JKS ) )
         {
             keyPass = "barquux";
-            policyConfig = JksSslPolicyConfig.group( POLICY_NAME );
+            policyConfig = JksSslPolicyConfig.forScope( TESTING );
 
         }
         else
@@ -123,8 +123,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -150,8 +150,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, TRUSTSTORE, TRUSTSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -173,8 +173,8 @@ public class KeyStoreSslPolicyLoaderIT
         signServerCertWithCAAndCopyCACertToClientTrustedCertEntry( serverDir, clientDir );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -193,8 +193,8 @@ public class KeyStoreSslPolicyLoaderIT
         Config clientConfig = aConfig( clientDir, "localhost" ).build();
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -212,8 +212,8 @@ public class KeyStoreSslPolicyLoaderIT
         Config clientConfig = aConfig( clientDir, "localhost" ).set( SSL_POLICY_CONFIG.trust_all, true ).build();
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -235,8 +235,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -258,8 +258,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -281,8 +281,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -305,8 +305,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( serverDir, clientDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -327,8 +327,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );
@@ -350,8 +350,8 @@ public class KeyStoreSslPolicyLoaderIT
         copyServerCertToClientTrustedCertEntry( clientDir, serverDir, KEYSTORE, KEYSTORE_PASS );
 
         // and setup
-        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
-        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( TESTING );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
         SecureClient secureClient = new SecureClient( clientPolicy );

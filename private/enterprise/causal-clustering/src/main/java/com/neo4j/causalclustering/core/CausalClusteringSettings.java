@@ -485,10 +485,6 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Boolean> multi_dc_license =
             newBuilder( "causal_clustering.multi_dc_license", BOOL,  false  ).build();
 
-    @Description( "Name of the SSL policy to be used by the clustering, as defined under the dbms.ssl.policy.* settings." +
-            " If no policy is configured then the communication will not be secured." )
-    public static final Setting<String> ssl_policy = newBuilder( "causal_clustering.ssl_policy", STRING, null ).build();
-
     private static SettingValueParser<ApplicationProtocolVersion> APP_PROTOCOL_VER = new SettingValueParser<>()
     {
 

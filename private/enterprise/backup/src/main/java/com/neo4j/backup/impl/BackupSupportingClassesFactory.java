@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -37,6 +36,8 @@ import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.util.VisibleForTesting;
+
+import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
 
 /**
  * The dependencies for the backup strategies require a valid configuration for initialisation.
@@ -128,8 +129,7 @@ public class BackupSupportingClassesFactory
     private SslPolicy loadSslPolicy( Config config )
     {
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
-        var sslPolicyName = config.get( OnlineBackupSettings.ssl_policy );
-        return sslPolicyLoader.getPolicy( sslPolicyName );
+        return sslPolicyLoader.hasPolicyForSource( BACKUP ) ? sslPolicyLoader.getPolicy( BACKUP ) : null;
     }
 
     private static BackupDelegator backupDelegator( Function<DatabaseId,RemoteStore> remoteStore, Function<DatabaseId,StoreCopyClient> storeCopyClient,
