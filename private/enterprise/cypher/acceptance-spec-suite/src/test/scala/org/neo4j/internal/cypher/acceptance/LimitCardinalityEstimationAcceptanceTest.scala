@@ -14,7 +14,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should estimate rows when parameterized") {
     (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeSingle("EXPLAIN MATCH (p:Person) RETURN p LIMIT {limit}",
+    val result = executeSingle("EXPLAIN MATCH (p:Person) RETURN p LIMIT $limit",
                                params = Map("limit" -> 10))
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit")
@@ -30,7 +30,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should estimate rows when literal and query has parameters") {
     (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeSingle("EXPLAIN MATCH (p:Person) WHERE 50 = {fifty} RETURN p LIMIT 10",
+    val result = executeSingle("EXPLAIN MATCH (p:Person) WHERE 50 = $fifty RETURN p LIMIT 10",
                                params = Map("fifty" -> 50))
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(10)
@@ -45,7 +45,7 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should estimate rows by default value when expression contains parameter") {
     (0 until 100).map(_ => createLabeledNode("Person"))
-    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInteger(sin({limit}))",
+    val result = executeSingle("EXPLAIN MATCH (p:Person) with 10 as x, p RETURN p LIMIT toInteger(sin($limit))",
                                params = Map("limit" -> 1))
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)

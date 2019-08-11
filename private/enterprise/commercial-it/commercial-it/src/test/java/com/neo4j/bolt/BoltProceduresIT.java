@@ -117,7 +117,7 @@ public class BoltProceduresIT
             var params = new HashMap<String,Object>();
             params.put( "context", NullValue.NULL );
             params.put( "database", NullValue.NULL );
-            var result = session.run( "CALL dbms.routing.getRoutingTable({context}, {database})", params );
+            var result = session.run( "CALL dbms.routing.getRoutingTable($context, $database)", params );
 
             var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
             assertThat( servers.size(), equalTo( 3 ) );
@@ -142,7 +142,7 @@ public class BoltProceduresIT
         {
             var params = new HashMap<String,Object>();
             params.put( "context", NullValue.NULL );
-            var result = session.run( "CALL dbms.cluster.routing.getRoutingTable({context})", params );
+            var result = session.run( "CALL dbms.cluster.routing.getRoutingTable($context)", params );
 
             var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
             assertThat( servers.size(), equalTo( 3 ) );

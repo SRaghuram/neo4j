@@ -122,28 +122,28 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   test("should fail properly if missing cartesian coordinates") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({params}) as point",
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
       List("A cartesian point must contain 'x' and 'y'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
       params = Map("params" -> Map("y" -> 1.0, "crs" -> "cartesian")))
   }
 
   test("should fail properly if missing geographic longitude") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({params}) as point",
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
       List("A wgs-84 point must contain 'latitude' and 'longitude'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
       params = Map("params" -> Map("latitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if missing geographic latitude") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({params}) as point",
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
       List("A wgs-84 point must contain 'latitude' and 'longitude'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
       params = Map("params" -> Map("longitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if unknown coordinate system") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({params}) as point", List("'WGS-1337' is not a supported coordinate reference system for points",
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point", List("'WGS-1337' is not a supported coordinate reference system for points",
       "Unknown coordinate reference system: WGS-1337"),
       params = Map("params" -> Map("x" -> 1, "y" -> 2, "crs" -> "WGS-1337")))
   }

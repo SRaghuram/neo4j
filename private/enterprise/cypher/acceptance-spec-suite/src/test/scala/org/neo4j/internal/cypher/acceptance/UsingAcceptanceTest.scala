@@ -138,7 +138,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val query =
       """MATCH (n:Test)
         |USING INDEX n:Test(foo)
-        |WHERE n.foo = {foo}
+        |WHERE n.foo = $foo
         |RETURN n""".stripMargin
 
     // WHEN
@@ -266,7 +266,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndex("Person", "name")
 
     //WHEN
-    val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} RETURN n",
+    val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN $coll RETURN n",
       params = Map("coll" -> List("Jacob")))
 
     //THEN

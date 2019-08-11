@@ -114,7 +114,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val n2 = createNode()
     val n3 = createNode()
 
-    val query = "MATCH (n) WITH collect(n) AS nodes, {param} AS data FOREACH (idx IN range(0,size(nodes)-1) | SET (nodes[idx]).num = data[idx])"
+    val query = "MATCH (n) WITH collect(n) AS nodes, $param AS data FOREACH (idx IN range(0,size(nodes)-1) | SET (nodes[idx]).num = data[idx])"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
@@ -129,7 +129,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val r2 = relate(createNode(), createNode())
     val r3 = relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]->() WITH collect(r) AS rels, {param} as data FOREACH (idx IN range(0,size(rels)-1) | SET (rels[idx]).num = data[idx])"
+    val query = "MATCH ()-[r]->() WITH collect(r) AS rels, $param as data FOREACH (idx IN range(0,size(rels)-1) | SET (rels[idx]).num = data[idx])"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
@@ -140,7 +140,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
-    failWithError(Configs.InterpretedAndSlotted, "SET (CASE WHEN true THEN {node} END).name = 'neo4j' RETURN count(*)",
+    failWithError(Configs.InterpretedAndSlotted, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
       List("The expression GenericCase(Vector((true,$node)),None) should have been a node or a relationship",
         "Developer: Stefan claims that: This should be a node or a relationship"), params = Map("node" -> 42))
   }

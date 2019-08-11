@@ -21,7 +21,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     for (i <- 1 to 1000) createNode("id" -> i)
     val result = executeWith(
       Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n) WHERE id(n) IN {ids} RETURN n.id",
+      "MATCH (n) WHERE id(n) IN $ids RETURN n.id",
       params = Map("ids" -> List(-2, -3, 0, -4)))
     result.executionPlanDescription() should includeSomewhere.aPlan("NodeByIdSeek")
     result.toList should equal(List(Map("n.id" -> 0)))
@@ -35,7 +35,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       prevNode = n
     }
     val result = executeSingle( // Bug in 3.1 makes it difficult to use the backwards compatibility mode here
-      queryText = "MATCH ()-[r]->() WHERE id(r) IN {ids} RETURN id(r)",
+      queryText = "MATCH ()-[r]->() WHERE id(r) IN $ids RETURN id(r)",
       params = Map("ids" -> List(-2, -3, 0, -4)))
     result.executionPlanDescription() should includeSomewhere.aPlan("DirectedRelationshipByIdSeek")
     result.toList should equal(List(Map("id(r)" -> 0)))
@@ -283,7 +283,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val r = relate(node1, node2)
 
     val query =
-      """WITH [{0}, {1}] AS x, count(*) as y
+      """WITH [$0, $1] AS x, count(*) as y
         |MATCH (n) WHERE ID(n) IN x
         |MATCH (m) WHERE ID(m) IN x
         |MATCH paths = (n)-[*..1]-(m)
@@ -765,7 +765,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // When
     val res =
-      executeWith(Configs.All - Configs.Morsel, "UNWIND {p} AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
+      executeWith(Configs.All - Configs.Morsel, "UNWIND $p AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
 
     //Then
     res.toList should equal(List(Map("c" -> 2)))
@@ -783,8 +783,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // When
     val res =
       executeWith(Configs.ExpandInto,
-        """UNWIND {p1} AS n1
-          |UNWIND {p2} AS n2
+        """UNWIND $p1 AS n1
+          |UNWIND $p2 AS n2
           |MATCH (n1)<-[:PING_DAY]-(n2) RETURN n1.prop, n2.prop""".stripMargin,
         params = Map("p1" -> List(node1), "p2" -> List(node2)))
 
@@ -1001,15 +1001,15 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query =
       """
         |MATCH (folder:folder)<-[rel:in_folder]-(video:Video)
-        |WHERE id(folder) = {folderId}
+        |WHERE id(folder) = $folderId
         |WITH {videokey:video, rel:rel} as video ORDER BY video.rel.position, video.videokey.created
         |WITH collect(video) AS videos
-        |WITH videos, CASE WHEN {position} = 'end' THEN size(videos) - 1 ELSE {position} END as position,
+        |WITH videos, CASE WHEN $position = 'end' THEN size(videos) - 1 ELSE $position END as position,
         |    range(0, size(videos)-1) as iterator,
-        |    reduce(x=[-1,0], v IN videos | CASE WHEN id(v.videokey) = {videoId} THEN [x[1],x[1]+1] ELSE [x[0], x[1]+1] END)[0] as movingVideoPosition
+        |    reduce(x=[-1,0], v IN videos | CASE WHEN id(v.videokey) = $videoId THEN [x[1],x[1]+1] ELSE [x[0], x[1]+1] END)[0] as movingVideoPosition
         |
         |    FOREACH (index IN iterator | FOREACH (rel IN [videos[index].rel] | SET rel.position =
-        |      CASE WHEN id(videos[index].videokey) = {videoId} THEN position
+        |      CASE WHEN id(videos[index].videokey) = $videoId THEN position
         |    ELSE index + 1 END
         |    ))
       """.stripMargin

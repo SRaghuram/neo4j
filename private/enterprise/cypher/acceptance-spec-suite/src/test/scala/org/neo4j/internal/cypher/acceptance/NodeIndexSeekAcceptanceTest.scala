@@ -294,7 +294,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.All,
-      "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
+      "MATCH (root:Company) WHERE root.uuid IN $uuids RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array("a", "b", "c")))
 
@@ -312,7 +312,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.All,
-      "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
+      "MATCH (root:Company) WHERE root.uuid IN $uuids RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array(1, 2, 3)))
 

@@ -13,7 +13,7 @@ class TypeConversionTest extends ExecutionEngineFunSuite with CommercialGraphDat
   test("should not allow adding node and number") {
     val x = createNode()
     val failure = intercept[CypherTypeException] {
-      val result = execute("debug=generate_java_source debug=show_java_source profile match (n) return n + {x} as res", "x" -> 5)
+      val result = execute("debug=generate_java_source debug=show_java_source profile match (n) return n + $x as res", "x" -> 5)
       // should not get here, if we do, this is for debugging:
       println(result.executionPlanDescription())
     }
@@ -24,7 +24,7 @@ class TypeConversionTest extends ExecutionEngineFunSuite with CommercialGraphDat
   test("shouldHandlePatternMatchingWithParameters") {
     val x = createNode()
 
-    val result = execute("match (x) where x = {startNode} return x", "startNode" -> x)
+    val result = execute("match (x) where x = $startNode return x", "startNode" -> x)
 
     result.toList should equal(List(Map("x" -> x)))
   }

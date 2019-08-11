@@ -51,7 +51,7 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   test("should unwind nodes") {
     val n = createNode("prop" -> 42)
 
-    val query = "UNWIND {nodes} AS n WITH n WHERE n.prop = 42 RETURN n"
+    val query = "UNWIND $nodes AS n WITH n WHERE n.prop = 42 RETURN n"
     val result = executeWith(Configs.All, query, params = Map("nodes" -> List(n)))
 
     result.toList should equal(List(Map("n" -> n)))

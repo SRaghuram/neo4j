@@ -80,7 +80,7 @@ class TemporalUniqueConstraintValidationAcceptanceTest
       var seq = 2
       for (resolve <- List("DELETE toRemove", "REMOVE toRemove.key1", "REMOVE toRemove:Label1", "SET toRemove.key1 = datetime('2018-03-30T10:10:10+02:00')")) {
         // WHEN
-        execute(s"MATCH (toRemove:Label1 {key1: ${op.funcString}}) $resolve CREATE ( toAdd:Label1 { seq: {seq}, key1: ${op.funcString} } )", "seq" -> seq)
+        execute(s"MATCH (toRemove:Label1 {key1: ${op.funcString}}) $resolve CREATE ( toAdd:Label1 { seq: $$seq, key1: ${op.funcString} } )", "seq" -> seq)
 
         // THEN
         val result = execute(s"MATCH (n:Label1) WHERE n.key1 =  ${op.funcString} RETURN n.seq AS seq")

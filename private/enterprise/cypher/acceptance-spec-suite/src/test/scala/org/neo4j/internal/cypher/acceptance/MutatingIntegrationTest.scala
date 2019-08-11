@@ -145,7 +145,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("create node from map values") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (n {a}) return n.age, n.name", params = Map("a" -> Map("name" -> "Andres", "age" -> 66)))
+    val result = executeWith(Configs.InterpretedAndSlotted, "create (n $a) return n.age, n.name", params = Map("a" -> Map("name" -> "Andres", "age" -> 66)))
 
     result.toList should equal(List(Map("n.age" -> 66, "n.name" -> "Andres")))
   }
@@ -155,7 +155,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     createNode()
 
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[r:REL {param}]->(b) return r.name, r.age", params = Map("param" -> Map("name" -> "Andres", "age" -> 66)))
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[r:REL $param]->(b) return r.name, r.age", params = Map("param" -> Map("name" -> "Andres", "age" -> 66)))
 
     result.toList should equal(List(Map("r.name" -> "Andres", "r.age" -> 66)))
   }
@@ -185,7 +185,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       Map("name" -> "Michael", "prefers" -> "Java"),
       Map("name" -> "Peter", "prefers" -> "Java"))
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "unwind {params} as m create (x) set x = m ", params = Map("params" -> maps))
+    val result = executeWith(Configs.InterpretedAndSlotted, "unwind $params as m create (x) set x = m ", params = Map("params" -> maps))
 
     assertStats(result,
       nodesCreated = 3,
@@ -200,7 +200,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       Map("name" -> "Peter", "prefers" -> "Java"))
 
     val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map")
-    failWithError(Configs.InterpretedAndSlotted, "create ({params})", params = Map("params" -> maps), message = errorMessages)
+    failWithError(Configs.InterpretedAndSlotted, "create ($params)", params = Map("params" -> maps), message = errorMessages)
   }
 
   test("fail to create from two iterables") {
@@ -212,7 +212,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       Map("name" -> "Andres"),
       Map("name" -> "Michael"),
       Map("name" -> "Peter"))
-    val query = "create (a {params1}), (b {params2})"
+    val query = "create (a $params1), (b $params2)"
     val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map", "If you create multiple elements, you can only create one of each.")
     failWithError(Configs.InterpretedAndSlotted, query, message = errorMessages, params = Map("params1" -> maps1, "params2" -> maps2))
   }
@@ -282,7 +282,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val map = new java.util.HashMap[String, Object]()
     map.put("arrayProp", list)
 
-    val q = "create (a{param}) return a.arrayProp"
+    val q = "create (a $param) return a.arrayProp"
     val result =  executeScalar[Array[String]](q, "param" -> map)
 
     assertStats(executeWith(Configs.InterpretedAndSlotted, q, params = Map("param"->map)), nodesCreated = 1, propertiesWritten = 1)
@@ -329,7 +329,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("failure_only_fails_inner_transaction") {
     val tx = graph.beginTransaction( Type.explicit, AnonymousContext.write() )
     try {
-      executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = {id} set a.foo = 'bar' return a", params = Map("id"->"0"))
+      executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = $id set a.foo = 'bar' return a", params = Map("id"->"0"))
     } catch {
       case _: Throwable => tx.rollback()
     }

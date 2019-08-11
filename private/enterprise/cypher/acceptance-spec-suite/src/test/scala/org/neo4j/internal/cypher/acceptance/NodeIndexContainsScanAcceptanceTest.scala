@@ -97,7 +97,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     graph.createUniqueConstraint("Location", "name")
 
-    val query = "MATCH (l:Location) WHERE l.name CONTAINS {param} RETURN l"
+    val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
@@ -120,7 +120,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     graph.createUniqueConstraint("Location", "name")
 
-    val query = "MATCH (l:Location) WHERE l.name CONTAINS {param} RETURN l"
+    val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
     failWithError(Configs.InterpretedAndSlottedAndMorsel,
       query, message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),

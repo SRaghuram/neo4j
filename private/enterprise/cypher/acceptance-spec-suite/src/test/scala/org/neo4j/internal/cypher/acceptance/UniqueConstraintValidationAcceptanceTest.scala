@@ -95,7 +95,7 @@ class UniqueConstraintValidationAcceptanceTest
       // WHEN
       val q = "match (toRemove:Label1 {key1:'value1'}) " +
         resolve +
-        " create ( toAdd:Label1 { seq: {seq}, key1: 'value1' } )"
+        " create ( toAdd:Label1 { seq: $seq, key1: 'value1' } )"
 
       try {
         execute(q, "seq" -> seq)

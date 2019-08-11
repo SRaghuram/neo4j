@@ -219,7 +219,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query =
       """
         |match (pA), (pB), (pC), (pD), (pE)
-        |where id(pA) in {a} and id(pB) = {b} and id(pC) in {c} and id(pD) in {0} and id(pE) in {1}
+        |where id(pA) in $a and id(pB) = $b and id(pC) in $c and id(pD) in $0 and id(pE) in $1
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
@@ -236,7 +236,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("parameterTypeErrorShouldBeNicelyExplained") {
     createNode()
-    val query = "match (pA) where id(pA) = {a} return pA"
+    val query = "match (pA) where id(pA) = $a return pA"
 
     executeWith(Configs.NodeById - Configs.Compiled, query, params = Map("a" -> "Andres")) should be (empty)
   }
@@ -244,7 +244,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("shouldBeAbleToTakeParamsFromParsedStuff") {
     createNodes("A")
 
-    val query = "match (pA) where id(pA) IN {a} return pA"
+    val query = "match (pA) where id(pA) IN $a return pA"
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("a" -> Seq[Long](0)))
 
     result.toList should equal(List(Map("pA" -> node("A"))))
@@ -253,7 +253,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("shouldBeAbleToTakeParamsForEqualityComparisons") {
     createNode(Map("name" -> "Andres"))
 
-    val query = "match (a) where id(a) = 0 and a.name = {name} return a"
+    val query = "match (a) where id(a) = 0 and a.name = $name return a"
 
     executeWith(Configs.NodeById, query, params = Map("name" -> "Tobias")).toList shouldBe empty
     executeWith(Configs.NodeById, query, params = Map("name" -> "Andres")).toList should have size 1
@@ -264,14 +264,14 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val b = createNode(Map("name" -> "you"))
     relate(a, b, "KNOW")
 
-    val result = executeWith(Configs.All, "match (x)-[r]-(friend) where x = {startId} and friend.name = {name} return TYPE(r)", params = Map("startId" -> a, "name" -> "you"))
+    val result = executeWith(Configs.All, "match (x)-[r]-(friend) where x = $startId and friend.name = $name return TYPE(r)", params = Map("startId" -> a, "name" -> "you"))
 
     result.toList should equal(List(Map("TYPE(r)" -> "KNOW")))
   }
 
   test("shouldComplainWhenMissingParams") {
     createNode()
-    failWithError(Configs.NodeById - Configs.Compiled, "match (pA) where id(pA) = {a} return pA", List("Expected a parameter named a", "Expected parameter(s): a"))
+    failWithError(Configs.NodeById - Configs.Compiled, "match (pA) where id(pA) = $a return pA", List("Expected a parameter named a", "Expected parameter(s): a"))
   }
 
   test("shouldSupportMultipleRegexes") {
@@ -375,14 +375,14 @@ order by a.COL1""".format(a, b))
 
     relate(refNode, a, "X")
 
-    executeWith(Configs.All, "match (a)-->(b) where a = {a} return b", params = Map("a" -> a)) should have size 1
-    executeWith(Configs.All, "match (a)-->(b) where a = {a} return b", params = Map("a" -> b)) shouldBe empty
+    executeWith(Configs.All, "match (a)-->(b) where a = $a return b", params = Map("a" -> a)) should have size 1
+    executeWith(Configs.All, "match (a)-->(b) where a = $a return b", params = Map("a" -> b)) shouldBe empty
   }
 
   test("should handle parameters names as variables") {
     createNode("bar" -> "Andres")
 
-    val result = executeWith(Configs.NodeById, "match (foo) where id(foo) = 0 and foo.bar = {foo} return foo.bar", params = Map("foo" -> "Andres"))
+    val result = executeWith(Configs.NodeById, "match (foo) where id(foo) = 0 and foo.bar = $foo return foo.bar", params = Map("foo" -> "Andres"))
     result.toList should equal(List(Map("foo.bar" -> "Andres")))
   }
 
@@ -479,7 +479,7 @@ order by a.COL1""".format(a, b))
 
   test("with should not forget parameters2") {
     val id = createNode().getId
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = {id} with n set n.foo={id} return n", params = Map("id" -> id)).toList
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = $id with n set n.foo= $id return n", params = Map("id" -> id)).toList
 
     result should have size 1
     graph.inTx {
@@ -505,7 +505,7 @@ order by a.COL1""".format(a, b))
 
   test("params should survive with") {
     val n = createNode()
-    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 WITH collect(n) as coll where size(coll)={id} RETURN coll", params = Map("id"->1))
+    val result = executeWith(Configs.NodeById - Configs.Compiled, "match (n) where id(n) = 0 WITH collect(n) as coll where size(coll)= $id RETURN coll", params = Map("id"->1))
 
     result.toList should equal(List(Map("coll" -> List(n))))
   }
@@ -561,7 +561,7 @@ order by a.COL1""".format(a, b))
     relate(a, b)
     relate(b, c)
 
-    val result = executeWith(Configs.All, "MATCH (n)-[r]->(m) WHERE n = {a} AND m = {b} RETURN *", params = Map("a"->a, "b"->c))
+    val result = executeWith(Configs.All, "MATCH (n)-[r]->(m) WHERE n = $a AND m = $b RETURN *", params = Map("a"->a, "b"->c))
 
     result.toList shouldBe empty
   }
@@ -804,14 +804,14 @@ order by a.COL1""".format(a, b))
 
   test("merge should support single parameter") {
     //WHEN
-    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (n:User {foo: {single_param}})", params = Map("single_param" -> 42))
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (n:User {foo: $single_param})", params = Map("single_param" -> 42))
 
     //THEN DOESN'T THROW EXCEPTION
     result.toList shouldBe empty
   }
 
   test("merge should not support map parameters for defining properties") {
-    failWithError(Configs.All, "MERGE (n:User {merge_map})", List("Parameter maps cannot be used in MERGE patterns"), params = Map("merge_map" -> Map("email" -> "test")))
+    failWithError(Configs.All, "MERGE (n:User $merge_map)", List("Parameter maps cannot be used in MERGE patterns"), params = Map("merge_map" -> Map("email" -> "test")))
   }
 
   test("should return null on all comparisons against null") {

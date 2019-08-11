@@ -144,7 +144,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     // Add an uninteresting predicate using a parameter to stop autoparameterization from happening
     val result = executeWith(Configs.CachedProperty, """MATCH (a:Address)
-                                                    |WHERE 43 = {apa}
+                                                    |WHERE 43 = $apa
                                                     |  AND a.prop STARTS WITH 'w'
                                                     |  AND a.prop STARTS WITH 'www'
                                                     |RETURN a""".stripMargin,
@@ -1044,7 +1044,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     }
     graph.createIndex("Label", "prop")
 
-    val query = "MATCH (n:Label) WHERE n.prop >= {param} AND n.prop < null RETURN n.prop AS prop"
+    val query = "MATCH (n:Label) WHERE n.prop >= $param AND n.prop < null RETURN n.prop AS prop"
 
     val result = executeWith(Configs.CachedProperty, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1068,7 +1068,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("prop" -> nonMatchingChar), "Label")
     graph.createIndex("Label", "prop")
 
-    val query = "MATCH (n:Label) WHERE n.prop >= {param} RETURN n.prop AS prop"
+    val query = "MATCH (n:Label) WHERE n.prop >= $param RETURN n.prop AS prop"
 
     val result = executeWith(Configs.CachedProperty, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1092,7 +1092,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     createLabeledNode(Map("prop" -> nonMatchingChar), "Label")
     graph.createIndex("Label", "prop")
 
-    val query = "MATCH (n:Label) WHERE n.prop >= {param} RETURN n.prop AS prop"
+    val query = "MATCH (n:Label) WHERE n.prop >= $param RETURN n.prop AS prop"
 
     val result = executeWith(Configs.CachedProperty, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {

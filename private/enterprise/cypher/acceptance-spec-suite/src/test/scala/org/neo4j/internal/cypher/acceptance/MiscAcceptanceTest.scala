@@ -127,13 +127,13 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // The query was run through IdAnonymizer
     val query =
       s"""
-         |MATCH (var0:L0 {p0: {param0}})
+         |MATCH (var0:L0 {p0: $$param0})
          |USING INDEX var0:L0(p0)
-         |MATCH (var1:L1 {p1: {param1}})
+         |MATCH (var1:L1 {p1: $$param1})
          |  WHERE (var0)-[:UNKNOWN0]->(:UNKNOWN1)-[:UNKNOWN2]->(var1) OR (var0)-[:UNKNOWN3]-(:UNKNOWN4)-[:UNKNOWN5]-(var1)
          |MATCH (var0)-[:UNKNOWN0]->(var2:UNKNOWN6)
          |WITH COLLECT(var2) AS var2, var0
-         |MATCH (var1:L1 {p1: {param1}})-[:UNKNOWN7]-(var3:UNKNOWN8)
+         |MATCH (var1:L1 {p1: $$param1})-[:UNKNOWN7]-(var3:UNKNOWN8)
          |MATCH (var3:UNKNOWN8)-[:UNKNOWN9]->(var4:UNKNOWN10)
          |MATCH (var5:UNKNOWN6)<-[:UNKNOWN5]-(var6:UNKNOWN1)-[:UNKNOWN2]-(var1)
          |  WHERE var5 IN var2

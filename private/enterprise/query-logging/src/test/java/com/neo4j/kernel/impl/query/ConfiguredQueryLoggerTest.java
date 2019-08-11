@@ -51,7 +51,7 @@ class ConfiguredQueryLoggerTest
     private static final String QUERY_1 = "MATCH (n) RETURN n";
     private static final String QUERY_2 = "MATCH (a)--(b) RETURN b.name";
     private static final String QUERY_3 = "MATCH (c)-[:FOO]->(d) RETURN d.size";
-    private static final String QUERY_4 = "MATCH (n) WHERE n.age IN {ages} RETURN n";
+    private static final String QUERY_4 = "MATCH (n) WHERE n.age IN $ages RETURN n";
     private final FakeClock clock = Clocks.fakeClock();
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final FakeCpuClock cpuClock = new FakeCpuClock();
@@ -202,7 +202,7 @@ class ConfiguredQueryLoggerTest
         logProvider.assertExactly(
             inLog( getClass() ).error(
                     is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
-                            + " - MATCH (n) WHERE n.age IN {ages} RETURN n - {ages: [41, 42, 43]} - {}" ),
+                            + " - MATCH (n) WHERE n.age IN $ages RETURN n - {ages: [41, 42, 43]} - {}" ),
                 sameInstance( failure ) )
         );
     }
@@ -380,8 +380,8 @@ class ConfiguredQueryLoggerTest
     @Test
     void shouldNotLogPasswordInDeprecatedParams()
     {
-        String inputQuery = "CALL dbms.security.changePassword({password})";
-        String outputQuery = "CALL dbms.security.changePassword({password})";
+        String inputQuery = "CALL dbms.security.changePassword($password)";
+        String outputQuery = "CALL dbms.security.changePassword($password)";
 
         runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", "abc123" ), "password: '******'" );
     }

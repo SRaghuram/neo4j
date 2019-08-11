@@ -386,7 +386,7 @@ class BoltCausalClusteringIT
             inExpirableSession( driver, Driver::session, session ->
             {
                 // execute a write/read query
-                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                 Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
                 assertEquals( 1, record.get( "count" ).asInt() );
 
@@ -395,7 +395,7 @@ class BoltCausalClusteringIT
                 try
                 {
                     switchLeader( leader );
-                    session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) ).consume();
+                    session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) ).consume();
                     fail( "Should have thrown an exception as the leader went away mid session" );
                 }
                 catch ( SessionExpiredException sep )
@@ -412,7 +412,7 @@ class BoltCausalClusteringIT
             inExpirableSession( driver, Driver::session, session ->
             {
                 // execute a write/read query
-                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                 Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
                 assertEquals( 2, record.get( "count" ).asInt() );
                 return null;
@@ -433,7 +433,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
                     tx.success();
                 }
 
@@ -462,7 +462,7 @@ class BoltCausalClusteringIT
         {
             inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
-                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                 return null;
             } );
 
@@ -484,7 +484,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
                     tx.success();
                 }
 
@@ -515,10 +515,10 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) );
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Chris" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Chris" ) );
                     tx.success();
                 }
 
@@ -556,7 +556,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                    tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                     tx.success();
                 }
 
@@ -623,7 +623,7 @@ class BoltCausalClusteringIT
                 {
                     switchLeader( leader );
 
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: $name, title: $title})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 catch ( SessionExpiredException ignored )
@@ -636,7 +636,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = s.beginTransaction() )
                 {
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: $name, title: $title})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 return s.lastBookmark();
@@ -697,7 +697,7 @@ class BoltCausalClusteringIT
                     writeSession.writeTransaction( tx ->
                     {
 
-                        tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", parameters( "nodesToCreate", nodesToCreate ) );
+                        tx.run( "UNWIND range(1, $nodesToCreate) AS i CREATE (n:Person {name: 'Jim'})", parameters( "nodesToCreate", nodesToCreate ) );
                         return null;
                     } );
 

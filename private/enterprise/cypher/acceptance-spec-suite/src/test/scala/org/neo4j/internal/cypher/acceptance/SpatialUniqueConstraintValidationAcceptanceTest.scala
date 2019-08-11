@@ -73,7 +73,7 @@ class SpatialUniqueConstraintValidationAcceptanceTest
     var seq = 2
     for (resolve <- List("DELETE toRemove", "REMOVE toRemove.key1", "REMOVE toRemove:Label1", "SET toRemove.key1 = point({x:3, y:4})")) {
       // WHEN
-      execute(s"MATCH (toRemove:Label1 {key1: point({x:1, y:2})}) $resolve CREATE ( toAdd:Label1 { seq: {seq}, key1: point({x:1, y:2}) } )", "seq" -> seq)
+      execute(s"MATCH (toRemove:Label1 {key1: point({x:1, y:2})}) $resolve CREATE ( toAdd:Label1 { seq: $$seq, key1: point({x:1, y:2}) } )", "seq" -> seq)
 
       // THEN
       val result = execute("MATCH (n:Label1) WHERE n.key1 =  point({x:1, y:2}) RETURN n.seq AS seq")

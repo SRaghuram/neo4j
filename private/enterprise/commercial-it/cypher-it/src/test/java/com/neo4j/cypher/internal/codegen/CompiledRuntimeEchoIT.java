@@ -56,7 +56,7 @@ class CompiledRuntimeEchoIT
 
     private void echo( Object value )
     {
-        Object result = db.execute( "CYPHER runtime=compiled RETURN {p} AS p", map( "p", value ) ).next().get( "p" );
+        Object result = db.execute( "CYPHER runtime=compiled RETURN $p AS p", map( "p", value ) ).next().get( "p" );
         assertThat( result, equalTo( value ) );
     }
 }

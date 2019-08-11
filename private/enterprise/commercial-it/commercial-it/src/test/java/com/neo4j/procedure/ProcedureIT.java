@@ -516,7 +516,7 @@ public class ProcedureIT
             long nodeId = db.createNode().getId();
 
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.node({id})", map( "id", nodeId ) );
+            Result res = db.execute( "CALL com.neo4j.procedure.node($id)", map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -821,7 +821,7 @@ public class ProcedureIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.schemaCallReadProcedure({id})", map( "id", nodeId ) );
+            Result res = db.execute( "CALL com.neo4j.procedure.schemaCallReadProcedure($id)", map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -865,7 +865,7 @@ public class ProcedureIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.avgNumberList({param})", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
+            Result res = db.execute( "CALL com.neo4j.procedure.avgNumberList($param)", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 2.0d ) ) );
@@ -880,7 +880,7 @@ public class ProcedureIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.avgDoubleList([{long}, {double}])", map( "long", 1L, "double", 2.0d ) );
+            Result res = db.execute( "CALL com.neo4j.procedure.avgDoubleList([$long, $double])", map( "long", 1L, "double", 2.0d ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 1.5d ) ) );
@@ -1064,7 +1064,7 @@ public class ProcedureIT
             Relationship rel = node1.createRelationshipTo( node2, RelationshipType.withName( "KNOWS" ) );
 
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.nodePaths({node}) YIELD path RETURN path", map( "node", node1 ) );
+            Result res = db.execute( "CALL com.neo4j.procedure.nodePaths($node) YIELD path RETURN path", map( "node", node1 ) );
 
             // Then
             assertTrue( res.hasNext() );
@@ -1881,7 +1881,7 @@ public class ProcedureIT
         @Procedure
         public Stream<PathOutputRecord> nodePaths( @Name( "node" ) Node node )
         {
-            return db.execute( "WITH {node} AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) ).stream().map(
+            return db.execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) ).stream().map(
                     record -> new PathOutputRecord( (Path) record.getOrDefault( "p", null ) ) );
         }
 

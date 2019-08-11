@@ -243,7 +243,7 @@ public class QueryLoggerIT
         Map<String,Object> params = new HashMap<>();
         params.put( "props", props );
 
-        String query = "CREATE ({props})";
+        String query = "CREATE ($props)";
         executeQueryAndShutdown( database, query, params );
 
         List<String> logLines = readAllLines( logFilename );
@@ -284,7 +284,7 @@ public class QueryLoggerIT
 
         Map<String,Object> params = new HashMap<>();
         params.put( "ids", Arrays.asList( 0, 1, 2 ) );
-        String query = "MATCH (n) WHERE id(n) in {ids} RETURN n.name";
+        String query = "MATCH (n) WHERE id(n) in $ids RETURN n.name";
         executeQueryAndShutdown( database, query, params );
 
         List<String> logLines = readAllLines( logFilename );

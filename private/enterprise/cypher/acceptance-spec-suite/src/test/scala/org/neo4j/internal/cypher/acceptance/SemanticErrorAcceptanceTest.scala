@@ -383,7 +383,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should fail nicely when addition overflows in runtime") {
     executeAndEnsureErrorForAllRuntimes(
-      s"RETURN {t1} + {t2}",
+      s"RETURN $$t1 + $$t2",
       "long overflow", // "result of 9223372036854775807 + 1 cannot be represented as an integer",
       "t1" -> Long.MaxValue, "t2" -> 1
     )
@@ -398,7 +398,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should fail nicely when subtraction underflows in runtime") {
     executeAndEnsureErrorForAllRuntimes(
-      s"RETURN {t1} - {t2}",
+      s"RETURN $$t1 - $$t2",
       "long overflow", // "result of -9223372036854775808 - 1 cannot be represented as an integer",
       "t1" -> Long.MinValue, "t2" -> 1
     )
@@ -413,7 +413,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should fail nicely when multiplication overflows in runtime") {
     executeAndEnsureErrorForAllRuntimes(
-      s"RETURN {t1} * {t2}",
+      s"RETURN $$t1 * $$t2",
       "long overflow", //"result of 9223372036854775807 * 10 cannot be represented as an integer",
       "t1" -> Long.MaxValue, "t2" -> 10
     )
@@ -421,7 +421,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should fail nicely when divide integer by zero in runtime") {
     executeAndEnsureErrorForAllRuntimes(
-      s"RETURN {t1} / {t2}",
+      s"RETURN $$t1 / $$t2",
       List("/ by zero", "divide by zero"),
       "t1" -> 1, "t2" -> 0
     )
@@ -429,7 +429,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("should fail nicely when modulo integer by zero in runtime") {
     executeAndEnsureErrorForAllRuntimes(
-      s"RETURN {t1} % {t2}",
+      s"RETURN $$t1 % $$t2",
       List("/ by zero", "divide by zero"),
       "t1" -> 1, "t2" -> 0
     )

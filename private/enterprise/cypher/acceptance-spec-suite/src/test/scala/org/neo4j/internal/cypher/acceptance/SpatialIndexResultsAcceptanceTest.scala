@@ -608,7 +608,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val onAxisX = wgsPoint(1, 4)
     val onAxisY = wgsPoint(0, 5)
     val inRange = wgsPoint(0, 4)
-    val query = "MATCH (n:Label) WHERE n.prop < {prop} RETURN n, n.prop AS prop ORDER BY id(n)"
+    val query = "MATCH (n:Label) WHERE n.prop < $prop RETURN n, n.prop AS prop ORDER BY id(n)"
     createIndex()
     createIndexedNode(atPoint)
 

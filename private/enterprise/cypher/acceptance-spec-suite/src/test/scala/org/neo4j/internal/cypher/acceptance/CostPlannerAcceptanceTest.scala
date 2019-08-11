@@ -132,7 +132,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     val query =
       """
         |EXPLAIN
-        |UNWIND {rows} as row
+        |UNWIND $rows as row
         |MATCH (startNode) WHERE ID(startNode) = row.startNodeId
         |MATCH (endNode) WHERE ID(endNode) = row.endNodeId
         |CREATE (startNode)-[rel:R]->(endNode) SET rel += row.props

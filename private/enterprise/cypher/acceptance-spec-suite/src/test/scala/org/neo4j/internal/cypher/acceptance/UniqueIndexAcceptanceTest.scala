@@ -78,7 +78,7 @@ class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       graph should haveConstraints(s"${constraintCreator.typeName}:Person(name)")
 
       //WHEN
-      val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} RETURN n", params = Map("coll" -> List("Jacob")))
+      val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN $coll RETURN n", params = Map("coll" -> List("Jacob")))
 
       //THEN
       result.toList should equal(List(Map("n" -> jake)))
@@ -96,7 +96,7 @@ class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       graph should haveConstraints(s"${constraintCreator.typeName}:Person(name)")
 
       //WHEN
-      executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} RETURN n",
+      executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN $coll RETURN n",
         planComparisonStrategy = ComparePlansWithAssertion(plan => {
           //THEN
           plan should includeSomewhere.aPlan("NodeUniqueIndexSeek")
@@ -146,7 +146,7 @@ class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       graph should not(haveConstraints(s"${constraintCreator.other.typeName}:Person(name)"))
       graph should haveConstraints(s"${constraintCreator.typeName}:Person(name)")
 
-      val query = "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} SET n:Foo RETURN n.name"
+      val query = "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN $coll SET n:Foo RETURN n.name"
       //WHEN
       executeWith(Configs.InterpretedAndSlotted, query, params = Map("coll" -> List("Jacob")),
         planComparisonStrategy = ComparePlansWithAssertion(plan => {

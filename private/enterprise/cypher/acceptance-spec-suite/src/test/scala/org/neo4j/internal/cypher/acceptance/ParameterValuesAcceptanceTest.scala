@@ -14,7 +14,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("should be able to send in an array of nodes via parameter") {
     // given
     val node = createLabeledNode("Person")
-    val result = executeWith(Configs.All, "WITH {param} as p RETURN p", params = Map("param" -> Array(node)))
+    val result = executeWith(Configs.All, "WITH $param as p RETURN p", params = Map("param" -> Array(node)))
     val outputP = result.head("p")
     outputP should equal(Array(node))
   }
@@ -67,7 +67,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // given
     val node = createLabeledNode("Person")
 
-    val result = executeWith(Configs.All, "MATCH (b) WHERE b = {param} RETURN b", params = Map("param" -> node))
+    val result = executeWith(Configs.All, "MATCH (b) WHERE b = $param RETURN b", params = Map("param" -> node))
     result.toList should equal(List(Map("b" -> node)))
   }
 
@@ -75,19 +75,19 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // given
     val rel = relate(createLabeledNode("Person"), createLabeledNode("Person"))
 
-    val result = executeWith(Configs.All, "MATCH (:Person)-[r]->(:Person) WHERE r = {param} RETURN r", params = Map("param" -> rel))
+    val result = executeWith(Configs.All, "MATCH (:Person)-[r]->(:Person) WHERE r = $param RETURN r", params = Map("param" -> rel))
     result.toList should equal(List(Map("r" -> rel)))
   }
 
   test("should treat chars as strings in equality") {
-    executeScalar[Boolean]("RETURN 'a' = {param}", "param" -> 'a') shouldBe true
-    executeScalar[Boolean]("RETURN {param} = 'a'", "param" -> 'a') shouldBe true
+    executeScalar[Boolean]("RETURN 'a' = $param", "param" -> 'a') shouldBe true
+    executeScalar[Boolean]("RETURN $param = 'a'", "param" -> 'a') shouldBe true
   }
 
   test("removing property when not sure if it is a node or relationship should still work - NODE") {
     val n = createNode("name" -> "Anders")
 
-    executeWith(Configs.InterpretedAndSlotted, "WITH {p} as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> n))
+    executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> n))
 
     graph.inTx {
       n.getProperty("lastname") should equal("Anders")
@@ -98,7 +98,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("removing property when not sure if it is a node or relationship should still work - REL") {
     val r = relate(createNode(), createNode(), "name" -> "Anders")
 
-    executeWith(Configs.InterpretedAndSlotted, "WITH {p} as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> r))
+    executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> r))
 
     graph.inTx {
       r.getProperty("lastname") should equal("Anders")
@@ -107,39 +107,39 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with missing parameter should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"))
   }
 
   test("match with missing parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"))
   }
 
   test("match with multiple missing parameters should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name, age:$age}) RETURN n", Seq("Expected parameter(s): name, age"))
   }
 
   test("match with multiple missing parameters should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name, age:$age}) RETURN n", Seq("Expected parameter(s): name, age"))
   }
 
   test("match with misspelled parameter should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
   }
 
   test("match with misspelled parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
   }
 
   test("name of missing parameters should only be returned once") {
-    failWithError(Configs.All, "RETURN {p} + {p} + {p}", Seq("Expected parameter(s): p"))
+    failWithError(Configs.All, "RETURN $p + $p + $p", Seq("Expected parameter(s): p"))
   }
 
   test("explain with missing parameter should NOT return error for empty db") {
-    executeWith(Configs.All, "EXPLAIN MATCH (n:Person {name:{name}}) RETURN n")
+    executeWith(Configs.All, "EXPLAIN MATCH (n:Person {name:$name}) RETURN n")
   }
 
   test("explain with missing parameter should NOT return error for non-empty db") {
-    executeWith(Configs.InterpretedAndSlotted, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n")
+    executeWith(Configs.InterpretedAndSlotted, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n")
   }
 
   test("merge and update using nested parameters list") {
@@ -148,7 +148,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     createLabeledNode(Map("name" -> "Agneta"), "Person")
 
     val config = Configs.InterpretedAndSlotted
-    val result = executeWith(config, """FOREACH (nameItem IN {nameItems} |
+    val result = executeWith(config, """FOREACH (nameItem IN $nameItems |
                                        |   MERGE (p:Person {name:nameItem[0]})
                                        |   SET p.item = nameItem[1] )""".stripMargin,
       params = Map("nameItems" -> List(List("Agneta", "saw"), List("Arne", "hammer"))))

@@ -160,7 +160,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.delegatingFunction({name}) AS someVal",
+            Result res = db.execute( "RETURN com.neo4j.procedure.delegatingFunction($name) AS someVal",
                     map( "name", 43L ) );
 
             // Then
@@ -176,7 +176,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.recursiveSum({order}) AS someVal", map( "order", 10L ) );
+            Result res = db.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal", map( "order", 10L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 55L ) ) );
@@ -271,7 +271,7 @@ class FunctionIT
             long nodeId = db.createNode().getId();
 
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.node({id}) AS node", map( "id", nodeId ) );
+            Result res = db.execute( "RETURN com.neo4j.procedure.node($id) AS node", map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -424,7 +424,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.squareDouble({value}) AS result", map( "value", 4L ) );
+            Result res = db.execute( "RETURN com.neo4j.procedure.squareDouble($value) AS result", map( "value", 4L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 16.0d ) ) );
@@ -439,7 +439,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.avgNumberList({param}) AS result",
+            Result res = db.execute( "RETURN com.neo4j.procedure.avgNumberList($param) AS result",
                     map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
@@ -455,7 +455,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.avgDoubleList([{long}, {double}]) AS result",
+            Result res = db.execute( "RETURN com.neo4j.procedure.avgDoubleList([$long, $double]) AS result",
                     map( "long", 1L, "double", 2.0d ) );
 
             // Then
@@ -471,7 +471,7 @@ class FunctionIT
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.squareLong({value}) as someVal", map( "value", 4L ) );
+            Result res = db.execute( "RETURN com.neo4j.procedure.squareLong($value) as someVal", map( "value", 4L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 16L ) ) );
@@ -487,7 +487,7 @@ class FunctionIT
         {
             long nodeId = db.createNode().getId();
             Node node = Iterators.single(
-                    db.execute( "RETURN com.neo4j.procedure.node({id}) AS node", map( "id", nodeId ) ).columnAs(
+                    db.execute( "RETURN com.neo4j.procedure.node($id) AS node", map( "id", nodeId ) ).columnAs(
                             "node" ) );
             node.setProperty( "name", "Stefan" );
             tx.commit();
@@ -606,7 +606,7 @@ class FunctionIT
             Relationship rel = node1.createRelationshipTo( node2, RelationshipType.withName( "KNOWS" ) );
 
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.nodePaths({node}) AS path", map( "node", node1 ) );
+            Result res = db.execute( "RETURN com.neo4j.procedure.nodePaths($node) AS path", map( "node", node1 ) );
 
             // Then
             assertTrue( res.hasNext() );
@@ -916,7 +916,7 @@ class FunctionIT
         public long delegatingFunction( @Name( "someValue" ) long someValue )
         {
             return (long) db
-                    .execute( "RETURN com.neo4j.procedure.simpleArgument({name}) AS result", map( "name", someValue ) )
+                    .execute( "RETURN com.neo4j.procedure.simpleArgument($name) AS result", map( "name", someValue ) )
                     .next().get( "result" );
         }
 
@@ -930,7 +930,7 @@ class FunctionIT
             else
             {
                 Long prev =
-                        (Long) db.execute( "RETURN com.neo4j.procedure.recursiveSum({order}) AS someVal",
+                        (Long) db.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal",
                                 map( "order", order - 1 ) )
                                 .next().get( "someVal" );
                 return order + prev;
@@ -1075,7 +1075,7 @@ class FunctionIT
         public Path nodePaths( @Name( "someValue" ) Node node )
         {
             return (Path) db
-                    .execute( "WITH {node} AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) )
+                    .execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) )
                     .next()
                     .getOrDefault( "p", null );
         }

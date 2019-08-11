@@ -556,7 +556,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
   }
 
   test("Don't compact complex query") {
-    val query = "EXPLAIN LOAD CSV WITH HEADERS FROM {csv_filename} AS line MERGE (u1:User {login: line.user1}) MERGE " +
+    val query = "EXPLAIN LOAD CSV WITH HEADERS FROM $csv_filename AS line MERGE (u1:User {login: line.user1}) MERGE " +
       "(u2:User {login: line.user2}) CREATE (u1)-[:FRIEND]->(u2)"
 
     executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldNotCompact, params = Map("csv_filename" -> "x"))

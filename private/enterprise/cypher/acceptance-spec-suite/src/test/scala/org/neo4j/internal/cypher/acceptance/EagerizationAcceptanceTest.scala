@@ -1430,7 +1430,7 @@ class EagerizationAcceptanceTest
     createNode()
     createNode(Map("id" -> 0))
     createNode(Map("id" -> 0))
-    val query = "MATCH (b {id: 0}), (c {id: 0}), (a) MERGE () ON MATCH SET a = {map} RETURN count(*) AS c"
+    val query = "MATCH (b {id: 0}), (c {id: 0}), (a) MERGE () ON MATCH SET a = $map RETURN count(*) AS c"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1),
@@ -2038,7 +2038,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 42)
     relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = {null} RETURN count(*)"
+    val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = $null RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
                              planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
@@ -2179,7 +2179,7 @@ class EagerizationAcceptanceTest
     relate(s, e)
     relate(e, s)
 
-    val query = "MATCH (n {prop : 5})-[r]->(m) SET m += {props} RETURN count(*)"
+    val query = "MATCH (n {prop : 5})-[r]->(m) SET m += $props RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1), params = Map("props" -> Map("prop" -> 5)))
@@ -2649,7 +2649,7 @@ class EagerizationAcceptanceTest
 
     val query =
       """
-        |MATCH (c:Cookie {name: {cookie}})<-[r2]-(d:Device)
+        |MATCH (c:Cookie {name: $cookie})<-[r2]-(d:Device)
         |WITH c, d
         |MATCH (c)-[r]-()
         |DELETE c, r

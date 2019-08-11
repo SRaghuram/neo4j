@@ -77,7 +77,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   }
 
   test("handle null value in property map from parameter for create node") {
-    val query = "CREATE (a {props}) RETURN a.foo, a.bar"
+    val query = "CREATE (a $props) RETURN a.foo, a.bar"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("props" -> Map("foo" -> null, "bar" -> "baz")))
 
@@ -87,7 +87,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   test("handle null value in property map from parameter for create node with SET") {
     createNode(("foo", 42), ("bar", "fu"))
-    val query = "MATCH (a) SET a = {props} RETURN a.foo, a.bar"
+    val query = "MATCH (a) SET a = $props RETURN a.foo, a.bar"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("props" -> Map("foo" -> null, "bar" -> "baz")))
 
@@ -96,7 +96,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   }
 
   test("handle null value in property map from parameter for create relationship") {
-    val query = "CREATE (a)-[r:REL {props}]->() RETURN r.foo, r.bar"
+    val query = "CREATE (a)-[r:REL $props]->() RETURN r.foo, r.bar"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("props" -> Map("foo" -> null, "bar" -> "baz")))
 
@@ -105,7 +105,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   }
 
   test("handle null value in property map from parameter") {
-    val query = "CREATE (a {props})-[r:REL {props}]->() RETURN a.foo, a.bar, r.foo, r.bar"
+    val query = "CREATE (a $props)-[r:REL $props]->() RETURN a.foo, a.bar, r.foo, r.bar"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("props" -> Map("foo" -> null, "bar" -> "baz")))
 
