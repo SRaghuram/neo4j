@@ -68,72 +68,47 @@ public enum SchemaHelper
                 @Override
                 public void createIndex( GraphDatabaseService db, String label, String property )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        db.schema().indexFor( Label.label( label ) ).on( property ).create();
-                        tx.commit();
-                    }
+                    db.schema().indexFor( Label.label( label ) ).on( property ).create();
                 }
 
                 @Override
                 public void createUniquenessConstraint( GraphDatabaseService db, String label, String property )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        db.schema().constraintFor( Label.label( label ) ).assertPropertyIsUnique( property ).create();
-                        tx.commit();
-                    }
+                    db.schema().constraintFor( Label.label( label ) ).assertPropertyIsUnique( property ).create();
                 }
 
                 @Override
                 public void createNodeKeyConstraint( GraphDatabaseService db, Label label, String... properties )
                 {
-                    try ( Transaction tx = db.beginTx() )
+                    ConstraintCreator creator = db.schema().constraintFor( label );
+                    for ( String property : properties )
                     {
-                        ConstraintCreator creator = db.schema().constraintFor( label );
-                        for ( String property : properties )
-                        {
-                            creator = creator.assertPropertyIsNodeKey( property );
-                        }
-                        creator.create();
-                        tx.commit();
+                        creator = creator.assertPropertyIsNodeKey( property );
                     }
+                    creator.create();
                 }
 
                 @Override
                 public void createNodePropertyExistenceConstraint( GraphDatabaseService db, String label, String property )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        db.schema().constraintFor( Label.label( label ) ).assertPropertyExists( property ).create();
-                        tx.commit();
-                    }
+                    db.schema().constraintFor( Label.label( label ) ).assertPropertyExists( property ).create();
                 }
 
                 @Override
                 public void createRelPropertyExistenceConstraint( GraphDatabaseService db, String type, String property )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        db.schema().constraintFor( RelationshipType.withName( type ) ).assertPropertyExists( property ).create();
-                        tx.commit();
-                    }
+                    db.schema().constraintFor( RelationshipType.withName( type ) ).assertPropertyExists( property ).create();
                 }
 
                 @Override
                 public ConstraintDefinition createNodeKeyConstraint( GraphDatabaseService db, String name, Label label, String... keys )
                 {
-                    try ( Transaction tx = db.beginTx() )
+                    ConstraintCreator creator = db.schema().constraintFor( label ).withName( name );
+                    for ( String key : keys )
                     {
-                        ConstraintCreator creator = db.schema().constraintFor( label ).withName( name );
-                        for ( String key : keys )
-                        {
-                            creator = creator.assertPropertyIsNodeKey( key );
-                        }
-                        ConstraintDefinition constraint = creator.create();
-                        tx.commit();
-                        return constraint;
+                        creator = creator.assertPropertyIsNodeKey( key );
                     }
+                    return creator.create();
                 }
             };
 

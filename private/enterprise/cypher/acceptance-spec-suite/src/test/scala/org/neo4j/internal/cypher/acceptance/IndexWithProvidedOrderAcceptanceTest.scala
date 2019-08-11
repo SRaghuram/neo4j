@@ -22,7 +22,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    createSomeNodes()
+    graph.inTx(createSomeNodes())
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop1", "prop2")
@@ -182,7 +182,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     // This is supported because internally all kernel indexes which support ordering will just scan and filter to serve contains
     test(s"$cypherToken: Order by index backed property should plan with provided order (contains scan)") {
-      createStringyNodes()
+      graph.inTx(createStringyNodes())
 
       val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
@@ -201,7 +201,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     // This is supported because internally all kernel indexes which support ordering will just scan and filter to serve ends with
     test(s"$cypherToken: Order by index backed property should plan with provided order (ends with scan)") {
-      createStringyNodes()
+      graph.inTx(createStringyNodes())
 
       val result = executeWith(Configs.NodeIndexEndsWithScan,
         s"MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'og' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
@@ -823,8 +823,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order for multiple types") {
-      graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
-      graph.execute("CREATE (:Awesome {prop1: 35.5})")
+      graph.inTx({
+        graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
+        graph.execute("CREATE (:Awesome {prop1: 35.5})")
+      })
 
       val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
@@ -962,7 +964,9 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order for nested functions with $functionName as inner") {
-      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+      graph.inTx({
+        graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+      })
 
       //should give the length of the alphabetically smallest/largest prop3 string
       val result = executeWith(Configs.Optional,
@@ -986,7 +990,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should give correct result for nested functions with $functionName as outer") {
-      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+      graph.inTx(graph.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
       val result = executeWith(Configs.CachedProperty,
@@ -1000,7 +1004,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should give correct result for nested functions in several depths") {
-      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+      graph.inTx(graph.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
       val result = executeWith(Configs.CachedProperty,
@@ -1180,7 +1184,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   // Nodes for composite index independent of already existing indexes
   private def createNodesForComposite() =
-    graph.execute(
+    graph.inTx(graph.execute(
       """
         |CREATE (:Label {prop1: 40, prop2: 5, prop3: 'a', prop4: true, prop5: 3.14})
         |CREATE (:Label {prop1: 40, prop2: 5, prop3: 'c', prop5: 2.72})
@@ -1212,5 +1216,5 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |CREATE (:Label {prop2: 2, prop3: 'g'})
         |CREATE (:Label {prop3: 'h'})
         |CREATE (:Label {prop3: 'g'})
-      """.stripMargin)
+      """.stripMargin))
 }

@@ -58,25 +58,27 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   }
 
   test("should not explode on complex pattern comprehension projection in write query") {
+    graph.inTx({
+      val query =
+        """UNWIND [{children : [
+          |            {_type : "browseNodeId", _text : "20" },
+          |            {_type : "childNodes", _text : "21" }
+          |        ]},
+          |       {children : [
+          |            {_type : "browseNodeId", _text : "30" },
+          |            {_type : "childNodes", _text : "31" }
+          |        ]}] AS row
+          |
+          |WITH   head([child IN row.children WHERE child._type = "browseNodeId"])._text as nodeId,
+          |       head([child IN row.children WHERE child._type = "childNodes"]) as childElement
+          |
+          |MERGE  (parent:Category { id: toInteger(nodeId) })
+          |
+          |RETURN *""".stripMargin
 
-    val query = """UNWIND [{children : [
-                  |            {_type : "browseNodeId", _text : "20" },
-                  |            {_type : "childNodes", _text : "21" }
-                  |        ]},
-                  |       {children : [
-                  |            {_type : "browseNodeId", _text : "30" },
-                  |            {_type : "childNodes", _text : "31" }
-                  |        ]}] AS row
-                  |
-                  |WITH   head([child IN row.children WHERE child._type = "browseNodeId"])._text as nodeId,
-                  |       head([child IN row.children WHERE child._type = "childNodes"]) as childElement
-                  |
-                  |MERGE  (parent:Category { id: toInteger(nodeId) })
-                  |
-                  |RETURN *""".stripMargin
-
-    val result = graph.execute(query)
-    result.resultAsString() // should not explode
+      val result = graph.execute(query)
+      result.resultAsString() // should not explode
+    })
   }
 
   test("optional match with distinct should take labels into account") {
@@ -114,11 +116,9 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   }
 
   test("should be able to plan customer query using outer join and alias (ZenDesk ticket #6628)") {
-    graph.inTx {
-      executeSingle("CREATE INDEX ON :L0(p0)")
-      executeSingle("CREATE INDEX ON :L1(p1)")
-      executeSingle("CREATE INDEX ON :L2(p2,p3)")
-    }
+    executeSingle("CREATE INDEX ON :L0(p0)")
+    executeSingle("CREATE INDEX ON :L1(p1)")
+    executeSingle("CREATE INDEX ON :L2(p2,p3)")
 
     graph.inTx {
       graph.schema.awaitIndexesOnline(10, TimeUnit.SECONDS)

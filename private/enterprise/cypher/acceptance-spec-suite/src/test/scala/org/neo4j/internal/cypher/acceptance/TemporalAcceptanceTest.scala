@@ -99,7 +99,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     dateMap.put("a", LocalDate.of(2018, 5, 5))
     dateMap.put("b", LocalTime.of(10, 3, 5))
 
-    graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
+    graph.inTx(graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
 
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
     val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateMap))
@@ -115,7 +115,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     dateMap.put("a", LocalDate.of(2018, 5, 5))
     dateMap.put("b", LocalTime.of(10, 3, 5))
 
-    graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
+    graph.inTx(graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
 
     val query = "MATCH (n) RETURN $param, n.a as a, n.b as b"
     val result = executeWith(Configs.All, query, params = Map("param" -> dateMap))
@@ -127,7 +127,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     // Given
     graph.createIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
-    graph.execute(
+    executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
@@ -150,7 +150,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     // Given
     graph.createIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
-    graph.execute(
+    executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
@@ -174,7 +174,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     // Given
     graph.createIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
-    graph.execute(
+    executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
@@ -199,7 +199,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     // Given
     graph.createIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
-    graph.execute(
+    executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
@@ -225,7 +225,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     graph.createIndex("Occasion", "timeSpan")
     createLabeledNode("Occasion")
 
-    graph.execute(
+    executeSingle(
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
@@ -836,9 +836,10 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("subtracting temporal instants should give meaningful error message") {
     for (func <- Seq("date", "localtime", "time", "localdatetime", "datetime")) {
       val query = s"RETURN $func() - $func()"
-      val exception = intercept[QueryExecutionException] {
-        println(graph.execute(query).next())
-      }
+      val exception =graph.inTx(
+        intercept[QueryExecutionException] {
+          println(graph.execute(query).next())
+        })
       exception.getMessage should startWith("Type mismatch: expected Duration but was")
     }
   }
@@ -935,7 +936,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   test("should not accept wrong argument types") {
-    graph.execute("CREATE ({str: 'a', num: 5, b: true})")
+    executeSingle("CREATE ({str: 'a', num: 5, b: true})")
     val returnQueries = Seq(
       "duration.between(n.str,n.str)",
       "date(n.num)",
@@ -1052,8 +1053,10 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   private def shouldReturnSomething(func: String): Unit = {
-    val query = s"RETURN $func"
-    graph.execute(query).next() should not be null
+    graph.inTx({
+      val query = s"RETURN $func"
+      graph.execute(query).next() should not be null
+    })
   }
 
   //noinspection ScalaUnnecessaryParentheses

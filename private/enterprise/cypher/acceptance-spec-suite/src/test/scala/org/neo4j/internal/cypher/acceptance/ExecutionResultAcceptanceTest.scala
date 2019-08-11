@@ -19,13 +19,15 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
     Configs.All.scenarios.map(s =>
     s"CYPHER ${s.preparserOptions} $query").foreach(q => {
-      val result = eengine.execute(q,
-                                   EMPTY_MAP,
-                                   graph.transactionalContext(query = q -> Map.empty),
-                                   profile = false,
-                                   prePopulate = false,
-                                   DO_NOTHING_SUBSCRIBER)
-      result.cancel()
+      graph.withTx { tx =>
+        val result = eengine.execute(q,
+          EMPTY_MAP,
+          graph.transactionalContext(tx, query = q -> Map.empty),
+          profile = false,
+          prePopulate = false,
+          DO_NOTHING_SUBSCRIBER)
+        result.cancel()
+      }
     })
   }
 
@@ -58,10 +60,14 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
   private def executeQueryAndGetExecutionPlanDescription(query: String, runtime: String, iterateOverResult: Boolean) = {
     val executedQuery = "CYPHER runtime = " + runtime + " " + query
-    val result: Result = graph.execute(executedQuery)
-    if (iterateOverResult)
-      result.hasNext should be (false) // don't really care for the assertion, just consume the results
-    result.getExecutionPlanDescription
+    graph.inTx({
+      val result: Result = graph.execute(executedQuery)
+      if (iterateOverResult)
+        result.hasNext should be (false) // don't really care for the assertion, just consume the results
+      val description = result.getExecutionPlanDescription
+      result.close()
+      description
+    })
   }
 
 }

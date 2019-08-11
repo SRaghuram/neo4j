@@ -28,9 +28,10 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerProcedureReturningSingleValue(value)
 
     // Using graph execute to get a Java value
-    graph.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
+    executeTransactionally(
+      graph.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("procedure calls and pattern comprehensions with complex query") {
@@ -39,9 +40,10 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerDummyInOutProcedure(Neo4jTypes.NTAny)
 
     // Using graph execute to get a Java value
-    graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)]) YIELD out0 UNWIND out0 AS result RETURN result").stream().toArray.toList should equal(List(
+    executeTransactionally(
+      graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)]) YIELD out0 UNWIND out0 AS result RETURN result").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("result", 18L)
-    ))
+    )))
   }
 
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {
@@ -52,9 +54,10 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerProcedureReturningSingleValue(value)
 
     // Using graph execute to get a Java value
+    executeTransactionally(
     graph.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should return correctly typed stream result (even if converting to and from scala representation internally)") {
@@ -66,9 +69,10 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerProcedureReturningSingleValue(stream)
 
     // Using graph execute to get a Java value
+    executeTransactionally(
     graph.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should not yield deprecated fields") {
@@ -87,9 +91,10 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     }
 
     // then
+    executeTransactionally(
     graph.execute("CALL something.with.deprecated.output()").stream().toArray.toList should equal(List(
       map("one", "alpha", "newTwo", "beta")
-    ))
+    )))
   }
 
   test("should be able to execute union of multiple token accessing procedures") {
@@ -105,15 +110,19 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
       "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey as result " +
       "UNION " +
       "CALL db.labels() YIELD label RETURN label as result"
+    val transaction = graphOps.beginTx()
+    try {
+      val result = graph.execute(query)
 
-    val result = graph.execute(query)
-
-    result.columnAs[String]("result").stream().toArray.toList shouldEqual List(
-      "Foo",
-      "Bar",
-      "REL",
-      "prop"
-    )
+      result.columnAs[String]("result").stream().toArray.toList shouldEqual List(
+        "Foo",
+        "Bar",
+        "REL",
+        "prop"
+      )
+    } finally {
+      transaction.close()
+    }
   }
 
   test("Fail when trying to pass arbitrary object in and out of a procedure") {
@@ -125,7 +134,8 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     val value = new Arbitrary
 
     // When & then
-    intercept[QueryExecutionException](graph.execute("CALL my.first.proc($p)", map("p", value)).next())
+    executeTransactionally(
+    intercept[QueryExecutionException](graph.execute("CALL my.first.proc($p)", map("p", value)).next()))
   }
 
   test("procedure calls and pattern comprehensions with simple query") {
@@ -134,8 +144,18 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerDummyInOutProcedure(Neo4jTypes.NTAny)
 
     // Using graph execute to get a Java value
-    graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)])").stream().toArray.toList should equal(List(
-      java.util.Collections.singletonMap("out0", java.util.Collections.singletonList(18L))
-      ))
+    executeTransactionally(
+      graph.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)])").stream().toArray.toList should equal(List(
+        java.util.Collections.singletonMap("out0", java.util.Collections.singletonList(18L))
+      )))
+  }
+
+  private def executeTransactionally[T](f: => T) {
+    val transaction = graphOps.beginTx()
+    try {
+      f
+    } finally {
+      transaction.close()
+    }
   }
 }

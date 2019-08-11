@@ -27,7 +27,7 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   }
 
   protected def dropIndex(): Unit = {
-    graph.execute(s"DROP INDEX ON :$LABEL($PROPERTY)")
+    graph.inTx(graph.execute(s"DROP INDEX ON :$LABEL($PROPERTY)"))
   }
 
   protected def createIndexedNode(value: Value): Node = {
@@ -89,13 +89,15 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
       expected.foreach(p => assert(nodes.contains(p)))
       nodes.size() should be(expected.size)
     } else {
-      val result = graph.execute("CYPHER runtime=slotted "+query, params)
-      val nodes = result.columnAs("n").stream().collect(Collectors.toSet)
-      expected.foreach(p => assert(nodes.contains(p)))
-      nodes.size() should be(expected.size)
+      graph.inTx({
+        val result = graph.execute("CYPHER runtime=slotted "+query, params)
+        val nodes = result.columnAs("n").stream().collect(Collectors.toSet)
+        expected.foreach(p => assert(nodes.contains(p)))
+        nodes.size() should be(expected.size)
 
-      val plan = result.getExecutionPlanDescription.toString
-      plan should include(wantedOperator)
+        val plan = result.getExecutionPlanDescription.toString
+        plan should include(wantedOperator)
+      })
     }
   }
 }

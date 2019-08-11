@@ -20,7 +20,6 @@
 package org.neo4j.bolt.dbapi.impl;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -38,13 +37,12 @@ public class BoltKernelTransaction extends BoltQueryExecutorImpl implements Bolt
     private final InternalTransaction topLevelInternalTransaction;
 
     public BoltKernelTransaction( QueryExecutionEngine queryExecutionEngine, ThreadToStatementContextBridge txBridge,
-            TransactionalContextFactory transactionalContextFactory, KernelTransaction kernelTransaction, InternalTransaction topLevelInternalTransaction,
-            Supplier<InternalTransaction> placeboTransactionFactory )
+            TransactionalContextFactory transactionalContextFactory, KernelTransaction kernelTransaction, InternalTransaction internalTransaction )
     {
-        super( queryExecutionEngine, transactionalContextFactory, placeboTransactionFactory );
+        super( queryExecutionEngine, transactionalContextFactory, internalTransaction );
         this.txBridge = txBridge;
         this.kernelTransaction = kernelTransaction;
-        this.topLevelInternalTransaction = topLevelInternalTransaction;
+        this.topLevelInternalTransaction = internalTransaction;
     }
 
     @Override
@@ -62,11 +60,7 @@ public class BoltKernelTransaction extends BoltQueryExecutorImpl implements Bolt
     @Override
     public void commit() throws TransactionFailureException
     {
-        // because of the placebo context changes and existence this needs to be temporary like this.
-        if ( kernelTransaction.isOpen() )
-        {
-            kernelTransaction.commit();
-        }
+        kernelTransaction.commit();
     }
 
     @Override

@@ -5,8 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.values.storable.DurationValue
 
@@ -58,13 +58,11 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   test("should be case sensitive for STARTS WITH with indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "london"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createIndex("Location", "name")
@@ -98,19 +96,17 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("should only match on the actual prefix") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
-    graph.inTx {
-      createLabeledNode(Map("name" -> "Johannesburg"), "Location")
-      createLabeledNode(Map("name" -> "Paris"), "Location")
-      createLabeledNode(Map("name" -> "Malmo"), "Location")
-      createLabeledNode(Map("name" -> "Loondon"), "Location")
-      createLabeledNode(Map("name" -> "Lolndon"), "Location")
+    createLabeledNode(Map("name" -> "Johannesburg"), "Location")
+    createLabeledNode(Map("name" -> "Paris"), "Location")
+    createLabeledNode(Map("name" -> "Malmo"), "Location")
+    createLabeledNode(Map("name" -> "Loondon"), "Location")
+    createLabeledNode(Map("name" -> "Lolndon"), "Location")
 
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
     graph.createIndex("Location", "name")
 
@@ -126,14 +122,11 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("should plan the leaf with the longest prefix if multiple STARTS WITH patterns") {
-
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Address")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("prop" -> i.toString), "Address")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Address")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("prop" -> i.toString), "Address")
     }
 
     val a1 = createLabeledNode(Map("prop" -> "www123"), "Address")
@@ -158,13 +151,11 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("should plan an IndexRangeSeek for a STARTS WITH predicate search when index exists") {
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Address")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("prop" -> i.toString), "Address")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Address")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("prop" -> i.toString), "Address")
     }
 
     val a1 = createLabeledNode(Map("prop" -> "www123"), "Address")
@@ -183,14 +174,11 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("should plan a UniqueIndexSeek when constraint exists") {
-
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Address")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("prop" -> i.toString), "Address")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Address")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("prop" -> i.toString), "Address")
     }
 
     val a1 = createLabeledNode(Map("prop" -> "www123"), "Address")
@@ -1217,26 +1205,26 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("should use the index of inequality range scans") {
-    graph.inTx {
-      (1 to 60).foreach { _ =>
-        createLabeledNode(Map("gender" -> "male"), "Person")
-      }
-      (1 to 30).foreach { _ =>
-        createLabeledNode(Map("gender" -> "female"), "Person")
-      }
-      (1 to 2).foreach { _ =>
-        createLabeledNode("Person")
-      }
+    (1 to 60).foreach { _ =>
+      createLabeledNode(Map("gender" -> "male"), "Person")
+    }
+    (1 to 30).foreach { _ =>
+      createLabeledNode(Map("gender" -> "female"), "Person")
+    }
+    (1 to 2).foreach { _ =>
+      createLabeledNode("Person")
     }
 
     graph.createIndex("Person", "gender")
 
-    val result = graph.execute("CYPHER PROFILE MATCH (a:Person) WHERE a.gender > 'female' RETURN count(a) as c")
+    graph.inTx({
+      val result = graph.execute("CYPHER PROFILE MATCH (a:Person) WHERE a.gender > 'female' RETURN count(a) as c")
 
-    import scala.collection.JavaConverters._
-    result.asScala.toList.map(_.asScala) should equal(List(Map("c" -> 60)))
-    result.getExecutionPlanDescription.toString should include(IndexSeekByRange.name)
-    result.close()
+      import scala.collection.JavaConverters._
+      result.asScala.toList.map(_.asScala) should equal(List(Map("c" -> 60)))
+      result.getExecutionPlanDescription.toString should include(IndexSeekByRange.name)
+      result.close()
+    })
   }
 
   test("should use best index for range seek") {
@@ -1265,13 +1253,13 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("should not range seek index with 1 unique value (gt issue #12225)") {
 
-    graph.execute(
+    graph.inTx(graph.execute(
       """UNWIND range(1, 10) AS i
         |CREATE (t:Tweet {created_date: 1})
         |WITH t, i
         |UNWIND range(1,10) AS j
         |CREATE (k:Keyword {value: i*10+j})
-        |CREATE (t)-[:CONTAINS_KEYWORD]->(k)""".stripMargin)
+        |CREATE (t)-[:CONTAINS_KEYWORD]->(k)""".stripMargin))
 
     graph.createIndex("Tweet", "created_date")
     graph.createIndex("Keyword", "value")

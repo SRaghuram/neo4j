@@ -140,10 +140,13 @@ class ClusterDiscoveryIT
     @SuppressWarnings( "unchecked" )
     private static List<Map<String,Object>> getMembers( GraphDatabaseAPI db )
     {
-        try ( var result = db.execute( "CALL dbms.routing.getRoutingTable({})" ) )
+        try ( var transaction = db.beginTx() )
         {
-            var record = Iterators.single( result );
-            return (List<Map<String,Object>>) record.get( "servers" );
+            try ( var result = db.execute( "CALL dbms.routing.getRoutingTable({})" ) )
+            {
+                var record = Iterators.single( result );
+                return (List<Map<String,Object>>) record.get( "servers" );
+            }
         }
     }
 

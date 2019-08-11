@@ -21,6 +21,7 @@ import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -246,7 +247,11 @@ class TransactionIdTrackerIT
     {
         for ( var i = 0; i < count; i++ )
         {
-            db.execute( "CREATE ()" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE ()" ).close();
+                transaction.commit();
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.impl.security.User;
@@ -431,7 +432,11 @@ class SystemGraphRealmIT
                 new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
-        systemDB.execute( String.format( "GRANT MATCH {*} ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
+        try ( Transaction transaction = systemDB.beginTx() )
+        {
+            systemDB.execute( String.format( "GRANT MATCH {*} ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
+            transaction.commit();
+        }
 
         assertAuthenticationSucceeds( realm, "alice" );
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );

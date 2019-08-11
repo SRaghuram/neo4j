@@ -59,8 +59,9 @@ public class ClusterFormationIT
         ).forEach( gdb ->
         {
             // (1) BuiltInProcedures from community
+            try ( var transaction = gdb.beginTx() )
             {
-                try ( Result result = gdb.execute( "CALL dbms.procedures()" ) )
+                try ( var result = gdb.execute( "CALL dbms.procedures()" ) )
                 {
                     assertTrue( result.hasNext() );
                 }

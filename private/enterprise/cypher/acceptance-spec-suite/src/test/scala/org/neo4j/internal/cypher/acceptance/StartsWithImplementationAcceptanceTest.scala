@@ -45,12 +45,11 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("Should handle prefix search with existing transaction state") {
     graph.createIndex("User", "name")
-    graph.inTx {
-      createLabeledNode(Map("name" -> "Stefan"), "User")
-      createLabeledNode(Map("name" -> "Stephan"), "User")
-      createLabeledNode(Map("name" -> "Stefanie"), "User")
-      createLabeledNode(Map("name" -> "Craig"), "User")
-    }
+    createLabeledNode(Map("name" -> "Stefan"), "User")
+    createLabeledNode(Map("name" -> "Stephan"), "User")
+    createLabeledNode(Map("name" -> "Stefanie"), "User")
+    createLabeledNode(Map("name" -> "Craig"), "User")
+
       val executeBefore = () => {
         drain(graph.execute("MATCH (u:User {name: 'Craig'}) SET u.name = 'Steven'"))
         drain(graph.execute("MATCH (u:User {name: 'Stephan'}) DELETE u"))

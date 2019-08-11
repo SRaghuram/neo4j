@@ -35,12 +35,14 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
     try {
 
       // when
+      val transaction = db.beginTx()
       val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
       result.accept(new ResultVisitor[RuntimeException] {
         def visit(row: ResultRow) = true
       })
 
       result.close()
+      transaction.close()
 
       // then
       // call to close actually worked

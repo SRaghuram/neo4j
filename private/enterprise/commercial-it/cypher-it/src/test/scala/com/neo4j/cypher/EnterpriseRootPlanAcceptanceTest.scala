@@ -68,22 +68,28 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Comm
   }
 
   test("should show_java_source") {
-    val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
-    res.resultAsString()
-    shouldContainSourceCode(res.getExecutionPlanDescription)
+    graph.withTx { _ =>
+      val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
+      res.resultAsString()
+      shouldContainSourceCode(res.getExecutionPlanDescription)
+    }
   }
 
   test("should show_bytecode") {
-    val res = executeOfficial("CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
-    res.resultAsString()
-    shouldContainByteCode(res.getExecutionPlanDescription)
+    graph.withTx { _ =>
+      val res = executeOfficial("CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
   }
 
   test("should show_java_source and show_bytecode") {
-    val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
-    res.resultAsString()
-    shouldContainSourceCode(res.getExecutionPlanDescription)
-    shouldContainByteCode(res.getExecutionPlanDescription)
+    graph.withTx { _ =>
+      val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
+      res.resultAsString()
+      shouldContainSourceCode(res.getExecutionPlanDescription)
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
   }
 
   private def shouldContainSourceCode(planDescription: ExecutionPlanDescription): Unit = {
@@ -147,9 +153,11 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Comm
           val runtimeString = runtime.map("runtime=" + _.name).getOrElse("")
           s"CYPHER $version $plannerString $runtimeString"
       }
-      val result = executeOfficial(s"$prepend PROFILE $query")
-      result.resultAsString()
-      result.getExecutionPlanDescription
+      graph.withTx { _ =>
+        val result = executeOfficial(s"$prepend PROFILE $query")
+        result.resultAsString()
+        result.getExecutionPlanDescription
+      }
     }
   }
 }

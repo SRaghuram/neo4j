@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -128,11 +129,14 @@ public class ClusterOverviewHelper
 
     public static List<MemberInfo> clusterOverview( GraphDatabaseFacade db )
     {
-        try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return result.stream()
-                    .map( ClusterOverviewHelper::createMemberInfo )
-                    .collect( toList() );
+            try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+            {
+                return result.stream()
+                        .map( ClusterOverviewHelper::createMemberInfo )
+                        .collect( toList() );
+            }
         }
     }
 

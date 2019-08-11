@@ -38,7 +38,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
     //Given
     import scala.collection.JavaConverters._
 
-    val result = graph.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n")
+    val result = graph.inTx(graph.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n"))
 
     // When (exhaust result)
     val notifications = result.getNotifications.asScala.toSet
@@ -66,20 +66,22 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
     val switch = new AtomicBoolean(false)
 
     // When executing a query that has multiple ProduceResult tasks
-    val result = graph.execute("CYPHER runtime=parallel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
+    graph.inTx({
+      val result = graph.execute("CYPHER runtime=parallel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
 
-    // Then these tasks should be executed non-concurrently
-    result.accept(new ResultVisitor[Exception]() {
-      override def visit(row: Result.ResultRow): Boolean = {
-        if (!switch.compareAndSet(false, true)) {
-          fail("Expected switch to be false: Concurrently doing ProduceResults.")
+      // Then these tasks should be executed non-concurrently
+      result.accept(new ResultVisitor[Exception]() {
+        override def visit(row: Result.ResultRow): Boolean = {
+          if (!switch.compareAndSet(false, true)) {
+            fail("Expected switch to be false: Concurrently doing ProduceResults.")
+          }
+          Thread.sleep(0)
+          if (!switch.compareAndSet(true, false)) {
+            fail("Expected switch to be true: Concurrently doing ProduceResults.")
+          }
+          true
         }
-        Thread.sleep(0)
-        if (!switch.compareAndSet(true, false)) {
-          fail("Expected switch to be true: Concurrently doing ProduceResults.")
-        }
-        true
-      }
+      })
     })
   }
 

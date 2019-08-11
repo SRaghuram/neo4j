@@ -249,9 +249,13 @@ public class SessionResetIT
 
     private long activeQueriesCount()
     {
-        try ( Result result = db().execute( "CALL dbms.listQueries() YIELD queryId RETURN count(queryId) AS result" ) )
+        var db = db();
+        try ( var transaction = db.beginTx() )
         {
-            return (long) single( result ).get( "result" ) - 1; // do not count listQueries procedure invocation
+            try ( Result result = db.execute( "CALL dbms.listQueries() YIELD queryId RETURN count(queryId) AS result" ) )
+            {
+                return (long) single( result ).get( "result" ) - 1; // do not count listQueries procedure invocation
+            }
         }
     }
 

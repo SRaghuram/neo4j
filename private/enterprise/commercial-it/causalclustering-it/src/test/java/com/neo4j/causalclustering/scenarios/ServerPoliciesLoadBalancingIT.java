@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -60,6 +62,7 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.procedure.builtin.routing.ParameterNames.CONTEXT;
 
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
@@ -260,7 +263,7 @@ class ServerPoliciesLoadBalancingIT
         try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
         {
             var parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
-            try ( var result = db.execute( tx, "CALL dbms.routing.getRoutingTable", ValueUtils.asMapValue( parameters ) ) )
+            try ( var result = db.execute( "CALL dbms.routing.getRoutingTable", parameters ) )
             {
                 var record = Iterators.single( result );
                 var mapValueBuilder = new MapValueBuilder();

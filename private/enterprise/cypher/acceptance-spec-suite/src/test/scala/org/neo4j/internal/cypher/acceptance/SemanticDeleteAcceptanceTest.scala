@@ -6,8 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen}
 import org.scalacheck.{Gen, Shrink}
 
 /*
@@ -29,13 +29,18 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.execute(s"CREATE $patternString")
-          //delete
-          val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
-          graph.execute(s"MATCH $patternString DELETE ${variables.mkString(",")} RETURN count(*)")
+          val transaction = graphOps.beginTx()
+          try {
+            graph.execute(s"CREATE $patternString").close()
+            //delete
+            val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
+            graph.execute(s"MATCH $patternString DELETE ${variables.mkString(",")} RETURN count(*)").close()
 
-          //now db should be empty
-          RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            //now db should be empty
+            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+          } finally {
+            transaction.close()
+          }
         }
       }
     }
@@ -50,14 +55,19 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
       whenever(pattern.nonEmpty) {
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
-          //update
-          graph.execute(s"CREATE $patternString")
-          //delete
-          val variables = findAllNodeNames(pattern)
-          graph.execute(s"MATCH $patternString DETACH DELETE ${variables.mkString(",")} RETURN count(*)")
+          val transaction = graphOps.beginTx()
+          try {
+            //update
+            graph.execute(s"CREATE $patternString").close()
+            //delete
+            val variables = findAllNodeNames(pattern)
+            graph.execute(s"MATCH $patternString DETACH DELETE ${variables.mkString(",")} RETURN count(*)").close()
 
-          //now db should be empty
-          RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            //now db should be empty
+            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+          } finally {
+            transaction.close()
+          }
         }
       }
     }
@@ -72,15 +82,20 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
       whenever(pattern.nonEmpty) {
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
-          //update
-          graph.execute(s"CREATE $patternString")
-          //delete
-          val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
-          val undirected = makeUndirected(pattern).map(_.string).mkString
-          graph.execute(s"MATCH $undirected DELETE ${variables.mkString(",")}")
+          val transaction = graphOps.beginTx()
+          try {
+            //update
+            graph.execute(s"CREATE $patternString").close()
+            //delete
+            val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
+            val undirected = makeUndirected(pattern).map(_.string).mkString
+            graph.execute(s"MATCH $undirected DELETE ${variables.mkString(",")}").close()
 
-          //now db should be empty
-          RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            //now db should be empty
+            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+          } finally {
+            transaction.close()
+          }
         }
       }
     }
@@ -95,15 +110,20 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
       whenever(pattern.nonEmpty) {
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
-          //update
-          graph.execute(s"CREATE $patternString")
-          //delete
-          val variables = findAllNodeNames(pattern)
-          val undirected = makeUndirected(pattern).map(_.string).mkString
-          graph.execute(s"MATCH $undirected DETACH DELETE ${variables.mkString(",")}")
+          val transaction = graphOps.beginTx()
+          try {
+            //update
+            graph.execute(s"CREATE $patternString").close()
+            //delete
+            val variables = findAllNodeNames(pattern)
+            val undirected = makeUndirected(pattern).map(_.string).mkString
+            graph.execute(s"MATCH $undirected DETACH DELETE ${variables.mkString(",")}").close()
 
-          //now db should be empty
-          RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            //now db should be empty
+            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+          } finally {
+            transaction.close()
+          }
         }
       }
     }

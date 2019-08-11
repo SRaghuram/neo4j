@@ -16,6 +16,7 @@ import java.util.Set;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -29,7 +30,6 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
-import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<CommercialLoginContext>
 {
@@ -82,9 +82,9 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
 
         String id = extractQueryId( query );
 
-        try ( InternalTransaction tx = graph.beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
+        try ( Transaction transaction = graph.beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
         {
-            graph.execute( tx, "CALL dbms.killQuery('" + id + "')", EMPTY_MAP );
+            graph.execute( "CALL dbms.killQuery('" + id + "')" );
             throw new AssertionError( "Expected exception to be thrown" );
         }
         catch ( QueryExecutionException e )

@@ -95,7 +95,7 @@ class MultiDatabaseTransactionBridgeIT
         try ( Transaction transaction = db.beginTx() )
         {
             TransactionFailureException exception = assertThrows( TransactionFailureException.class, systemDb::beginTx );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
+            assertThat( exception.getMessage(), containsString( "Fail to start new transaction. Already have transaction in the context." ) );
         }
     }
 

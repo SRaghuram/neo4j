@@ -168,34 +168,40 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("unfinished profiler complains [using MATCH]") {
     //GIVEN
     createNode("foo" -> "bar")
-    val result = graph.execute("PROFILE MATCH (n) WHERE id(n) = 0 RETURN n")
+    graph.inTx({
+      val result = graph.execute("PROFILE MATCH (n) WHERE id(n) = 0 RETURN n")
 
-    //WHEN THEN
-    val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
-    ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
-    result.close() // ensure that the transaction is closed
+      //WHEN THEN
+      val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
+      ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
+      result.close() // ensure that the transaction is closed
+    })
   }
 
   test("unfinished profiler complains [using CALL]") {
     //GIVEN
     createLabeledNode("Person")
-    val result = graph.execute("PROFILE CALL db.labels")
+    graph.inTx({
+      val result = graph.execute("PROFILE CALL db.labels")
 
-    //WHEN THEN
-    val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
-    ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
-    result.close() // ensure that the transaction is closed
+      //WHEN THEN
+      val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
+      ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
+      result.close() // ensure that the transaction is closed
+    })
   }
 
   test("unfinished profiler complains [using CALL within larger query]") {
     //GIVEN
     createLabeledNode("Person")
-    val result = graph.execute("PROFILE CALL db.labels() YIELD label WITH label AS r RETURN r")
+    graph.inTx({
+      val result = graph.execute("PROFILE CALL db.labels() YIELD label WITH label AS r RETURN r")
 
-    //WHEN THEN
-    val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
-    ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
-    result.close() // ensure that the transaction is closed
+      //WHEN THEN
+      val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
+      ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
+      result.close() // ensure that the transaction is closed
+    })
   }
 
   test("tracks number of rows") {
@@ -308,7 +314,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     // given
     executeWith(Configs.InterpretedAndSlotted, query).toList
-    deleteAllEntities()
+    graph.inTx(deleteAllEntities())
     val initialTxCounts = graph.txCounts
 
     // when
@@ -329,9 +335,11 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("reports COST planner when showing plan description") {
-    val result = graph.execute("CYPHER planner=cost MATCH (n) RETURN n")
-    result.resultAsString()
-    result.getExecutionPlanDescription.toString should include("Planner COST" + System.lineSeparator())
+    graph.inTx({
+      val result = graph.execute("CYPHER planner=cost MATCH (n) RETURN n")
+      result.resultAsString()
+      result.getExecutionPlanDescription.toString should include("Planner COST" + System.lineSeparator())
+    })
   }
 
   test("match (p:Person {name:'Seymour'}) return (p)-[:RELATED_TO]->()") {
@@ -422,11 +430,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should throw if accessing profiled results before they have been materialized") {
     createNode()
-    val result = graph.execute("PROFILE MATCH (n) RETURN n")
+    graph.inTx({
+      val result = graph.execute("PROFILE MATCH (n) RETURN n")
 
-    val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
-    ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
-    result.close() // ensure that the transaction is closed
+      val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
+      ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]
+      result.close() // ensure that the transaction is closed
+    })
   }
 
   test("should profile cartesian products") {

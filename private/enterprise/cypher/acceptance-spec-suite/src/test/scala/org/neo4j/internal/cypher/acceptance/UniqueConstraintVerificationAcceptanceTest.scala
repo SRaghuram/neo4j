@@ -102,7 +102,7 @@ class UniqueConstraintVerificationAcceptanceTest
 
   test("Should handle temporal with unique constraint") {
     // When
-    graph.execute("CREATE CONSTRAINT ON (n:User) ASSERT (n.birthday) IS UNIQUE")
+    graph.inTx(graph.execute("CREATE CONSTRAINT ON (n:User) ASSERT (n.birthday) IS UNIQUE"))
 
     // Then
     createLabeledNode(Map("birthday" -> LocalDate.of(1991, 10, 18)), "User")

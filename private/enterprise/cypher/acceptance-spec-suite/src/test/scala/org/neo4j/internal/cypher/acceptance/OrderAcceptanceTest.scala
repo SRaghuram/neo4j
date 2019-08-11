@@ -658,7 +658,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("Should be able to reuse unprojected node and rel variables after WITH ORDER BY") {
 
-    graph.execute("MATCH (a {name: 'A'}), (b {name: 'B'}), (c {name: 'C'}) CREATE (a)-[:Rel]->(b)-[:Rel]->(c)")
+    graph.inTx(
+      graph.execute("MATCH (a {name: 'A'}), (b {name: 'B'}), (c {name: 'C'}) CREATE (a)-[:Rel]->(b)-[:Rel]->(c)").close()
+    )
 
     val query =
       """

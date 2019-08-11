@@ -40,7 +40,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     val result = executeWith(Configs.CachedProperty,
       "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point",
@@ -61,7 +61,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
@@ -84,7 +84,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = [point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})] RETURN p.location as point")
+    executeSingle("MATCH (p:Place) SET p.location = [point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})] RETURN p.location as point")
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
@@ -106,7 +106,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute(
+    executeSingle(
       """MATCH (p:Place) SET p.location =
         |[point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}),
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
@@ -138,7 +138,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute(
+    executeSingle(
       """MATCH (p:Place) SET p.location =
         |[point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}),
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
@@ -187,8 +187,8 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 40.7, longitude: -35.78, crs: 'WGS-84'})")
+    executeSingle("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 40.7, longitude: -35.78, crs: 'WGS-84'})")
 
     val query = "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point"
 
@@ -208,7 +208,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
+    executeSingle("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
 
     // When
     val result = executeWith(Configs.CachedProperty,
@@ -230,8 +230,8 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     // Given
     graph.createIndex("Place", "location")
     createLabeledNode("Place")
-    graph.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.601})")
+    executeSingle("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.601})")
 
     // When
     val result = executeWith(Configs.CachedProperty,
@@ -249,10 +249,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points far apart in cartesian space - range query greaterThan") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) RETURN p.location as point")
@@ -268,10 +268,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points far apart in cartesian space - range query lessThan") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location < point({x: 0, y: 0}) RETURN p.location as point")
@@ -287,11 +287,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points far apart in cartesian space - range query within") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 500000, y: 500000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
-    graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 500000, y: 500000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: 100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: -100000, y: -100000})")
+    executeSingle("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) AND p.location < point({x: 200000, y: 200000}) RETURN p.location as point")
@@ -307,10 +307,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points far apart in WGS84 - range query greaterThan") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 5.7, longitude: 116.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: -50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: -10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 5.7, longitude: 116.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: -50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: -10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
@@ -327,8 +327,8 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - equality query") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
@@ -342,8 +342,8 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("Index query with MERGE") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
 
     // When matching in merge
     val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (p:Place {location: point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) }) RETURN p.location as point")
@@ -365,10 +365,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - range query greaterThan") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
@@ -385,10 +385,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - range query greaterThanOrEqualTo") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
@@ -405,10 +405,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - range query greaterThan with no results") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
@@ -424,11 +424,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - range query greaterThan with multiple CRS") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
@@ -444,11 +444,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
   test("indexed points close together in WGS84 - range query within") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
     val result = executeWith(Configs.CachedProperty, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'}) AND p.location < point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
@@ -619,10 +619,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       }
     }
 
-    graph.inTx {
-      Seq(onAxisX, onAxisY, inRange).foreach(createIndexedNode(_))
-      runTest("nodes in same transaction")
-    }
+    Seq(onAxisX, onAxisY, inRange).foreach(createIndexedNode(_))
     runTest("no transaction state")
   }
 

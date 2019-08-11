@@ -165,10 +165,13 @@ class CausalClusteringProceduresIT
         for ( var member : members )
         {
             var db = member.database( databaseName );
-            try ( var result = procedureExecutor.apply( db ) )
+            try ( var transaction = db.beginTx() )
             {
-                var records = Iterators.asList( result );
-                assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
+                try ( var result = procedureExecutor.apply( db ) )
+                {
+                    var records = Iterators.asList( result );
+                    assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
+                }
             }
         }
     }
@@ -195,9 +198,12 @@ class CausalClusteringProceduresIT
         return () ->
         {
             var db = member.database( databaseName );
-            try ( var result = invokeClusterRoleProcedure( db, databaseName ) )
+            try ( var transaction = db.beginTx() )
             {
-                return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
+                try ( var result = invokeClusterRoleProcedure( db, databaseName ) )
+                {
+                    return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
+                }
             }
         };
     }

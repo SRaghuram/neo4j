@@ -20,7 +20,6 @@ import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.JavaConverters._
@@ -55,13 +54,13 @@ class LoadCsvAcceptanceTest
         writer.println("3, '6', 3, '6'")
     })
 
-    graph.execute(
+    executeSingle(
       s"""LOAD CSV WITH HEADERS FROM '${urls.head}' AS row
           | CREATE (user:User{userID: row.USERID})
           | CREATE (order:Order{orderID: row.OrderId})
           | CREATE (user)-[acc:ORDERED]->(order)
           | RETURN count(*)""".stripMargin
-    ).resultAsString()
+    )
 
     resourceMonitor.assertClosedAndClear(1)
 
@@ -566,9 +565,14 @@ class LoadCsvAcceptanceTest
       .build()
     val db = managementService.database(DEFAULT_DATABASE_NAME)
     try {
-      intercept[QueryExecutionException] {
-        db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
-      }.getMessage should endWith(": configuration property 'dbms.security.allow_csv_import_from_file_urls' is false")
+      val transaction = db.beginTx()
+      try {
+        intercept[QueryExecutionException] {
+          db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
+        }.getMessage should endWith(": configuration property 'dbms.security.allow_csv_import_from_file_urls' is false")
+      } finally {
+        transaction.close()
+      }
     } finally {
       managementService.shutdown()
     }
@@ -590,11 +594,13 @@ class LoadCsvAcceptanceTest
 
     trackResources(db)
 
+    val tx = db.beginTx
     try {
       val result = db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line RETURN line[0] AS field", emptyMap())
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       result.close()
     } finally {
+      tx.close()
       managementService.shutdown()
     }
     resourceMonitor.assertClosedAndClear(1)
@@ -610,11 +616,13 @@ class LoadCsvAcceptanceTest
 
     trackResources(db)
 
+    val transaction = db.beginTx()
     try {
       intercept[QueryExecutionException] {
         db.execute(s"LOAD CSV FROM 'file:///../foo.csv' AS line RETURN line[0] AS field", emptyMap()).asScala.size
       }.getMessage should endWith(" file URL points outside configured import directory").or(include("Couldn't load the external resource at"))
     } finally {
+      transaction.close()
       managementService.shutdown()
     }
     resourceMonitor.assertClosedAndClear(0)
@@ -644,11 +652,13 @@ class LoadCsvAcceptanceTest
 
     trackResources(db)
 
+    val tx = db.beginTx
     try {
       val result = db.execute(s"LOAD CSV FROM 'testproto://foo.bar' AS line RETURN line[0] AS field", emptyMap())
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       resourceMonitor.assertClosedAndClear(1)
     } finally {
+      tx.close()
       managementService.shutdown()
     }
   }
@@ -736,9 +746,10 @@ class LoadCsvAcceptanceTest
       })
       for (url <- urls) {
         //TODO this message should mention `dbms.import.csv.buffer_size` in 3.5
-        val error = intercept[QueryExecutionException](db.execute(
-          s"""LOAD CSV WITH HEADERS FROM '$url' AS row
-             |RETURN row.prop""".stripMargin).next().get("row.prop"))
+        val error = db.inTx(
+          intercept[QueryExecutionException](db.execute(
+            s"""LOAD CSV WITH HEADERS FROM '$url' AS row
+               |RETURN row.prop""".stripMargin).next().get("row.prop")))
         error.getMessage should startWith(
           """Tried to read a field larger than buffer size 1048576.""".stripMargin)
         resourceMonitor.assertClosedAndClear(1)
@@ -758,11 +769,13 @@ class LoadCsvAcceptanceTest
           writer.println(longName)
       })
       for (url <- urls) {
-        val result = db.execute(
-          s"""LOAD CSV WITH HEADERS FROM '$url' AS row
-             |RETURN row.prop""".stripMargin)
-        result.next().get("row.prop") should equal(longName)
-        resourceMonitor.assertClosedAndClear(1)
+        db.withTx( _ => {
+          val result = db.execute(
+            s"""LOAD CSV WITH HEADERS FROM '$url' AS row
+               |RETURN row.prop""".stripMargin)
+          result.next().get("row.prop") should equal(longName)
+          resourceMonitor.assertClosedAndClear(1)
+        })
       }
     }
   }

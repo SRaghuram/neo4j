@@ -9,6 +9,7 @@ import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.Arrays.asList;
@@ -56,7 +57,11 @@ class CompiledRuntimeEchoIT
 
     private void echo( Object value )
     {
-        Object result = db.execute( "CYPHER runtime=compiled RETURN $p AS p", map( "p", value ) ).next().get( "p" );
-        assertThat( result, equalTo( value ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Object result = db.execute( "CYPHER runtime=compiled RETURN $p AS p", map( "p", value ) ).next().get( "p" );
+            assertThat( result, equalTo( value ) );
+            transaction.commit();
+        }
     }
 }

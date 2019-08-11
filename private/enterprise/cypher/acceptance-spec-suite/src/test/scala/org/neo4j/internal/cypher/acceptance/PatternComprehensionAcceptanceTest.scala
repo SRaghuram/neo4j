@@ -12,7 +12,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
   test("pattern comprehension involving index seek on RHS") {
-    graph.execute("CREATE CONSTRAINT ON (end:End) ASSERT end.id IS UNIQUE")
+    graph.inTx(graph.execute("CREATE CONSTRAINT ON (end:End) ASSERT end.id IS UNIQUE"))
     val start = createLabeledNode("Start")
     val ends = (0 to 1000).map(id => createLabeledNode(Map("id" -> id), "End"))
     ends.foreach(end => relate(start, end))
@@ -495,10 +495,10 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("nested pattern comprehension") {
     // given
-    graph.execute(
+    graph.inTx(graph.execute(
       """CREATE (a:Label)-[:T1]->(b)-[:T2]->(c {prop: 42})
          CREATE (b)-[:T2]->({prop: 43})
-      """.stripMargin)
+      """.stripMargin))
 
     val query =
       """
@@ -527,7 +527,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |         | b.foo ]) as arraySize
       """.stripMargin
 
-    graph.execute(setup)
+    graph.inTx(graph.execute(setup).close())
 
     val res = executeWith(Configs.InterpretedAndSlotted, query)
     // If the (b)-->(:C) does not get correctly evaluated, this will be two instead
@@ -541,7 +541,9 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |RETURN *, [ (a)-[:HAS_BUREAU]->(bureau:Bureau) | bureau.CREDIT_ACTIVE = "Active"] as bureauStatus
       """.stripMargin
 
-    val result = graph.execute(query)
-    result.resultAsString() // should not throw
+    graph.inTx({
+      val result = graph.execute(query)
+      result.resultAsString() // should not throw
+    })
   }
 }

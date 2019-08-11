@@ -187,10 +187,12 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
         |RETURN count(*) as c
       """.stripMargin
 
-    val result = graph.execute(query)
+    graph.inTx({
+      val result = graph.execute(query)
 
-    assert(result.hasNext)
-    result.next.get("c") shouldEqual 1
+      assert(result.hasNext)
+      result.next.get("c") shouldEqual 1
+    })
   }
 
   val MISSING_NODE_ERRORS = List("Failed to create relationship `r`, node `c` is missing. If you prefer to simply ignore rows " +
@@ -201,7 +203,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if start-point is missing") {
-    graph.execute("CREATE (a), (b)")
+    graph.inTx(graph.execute("CREATE (a), (b)"))
 
     val config = Configs.InterpretedAndSlotted
 
@@ -215,7 +217,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if end-point is missing") {
-    graph.execute("CREATE (a), (b)")
+    graph.inTx(graph.execute("CREATE (a), (b)"))
 
     val config = Configs.InterpretedAndSlotted
 

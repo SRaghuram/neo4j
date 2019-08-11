@@ -181,18 +181,16 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should use index selectivity when planning") {
     // Given
-    graph.inTx{
-      val ls = (1 to 100).map { i =>
-        createLabeledNode(Map("l" -> i), "L")
-      }
+    val ls = (1 to 100).map { i =>
+      createLabeledNode(Map("l" -> i), "L")
+    }
 
-      val rs = (1 to 100).map { _ =>
-        createLabeledNode(Map("r" -> 23), "R")
-      }
+    val rs = (1 to 100).map { _ =>
+      createLabeledNode(Map("r" -> 23), "R")
+    }
 
-      for (l <- ls ; r <- rs) {
-        relate(l, r, "REL")
-      }
+    for (l <- ls ; r <- rs) {
+      relate(l, r, "REL")
     }
 
     // note: creating index after the nodes makes sure that we have statistics when the indexes come online
@@ -352,7 +350,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     graph.createIndex("Label1", "prop1")
     graph.createIndex("Label2", "prop2")
-    graph.execute("CREATE(:Label1 {prop1: 'val'})" )
+    graph.inTx(graph.execute("CREATE(:Label1 {prop1: 'val'})" ).close())
 
     // When
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label1:Label2) WHERE n.prop1 = 'val' OR n.prop2 = 'val' RETURN n",
@@ -384,10 +382,12 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Label2", "prop1")
     graph.createIndex("Label2", "prop2")
 
-    for( _ <- 1 to 10 ) {
-      graph.execute("CREATE(:Label1 {prop1: 'val', prop2: 'val'})" )
-      graph.execute("CREATE(:Label2 {prop1: 'val', prop2: 'val'})" )
-    }
+    inTx( _ =>
+      for (_ <- 1 to 10) {
+        graph.execute("CREATE(:Label1 {prop1: 'val', prop2: 'val'})")
+        graph.execute("CREATE(:Label2 {prop1: 'val', prop2: 'val'})")
+      }
+    )
 
     // When
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:Label1:Label2) WHERE n.prop1 = 'val' OR n.prop2 = 'val' RETURN n",

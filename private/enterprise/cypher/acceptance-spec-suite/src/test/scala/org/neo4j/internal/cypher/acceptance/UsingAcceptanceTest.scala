@@ -148,10 +148,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING INDEX' which can be fulfilled") {
     runWithConfig() {
       db =>
-        db.execute("CREATE INDEX ON :Person(name)")
-        db.execute("CALL db.awaitIndex(':Person(name)')")
-        shouldHaveNoWarnings(
-          db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+        db.inTx(db.execute("CREATE INDEX ON :Person(name)"))
+        db.inTx(db.execute("CALL db.awaitIndex(':Person(name)')"))
+        db.inTx(shouldHaveNoWarnings(
+            db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+          )
         )
     }
   }
@@ -159,52 +160,63 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should generate a warning if executing a query using a 'USING INDEX' which cannot be fulfilled") {
     runWithConfig() {
       db =>
-        shouldHaveWarning(db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n"), Status.Schema.IndexNotFound)
+        db.withTx( _ =>
+          shouldHaveWarning(db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n"), Status.Schema.IndexNotFound)
+        )
     }
   }
 
   test("should generate a warning if executing a query using a 'USING INDEX' which cannot be fulfilled, and hint errors are turned off") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> FALSE) {
       db =>
-        shouldHaveWarning(db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n"), Status.Schema.IndexNotFound)
+        db.withTx( _ =>
+          shouldHaveWarning(db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n"), Status.Schema.IndexNotFound)
+        )
     }
   }
 
   test("should generate an error if executing a query using EXPLAIN and a 'USING INDEX' which cannot be fulfilled, and hint errors are turned on") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
-        intercept[QueryExecutionException](
-          db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
-        ).getStatusCode should equal("Neo.ClientError.Schema.IndexNotFound")
+        db.inTx(
+          intercept[QueryExecutionException](
+            db.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Schema.IndexNotFound"))
     }
   }
 
   test("should generate an error if executing a query using a 'USING INDEX' which cannot be fulfilled, and hint errors are turned on") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
-        intercept[QueryExecutionException](
-          db.execute(s"MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
-        ).getStatusCode should equal("Neo.ClientError.Schema.IndexNotFound")
+        db.inTx(
+          intercept[QueryExecutionException](
+            db.execute(s"MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Schema.IndexNotFound")
+        )
     }
   }
 
   test("should generate an error if executing a query using a 'USING INDEX' for an existing index but which cannot be fulfilled for the query, and hint errors are turned on") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
-        db.execute("CREATE INDEX ON :Person(email)")
-        intercept[QueryExecutionException](
-          db.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
-        ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        db.inTx({
+          db.execute("CREATE INDEX ON :Person(email)")
+          intercept[QueryExecutionException](
+            db.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        })
     }
   }
 
   test("should generate an error if executing a query using a 'USING INDEX' for an existing index but which cannot be fulfilled for the query, even when hint errors are not turned on") {
     runWithConfig() {
       db =>
-        db.execute("CREATE INDEX ON :Person(email)")
-        intercept[QueryExecutionException](
-          db.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
-        ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        db.inTx({
+          db.execute("CREATE INDEX ON :Person(email)")
+          intercept[QueryExecutionException](
+            db.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        })
     }
   }
 
@@ -330,8 +342,10 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING SCAN'") {
     runWithConfig() {
       engine =>
-        shouldHaveNoWarnings(
-          engine.execute(s"EXPLAIN MATCH (n:Person) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
+        engine.inTx(
+          shouldHaveNoWarnings(
+            engine.execute(s"EXPLAIN MATCH (n:Person) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
+          )
         )
     }
   }
@@ -339,27 +353,29 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed if executing a query using both 'USING SCAN' and 'USING INDEX' if index exists") {
     runWithConfig() {
       engine =>
-        engine.execute("CREATE INDEX ON :Person(name)")
-        engine.execute("CALL db.awaitIndex(':Person(name)')")
-        shouldHaveNoWarnings(
-          engine.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
-        )
+        engine.inTx(engine.execute("CREATE INDEX ON :Person(name)"))
+        engine.inTx(engine.execute("CALL db.awaitIndex(':Person(name)')"))
+        engine.inTx(shouldHaveNoWarnings(
+            engine.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
+          ))
     }
   }
 
   test("should fail outright if executing a query using a 'USING SCAN' and 'USING INDEX' on the same variable, even if index exists") {
     runWithConfig() {
       engine =>
-        engine.execute("CREATE INDEX ON :Person(name)")
-        intercept[QueryExecutionException](
-          engine.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
-        ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        engine.inTx({
+          engine.execute("CREATE INDEX ON :Person(name)")
+          intercept[QueryExecutionException](
+            engine.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        })
     }
   }
 
   test("should handle join hint on the start node of a single hop pattern") {
     val initQuery = "CREATE (a:A {prop: 'foo'})-[:R]->(b:B {prop: 'bar'})"
-    graph.execute(initQuery)
+    graph.inTx(graph.execute(initQuery))
 
     val query =
       s"""
@@ -375,7 +391,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should handle join hint on the end node of a single hop pattern") {
     val initQuery = "CREATE (a:A {prop: 'foo'})-[:R]->(b:B {prop: 'bar'})"
-    graph.execute(initQuery)
+    graph.inTx(graph.execute(initQuery))
 
     val query =
       s"""
@@ -748,7 +764,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should handle multiple hints on longer pattern") {
     val initQuery = "CREATE (a:Node {prop: 'foo'})-[:R]->(b:Node {prop: 'bar'})-[:R]->(c:Node {prop: 'baz'})"
-    graph.execute(initQuery)
+    graph.inTx(graph.execute(initQuery))
     graph.createIndex("Node", "prop")
 
     val query =
@@ -787,7 +803,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
   test("should handle join hint solved multiple times") {
     val initQuery = "CREATE (a:Node)-[:R]->(b:Node)-[:R]->(c:Node), (d:Node)-[:R]->(b)-[:R]->(e:Node)"
-    graph.execute(initQuery)
+    graph.inTx(graph.execute(initQuery))
 
     val query =
       s"""MATCH (a:Node)-->(b:Node),(b)-->(c:Node),(d:Node)-->(b),(b)-->(e:Node)

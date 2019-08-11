@@ -9,6 +9,7 @@ import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -31,10 +32,10 @@ class SetConfigValueProcedureTest
     {
         Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
-        db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" );
         assertFalse( config.get( log_queries ) );
 
-        db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" );
         assertTrue( config.get( log_queries ) );
     }
 
@@ -42,7 +43,7 @@ class SetConfigValueProcedureTest
     void failIfUnknownSetting()
     {
         Throwable rootCause = Exceptions.rootCause(
-                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
+                assertThrows( RuntimeException.class, () -> executeTransactionally( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting `unknown.setting.indeed` not found", rootCause.getMessage() );
     }
@@ -51,8 +52,8 @@ class SetConfigValueProcedureTest
     void failIfStaticSetting()
     {
         // Static setting, at least for now
-        Throwable rootCause = Exceptions.rootCause(
-                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
+        Throwable rootCause = Exceptions.rootCause( assertThrows( RuntimeException.class,
+                () -> executeTransactionally( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting 'dbms.directories.plugins' is not dynamic and can not be changed at runtime", rootCause.getMessage() );
     }
@@ -61,8 +62,17 @@ class SetConfigValueProcedureTest
     void failIfInvalidValue()
     {
         Throwable rootCause = Exceptions.rootCause(
-                assertThrows( RuntimeException.class, () -> db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
+                assertThrows( RuntimeException.class, () -> executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "'invalid' is not a valid boolean value, must be 'true' or 'false'", rootCause.getMessage() );
+    }
+
+    private void executeTransactionally( String query )
+    {
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( query );
+            transaction.commit();
+        }
     }
 }

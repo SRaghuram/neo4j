@@ -231,7 +231,6 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   override protected def initTest(): Unit = {
     super.initTest()
-    graph.inTx {
       val nodes: Seq[IndexedSeq[Node]] =
         for (i <- 1 to NUM_LAYERS) yield {
           for (j <- 1 to NODES_PER_LAYER) yield {
@@ -248,7 +247,6 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
         } {
           relate(n1, n2, s"T$i", Map("p"+i -> i))
         }
-      }
     }
   }
 
@@ -298,8 +296,10 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   private def assertQuery(query: String) = {
     runWithTimeout(TIMEOUT_MS) {
       //this is an optimization just so that we only compare results when we have to
-      val runtimeUsed = graph.execute(s"EXPLAIN CYPHER runtime=compiled $query")
-        .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
+      val runtimeUsed = graph.withTx { _ =>
+          graph.execute(s"EXPLAIN CYPHER runtime=compiled $query")
+            .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
+        }
       if (runtimeUsed == "COMPILED") {
         // We resort to using internals of CypherComparisonSupport,
         // since with randomized patterns we cannot know at compile time, for which

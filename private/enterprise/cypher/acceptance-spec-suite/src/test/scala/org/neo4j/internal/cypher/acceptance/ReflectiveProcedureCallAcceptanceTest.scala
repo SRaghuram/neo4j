@@ -51,10 +51,12 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should close resources on failure") {
     val counters = setUpProcedures()
 
-    val caught = intercept[QueryExecutionException] {
-      val result = graph.execute(defaultQuery)
-      result.resultAsString()
-    }
+    val caught = graph.inTx({
+      intercept[QueryExecutionException] {
+        val result = graph.execute(defaultQuery)
+        result.resultAsString()
+      }
+    })
     val rootCause = ExceptionUtils.getRootCause(caught)
     rootCause shouldBe a[SimulateFailureException]
 
@@ -153,10 +155,12 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
          |RETURN line, v1, ok
          |""".stripMargin
 
-    val caught = intercept[QueryExecutionException] {
-      val result = graph.execute(periodicCommitQuery)
-      result.resultAsString()
-    }
+    val caught = graph.inTx({
+      intercept[QueryExecutionException] {
+        val result = graph.execute(periodicCommitQuery)
+        result.resultAsString()
+      }
+    })
     val rootCause = ExceptionUtils.getRootCause(caught)
     rootCause shouldBe a[SimulateFailureException]
 

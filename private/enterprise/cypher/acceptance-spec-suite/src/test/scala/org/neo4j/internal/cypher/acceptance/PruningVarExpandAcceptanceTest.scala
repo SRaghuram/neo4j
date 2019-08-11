@@ -12,7 +12,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should handle query with no predicate") {
     // Given the graph:
-    graph.execute("""UNWIND range(1,1000) AS index
+    executeSingle("""UNWIND range(1,1000) AS index
                     |CREATE (:Scaffold)-[:REL]->()-[:REL]->(:Molecule)""".stripMargin)
 
     // When
@@ -26,7 +26,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should handle query with predicates") {
     // Given the graph:
-    graph.execute("""UNWIND range(1,1000) AS index
+    executeSingle("""UNWIND range(1,1000) AS index
                     |CREATE (:Scaffold)-[:REL {prop:index}]->()-[:REL {prop: index}]->(:Molecule)""".stripMargin)
 
     // When

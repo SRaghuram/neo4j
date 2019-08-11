@@ -143,16 +143,15 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                             executeBefore: Option[String],
                             enterprise: Boolean): RewindableExecutionResult = {
     val explicitTx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
-    val implicitTx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
     try {
       executeBefore match {
         case None =>
         case Some(setupQuery) =>
           val setupBS = queryToParsingBaseState(setupQuery, enterprise)
           val setupStm = setupBS.statement()
-          executeInTx(setupQuery, setupStm, setupBS, implicitTx, enterprise)
+          executeInTx(setupQuery, setupStm, setupBS, explicitTx, enterprise)
       }
-      executeInTx(query, statement, parsingBaseState, implicitTx, enterprise)
+      executeInTx(query, statement, parsingBaseState, explicitTx, enterprise)
     } finally {
       explicitTx.rollback()
     }

@@ -142,7 +142,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   private def given() {
-    graph.execute(
+    graph.inTx(graph.execute(
       """CREATE (architect:Matrix { name:'The Architect' }),
         |       (smith:Matrix { name:'Agent Smith' }),
         |       (cypher:Matrix:Crew { name:'Cypher' }),
@@ -154,7 +154,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
         |       (morpheus)-[:KNOWS]->(trinity),
         |       (morpheus)-[:KNOWS]->(cypher),
         |       (neo)-[:KNOWS]->(morpheus),
-        |       (neo)-[:LOVES]->(trinity)""".stripMargin)
+        |       (neo)-[:LOVES]->(trinity)""".stripMargin))
 
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Joe" + i)), "Crew")
 

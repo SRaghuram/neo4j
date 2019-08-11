@@ -20,7 +20,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not CREATE relationship if start-point is missing") {
-    graph.execute("CREATE (a), (b)")
+    graph.inTx(graph.execute("CREATE (a), (b)"))
 
 
     val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
@@ -34,7 +34,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not CREATE relationship if end-point is missing") {
-    graph.execute("CREATE (a), (b)")
+    graph.inTx(graph.execute("CREATE (a), (b)"))
 
     val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
                                        |WHERE id(a)=0 AND id(b)=1

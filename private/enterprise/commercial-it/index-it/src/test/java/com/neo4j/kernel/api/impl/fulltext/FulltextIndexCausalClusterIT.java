@@ -303,22 +303,26 @@ class FulltextIndexCausalClusterIT
 
     private void verifyIndexContents( GraphDatabaseService db, String index, String queryString, long[] entityIds, boolean queryNodes ) throws Exception
     {
-        List<Long> expected = Arrays.stream( entityIds ).boxed().collect( Collectors.toList() );
-        String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
-        try ( Result result = db.execute( format( queryCall, index, queryString ) ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            Set<Long> results = new HashSet<>();
-            while ( result.hasNext() )
+            List<Long> expected = Arrays.stream( entityIds ).boxed().collect( Collectors.toList() );
+            String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
+            try ( Result result = db.execute( format( queryCall, index, queryString ) ) )
             {
-                results.add( ((Entity) result.next().get( queryNodes ? NODE : RELATIONSHIP )).getId() );
+                Set<Long> results = new HashSet<>();
+                while ( result.hasNext() )
+                {
+                    results.add( ((Entity) result.next().get( queryNodes ? NODE : RELATIONSHIP )).getId() );
+                }
+                String errorMessage = errorMessage( results, expected ) + " (" + db + ", leader is " + cluster.awaitLeader() + ") query = " + queryString;
+                assertEquals( expected.size(), results.size(), errorMessage );
+                int i = 0;
+                while ( !results.isEmpty() )
+                {
+                    assertTrue( results.remove( expected.get( i++ ) ), errorMessage );
+                }
             }
-            String errorMessage = errorMessage( results, expected ) + " (" + db + ", leader is " + cluster.awaitLeader() + ") query = " + queryString;
-            assertEquals( expected.size(), results.size(), errorMessage );
-            int i = 0;
-            while ( !results.isEmpty() )
-            {
-                assertTrue( results.remove( expected.get( i++ ) ), errorMessage );
-            }
+            transaction.commit();
         }
     }
 

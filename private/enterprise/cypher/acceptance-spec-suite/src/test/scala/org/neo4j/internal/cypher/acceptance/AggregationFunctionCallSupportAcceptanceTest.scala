@@ -19,9 +19,9 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("my.first.value()", value)
-    ))
+    )))
   }
 
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {
@@ -32,9 +32,9 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should return correctly typed stream result (even if converting to and from scala representation internally)") {
@@ -46,9 +46,9 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(stream)
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should not copy lists unnecessarily") {
@@ -59,7 +59,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    val returned = graph.inTx(graph.execute("RETURN my.first.value() AS out").next().get("out"))
 
     returned shouldBe an [util.ArrayList[_]]
     returned shouldBe value
@@ -74,7 +74,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    val returned = graph.inTx(graph.execute("RETURN my.first.value() AS out").next().get("out"))
 
     returned shouldBe an [util.ArrayList[_]]
     returned shouldBe value
@@ -88,8 +88,8 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value, Neo4jTypes.NTList(Neo4jTypes.NTInteger))
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
-      .next().get("out")
+    val returned = graph.inTx(graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
+      .next().get("out"))
 
     returned should equal(4)
   }

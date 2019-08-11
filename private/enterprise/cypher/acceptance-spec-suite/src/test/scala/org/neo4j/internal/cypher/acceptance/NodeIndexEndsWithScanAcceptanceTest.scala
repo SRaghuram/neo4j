@@ -17,13 +17,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should be case sensitive for ENDS WITH with indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createIndex("Location", "name")
@@ -39,13 +37,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should be case sensitive for ENDS WITH with unique indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createUniqueConstraint("Location", "name")
@@ -61,13 +57,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should be case sensitive for ENDS WITH with multiple indexes and predicates") {
     val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
     createLabeledNode(Map("name" -> "LONDON", "country" -> "UK"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
     }
 
     graph.createIndex("Location", "name")
@@ -84,13 +78,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should not use endsWith index scan with multiple indexes and predicates where other index is more selective") {
     val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
     createLabeledNode(Map("name" -> "LONDON", "country" -> "UK"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 1000).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 1000).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createIndex("Location", "name")
@@ -107,13 +99,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should use endsWith index with multiple indexes and predicates where other index is more selective but we add index hint") {
     val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
     createLabeledNode(Map("name" -> "LONDON", "country" -> "UK"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createIndex("Location", "name")
@@ -131,13 +121,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("should return nothing when invoked with a null value") {
     createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+       createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createUniqueConstraint("Location", "name")
@@ -154,13 +142,11 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
   test("throws appropriate type error") {
     createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
     }
 
     graph.createUniqueConstraint("Location", "name")

@@ -583,10 +583,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   // Non-deterministic -- requires new TCK design
   test("should only evaluate non-deterministic predicates after pattern is matched") {
     // given
-    graph.inTx {
-      (0 to 100) foreach {
-        x => createNode()
-      }
+    (0 to 100) foreach {
+      x => createNode()
     }
 
     // when
@@ -732,26 +730,28 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(a, b)
     }
     //TODO move to LernaeanTestSupport
-    val resultNoAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a SKIP 0 MATCH (a)-[]->(b:B) return a, b")
-    resultNoAlias.asScala.toList.size should equal(11)
-    val resultWithAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a as n SKIP 0 MATCH (n)-[]->(b:B) return n, b")
-    resultWithAlias.asScala.toList.size should equal(11)
+    graph.inTx({
+      val resultNoAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a SKIP 0 MATCH (a)-[]->(b:B) return a, b")
+      resultNoAlias.asScala.toList.size should equal(11)
+      val resultWithAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a as n SKIP 0 MATCH (n)-[]->(b:B) return n, b")
+      resultWithAlias.asScala.toList.size should equal(11)
 
-    var descriptionNoAlias = resultNoAlias.getExecutionPlanDescription
-    var descriptionWithAlias = resultWithAlias.getExecutionPlanDescription
-    descriptionWithAlias.getArguments.get("EstimatedRows") should equal(
-      descriptionNoAlias.getArguments.get("EstimatedRows"))
-    while (descriptionWithAlias.getChildren.isEmpty) {
-      descriptionWithAlias = single(descriptionWithAlias.getChildren.iterator())
-      if (descriptionWithAlias.getName != "Projection") {
-        descriptionNoAlias = single(descriptionNoAlias.getChildren.iterator())
-        descriptionWithAlias.getArguments.get("EstimatedRows") should equal(
-          descriptionNoAlias.getArguments.get("EstimatedRows"))
+      var descriptionNoAlias = resultNoAlias.getExecutionPlanDescription
+      var descriptionWithAlias = resultWithAlias.getExecutionPlanDescription
+      descriptionWithAlias.getArguments.get("EstimatedRows") should equal(
+        descriptionNoAlias.getArguments.get("EstimatedRows"))
+      while (descriptionWithAlias.getChildren.isEmpty) {
+        descriptionWithAlias = single(descriptionWithAlias.getChildren.iterator())
+        if (descriptionWithAlias.getName != "Projection") {
+          descriptionNoAlias = single(descriptionNoAlias.getChildren.iterator())
+          descriptionWithAlias.getArguments.get("EstimatedRows") should equal(
+            descriptionNoAlias.getArguments.get("EstimatedRows"))
+        }
       }
-    }
 
-    resultNoAlias.close()
-    resultWithAlias.close()
+      resultNoAlias.close()
+      resultWithAlias.close()
+    })
   }
 
   test("should handle unwind on a list of nodes in both runtimes") {

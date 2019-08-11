@@ -23,7 +23,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |  CREATE (n)-[:SELF]->(b))""".stripMargin
 
     // should work
-    executeOfficial(query)
+    inTx( _ => executeOfficial(query))
   }
 
   test("nested foreach") {
@@ -199,7 +199,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
   }
 
   test("should handle building FOREACH on pattern comprehension") {
-    graph.execute("CREATE (:X)-[:T]->(), (:X)")
+    executeSingle("CREATE (:X)-[:T]->(), (:X)")
 
     val result = executeWith(
       expectSucceed = Configs.InterpretedAndSlotted,

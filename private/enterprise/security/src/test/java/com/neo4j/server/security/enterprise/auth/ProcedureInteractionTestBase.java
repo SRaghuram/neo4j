@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -197,17 +196,13 @@ public abstract class ProcedureInteractionTestBase<S>
 
     private void setupTokensAndNodes()
     {
-        try ( Transaction tx = neo.getLocalGraph().beginTx( 1, TimeUnit.HOURS ) )
-        {
-            // Note: the intention of this query is to seed the token store with labels and property keys
-            // that an editor should be allowed to use.
-            assertEmpty( schemaSubject, "CREATE (n) SET n:A:Test:NEWNODE:VeryUniqueLabel:Node " +
-                    "SET n.id = '2', n.square = '4', n.name = 'me', n.prop = 'a', n.number = '1' " +
-                    "DELETE n" );
+        // Note: the intention of this query is to seed the token store with labels and property keys
+        // that an editor should be allowed to use.
+        assertEmpty( schemaSubject, "CREATE (n) SET n:A:Test:NEWNODE:VeryUniqueLabel:Node " +
+                "SET n.id = '2', n.square = '4', n.name = 'me', n.prop = 'a', n.number = '1' " +
+                "DELETE n" );
 
-            assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
-            tx.commit();
-        }
+        assertEmpty( writeSubject, "UNWIND range(0,2) AS number CREATE (:Node {number:number, name:'node'+number})" );
     }
 
     protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<Setting<?>,String> config ) throws Throwable;

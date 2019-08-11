@@ -211,13 +211,11 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
   private def executeOnDbWithInitialNumberOfNodes(f: () => Any,
                                                   config: InitialNumberOfNodes,
                                                   indexedLabels: List[String] = List.empty): Unit = {
-    graph.inTx {
-      (1 to config.nodesWithoutLabel).foreach { _ => createNode() }
-      (1 to config.aNodesWithoutProp).foreach { _ => createLabeledNode("A") }
-      (1 to config.bNodesWithoutProp).foreach { _ => createLabeledNode("B") }
-      (1 to config.aNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> i), "A") }
-      (1 to config.bNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> (i + 10000)), "B") }
-    }
+    (1 to config.nodesWithoutLabel).foreach { _ => createNode() }
+    (1 to config.aNodesWithoutProp).foreach { _ => createLabeledNode("A") }
+    (1 to config.bNodesWithoutProp).foreach { _ => createLabeledNode("B") }
+    (1 to config.aNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> i), "A") }
+    (1 to config.bNodesWithProp).foreach { i => createLabeledNode(Map("prop" -> (i + 10000)), "B") }
 
     resampleIndexes()
 
@@ -234,7 +232,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     val missesAfter = missCounter.count
     missesAfter should be > missesBefore
 
-    deleteAllEntities()
+    graph.inTx(deleteAllEntities())
   }
 
   class MissCounter() extends StringCacheMonitor {

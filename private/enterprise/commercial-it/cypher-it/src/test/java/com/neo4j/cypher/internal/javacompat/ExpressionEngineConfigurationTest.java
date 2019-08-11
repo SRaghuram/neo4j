@@ -13,13 +13,12 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.Matchers.anyOf;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class ExpressionEngineConfigurationTest
 {
@@ -67,9 +66,12 @@ class ExpressionEngineConfigurationTest
         GraphDatabaseService db = withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.ONLY_WHEN_HOT, 3 );
 
         // When
-        db.execute( query );
-        db.execute( query );
-        db.execute( query );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( query );
+            db.execute( query );
+            db.execute( query );
+        }
 
         // Then
         assertUsingCompiled( db, query );
@@ -103,7 +105,10 @@ class ExpressionEngineConfigurationTest
         GraphDatabaseService db = withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.INTERPRETED, 0 );
 
         // When
-        db.execute( query );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( query );
+        }
 
         // Then
         assertUsingCompiled( db, "CYPHER expressionEngine=COMPILED " + query );
@@ -124,7 +129,11 @@ class ExpressionEngineConfigurationTest
     private void assertUsingCompiled( GraphDatabaseService db, String query )
     {
         logProvider.clear();
-        db.execute( query ).resultAsString();
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( query ).resultAsString();
+            transaction.commit();
+        }
 
         logProvider.assertAtLeastOnce(
                 AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )
@@ -137,7 +146,11 @@ class ExpressionEngineConfigurationTest
     private void assertNotUsingCompiled( GraphDatabaseService db, String query )
     {
         logProvider.clear();
-        db.execute( query ).resultAsString();
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( query ).resultAsString();
+            transaction.commit();
+        }
 
         logProvider.assertNone(
                 AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )

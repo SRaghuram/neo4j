@@ -6,9 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.ResourceIterator
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.scalacheck.{Gen, Shrink}
 
 /*
@@ -30,16 +30,18 @@ class SemanticMergeAcceptanceTest
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.execute(s"MERGE $patternString")
+          graph.inTx(graph.execute(s"MERGE $patternString").close())
 
           //find created pattern (cannot return * since everything might be unnamed)
-          val result1 = graph.execute(s"MATCH $patternString RETURN 42")
-          hasSingleRow(result1)
-          val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
-          hasSingleRow(result2)
+          graph.inTx({
+            val result1 = graph.execute(s"MATCH $patternString RETURN 42")
+            hasSingleRow(result1)
+            val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
+            hasSingleRow(result2)
+          })
 
           //clean up
-          graph.execute(s"MATCH (n) DETACH DELETE n")
+          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n"))
         }
       }
     }
@@ -54,15 +56,17 @@ class SemanticMergeAcceptanceTest
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.execute(s"CREATE $patternString")
+          graph.inTx(graph.execute(s"CREATE $patternString"))
 
           //find created pattern (cannot return * since everything might be unnamed)
-          val result = RewindableExecutionResult(graph.execute(s"MERGE $patternString RETURN 42"))
-          result.toList should have size 1
-          assertStats(result, nodesCreated = 0)
+          graph.inTx({
+            val result = RewindableExecutionResult(graph.execute(s"MERGE $patternString RETURN 42"))
+            result.toList should have size 1
+            assertStats(result, nodesCreated = 0)
+          })
 
           //clean up
-          graph.execute(s"MATCH (n) DETACH DELETE n")
+          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n"))
         }
       }
     }

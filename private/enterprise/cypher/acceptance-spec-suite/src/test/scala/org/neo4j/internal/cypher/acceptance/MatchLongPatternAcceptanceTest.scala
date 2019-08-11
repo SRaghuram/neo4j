@@ -236,7 +236,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       text + s"-[r$index]->(n$index)"
     } + " RETURN p"
 
-  private def makeLargeMatrixDataset(size: Int): Unit = graph.inTx {
+  private def makeLargeMatrixDataset(size: Int): Unit = {
     val nodes = (for (
       a <- 0 to size;
       b <- 0 to size
@@ -253,7 +253,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
     }
   }
 
-  private def makeStarDataset(size: Int): Unit = graph.inTx {
+  private def makeStarDataset(size: Int): Unit = {
     val center = createLabeledNode("Center")
 
     for (i <- 1 to size) {

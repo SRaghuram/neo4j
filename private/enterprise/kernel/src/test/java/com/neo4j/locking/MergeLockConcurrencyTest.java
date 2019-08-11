@@ -67,9 +67,13 @@ public class MergeLockConcurrencyTest
     private void withConstraint( ThrowingFunction<CyclicBarrier,Node,Exception> action ) throws Exception
     {
         // given
-        db.execute( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
+            transaction.commit();
+        }
         CyclicBarrier barrier = new CyclicBarrier( 2 );
-        Node node = mergeNode();
+        Node node = createMergeNode();
 
         // when
         List<Node> result = await( threads.multiple( barrier.getParties(), action, barrier ) );
@@ -78,6 +82,17 @@ public class MergeLockConcurrencyTest
         assertEquals( "size of result", 2, result.size() );
         assertEquals( node, result.get( 0 ) );
         assertEquals( node, result.get( 1 ) );
+    }
+
+    private Node createMergeNode()
+    {
+        Node node;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            node = mergeNode();
+            transaction.commit();
+        }
+        return node;
     }
 
     private ThrowingFunction<CyclicBarrier,Node,Exception> mergeThen(

@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -75,18 +76,26 @@ class PrepareStoreCopyFilesIT
 
     private static void createSchemaAndData( GraphDatabaseService db )
     {
-        db.execute( "CREATE INDEX ON :Person(id)" ).close();
-        db.execute( "CALL db.createIndex(':Person(name)', $provider)", Map.of( "provider", NATIVE30.providerName() ) ).close();
-        db.execute( "CALL db.index.fulltext.createNodeIndex('nameAndTitle', ['Person'], ['name', 'title'])" ).close();
-        db.execute( "CALL db.index.fulltext.createRelationshipIndex('description', ['KNOWS'], ['description'])" ).close();
-        db.execute( "CALL db.awaitIndexes(60)" ).close();
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( "CREATE INDEX ON :Person(id)" ).close();
+            db.execute( "CALL db.createIndex(':Person(name)', $provider)", Map.of( "provider", NATIVE30.providerName() ) ).close();
+            db.execute( "CALL db.index.fulltext.createNodeIndex('nameAndTitle', ['Person'], ['name', 'title'])" ).close();
+            db.execute( "CALL db.index.fulltext.createRelationshipIndex('description', ['KNOWS'], ['description'])" ).close();
+            transaction.commit();
+        }
+        try ( Transaction transaction = db.beginTx() )
+        {
+            db.execute( "CALL db.awaitIndexes(60)" ).close();
 
-        db.execute( "UNWIND range(1, 100) AS x " +
+            db.execute( "UNWIND range(1, 100) AS x " +
                     "WITH x AS x, x + 1 AS y " +
                     "CREATE (p1:Person {id: x, name: 'name-' + x, title: 'title-' + x})," +
                     "       (p2:Person {id: y, name: 'name-' + y, title: 'title-' + y})," +
                     "       (p1)-[:KNOWS {description: 'description-' + x + '-' + y}]->(p2)" ).close();
 
-        db.execute( "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()" ).close();
+            db.execute( "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()" ).close();
+            transaction.commit();
+        }
     }
 }

@@ -80,9 +80,12 @@ class ClusterOverviewProcedureIT
     private static List<Map<String,Object>> invokeClusterOverviewProcedure( ClusterMember member )
     {
         var db = member.defaultDatabase();
-        try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+        try ( var transaction = db.beginTx() )
         {
-            return asList( result );
+            try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+            {
+                return asList( result );
+            }
         }
     }
 

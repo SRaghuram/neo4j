@@ -47,7 +47,7 @@ class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   private def setupModel(): Unit = {
-    graph.execute(
+    executeSingle(
       """
         |MERGE (p1:Pixie {fname:'Charles'})
         |MERGE (p2:Pixie {fname:'Kim'})

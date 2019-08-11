@@ -21,7 +21,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    createSomeNodes()
+    graph.inTx(createSomeNodes())
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop1", "prop2")

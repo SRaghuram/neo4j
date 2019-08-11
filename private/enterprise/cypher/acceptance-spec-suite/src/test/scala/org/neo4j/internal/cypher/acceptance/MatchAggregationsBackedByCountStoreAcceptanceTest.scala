@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryPlanTestSupport, QueryStatisticsTestSupport}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
-import org.scalatest.Assertion
 
 class MatchAggregationsBackedByCountStoreAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with QueryPlanTestSupport {
@@ -508,7 +507,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
   }
 
   test("should work even when the tokens are already known") {
-    graph.execute(
+    executeSingle(
       s"""
          |CREATE (p:User {name: 'Petra'})
          |CREATE (s:User {name: 'Steve'})
@@ -627,7 +626,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
   private def setupBigModel(label1: String = "User",
                     label2: String = "User",
                     type1: String = "KNOWS"): Unit = {
-    graph.execute(
+    executeSingle(
       s"""
          |CREATE (m:X {name: 'Mats'})
          |CREATE (p:$label1 {name: 'Petra'})

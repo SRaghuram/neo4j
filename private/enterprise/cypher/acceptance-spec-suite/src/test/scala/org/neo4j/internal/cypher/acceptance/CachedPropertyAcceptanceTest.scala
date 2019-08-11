@@ -93,10 +93,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should cache a node property on existence check - if it exists") {
     var n1: Node = null
     var n2: Node = null
-    graph.inTx {
-      n1 = createNode()
-      n2 = createNode(Map("foo" -> 2))
-    }
+    n1 = createNode()
+    n2 = createNode(Map("foo" -> 2))
 
     val res = executeWith(Configs.CachedProperty, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
@@ -117,10 +115,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should cache a relationship property on existence check - if it exists") {
     var r1: Relationship = null
     var r2: Relationship = null
-    graph.inTx {
-      r1 = relate(createNode(), createNode())
-      r2 = relate(createNode(), createNode(), "foo" -> 1)
-    }
+    r1 = relate(createNode(), createNode())
+    r2 = relate(createNode(), createNode(), "foo" -> 1)
 
     val res = executeWith(Configs.CachedProperty, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
@@ -143,19 +139,18 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     var n2: Node = null
     var n3: Node = null
     var n4: Node = null
-    graph.inTx {
-      n1 = createNode()
-      n2 = createNode()
-      n3 = createNode(Map("foo" -> 3))
-      n4 = createNode(Map("foo" -> 4))
-    }
+    n1 = createNode()
+    n2 = createNode()
+    n3 = createNode(Map("foo" -> 3))
+    n4 = createNode(Map("foo" -> 4))
 
     val res = executeWith(Configs.CachedProperty, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
       executeBefore = () => {
         n2.setProperty("foo", 2)
         n3.removeProperty("foo")
-        createNode()
-        createNode(Map("foo" -> 5))
+        graph.createNode()
+        val node = graphOps.createNode()
+        node.setProperty("foo", 5);
       })
 
     res.executionPlanDescription() should includeSomewhere.
@@ -174,19 +169,17 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     var r2: Relationship = null
     var r3: Relationship = null
     var r4: Relationship = null
-    graph.inTx {
-      r1 = relate(createNode(), createNode())
-      r2 = relate(createNode(), createNode())
-      r3 = relate(createNode(), createNode(), "foo" -> 1)
-      r4 = relate(createNode(), createNode(), "foo" -> 4)
-    }
+    r1 = relate(createNode(), createNode())
+    r2 = relate(createNode(), createNode())
+    r3 = relate(createNode(), createNode(), "foo" -> 1)
+    r4 = relate(createNode(), createNode(), "foo" -> 4)
 
     val res = executeWith(Configs.CachedProperty, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
       executeBefore = () => {
         r2.setProperty("foo", 2)
         r3.removeProperty("foo")
-        relate(createNode(), createNode())
-        relate(createNode(), createNode(), "foo" -> 5)
+        graph.createNode().createRelationshipTo(graph.createNode(), REL)
+        graph.createNode().createRelationshipTo(graph.createNode(), REL).setProperty("foo", 5)
       })
 
     res.executionPlanDescription() should includeSomewhere.

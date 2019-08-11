@@ -6,6 +6,7 @@
 package com.neo4j.procedure;
 
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,78 +146,106 @@ public class ProcedureIT
     @Test
     void shouldCallProcedureWithDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "someVal", 42L ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "someVal", 42L ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallYieldProcedureWithDefaultArgument()
     {
-        // Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault() YIELD someVal as n RETURN n + 1295 as val" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault() YIELD someVal as n RETURN n + 1295 as val" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "val", 1337L ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "val", 1337L ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallProcedureWithAllDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.defaultValues" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.defaultValues" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "string", "a string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "string", "a string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallProcedureWithOneProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string')" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string')" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "string", "another string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallProcedureWithTwoProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337)" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 3.14, "aBoolean", true ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallProcedureWithThreeProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828)" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", true ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", true ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallProcedureWithFourProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false)" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", false ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", false ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -528,28 +557,39 @@ public class ProcedureIT
     @Test
     void shouldCallProcedureReturningNull()
     {
-        Result res = db.execute( "CALL com.neo4j.procedure.node(-1)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result res = db.execute( "CALL com.neo4j.procedure.node(-1)" );
 
-        assertThat( res.next().get( "node" ), nullValue() );
-        assertFalse( res.hasNext() );
+            assertThat( res.next().get( "node" ), nullValue() );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallYieldProcedureReturningNull()
     {
-        Result res = db.execute( "CALL com.neo4j.procedure.node(-1) YIELD node as node RETURN node" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result res = db.execute( "CALL com.neo4j.procedure.node(-1) YIELD node as node RETURN node" );
 
-        assertThat( res.next().get( "node" ), nullValue() );
-        assertFalse( res.hasNext() );
+            assertThat( res.next().get( "node" ), nullValue() );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldGiveHelpfulErrorOnMissingProcedure()
     {
-        QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL someProcedureThatDoesNotExist" ) );
-        assertThat( exception.getMessage(), equalTo( "There is no procedure with the name `someProcedureThatDoesNotExist` " +
-                "registered for this database instance. Please ensure you've spelled the " +
-                "procedure name correctly and that the procedure is properly deployed." ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL someProcedureThatDoesNotExist" ) );
+            assertThat( exception.getMessage(), equalTo( "There is no procedure with the name `someProcedureThatDoesNotExist` " +
+                    "registered for this database instance. Please ensure you've spelled the " +
+                    "procedure name correctly and that the procedure is properly deployed." ) );
+        }
     }
 
     @Test
@@ -966,12 +1006,17 @@ public class ProcedureIT
         // given
         Runnable doIt = () ->
         {
-            Result result = db.execute( "CALL com.neo4j.procedure.supportedProcedure()" );
-            while ( result.hasNext() )
+            try ( Transaction transaction = db.beginTx() )
             {
-                result.next();
+                try ( Result result = db.execute( "CALL com.neo4j.procedure.supportedProcedure()" ) )
+                {
+                    while ( result.hasNext() )
+                    {
+                        result.next();
+                    }
+                }
+                transaction.commit();
             }
-            result.close();
         };
 
         int numThreads = 10;
@@ -992,18 +1037,23 @@ public class ProcedureIT
             threads[i].join();
         }
 
-        Result result = db.execute( "MATCH () RETURN count(*) as n" );
-        assertThat( result.hasNext(), equalTo( true ) );
-        while ( result.hasNext() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( result.next().get( "n" ), equalTo( (long) numThreads ) );
+            try ( Result result = db.execute( "MATCH () RETURN count(*) as n" ) )
+            {
+                assertThat( result.hasNext(), equalTo( true ) );
+                while ( result.hasNext() )
+                {
+                    assertThat( result.next().get( "n" ), equalTo( (long) numThreads ) );
+                }
+            }
+            transaction.commit();
         }
-        result.close();
         assertThat( "Should be no exceptions in procedures", exceptionsInProcedure.isEmpty(), equalTo( true ) );
     }
 
     @Test
-    void shouldBeAbleToUseCallYieldWithPeriodicCommit() throws IOException
+    void shouldBeAbleToUseCallYieldWithPeriodicCommit() throws Exception
     {
         // GIVEN
         String[] lines = IntStream.rangeClosed( 1, 100 )
@@ -1013,20 +1063,22 @@ public class ProcedureIT
         String url = createCsvFile( lines);
 
         //WHEN
-        Result result = db.execute( "USING PERIODIC COMMIT 1 " +
-                "LOAD CSV FROM '" + url + "' AS line " +
-                "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
-                "RETURN n.prop" );
-        // THEN
-        for ( int i = 1; i <= 100; i++ )
-        {
-            assertThat( result.next().get( "n.prop" ), equalTo( Integer.toString( i ) ) );
-        }
-        result.close();
+        MutableInt counter = new MutableInt( 1 );
+        db.executeTransactionally(
+                "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " + "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
+                        "RETURN n.prop", (Result.ResultVisitor<Exception>) row ->
+                {
+                    assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
+                    return true;
+                } );
+        assertEquals( 101, counter.getValue() );
 
-        //Make sure all the lines has been properly commited to the database.
-        String[] dbContents = db.execute( "MATCH (n) return n.prop" ).stream().map( m -> (String) m.get( "n.prop" ) ).toArray( String[]::new );
-        assertThat( dbContents, equalTo( lines ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Make sure all the lines has been properly commited to the database.
+            String[] dbContents = db.execute( "MATCH (n) return n.prop" ).stream().map( m -> (String) m.get( "n.prop" ) ).toArray( String[]::new );
+            assertThat( dbContents, equalTo( lines ) );
+        }
     }
 
     @Test
@@ -1034,10 +1086,13 @@ public class ProcedureIT
     {
         String url = createCsvFile( "13" );
 
-        QueryExecutionException exception = assertThrows( QueryExecutionException.class,
-                () -> db.execute( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
-                        "CALL com.neo4j.procedure.simpleArgument(toInteger(line[0])) YIELD someVal as val " + "RETURN val" ) );
-        assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute(
+                    "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
+                            "CALL com.neo4j.procedure.simpleArgument(toInteger(line[0])) YIELD someVal as val " + "RETURN val" ) );
+            assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+        }
     }
 
     @Test
@@ -1046,11 +1101,15 @@ public class ProcedureIT
         // GIVEN
         String url = createCsvFile( "foo" );
 
-        //WHEN
-        Result result =
-                db.execute( "LOAD CSV FROM '" + url + "' AS line CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n SET n.p = 42 RETURN n.p" );
-        // THEN
-        assertThat( result.next().get( "n.p" ), equalTo( 42L ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //WHEN
+            Result result =
+                    db.execute( "LOAD CSV FROM '" + url + "' AS line CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n SET n.p = 42 RETURN n.p" );
+            // THEN
+            assertThat( result.next().get( "n.p" ), equalTo( 42L ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -1081,34 +1140,40 @@ public class ProcedureIT
     @Test
     void shouldCallStreamCloseWhenResultExhausted()
     {
-        String query = "CALL com.neo4j.procedure.onCloseProcedure(0)";
+        try ( Transaction transaction = db.beginTx() )
+        {
+            String query = "CALL com.neo4j.procedure.onCloseProcedure(0)";
 
-        Result res = db.execute( query );
+            Result res = db.execute( query );
 
-        assertTrue( res.hasNext() );
-        res.next();
+            assertTrue( res.hasNext() );
+            res.next();
 
-        assertFalse( onCloseCalled[0] );
+            assertFalse( onCloseCalled[0] );
 
-        assertTrue( res.hasNext() );
-        res.next();
+            assertTrue( res.hasNext() );
+            res.next();
 
-        assertTrue( onCloseCalled[0] );
+            assertTrue( onCloseCalled[0] );
+        }
     }
 
     @Test
     void shouldCallStreamCloseWhenResultFiltered()
     {
-        // This query should return zero rows
-        String query = "CALL com.neo4j.procedure.onCloseProcedure(1) YIELD someVal WITH someVal WHERE someVal = 1337 RETURN someVal";
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // This query should return zero rows
+            String query = "CALL com.neo4j.procedure.onCloseProcedure(1) YIELD someVal WITH someVal WHERE someVal = 1337 RETURN someVal";
 
-        Result res = db.execute( query );
+            Result res = db.execute( query );
 
-        assertFalse( onCloseCalled[1] );
+            assertFalse( onCloseCalled[1] );
 
-        assertFalse( res.hasNext() );
+            assertFalse( res.hasNext() );
 
-        assertTrue( onCloseCalled[1] );
+            assertTrue( onCloseCalled[1] );
+        }
     }
 
     private String createCsvFile( String... lines ) throws IOException
@@ -1129,13 +1194,17 @@ public class ProcedureIT
     @Test
     void shouldReturnNodeListTypedAsNodeList()
     {
-        // When
-        Result res = db.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN [ x IN nodes | id(x) ] as ids" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result res = db.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN [ x IN nodes | id(x) ] as ids" );
 
-        // Then
-        assertTrue( res.hasNext() );
-        assertThat( ((List<?>) res.next().get( "ids" )).size(), equalTo( 2 ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertTrue( res.hasNext() );
+            assertThat( ((List<?>) res.next().get( "ids" )).size(), equalTo( 2 ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -1225,67 +1294,92 @@ public class ProcedureIT
     @Test
     void shouldCallProcedureWithDefaultNodeArgument()
     {
-        //Given/When
-        Result res = db.execute( "CALL com.neo4j.procedure.nodeWithDefault" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL com.neo4j.procedure.nodeWithDefault" );
 
-        // Then
-        assertThat( res.next(), equalTo( map( "node", null ) ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next(), equalTo( map( "node", null ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldIndicateDefaultValueWhenListingProcedures()
     {
-        // Given/When
-        List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
-                record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDefault" ) ).collect( Collectors.toList() );
-        // Then
-        assertFalse( results.isEmpty(), "Expected to find test procedure" );
-        assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.nodeWithDefault(node = null :: NODE?) :: (node :: NODE?)" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
+                    record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDefault" ) ).collect( Collectors.toList() );
+            // Then
+            assertFalse( results.isEmpty(), "Expected to find test procedure" );
+            assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.nodeWithDefault(node = null :: NODE?) :: (node :: NODE?)" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowDescriptionWhenListingProcedures()
     {
-        // Given/When
-        List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
-                record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
-        // Then
-        assertFalse( results.isEmpty(), "Expected to find test procedure" );
-        assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
+                    record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
+            // Then
+            assertFalse( results.isEmpty(), "Expected to find test procedure" );
+            assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowModeWhenListingProcedures()
     {
-        // Given/When
-        List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
-                record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
-        // Then
-        assertFalse( results.isEmpty(), "Expected to find test procedure" );
-        assertThat( results.get( 0 ).get( "mode" ), equalTo( "WRITE" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            List<Map<String,Object>> results = db.execute( "CALL dbms.procedures()" ).stream().filter(
+                    record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
+            // Then
+            assertFalse( results.isEmpty(), "Expected to find test procedure" );
+            assertThat( results.get( 0 ).get( "mode" ), equalTo( "WRITE" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldIndicateDefaultValueWhenListingFunctions()
     {
-        // Given/When
-        List<Map<String,Object>> results = db.execute( "CALL dbms.functions()" ).stream().filter( record -> record.get( "name" )
-                .equals( "com.neo4j.procedure.getNodeName" ) ).collect( Collectors.toList() );
-        // Then
-        assertFalse( results.isEmpty(), "Expected to find test function" );
-        assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.getNodeName(node = null :: NODE?) :: (STRING?)" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            List<Map<String,Object>> results =
+                    db.execute( "CALL dbms.functions()" ).stream().filter( record -> record.get( "name" ).equals( "com.neo4j.procedure.getNodeName" ) ).collect(
+                            Collectors.toList() );
+            // Then
+            assertFalse( results.isEmpty(), "Expected to find test function" );
+            assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.getNodeName(node = null :: NODE?) :: (STRING?)" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowDescriptionWhenListingFunctions()
     {
-        // Given/When
-        List<Map<String,Object>> results = db.execute( "CALL dbms.functions()" ).stream().filter(
-                record -> record.get( "name" ).equals( "com.neo4j.procedure.functionWithDescription" ) ).collect( Collectors.toList() );
-        // Then
-        assertFalse( results.isEmpty(), "Expected to find test function" );
-        assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            List<Map<String,Object>> results = db.execute( "CALL dbms.functions()" ).stream().filter(
+                    record -> record.get( "name" ).equals( "com.neo4j.procedure.functionWithDescription" ) ).collect( Collectors.toList() );
+            // Then
+            assertFalse( results.isEmpty(), "Expected to find test function" );
+            assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -1360,9 +1454,12 @@ public class ProcedureIT
     @Test
     void shouldUseGuardToDetectTransactionTermination()
     {
-        QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.guardMe" ).next() );
-        assertThat( exception.getMessage(), equalTo( "The transaction has been terminated. Retry your operation in a new " +
-                "transaction, and you should see a successful result. Explicitly terminated by the user. " ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.guardMe" ).next() );
+            assertThat( exception.getMessage(), equalTo( "The transaction has been terminated. Retry your operation in a new " +
+                    "transaction, and you should see a successful result. Explicitly terminated by the user. " ) );
+        }
     }
 
     @Test
@@ -1373,12 +1470,15 @@ public class ProcedureIT
         {
             db.createNode( Label.label( "Person" ) );
         }
-        Result result = db.execute( "CALL com.neo4j.procedure.failingPersonCount" );
-        assertThrows( QueryExecutionException.class, result::next );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result result = db.execute( "CALL com.neo4j.procedure.failingPersonCount" );
+            assertThrows( QueryExecutionException.class, result::next );
+        }
     }
 
     @Test
-    public void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContext()
+    void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContext()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )

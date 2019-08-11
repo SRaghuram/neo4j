@@ -40,7 +40,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   }
 
   test("should provide sensible error message for invalid regex syntax together with index") {
-    graph.execute("CREATE (n:Person {text:'abcxxxdefyyyfff'})")
+    executeSingle("CREATE (n:Person {text:'abcxxxdefyyyfff'})")
     failWithError(Configs.CachedProperty,
       "MATCH (x:Person) WHERE x.text =~ '*xxx*yyy*' RETURN x.text", List("Invalid Regex:"))
   }
@@ -72,7 +72,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to add incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -95,7 +95,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to multiply incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -120,7 +120,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to subtract incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -145,7 +145,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to calculate modulus of incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -170,7 +170,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to divide incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -195,7 +195,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when trying to raise to the power of incompatible types") {
     // We want to deliberately fail after semantic checking (at runtime), thus the need for CREATE
 
-    graph.execute("CREATE (n:Test {" +
+    executeSingle("CREATE (n:Test {" +
       "loc: point({x:22, y:44}), " +
       "num: 2, dur: duration({ days: 1, hours: 12 }), " +
       "dat: datetime('2015-07-21T21:40:32.142+0100'), " +
@@ -218,14 +218,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   }
 
   test("should provide sensible error message for using compiled expression with interpreted") {
-    intercept[Exception](graph.execute("CYPHER runtime=interpreted expressionEngine=compiled RETURN 1")).getMessage should be("Cannot combine EXPRESSION ENGINE 'compiled' with RUNTIME 'interpreted'")
+    intercept[Exception](executeSingle("CYPHER runtime=interpreted expressionEngine=compiled RETURN 1")).getMessage should be("Cannot combine EXPRESSION ENGINE 'compiled' with RUNTIME 'interpreted'")
   }
 
   test("should provide sensible error message for using compiled expression with compiled runtime") {
-    intercept[Exception](graph.execute("CYPHER runtime=compiled expressionEngine=compiled RETURN 1")).getMessage should be("Cannot combine EXPRESSION ENGINE 'compiled' with RUNTIME 'compiled'")
+    intercept[Exception](executeSingle("CYPHER runtime=compiled expressionEngine=compiled RETURN 1")).getMessage should be("Cannot combine EXPRESSION ENGINE 'compiled' with RUNTIME 'compiled'")
   }
 
   test("should be able to use compiled expression engine with slotted") {
-    graph.execute("CYPHER runtime=slotted expressionEngine=compiled RETURN 1").resultAsString() should not be null
+    inTx( _ =>
+      graph.execute("CYPHER runtime=slotted expressionEngine=compiled RETURN 1").resultAsString() should not be null
+    )
   }
 }

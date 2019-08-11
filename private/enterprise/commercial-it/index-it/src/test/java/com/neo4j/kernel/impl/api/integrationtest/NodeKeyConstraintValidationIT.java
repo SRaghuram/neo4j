@@ -41,9 +41,13 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
     void requirePropertyFromMultipleNodeKeys( SchemaHelper helper )
     {
         Label label = Label.label( "multiNodeKeyLabel" );
-        helper.createNodeKeyConstraint( db, label,  "property1", "property2" );
-        helper.createNodeKeyConstraint( db, label,  "property2", "property3" );
-        helper.createNodeKeyConstraint( db, label,  "property3", "property4" );
+        try ( org.neo4j.graphdb.Transaction transaction = db.beginTx() )
+        {
+            helper.createNodeKeyConstraint( db, label,  "property1", "property2" );
+            helper.createNodeKeyConstraint( db, label,  "property2", "property3" );
+            helper.createNodeKeyConstraint( db, label,  "property3", "property4" );
+            transaction.commit();
+        }
 
         assertException( () ->
         {

@@ -451,9 +451,9 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         "status" -> "index created"))
     )
 
-    graph.execute("CALL db.awaitIndexes(10)")
+    graph.inTx(graph.execute("CALL db.awaitIndexes(10)"))
 
-    val index = inTx(kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")),
+    val index = inTx(_ => kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")),
                                                        tokenReader(t => t.propertyKey("name"))))
     // when
     val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
@@ -486,7 +486,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         "status" -> "uniqueness constraint online"))
     )
 
-    graph.execute("CALL db.awaitIndexes(10)")
+    graph.inTx(graph.execute("CALL db.awaitIndexes(10)"))
 
     // when
     val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement
@@ -519,7 +519,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         "status" -> "node key constraint online"))
     )
 
-    graph.execute("CALL db.awaitIndexes(10)")
+    graph.inTx(graph.execute("CALL db.awaitIndexes(10)"))
 
     // when
     val mapResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()").toList.loneElement

@@ -70,11 +70,15 @@ class QueryRestartIT
         prepareCursorContext( DEFAULT_DATABASE_NAME );
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         createData( database );
-        var result = database.execute( "MATCH (n) RETURN n.c" );
-        assertEquals( 1, testCursorContext.getAdditionalAttempts() );
-        while ( result.hasNext() )
+        try ( Transaction transaction = database.beginTx() )
         {
-            assertEquals( "d", result.next().get( "n.c" ) );
+            var result = database.execute( "MATCH (n) RETURN n.c" );
+            assertEquals( 1, testCursorContext.getAdditionalAttempts() );
+            while ( result.hasNext() )
+            {
+                assertEquals( "d", result.next().get( "n.c" ) );
+            }
+            transaction.commit();
         }
     }
 
@@ -86,11 +90,15 @@ class QueryRestartIT
         prepareCursorContext( databaseName );
         GraphDatabaseService database = managementService.database( databaseName );
         createData( database );
-        var result = database.execute( "MATCH (n) RETURN n.c" );
-        assertEquals( 1, testCursorContext.getAdditionalAttempts() );
-        while ( result.hasNext() )
+        try ( Transaction transaction = database.beginTx() )
         {
-            assertEquals( "d", result.next().get( "n.c" ) );
+            var result = database.execute( "MATCH (n) RETURN n.c" );
+            assertEquals( 1, testCursorContext.getAdditionalAttempts() );
+            while ( result.hasNext() )
+            {
+                assertEquals( "d", result.next().get( "n.c" ) );
+            }
+            transaction.commit();
         }
     }
 

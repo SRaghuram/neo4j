@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, 
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
+import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.runtime.{NoInput, QueryContext}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
@@ -34,9 +34,10 @@ import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead, Transac
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.database.{Database, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.factory.KernelTransactionFactory
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
@@ -185,6 +186,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val metaData = new util.HashMap[String, AnyRef]()
     val threadToStatementContextBridge =
       dependencyResolver.provideDependency(classOf[ThreadToStatementContextBridge]).get
+    val transactionFactory = dependencyResolver.provideDependency(classOf[KernelTransactionFactory]).get
     val databaseId = db.asInstanceOf[GraphDatabaseAPI].databaseId()
     val initialStatement: Statement = threadToStatementContextBridge.get(databaseId)
     val threadExecutingTheQuery = Thread.currentThread()
@@ -198,8 +200,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       tx,
       initialStatement,
       new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, databaseId, "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
-      new DefaultValueMapper(proxySpi)) {
-      override def close(success: Boolean): Unit = ()
+      new DefaultValueMapper(proxySpi), transactionFactory) {
+      override def close(): Unit = ()
     }
   }
 

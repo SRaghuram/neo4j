@@ -7,14 +7,15 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.PrintWriter
 
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.plandescription.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.exceptions
-import org.neo4j.exceptions.{Neo4jException, LoadCsvStatusWrapCypherException, PeriodicCommitInOpenTransactionException, SyntaxException}
-import org.neo4j.graphdb.Node
-import org.neo4j.internal.kernel.api.Transaction.Type
+import org.neo4j.exceptions.{Neo4jException, PeriodicCommitInOpenTransactionException, SyntaxException}
+import org.neo4j.graphdb.{Node, QueryExecutionException}
+import org.neo4j.internal.helpers.Exceptions
 import org.neo4j.storageengine.api.TransactionIdStore
 
 class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
@@ -33,7 +34,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
       f
     }
     catch {
-      case e: LoadCsvStatusWrapCypherException => throw e.getCause
+      case t: Throwable => throw Exceptions.rootCause(t)
     }
   }
 
@@ -160,7 +161,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
 
     // when
     val (_, txCounts) = prepareAndTrackTxCounts(intercept[exceptions.ArithmeticException](
-      unwrapLoadCSVStatus(executeScalar[Number](queryText))
+      unwrapLoadCSVStatus(graph.getGraphDatabaseService.executeTransactionally(queryText))
     ))
 
     // then
@@ -190,11 +191,17 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
 
   test("should fail if periodic commit is executed in an open transaction") {
     // given
-    intercept[PeriodicCommitInOpenTransactionException] {
-      val url = createTempCSVFile(3)
-      graph.inTx( {
-        execute(s"USING PERIODIC COMMIT LOAD CSV FROM '$url' AS line CREATE ()")
-      }, Type.explicit)
+    val transaction = graph.getGraphDatabaseService.beginTx()
+    try {
+      val caught = intercept[QueryExecutionException] {
+        val url = createTempCSVFile(3)
+        graph.getGraphDatabaseService.execute(s"USING PERIODIC COMMIT LOAD CSV FROM '$url' AS line CREATE ()")
+      }
+      val rootCause = ExceptionUtils.getRootCause(caught)
+      rootCause shouldBe a[PeriodicCommitInOpenTransactionException]
+    }
+    finally {
+      transaction.close()
     }
     resourceMonitor.assertClosedAndClear(0)
   }

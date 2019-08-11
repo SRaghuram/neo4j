@@ -15,7 +15,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
@@ -26,23 +25,19 @@ class PageCacheWarmupTestSupport
 {
     static void createTestData( GraphDatabaseService db )
     {
-        try ( Transaction tx = db.beginTx() )
+        Label label = Label.label( "Label" );
+        RelationshipType relationshipType = RelationshipType.withName( "REL" );
+        long[] largeValue = new long[1024];
+        for ( int i = 0; i < 1000; i++ )
         {
-            Label label = Label.label( "Label" );
-            RelationshipType relationshipType = RelationshipType.withName( "REL" );
-            long[] largeValue = new long[1024];
-            for ( int i = 0; i < 1000; i++ )
+            Node node = db.createNode( label );
+            node.setProperty( "Niels", "Borh" );
+            node.setProperty( "Albert", largeValue );
+            for ( int j = 0; j < 30; j++ )
             {
-                Node node = db.createNode( label );
-                node.setProperty( "Niels", "Borh" );
-                node.setProperty( "Albert", largeValue );
-                for ( int j = 0; j < 30; j++ )
-                {
-                    Relationship rel = node.createRelationshipTo( node, relationshipType );
-                    rel.setProperty( "Max", "Planck" );
-                }
+                Relationship rel = node.createRelationshipTo( node, relationshipType );
+                rel.setProperty( "Max", "Planck" );
             }
-            tx.commit();
         }
     }
 

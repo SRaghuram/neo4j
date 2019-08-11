@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -71,6 +70,7 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.factory.KernelTransactionFactory;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
@@ -696,14 +696,13 @@ public class CommercialSecurityModule extends SecurityModule
         private SecurityQueryExecutor( GraphDatabaseService database )
         {
             this.api = (GraphDatabaseAPI) database;
-            this.engine =
-                    api.getDependencyResolver().resolveDependency( QueryExecutionEngine.class );
-            DependencyResolver resolver = api.getDependencyResolver();
-            ThreadToStatementContextBridge bridge =
-                    resolver.resolveDependency( ThreadToStatementContextBridge.class );
-            EmbeddedProxySPI embeddedProxySPI = resolver.resolveDependency( EmbeddedProxySPI.class );
+            var resolver = api.getDependencyResolver();
+            this.engine = resolver.resolveDependency( QueryExecutionEngine.class );
+            var bridge = resolver.resolveDependency( ThreadToStatementContextBridge.class );
+            var transactionFactory = resolver.resolveDependency( KernelTransactionFactory.class );
+            var embeddedProxySPI = resolver.resolveDependency( EmbeddedProxySPI.class );
             this.contextFactory = Neo4jTransactionalContextFactory.create( embeddedProxySPI,
-                    () -> api.getDependencyResolver().resolveDependency( GraphDatabaseQueryService.class ), bridge );
+                    () -> resolver.resolveDependency( GraphDatabaseQueryService.class ), transactionFactory, bridge );
         }
 
         @Override
@@ -712,17 +711,14 @@ public class CommercialSecurityModule extends SecurityModule
             try ( InternalTransaction tx = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
             {
                 MapValue parameters = asParameterMapValue( params );
-                try ( InternalTransaction internalTransaction = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
-                {
-                    TransactionalContext context = contextFactory.newContext( internalTransaction, query, parameters );
-                    QueryExecution execution =
-                            engine.executeQuery( query,
-                                    parameters,
-                                    context,
-                                    false,
-                                    subscriber );
-                    execution.consumeAll();
-                }
+                TransactionalContext context = contextFactory.newContext( tx, query, parameters );
+                QueryExecution execution =
+                        engine.executeQuery( query,
+                                parameters,
+                                context,
+                                false,
+                                subscriber );
+                execution.consumeAll();
                 tx.commit();
             }
             catch ( Exception e )

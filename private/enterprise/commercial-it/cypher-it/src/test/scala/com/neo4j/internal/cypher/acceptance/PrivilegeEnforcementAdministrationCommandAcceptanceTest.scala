@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.graphdb.{Node, Result}
+import org.neo4j.graphdb.{Label, Node, Result}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 
@@ -23,7 +23,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
@@ -42,7 +42,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
@@ -62,7 +62,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (n:A {name:'a'})")
+    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -1381,7 +1381,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})")
+    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})"))
 
     val expected = List(
       "a", "b"
@@ -1408,7 +1408,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1437,7 +1437,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1477,7 +1477,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1508,7 +1508,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1530,7 +1530,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
@@ -1570,7 +1570,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
+    graph.inTx(graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
@@ -1612,7 +1612,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()")
+    graph.inTx(graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()"))
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
@@ -1674,7 +1674,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)")
+    graph.inTx(graph.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)"))
 
     val expectedZero = List(
       ("A", 0),
@@ -2713,7 +2713,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
-    }, executeBefore = () => createLabeledNode("A")) should be(1)
+    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 3)))
 
@@ -2724,7 +2724,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
-    }, executeBefore = () => createLabeledNode("A")) should be(1)
+    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 4)))
 
@@ -2735,7 +2735,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
-    }, executeBefore = () => createLabeledNode("A")) should be(1)
+    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 5)))
   }

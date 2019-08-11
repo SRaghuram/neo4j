@@ -29,16 +29,19 @@ class SemanticCreateAcceptanceTest extends ExecutionEngineFunSuite with PatternG
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.execute(s"CREATE $patternString")
+          graph.inTx(graph.execute(s"CREATE $patternString").close())
 
           //find created pattern (cannot return * since everything might be unnamed)
-          val result1 = graph.execute(s"MATCH $patternString RETURN 42")
-          hasSingleRow(result1)
-          val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
-          hasSingleRow(result2)
+          graph.inTx({
+            val result1 = graph.execute(s"MATCH $patternString RETURN 42")
+            hasSingleRow(result1)
+
+            val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
+            hasSingleRow(result2)
+          })
 
           //clean up
-          graph.execute(s"MATCH (n) DETACH DELETE n")
+          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n").close())
         }
       }
     }

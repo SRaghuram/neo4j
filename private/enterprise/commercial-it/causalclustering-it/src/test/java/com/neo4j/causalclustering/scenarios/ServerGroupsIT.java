@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -25,8 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
 import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
@@ -37,7 +35,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public class ServerGroupsIT
 {
@@ -178,9 +175,9 @@ public class ServerGroupsIT
     private List<List<String>> getServerGroups( GraphDatabaseFacade db )
     {
         List<List<String>> serverGroups = new ArrayList<>();
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            try ( Result result = db.execute( tx, "CALL dbms.cluster.overview", EMPTY_MAP ) )
+            try ( Result result = db.execute( "CALL dbms.cluster.overview" ) )
             {
                 while ( result.hasNext() )
                 {

@@ -13,8 +13,10 @@ class ToStringAcceptanceTest extends ExecutionEngineFunSuite with Matchers with 
 
   test("Node should provide sensible toString") {
     val data = makeModel()
-    val result = graph.execute("MATCH (a:A) RETURN a")
-    result.columnAs("a").next().toString should be(s"Node[${data("a")}]")
+    graph.inTx({
+      val result = graph.execute("MATCH (a:A) RETURN a")
+      result.columnAs("a").next().toString should be(s"Node[${data("a")}]")
+    })
   }
 
   test("Node should provide sensible toString within transactions") {
@@ -27,14 +29,18 @@ class ToStringAcceptanceTest extends ExecutionEngineFunSuite with Matchers with 
 
   test("Node collection should provide sensible toString") {
     makeModel()
-    val result = graph.execute("MATCH (a) RETURN collect(a) as nodes")
-    result.columnAs("nodes").next().toString should fullyMatch regex "\\[Node\\[\\d+\\], Node\\[\\d+\\], Node\\[\\d+\\]\\]"
+    graph.inTx({
+      val result = graph.execute("MATCH (a) RETURN collect(a) as nodes")
+      result.columnAs("nodes").next().toString should fullyMatch regex "\\[Node\\[\\d+\\], Node\\[\\d+\\], Node\\[\\d+\\]\\]"
+    })
   }
 
   test("Relationship should provide sensible toString") {
     val data = makeModel()
-    val result = graph.execute("MATCH (:A)-[r]->(:B) RETURN r")
-    result.columnAs("r").next().toString should be(s"(?)-[RELTYPE(0),${data("ab")}]->(?)")
+    graph.inTx({
+      val result = graph.execute("MATCH (:A)-[r]->(:B) RETURN r")
+      result.columnAs("r").next().toString should be(s"(0)-[KNOWS,${data("ab")}]->(1)")
+    })
   }
 
   test("Relationship should provide sensible toString within transactions") {
@@ -47,10 +53,12 @@ class ToStringAcceptanceTest extends ExecutionEngineFunSuite with Matchers with 
 
   test("Path should provide sensible toString") {
     val data = makeModel()
-    val result = graph.execute("MATCH p = (:A)-->(:B)-->(:C) RETURN p")
-    result.columnAs("p").next().toString should (
-      be(s"(?)-[?,${data("ab")}]-(?)-[?,${data("bc")}]-(?)") or
-        be(s"(${data("a")})-[${data("ab")}:KNOWS]->(${data("b")})-[${data("bc")}:KNOWS]->(${data("c")})"))
+    graph.inTx({
+      val result = graph.execute("MATCH p = (:A)-->(:B)-->(:C) RETURN p")
+      result.columnAs("p").next().toString should (
+        be(s"(?)-[?,${data("ab")}]-(?)-[?,${data("bc")}]-(?)") or
+          be(s"(${data("a")})-[KNOWS,${data("ab")}]->(${data("b")})-[KNOWS,${data("bc")}]->(${data("c")})"))
+    })
   }
 
   test("Path should provide sensible toString within transactions") {

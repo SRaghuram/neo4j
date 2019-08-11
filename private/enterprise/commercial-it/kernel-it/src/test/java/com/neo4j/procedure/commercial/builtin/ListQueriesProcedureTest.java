@@ -79,28 +79,36 @@ public class ListQueriesProcedureTest
     @Test
     public void shouldContainTheQueryItself()
     {
-        // given
-        String query = "CALL dbms.listQueries";
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // given
+            String query = "CALL dbms.listQueries";
 
-        // when
-        Result result = db.execute( query );
+            // when
+            Result result = db.execute( query );
 
-        // then
-        Map<String,Object> row = result.next();
-        assertFalse( result.hasNext() );
-        assertEquals( query, row.get( "query" ) );
+            // then
+            Map<String,Object> row = result.next();
+            assertFalse( result.hasNext() );
+            assertEquals( query, row.get( "query" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     public void shouldNotIncludeDeprecatedFields()
     {
-        // when
-        Result result = db.execute( "CALL dbms.listQueries" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // when
+            Result result = db.execute( "CALL dbms.listQueries" );
 
-        // then
-        Map<String,Object> row = result.next();
-        assertThat( row, not( hasKey( "elapsedTime" ) ) );
-        assertThat( row, not( hasKey( "connectionDetails" ) ) );
+            // then
+            Map<String,Object> row = result.next();
+            assertThat( row, not( hasKey( "elapsedTime" ) ) );
+            assertThat( row, not( hasKey( "connectionDetails" ) ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -204,7 +212,7 @@ public class ListQueriesProcedureTest
 
         // Run the query one time first so that the plan is cached and
         // locks taken during planning is not counted in
-        db.execute( query );
+        executeTransactionally( query );
 
         Set<Long> locked = new HashSet<>();
         try ( Resource<Node> test = test( () ->
@@ -217,46 +225,48 @@ public class ListQueriesProcedureTest
         }, query ) )
         {
             // when
-            try ( Result rows = db.execute( "CALL dbms.listQueries() "
-                    + "YIELD query AS queryText, queryId, activeLockCount "
-                    + "WHERE queryText = $queryText "
-                    + "CALL dbms.listActiveLocks(queryId) YIELD mode, resourceType, resourceId "
-                    + "RETURN *", singletonMap( "queryText", query ) ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                // then
-                Set<Long> ids = new HashSet<>();
-                Long lockCount = null;
-                long rowCount = 0;
-                while ( rows.hasNext() )
+                try ( Result rows = db.execute(
+                        "CALL dbms.listQueries() " + "YIELD query AS queryText, queryId, activeLockCount " + "WHERE queryText = $queryText " +
+                                "CALL dbms.listActiveLocks(queryId) YIELD mode, resourceType, resourceId " + "RETURN *", singletonMap( "queryText", query ) ); )
                 {
-                    Map<String,Object> row = rows.next();
-                    Object resourceType = row.get( "resourceType" );
-                    Object activeLockCount = row.get( "activeLockCount" );
-                    if ( lockCount == null )
+                    // then
+                    Set<Long> ids = new HashSet<>();
+                    Long lockCount = null;
+                    long rowCount = 0;
+                    while ( rows.hasNext() )
                     {
-                        assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
-                        lockCount = (Long) activeLockCount;
+                        Map<String,Object> row = rows.next();
+                        Object resourceType = row.get( "resourceType" );
+                        Object activeLockCount = row.get( "activeLockCount" );
+                        if ( lockCount == null )
+                        {
+                            assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
+                            lockCount = (Long) activeLockCount;
+                        }
+                        else
+                        {
+                            assertEquals( "activeLockCount", lockCount, activeLockCount );
+                        }
+                        if ( ResourceTypes.LABEL.name().equals( resourceType ) )
+                        {
+                            assertEquals( "SHARED", row.get( "mode" ) );
+                            assertEquals( 0L, row.get( "resourceId" ) );
+                        }
+                        else
+                        {
+                            assertEquals( "NODE", resourceType );
+                            assertEquals( "EXCLUSIVE", row.get( "mode" ) );
+                            ids.add( (Long) row.get( "resourceId" ) );
+                        }
+                        rowCount++;
                     }
-                    else
-                    {
-                        assertEquals( "activeLockCount", lockCount, activeLockCount );
-                    }
-                    if ( ResourceTypes.LABEL.name().equals( resourceType ) )
-                    {
-                        assertEquals( "SHARED", row.get( "mode" ) );
-                        assertEquals( 0L, row.get( "resourceId" ) );
-                    }
-                    else
-                    {
-                        assertEquals( "NODE", resourceType );
-                        assertEquals( "EXCLUSIVE", row.get( "mode" ) );
-                        ids.add( (Long) row.get( "resourceId" ) );
-                    }
-                    rowCount++;
+                    assertEquals( locked, ids );
+                    assertNotNull( "activeLockCount", lockCount );
+                    assertEquals( lockCount.intValue(), rowCount ); // note: only true because query is blocked
                 }
-                assertEquals( locked, ids );
-                assertNotNull( "activeLockCount", lockCount );
-                assertEquals( lockCount.intValue(), rowCount ); // note: only true because query is blocked
+                transaction.commit();
             }
         }
     }
@@ -278,21 +288,24 @@ public class ListQueriesProcedureTest
         }, query1, query2 ) )
         {
             // when
-            try ( Result rows = db.execute( "CALL dbms.listQueries() "
-                    + "YIELD query AS queryText, queryId, activeLockCount "
-                    + "WHERE queryText = $queryText "
-                    + "CALL dbms.listActiveLocks(queryId) YIELD resourceId "
-                    + "WITH queryText, queryId, activeLockCount, count(resourceId) AS allLocks "
-                    + "RETURN *", singletonMap( "queryText", query2 ) ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                assertTrue( "should have at least one row", rows.hasNext() );
-                Map<String,Object> row = rows.next();
-                Object activeLockCount = row.get( "activeLockCount" );
-                Object allLocks = row.get( "allLocks" );
-                assertFalse( "should have at most one row", rows.hasNext() );
-                assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
-                assertThat( "allLocks", allLocks, instanceOf( Long.class ) );
-                assertThat( (Long) activeLockCount, lessThan( (Long) allLocks ) );
+                try ( Result rows = db.execute(
+                        "CALL dbms.listQueries() " + "YIELD query AS queryText, queryId, activeLockCount " + "WHERE queryText = $queryText " +
+                                "CALL dbms.listActiveLocks(queryId) YIELD resourceId " +
+                                "WITH queryText, queryId, activeLockCount, count(resourceId) AS allLocks " + "RETURN *",
+                        singletonMap( "queryText", query2 ) ); )
+                {
+                    assertTrue( "should have at least one row", rows.hasNext() );
+                    Map<String,Object> row = rows.next();
+                    Object activeLockCount = row.get( "activeLockCount" );
+                    Object allLocks = row.get( "allLocks" );
+                    assertFalse( "should have at most one row", rows.hasNext() );
+                    assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
+                    assertThat( "allLocks", allLocks, instanceOf( Long.class ) );
+                    assertThat( (Long) activeLockCount, lessThan( (Long) allLocks ) );
+                }
+                transaction.commit();
             }
         }
     }
@@ -432,7 +445,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), notNullValue() ) );
 
         // when
-        db.execute( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
+        executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -441,7 +454,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), nullValue() ) );
 
         // when
-        db.execute( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
+        executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -485,7 +498,7 @@ public class ListQueriesProcedureTest
                 instanceOf( Long.class ), greaterThan( 0L ) ) ) ) );
 
         // when
-        db.execute( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
+        executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -494,7 +507,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
 
         // when
-        db.execute( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
+        executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -564,16 +577,20 @@ public class ListQueriesProcedureTest
 
     private Map<String,Object> getQueryListing( String query )
     {
-        try ( Result rows = db.execute( "CALL dbms.listQueries" ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            while ( rows.hasNext() )
+            try ( Result rows = db.execute( "CALL dbms.listQueries" ) )
             {
-                Map<String,Object> row = rows.next();
-                if ( query.equals( row.get( "query" ) ) )
+                while ( rows.hasNext() )
                 {
-                    return row;
+                    Map<String,Object> row = rows.next();
+                    if ( query.equals( row.get( "query" ) ) )
+                    {
+                        return row;
+                    }
                 }
             }
+            transaction.commit();
         }
         throw new AssertionError( "query not active: " + query );
     }
@@ -651,5 +668,16 @@ public class ListQueriesProcedureTest
         }, null, waitingWhileIn( GraphDatabaseFacade.class, "execute" ), SECONDS_TIMEOUT, SECONDS );
 
         return new Resource<>( listQueriesLatch, finishQueriesLatch, resource );
+    }
+
+    private Result executeTransactionally( String query )
+    {
+        Result result;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            result = db.execute( query );
+            transaction.commit();
+        }
+        return result;
     }
 }

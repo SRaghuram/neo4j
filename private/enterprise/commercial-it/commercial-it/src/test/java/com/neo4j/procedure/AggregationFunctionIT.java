@@ -72,11 +72,15 @@ class AggregationFunctionIT
         }
 
         // When
-        Result result = db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result result = db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "count", 4L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "count", 4L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -93,13 +97,17 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        // When
-        Result result = db.execute( "MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "n.prop1", 42L, "count", 3L ) ) );
-        assertThat( result.next(), equalTo( map( "n.prop1", 1337L, "count", 1L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "n.prop1", 42L, "count", 3L ) ) );
+            assertThat( result.next(), equalTo( map( "n.prop1", 1337L, "count", 1L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -116,9 +124,12 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () -> db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ) );
-        assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ) );
+            assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
+        }
     }
 
     @Test
@@ -134,13 +145,16 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        // When
-        Result result =
-                db.execute( "MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -156,13 +170,16 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        // When
-        Result result = db.execute(
-                "MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -177,72 +194,89 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        // When
-        Result result = db.execute(
-                "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "len", 3L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "len", 3L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleNullPath()
     {
-        // When
-        Result result = db.execute(
-                "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest");
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "longest", null ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "longest", null ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleNumberArgumentAggregationFunction()
     {
-        // Given, When
-        Result result = db.execute(
-                "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given, When
+            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleDoubleArgumentAggregationFunction()
     {
-        // Given, When
-        Result result = db.execute(
-                "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given, When
+            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleLongArgumentAggregationFunction()
     {
-        // Given, When
-        Result result = db.execute(
-                "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given, When
+            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest" );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "closest", 42L ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "closest", 42L ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleNoArgumentBooleanAggregationFunction()
     {
-        assertThat( db.execute(
-                "UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
-                equalTo( map( "wasCalled", true ) ) );
-        assertThat( db.execute(
-                "UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
-                equalTo( map( "wasCalled", false ) ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( db.execute( "UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
+                    equalTo( map( "wasCalled", true ) ) );
+            assertThat( db.execute( "UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
+                    equalTo( map( "wasCalled", false ) ) );
+            transaction.commit();
+        }
 
     }
 
@@ -260,14 +294,17 @@ class AggregationFunctionIT
             tx.commit();
         }
 
-        // When
-        Result result = db.execute(
-                "UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes",
-                map("ids", nodes.stream().map( Node::getId ).collect( Collectors.toList() )));
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result result = db.execute( "UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes",
+                    map( "ids", nodes.stream().map( Node::getId ).collect( Collectors.toList() ) ) );
 
-        // Then
-        assertThat( result.next(), equalTo( map( "nodes", nodes ) ) );
-        assertFalse( result.hasNext() );
+            // Then
+            assertThat( result.next(), equalTo( map( "nodes", nodes ) ) );
+            assertFalse( result.hasNext() );
+            transaction.commit();
+        }
     }
 
     //TODO unignore when we have updated front end dependency

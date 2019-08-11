@@ -27,7 +27,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call cypher from procedure") {
     registerTestProcedures()
 
-    graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
+    executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.aNodeWithLabel( 'Cat' ) YIELD node RETURN node")
@@ -38,7 +38,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should recursively call cypher and procedure") {
     registerTestProcedures()
 
-    graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
+    executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.recurseN( 3 ) YIELD node RETURN node")
@@ -49,8 +49,8 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call Core API") {
     registerTestProcedures()
 
-    graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
-    graph.execute("UNWIND [1,2] AS i CREATE (a:Mouse)")
+    executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
+    executeSingle("UNWIND [1,2] AS i CREATE (a:Mouse)")
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.findNodesWithLabel( 'Cat' ) YIELD node RETURN node")
@@ -61,7 +61,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call expand using Core API") {
     registerTestProcedures()
 
-    graph.execute("CREATE (c:Cat) WITH c UNWIND [1,2,3] AS i CREATE (c)-[:HUNTS]->(m:Mouse)")
+    executeSingle("CREATE (c:Cat) WITH c UNWIND [1,2,3] AS i CREATE (c)-[:HUNTS]->(m:Mouse)")
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (c:Cat) CALL org.neo4j.expandNode( id( c ) ) YIELD node AS n RETURN n")
@@ -81,7 +81,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should find shortest path using Graph Algos Dijkstra") {
     registerTestProcedures()
 
-    graph.execute(
+    executeSingle(
       """
         |CREATE (s:Start)
         |CREATE (e:End)
@@ -111,8 +111,8 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     registerTestProcedures()
 
     // Given
-    graph.execute(TestGraph.movies)
-    graph.execute("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
+    executeSingle(TestGraph.movies)
+    executeSingle("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
 
     // When
     val result = executeWith(Configs.InterpretedAndSlotted,
@@ -135,7 +135,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should call procedure with query parameters overriding default values") {
     registerTestProcedures()
 
-    graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
+    executeSingle("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.aNodeWithLabel", params = Map("label" -> "Cat"))

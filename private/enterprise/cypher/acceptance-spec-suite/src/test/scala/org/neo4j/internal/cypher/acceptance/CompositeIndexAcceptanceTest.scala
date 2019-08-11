@@ -517,8 +517,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should be able to update composite index when only one property has changed") {
     graph.createIndex("Person", "name", "surname")
-    val n = graph.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
-    graph.execute("MATCH (n:Person) SET n.surname = 'Bloggs'")
+    var n: Node = null
+    graph.inTx({
+      n = graph.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
+      graph.execute("MATCH (n:Person) SET n.surname = 'Bloggs'")
+    })
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) where n.name = 'Joe' and n.surname = 'Bloggs' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -1332,10 +1335,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           |CREATE (:Awesome {prop1: true, prop2: 'horse'})
           |CREATE (:Awesome {prop1: 3.14, prop2: 'salmon'})
         """.stripMargin)
-      createLabeledNode(Map("prop1" -> LocalDate.of(1991, 10, 18).toEpochDay, "prop2" -> "peacock"), "Awesome")
-      createLabeledNode(Map("prop1" -> LocalTime.of(0, 30, 0), "prop2" -> "mole"), "Awesome")
-      createLabeledNode(Map("prop1" -> DurationValue.duration(0, 0, 1800, 0).asObject(), "prop2" -> "kangaroo"), "Awesome")
     }
+    createLabeledNode(Map("prop1" -> LocalDate.of(1991, 10, 18).toEpochDay, "prop2" -> "peacock"), "Awesome")
+    createLabeledNode(Map("prop1" -> LocalTime.of(0, 30, 0), "prop2" -> "mole"), "Awesome")
+    createLabeledNode(Map("prop1" -> DurationValue.duration(0, 0, 1800, 0).asObject(), "prop2" -> "kangaroo"), "Awesome")
 
     val result = executeWith(Configs.CachedProperty,
       "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'f' AND exists(n.prop2) RETURN n.prop1, n.prop2",
@@ -1362,6 +1365,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNodes()
 
     // Add nodes not in index
+    graph.inTx(
     graph.execute(
       """
         |CREATE (:Awesome)
@@ -1374,7 +1378,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
         |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin
-    )
+    ) )
     resampleIndexes()
 
     val result = executeWith(Configs.CachedProperty,
@@ -1400,6 +1404,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNodes()
 
     // Add nodes not in index
+    graph.inTx(
     graph.execute(
       """
         |CREATE (:Awesome)
@@ -1412,7 +1417,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
         |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin
-    )
+    ) )
     resampleIndexes()
 
     val result = executeWith(Configs.CachedProperty,
@@ -1442,17 +1447,15 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("name" -> "Joe", "city" -> point1), "User")
     createLabeledNode(Map("name" -> "Jake", "city" -> point2), "User")
 
-    def createMe(): Unit = {
-      createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
+    createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
 
-      // Values that should not be valid for the query
-      createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
-    }
+    // Values that should not be valid for the query
+    createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
 
     // When
     val query =
@@ -1461,7 +1464,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createMe,
+    val result = executeWith(Configs.CachedProperty, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
@@ -1487,18 +1490,16 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("name" -> "Joe", "city" -> point1), "User")
     createLabeledNode(Map("name" -> "Jake", "city" -> point2), "User")
 
-    def createMe(): Unit = {
-      createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> point3), "User")
+    createLabeledNode(Map("name" -> "Jake", "city" -> point1), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> point2), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> point3), "User")
 
-      // Values that should not be valid for the query
-      createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
-      createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
-    }
+    // Values that should not be valid for the query
+    createLabeledNode(Map("name" -> "Joe", "city" -> "Staffanstorp"), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> false), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> LocalDate.of(1991, 10, 18).toEpochDay), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> LocalTime.of(0, 30, 0)), "User")
+    createLabeledNode(Map("name" -> "Joe", "city" -> DurationValue.duration(0, 0, 1800, 0).asObject()), "User")
 
     // When
     val query =
@@ -1507,7 +1508,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createMe,
+    val result = executeWith(Configs.CachedProperty, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
@@ -1531,11 +1532,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     def createMe(): Unit = {
       createNodesInTxState()
-      nodes = Set(
-        createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
-        createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
-      )
     }
+    nodes = Set(
+      createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
+      createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
+    )
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
@@ -1559,11 +1560,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     def createMe(): Unit = {
       createNodesInTxState()
-      nodes = Set(
-        createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
-        createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
-      )
     }
+    nodes = Set(
+      createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
+      createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
+    )
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
@@ -1594,6 +1595,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   private def createNodes(): Unit =
+    graph.inTx(
     graph.execute(
       """
         |CREATE (:Awesome {prop1: 40, prop2: 5})
@@ -1605,7 +1607,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |CREATE (:Awesome {prop1: 'footurama', prop2: 'bar'})
         |CREATE (:Awesome {prop1: 'fooism', prop2: 'rab'})
         |CREATE (:Awesome {prop1: 'aismfama', prop2: 'rab'})
-      """.stripMargin
+      """.stripMargin )
     )
 
   private def createNodesInTxState(): Unit =

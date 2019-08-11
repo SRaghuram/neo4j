@@ -60,7 +60,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
                                                         prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
       result.consumeAll()
-      transactionalContext.close(true)
+      transactionalContext.close()
       result
     } finally {
       tx.close()

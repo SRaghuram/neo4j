@@ -41,6 +41,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -320,7 +321,11 @@ public class QueryLoggerIT
         // Logging is done asynchronously, so write many times to make sure we would have rotated something
         for ( int i = 0; i < 100; i++ )
         {
-            database.execute( QUERY );
+            try ( Transaction transaction = database.beginTx() )
+            {
+                database.execute( QUERY );
+                transaction.commit();
+            }
         }
 
         databaseManagementService.shutdown();
@@ -348,7 +353,11 @@ public class QueryLoggerIT
 
         for ( int i = 0; i < 100; i++ )
         {
-            database.execute( QUERY );
+            try ( Transaction transaction = database.beginTx() )
+            {
+                database.execute( QUERY );
+                transaction.commit();
+            }
         }
 
         databaseManagementService.shutdown();
@@ -364,12 +373,16 @@ public class QueryLoggerIT
 
         databaseManagementService = databaseBuilder.build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
-        // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
-        database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
-        database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
-        for ( int i = 0; i < 100; i++ )
+        try ( Transaction transaction = database.beginTx() )
         {
-            database.execute( QUERY );
+            // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
+            database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
+            database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
+            for ( int i = 0; i < 100; i++ )
+            {
+                database.execute( QUERY );
+            }
+            transaction.commit();
         }
 
         databaseManagementService.shutdown();
@@ -427,20 +440,24 @@ public class QueryLoggerIT
 
         try
         {
-            database.execute( QUERY ).close();
+            try ( Transaction transaction = database.beginTx() )
+            {
+                database.execute( QUERY ).close();
 
-            // File will not be created until query logService is enabled.
-            assertFalse( fileSystem.fileExists( logFilename ) );
+                // File will not be created until query logService is enabled.
+                assertFalse( fileSystem.fileExists( logFilename ) );
 
-            database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" ).close();
-            database.execute( QUERY ).close();
+                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" ).close();
+                database.execute( QUERY ).close();
 
-            // Both config change and query should exist
-            strings = readAllLines( logFilename );
-            assertEquals( 2, strings.size() );
+                // Both config change and query should exist
+                strings = readAllLines( logFilename );
+                assertEquals( 2, strings.size() );
 
-            database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" ).close();
-            database.execute( QUERY ).close();
+                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" ).close();
+                database.execute( QUERY ).close();
+                transaction.commit();
+            }
         }
         finally
         {
@@ -478,7 +495,11 @@ public class QueryLoggerIT
                 .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
-        database.execute( QUERY ).close();
+        try ( Transaction transaction = database.beginTx() )
+        {
+            database.execute( QUERY ).close();
+            transaction.commit();
+        }
         databaseManagementService.shutdown();
     }
 
@@ -489,8 +510,12 @@ public class QueryLoggerIT
 
     private static void executeQueryAndShutdown( GraphDatabaseService database, String query, Map<String,Object> params )
     {
-        Result execute = database.execute( query, params );
-        execute.close();
+        try ( Transaction transaction = database.beginTx() )
+        {
+            Result execute = database.execute( query, params );
+            execute.close();
+            transaction.commit();
+        }
     }
 
     private EnterpriseUserManager getUserManager()

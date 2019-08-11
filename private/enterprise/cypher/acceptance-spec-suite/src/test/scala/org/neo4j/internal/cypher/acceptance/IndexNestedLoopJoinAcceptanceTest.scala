@@ -186,12 +186,13 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should be able to plan index use for spatial index queries") {
     // Given
-    graph.execute(
-      """CREATE (:Bar {location: point({ x:0, y:100 })})
-        |WITH 1 as whyOwhy
-        |UNWIND range(1,200) AS y
-        |CREATE (:Foo {location: point({ x:0, y:y })})
-      """.stripMargin)
+    graph.inTx(
+      graph.execute(
+        """CREATE (:Bar {location: point({ x:0, y:100 })})
+          |WITH 1 as whyOwhy
+          |UNWIND range(1,200) AS y
+          |CREATE (:Foo {location: point({ x:0, y:y })})
+        """.stripMargin))
     graph.createIndex("Foo", "location")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE distance(a.location, b.location) < 2

@@ -70,7 +70,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       cursors.close()
     }
     if (context != null) {
-      context.close(true)
+      context.close()
     }
 
     tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
@@ -84,7 +84,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       cursors.close()
     }
     if (context != null) {
-      context.close(true)
+      context.close()
       context = null
     }
     super.stopTest()

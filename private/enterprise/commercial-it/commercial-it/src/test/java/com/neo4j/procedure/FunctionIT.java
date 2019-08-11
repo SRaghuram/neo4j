@@ -6,6 +6,7 @@
 package com.neo4j.procedure;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -283,12 +284,13 @@ class FunctionIT
     @Test
     void shouldGiveHelpfulErrorOnMissingFunction()
     {
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
-        assertThat( exception.getMessage(), startsWith(
-                String.format( "Unknown function 'org.someFunctionThatDoesNotExist' (line 1, column 8 (offset: 7))" +
-                        "%n" +
-                        "\"RETURN org.someFunctionThatDoesNotExist()" ) ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
+            assertThat( exception.getMessage(), startsWith( String.format(
+                    "Unknown function 'org.someFunctionThatDoesNotExist' (line 1, column 8 (offset: 7))" + "%n" +
+                            "\"RETURN org.someFunctionThatDoesNotExist()" ) ) );
+        }
     }
 
     @Test
@@ -510,9 +512,14 @@ class FunctionIT
         // given
         Runnable doIt = () ->
         {
-            Result result = db.execute( "RETURN com.neo4j.procedure.unsupportedFunction()" );
-            result.resultAsString();
-            result.close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                try ( Result result = db.execute( "RETURN com.neo4j.procedure.unsupportedFunction()" ) )
+                {
+                    result.resultAsString();
+                }
+                transaction.commit();
+            }
         };
 
         int numThreads = 10;
@@ -544,17 +551,22 @@ class FunctionIT
                     startsWith( "Write operations are not allowed" ) );
         }
 
-        Result result = db.execute( "MATCH () RETURN count(*) as n" );
-        assertThat( result.hasNext(), equalTo( true ) );
-        while ( result.hasNext() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( result.next().get( "n" ), equalTo( 0L ) );
+            try ( Result result = db.execute( "MATCH () RETURN count(*) as n" ) )
+            {
+                assertThat( result.hasNext(), equalTo( true ) );
+                while ( result.hasNext() )
+                {
+                    assertThat( result.next().get( "n" ), equalTo( 0L ) );
+                }
+            }
+            transaction.commit();
         }
-        result.close();
     }
 
     @Test
-    void shouldBeAbleToUseFunctionCallWithPeriodicCommit() throws IOException
+    void shouldBeAbleToUseFunctionCallWithPeriodicCommit() throws Exception
     {
         // GIVEN
         String[] lines = IntStream.rangeClosed( 1, 100 )
@@ -564,21 +576,23 @@ class FunctionIT
         String url = createCsvFile( lines );
 
         //WHEN
-        Result result = db.execute( "USING PERIODIC COMMIT 1 " +
-                                    "LOAD CSV FROM '" + url + "' AS line " +
-                                    "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " +
-                                    "RETURN n.prop" );
-        // THEN
-        for ( long i = 1; i <= 100L; i++ )
+        MutableLong counter = new MutableLong( 1 );
+        db.executeTransactionally( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
+                "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", (Result.ResultVisitor<Exception>) row ->
         {
-            assertThat( result.next().get( "n.prop" ), equalTo( i ) );
+            assertThat( row.get( "n.prop" ), equalTo( counter.getAndIncrement() ) );
+            return true;
+        } );
+        // THEN
+        assertEquals( 101L, counter.getValue() );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Make sure all the lines has been properly commited to the database.
+            String[] dbContents =
+                    db.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) ).toArray( String[]::new );
+            assertThat( dbContents, equalTo( lines ) );
+            transaction.commit();
         }
-
-        //Make sure all the lines has been properly commited to the database.
-        String[] dbContents =
-                db.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) )
-                        .toArray( String[]::new );
-        assertThat( dbContents, equalTo( lines ) );
     }
 
     @Test
@@ -586,13 +600,13 @@ class FunctionIT
     {
         String url = createCsvFile( "13" );
 
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () ->
-                        db.execute( "USING PERIODIC COMMIT 1 " +
-                    "LOAD CSV FROM '" + url + "' AS line " +
-                    "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " +
-                    "RETURN val" ) );
-        assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute(
+                    "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
+                            "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
+            assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+        }
     }
 
     @Test
@@ -719,81 +733,106 @@ class FunctionIT
     @Test
     void shouldCallProcedureWithAllDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues() AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues() AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "a string,42,3.14,true" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "a string,42,3.14,true" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldHandleNullAsParameter()
     {
-        //Given/When
-        Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues($p) AS result", map( "p", null ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues($p) AS result", map( "p", null ) );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "null,42,3.14,true" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "null,42,3.14,true" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallFunctionWithOneProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string') AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string') AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "another string,42,3.14,true" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "another string,42,3.14,true" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallFunctionWithTwoProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337) AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337) AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "another string,1337,3.14,true" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "another string,1337,3.14,true" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallFunctionWithThreeProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res =
-                db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,true" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,true" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallFunctionWithFourProvidedRestDefaultArgument()
     {
-        //Given/When
-        Result res = db.execute(
-                "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false) AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false) AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,false" ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,false" ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCallFunctionReturningNull()
     {
-        //Given/When
-        Result res = db.execute(
-                "RETURN com.neo4j.procedure.node(-1) AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN com.neo4j.procedure.node(-1) AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( null) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( null ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     /**
@@ -803,32 +842,38 @@ class FunctionIT
     @Test
     void shouldListAllFunctions()
     {
-        //Given/When
-        Result res = db.execute( "CALL dbms.functions()" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "CALL dbms.functions()" );
 
-        try ( BufferedReader reader = new BufferedReader(
-                new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
-        {
-            String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
-            String actual = res.resultAsString();
-            // Be aware that the text file "functions" must end with two newlines
-            assertThat( actual, equalTo(expected) );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Failed to read functions file." );
+            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
+            {
+                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
+                String actual = res.resultAsString();
+                // Be aware that the text file "functions" must end with two newlines
+                assertThat( actual, equalTo( expected ) );
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( "Failed to read functions file." );
+            }
         }
     }
 
     @Test
     void shouldCallFunctionWithSameNameAsBuiltIn()
     {
-        //Given/When
-        Result res = db.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = db.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
 
-        // Then
-        assertThat( res.next().get( "result" ), equalTo( 1337 + 2.718281828 + 3.1415 ) );
-        assertFalse( res.hasNext() );
+            // Then
+            assertThat( res.next().get( "result" ), equalTo( 1337 + 2.718281828 + 3.1415 ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
     }
 
     @Test

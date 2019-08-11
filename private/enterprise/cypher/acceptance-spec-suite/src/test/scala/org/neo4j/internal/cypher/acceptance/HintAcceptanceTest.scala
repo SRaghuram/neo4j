@@ -95,10 +95,8 @@ class HintAcceptanceTest
     graph.createIndex("A", "prop")
     graph.createIndex("B", "prop")
 
-    graph.inTx {
-      createLabeledNode(Map("prop" -> 42), "A")
-      createLabeledNode(Map("prop" -> 1337), "B")
-    }
+    createLabeledNode(Map("prop" -> 42), "A")
+    createLabeledNode(Map("prop" -> 1337), "B")
 
     // At the time of writing this test fails with generic index hints:
     // USING INDEX a:A(prop)

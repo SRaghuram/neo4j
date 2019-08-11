@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.{QueryExecution, QuerySubscriber, RecordingQuerySubscriber, TransactionalContext}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
@@ -51,11 +52,11 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 
   override def makeRewinadable(in: Result): RewindableExecutionResult = RewindableExecutionResult(in)
 
-  override def rollback[T](f: => T): T = graph.rollback(f)
+  override def rollback[T](f: InternalTransaction => T): T = graph.rollback(f)
 
-  override def inTx[T](f: => T): T = graph.inTx(f)
+  override def inTx[T](f: InternalTransaction => T): T = graph.inTx(f)
 
-  override def transactionalContext(query: (String, Map[String, Any])): TransactionalContext = graph.transactionalContext(query = query)
+  override def transactionalContext(tx: InternalTransaction, query: (String, Map[String, Any])): TransactionalContext = graph.transactionalContext(tx, query = query)
 
   override def databaseConfig(): collection.Map[Setting[_], Object] = {
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
@@ -78,11 +79,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
   def makeRewinadable(in:Result): RewindableExecutionResult
 
-  def rollback[T](f: => T): T
+  def rollback[T](f: InternalTransaction => T): T
 
-  def inTx[T](f: => T): T
+  def inTx[T](f:InternalTransaction => T): T
 
-  def transactionalContext(query: (String, Map[String, Any])): TransactionalContext
+  def transactionalContext(tx: InternalTransaction, query: (String, Map[String, Any])): TransactionalContext
 
   def kernelMonitors: Monitors
 
@@ -136,7 +137,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     for (thisScenario <- scenariosToExecute) {
       val expectedToFailWithSpecificMessage = expectedSpecificFailureFrom.containsScenario(thisScenario)
 
-      val tryResult: Try[RewindableExecutionResult] = Try(innerExecute(s"CYPHER ${thisScenario.preparserOptions} $query", params))
+      val tryResult: Try[RewindableExecutionResult] = Try(innerExecuteTransactionally(s"CYPHER ${thisScenario.preparserOptions} $query", params))
       tryResult match {
         case Success(_) =>
           if (expectedToFailWithSpecificMessage) {
@@ -166,11 +167,13 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     */
   protected def dumpToString(query: String,
                              params: Map[String, Any] = Map.empty): String = {
-    val result = Try(eengineExecute(query, params).resultAsString())
+    inTx({ _ =>
+      val result = Try(eengineExecute(query, params).resultAsString())
 
-    if (!result.isSuccess) fail(s"Failed to execute ´$query´")
+      if (!result.isSuccess) fail(s"Failed to execute ´$query´")
 
-    result.get
+      result.get
+    })
   }
 
   /**
@@ -251,7 +254,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
       val baseScenario = TestScenario(Planners.Cost, Runtimes.Interpreted)
       executeBefore()
-      val baseResult = innerExecute(s"CYPHER ${baseScenario.preparserOptions} $query", params)
+      val baseResult = innerExecuteTransactionally(s"CYPHER ${baseScenario.preparserOptions} $query", params)
       baseResult
     }
   }
@@ -264,7 +267,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     * Execute a single CYPHER query (without multiple different pre-parser options). Obtain a RewindableExecutionResult.
     */
   protected def executeSingle(queryText: String, params: Map[String, Any] = Map.empty): RewindableExecutionResult =
-    innerExecute(queryText, params)
+    innerExecuteTransactionally(queryText, params)
 
   private def correctError(actualError: String, possibleErrors: Seq[String]): Boolean = {
     possibleErrors == Seq.empty || (actualError != null && possibleErrors.exists(s => actualError.replaceAll("\\r", "").contains(s.replaceAll("\\r", ""))))
@@ -293,12 +296,12 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                               executeExpectedFailures: Boolean,
                               shouldRollback: Boolean = true): Option[(TestScenario, RewindableExecutionResult)] = {
 
-    def execute() = {
+    def execute(tx: InternalTransaction) = {
       executeBefore()
       val queryWithPreparserOptions = s"CYPHER ${scenario.preparserOptions} $query"
       val tryRes =
         if (expectedToSucceed || executeExpectedFailures) {
-          Try(innerExecute(queryWithPreparserOptions, params))
+          Try(innerExecute(tx, queryWithPreparserOptions, params))
         } else {
           Failure(NotExecutedException)
         }
@@ -326,7 +329,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
           case Failure(NotExecutedException) => None
           case Failure(_) =>
             // Re-run the query with EXPLAIN to determine if the failure was at compile-time or runtime
-            Some(Try(innerExecute(s"EXPLAIN $queryWithPreparserOptions", params)) match {
+            Some(Try(innerExecuteTransactionally(s"EXPLAIN $queryWithPreparserOptions", params)) match {
               case Failure(_) => Phase.compile
               case Success(_) => Phase.runtime
             })
@@ -335,8 +338,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
         None
       }
     }
-
-    if (shouldRollback) rollback(execute()) else inTx(execute())
+    if (shouldRollback) rollback(tx => execute(tx)) else inTx(tx => execute(tx))
   }
 
   private def assertResultsSame(result1: RewindableExecutionResult, result2: RewindableExecutionResult, queryText: String, errorMsg: String, replaceNaNs: Boolean = false): Unit = {
@@ -359,9 +361,15 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     }
   }
 
-  private def innerExecute(queryText: String, params: Map[String, Any]): RewindableExecutionResult = {
+  private def innerExecuteTransactionally(queryText: String, params: Map[String, Any]): RewindableExecutionResult = {
+    graph.withTx { tx =>
+      innerExecute(tx, queryText, params)
+    }
+  }
+
+  private def innerExecute(tx: InternalTransaction, queryText: String, params: Map[String, Any]) = {
     val subscriber = new RecordingQuerySubscriber
-    val context = transactionalContext(queryText -> params)
+    val context = transactionalContext(tx, queryText -> params)
     val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
     val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
     RewindableExecutionResult(innerResult, queryContext, subscriber)

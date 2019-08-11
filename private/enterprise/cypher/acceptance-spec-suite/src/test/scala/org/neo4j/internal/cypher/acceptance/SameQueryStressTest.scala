@@ -13,7 +13,9 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
 
   private val lookup = """MATCH (theMatrix:Movie {title:'The Matrix'})<-[:ACTED_IN]-(actor)-[:ACTED_IN]->(other:Movie)
                           WHERE other <> theMatrix
-                          RETURN actor""".stripMargin
+                          RETURN actor
+                          ORDER BY actor.born
+                          """.stripMargin
 
   for {
     runtime <- List("interpreted", "slotted", "compiled")
@@ -24,8 +26,15 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
     test(s"concurrent query execution in $runtime") {
 
       // Given
-      graph.execute(TestGraph.movies)
-      val expected = graph.execute(lookup).resultAsString()
+      var expected = ""
+      val transaction = graphOps.beginTx()
+      try {
+        graph.execute(TestGraph.movies).close()
+        expected = graph.execute(lookup).resultAsString()
+        transaction.commit()
+      } finally {
+        transaction.close()
+      }
 
       // When
       val nThreads = 10
@@ -35,7 +44,12 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
           executor.submit(new Callable[Array[String]] {
             override def call(): Array[String] = {
               (for (_ <- 1 to 1000) yield {
-                graph.execute(lookup).resultAsString()
+                val transaction = graphOps.beginTx()
+                try {
+                  graph.execute(lookup).resultAsString()
+                } finally {
+                  transaction.close()
+                }
               }).toArray
             }
           })

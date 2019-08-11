@@ -16,6 +16,7 @@ import org.neo4j.cypher.security.TestBasicSystemGraphRealm;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
@@ -56,7 +57,8 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, new TestThreadToStatementContextBridge() );
+        var threadToStatementContextBridge = dbManager.testSystemDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, threadToStatementContextBridge );
         return testRealm( importOptions, securityLog, dbManager, executor, config );
     }
 

@@ -8,7 +8,8 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.compiler.helpers.ListSupport
-import org.neo4j.exceptions.{ConstraintValidationException, CypherExecutionException}
+import org.neo4j.exceptions.CypherExecutionException
+import org.neo4j.graphdb.ConstraintViolationException
 import org.neo4j.kernel.api.exceptions.Status
 
 class PropertyExistenceConstraintAcceptanceTest
@@ -22,7 +23,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create constraint on (node:Label1) assert exists(node.key1)")
 
     // WHEN
-    val e = intercept[ConstraintValidationException](execute("create (node:Label1)"))
+    val e = intercept[ConstraintViolationException](execute("create (node:Label1)"))
 
     // THEN
     e.getMessage should endWith(" with label `Label1` must have the property `key1`")
@@ -33,7 +34,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
 
     // WHEN
-    val e = intercept[ConstraintValidationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
+    val e = intercept[ConstraintViolationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
 
     // THEN
     e.getMessage should endWith("with type `KNOWS` must have the property `since`")
@@ -47,7 +48,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create (node1:Label1 {key1:'value1'})")
 
     // THEN
-    intercept[ConstraintValidationException](execute("match (node:Label1) remove node.key1"))
+    intercept[ConstraintViolationException](execute("match (node:Label1) remove node.key1"))
   }
 
   test("relationship: should enforce on removing property") {
@@ -58,7 +59,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create (p1:Person)-[:KNOWS {since: 'yesterday'}]->(p2:Person)")
 
     // THEN
-    intercept[ConstraintValidationException](execute("match (p1:Person)-[r:KNOWS]->(p2:Person) remove r.since"))
+    intercept[ConstraintViolationException](execute("match (p1:Person)-[r:KNOWS]->(p2:Person) remove r.since"))
   }
 
   test("node: should enforce on setting property to null") {
@@ -69,7 +70,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create ( node1:Label1 {key1:'value1' } )")
 
     //THEN
-    intercept[ConstraintValidationException](execute("match (node:Label1) set node.key1 = null"))
+    intercept[ConstraintViolationException](execute("match (node:Label1) set node.key1 = null"))
   }
 
   test("relationship: should enforce on setting property to null") {
@@ -80,7 +81,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create (p1:Person)-[:KNOWS {since: 'yesterday'}]->(p2:Person)")
 
     //THEN
-    intercept[ConstraintValidationException](execute("match (p1:Person)-[r:KNOWS]->(p2:Person) set r.since = null"))
+    intercept[ConstraintViolationException](execute("match (p1:Person)-[r:KNOWS]->(p2:Person) set r.since = null"))
   }
 
   test("node: should allow to break constraint within statement") {
@@ -158,7 +159,7 @@ class PropertyExistenceConstraintAcceptanceTest
     // GIVEN
     execute("create constraint on (node:Label1) assert exists(node.key1)")
 
-    intercept[ConstraintValidationException](execute("create (node:Label1)"))
+    intercept[ConstraintViolationException](execute("create (node:Label1)"))
     numberOfNodes shouldBe 0
 
     // WHEN
@@ -173,7 +174,7 @@ class PropertyExistenceConstraintAcceptanceTest
     // GIVEN
     execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
 
-    intercept[ConstraintValidationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
+    intercept[ConstraintViolationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
     numberOfRelationships shouldBe 0
 
     // WHEN
@@ -202,5 +203,3 @@ class PropertyExistenceConstraintAcceptanceTest
 
   private def numberOfRelationships = executeScalar[Long]("match ()-[r]->() return count(r)")
 }
-
-

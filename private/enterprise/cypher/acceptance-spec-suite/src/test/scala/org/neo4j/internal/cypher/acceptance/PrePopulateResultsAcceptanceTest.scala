@@ -120,35 +120,37 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
     for (prefix <- prefixes) {
       withClue(s"[$prefix]: ") {
         val q = prefix + " " + query
-        val context = graph.transactionalContext(query = q -> Map.empty)
-        try {
-          val subscriber: QuerySubscriber = new QuerySubscriberAdapter {
-            private var currentOffset = -1
+        graph.withTx { tx =>
+          val context = graph.transactionalContext(tx, query = q -> Map.empty)
+          try {
+            val subscriber: QuerySubscriber = new QuerySubscriberAdapter {
+              private var currentOffset = -1
 
-            override def onRecord(): Unit = currentOffset = 0
+              override def onRecord(): Unit = currentOffset = 0
 
-            override def onRecordCompleted(): Unit = currentOffset = -1
+              override def onRecordCompleted(): Unit = currentOffset = -1
 
-            override def onField(value: AnyValue): Unit = {
-              try {
-                if (currentOffset == 0) {
-                  f(value)
+              override def onField(value: AnyValue): Unit = {
+                try {
+                  if (currentOffset == 0) {
+                    f(value)
+                  }
+                } finally {
+                  currentOffset += 1
                 }
-              } finally {
-                currentOffset += 1
               }
             }
-          }
-          val result = eengine.execute(q,
-                                       EMPTY_MAP,
-                                       context,
-                                       profile= false,
-                                       prePopulate = prePopulateResults,
-                                       subscriber = subscriber)
+            val result = eengine.execute(q,
+              EMPTY_MAP,
+              context,
+              profile = false,
+              prePopulate = prePopulateResults,
+              subscriber = subscriber)
 
-          result.consumeAll()
-        } finally {
-          context.close(true)
+            result.consumeAll()
+          } finally {
+            context.close()
+          }
         }
       }
     }

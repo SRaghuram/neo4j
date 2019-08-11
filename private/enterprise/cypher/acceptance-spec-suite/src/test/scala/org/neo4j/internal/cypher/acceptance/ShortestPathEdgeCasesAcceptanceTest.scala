@@ -73,7 +73,7 @@ class ShortestPathEdgeCasesAcceptanceTest extends ExecutionEngineFunSuite with C
                     |create (_31818)-[:`SE`]->(_31817)
                     |create (_31819)-[:`SE`]->(_31818)
                     |create (_31820)-[:`SE`]->(_31813)""".stripMargin
-      graph.execute(query)
+      executeSingle(query)
     }
 
     createTestGraph()

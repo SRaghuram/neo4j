@@ -115,23 +115,27 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
 
     createLabeledNode("Dog")
     (0 until 50).foreach { _ => createLabeledNode("Person") }
-    val result1 = engine.execute(query,
-                   EMPTY_MAP,
-                   graph.transactionalContext(query = query -> Map.empty),
-                   profile = false,
-                   prePopulate = false,
-                   DO_NOTHING_SUBSCRIBER)
-    result1.consumeAll()
+    graph.withTx{ tx =>
+      val result1 = engine.execute(query,
+        EMPTY_MAP,
+        graph.transactionalContext(tx, query = query -> Map.empty),
+        profile = false,
+        prePopulate = false,
+        DO_NOTHING_SUBSCRIBER)
+      result1.consumeAll()
+    }
 
     // when
     (0 until 1000).foreach { _ => createLabeledNode("Dog") }
-    val result2 = engine.execute(query,
-                   EMPTY_MAP,
-                   graph.transactionalContext(query = query -> Map.empty),
-                   profile = false,
-                   prePopulate = false,
-                   DO_NOTHING_SUBSCRIBER)
-    result2.consumeAll()
+    graph.withTx { tx =>
+      val result2 = engine.execute(query,
+        EMPTY_MAP,
+        graph.transactionalContext(tx, query = query -> Map.empty),
+        profile = false,
+        prePopulate = false,
+        DO_NOTHING_SUBSCRIBER)
+      result2.consumeAll()
+    }
 
     logProvider.assertAtLeastOnce(
 

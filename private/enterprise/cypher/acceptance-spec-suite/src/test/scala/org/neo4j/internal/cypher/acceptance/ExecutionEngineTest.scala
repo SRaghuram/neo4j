@@ -200,13 +200,15 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     val result = executeWith(Configs.VarExpand, "match (a)-[:CONTAINS*0..1]->(b)-[:FRIEND*0..1]->(c) where id(a) = 0 return a,b,c")
 
-    result.toSet should equal(
-      Set(
-        Map("a" -> node("A"), "b" -> node("A"), "c" -> node("A")),
-        Map("a" -> node("A"), "b" -> node("B"), "c" -> node("B")),
-        Map("a" -> node("A"), "b" -> node("B"), "c" -> node("C"))
+    graph.inTx({
+      result.toSet should equal(
+        Set(
+          Map("a" -> node("A"), "b" -> node("A"), "c" -> node("A")),
+          Map("a" -> node("A"), "b" -> node("B"), "c" -> node("B")),
+          Map("a" -> node("A"), "b" -> node("B"), "c" -> node("C"))
+        )
       )
-    )
+    })
   }
 
   test("shouldBeAbleToTakeParamsInDifferentTypes") {
@@ -248,7 +250,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query = "match (pA) where id(pA) IN $a return pA"
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("a" -> Seq[Long](0)))
 
-    result.toList should equal(List(Map("pA" -> node("A"))))
+    graph.inTx(result.toList should equal(List(Map("pA" -> node("A")))))
   }
 
   test("shouldBeAbleToTakeParamsForEqualityComparisons") {
@@ -698,11 +700,13 @@ order by a.COL1""".format(a, b))
     //GIVEN
     readOnlyEngine() {
       _ =>
-        //WHEN
-        val result = executeOfficial("MATCH (n) WHERE n:NonExistingLabel RETURN n")
+        graph.withTx(_ =>{
+          //WHEN
+          val result = executeOfficial("MATCH (n) WHERE n:NonExistingLabel RETURN n")
 
-        //THEN
-        result.asScala.toList shouldBe empty
+          //THEN
+          result.asScala.toList shouldBe empty
+        })
     }
   }
 
@@ -871,8 +875,10 @@ order by a.COL1""".format(a, b))
       writer.println("1,2,3")
       writer.println("4,5,6")
     }
-    val result = executeOfficial(s"using periodic commit load csv from '$url' as line create (x) return x")
-    result.asScala should have size 2
+    graph.inTx({
+      val result = executeOfficial(s"using periodic commit load csv from '$url' as line create (x) return x")
+      result.asScala should have size 2
+    })
   }
 
   override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
@@ -898,12 +904,12 @@ order by a.COL1""".format(a, b))
     (0 until 100).foreach { _ => createLabeledNode("Person") }
 
     // WHEN
-    executeOfficial(s"match (n:Person) return n").resultAsString()
+    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
     planningListener.planRequests should equal(Seq(
       s"match (n:Person) return n"
     ))
     (0 until 301).foreach { _ => createLabeledNode("Person") }
-    executeOfficial(s"match (n:Person) return n").resultAsString()
+    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
 
     //THEN
     planningListener.planRequests should equal (Seq(
@@ -919,12 +925,12 @@ order by a.COL1""".format(a, b))
 
     (0 until 100).foreach { _ => createLabeledNode("Person") }
     //WHEN
-    executeOfficial(s"match (n:Person) return n").resultAsString()
+    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
     planningListener.planRequests should equal(Seq(
       s"match (n:Person) return n"
     ))
     (0 until 9).foreach { _ => createLabeledNode("Dog") }
-    executeOfficial(s"match (n:Person) return n").resultAsString()
+    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
 
     //THEN
     planningListener.planRequests should equal(Seq(
@@ -934,7 +940,9 @@ order by a.COL1""".format(a, b))
 
   test("replanning should happen after data source restart") {
     // given
-    graph.execute("match (n) return n").hasNext shouldBe false
+    graph.inTx({
+      graph.execute("match (n) return n").hasNext shouldBe false
+    })
 
     val database = graph.getDependencyResolver.resolveDependency(classOf[Database])
     database.stop()
@@ -943,7 +951,9 @@ order by a.COL1""".format(a, b))
     // when
     val planningListener = PlanningListener()
     kernelMonitors.addMonitorListener(planningListener)
-    graph.execute("match (n) return n").hasNext shouldBe false
+    graph.inTx({
+      graph.execute("match (n) return n").hasNext shouldBe false
+    })
 
     // then
     planningListener.planRequests should equal(Seq("match (n) return n"))

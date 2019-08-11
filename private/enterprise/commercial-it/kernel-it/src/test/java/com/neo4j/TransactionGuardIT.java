@@ -148,7 +148,7 @@ class TransactionGuardIT
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
             URL url = prepareTestImportFile( 8 );
-            database.execute( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" );
+            database.executeTransactionally( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" );
         } );
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -367,8 +367,8 @@ class TransactionGuardIT
         {
             fakeClock.forward( 3, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            transaction.commit();
             database.execute( "create (n)" );
+            transaction.commit();
         }
 
         // Assert node successfully created

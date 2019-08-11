@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 
 @CommercialDbmsExtension
 class SchemaWithPECAcceptanceTest
@@ -58,7 +59,7 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint = createNodePropertyExistenceConstraint( helper, label, propertyKey );
 
         // Then
-        assertThat( getConstraints( db ), containsOnly( constraint ) );
+        assertThat( getConstraints( db ), inTx( db, containsOnly( constraint ) ) );
     }
 
     @ParameterizedTest
@@ -69,7 +70,7 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint = createRelationshipPropertyExistenceConstraint( helper, Types.MY_TYPE, propertyKey );
 
         // Then
-        assertThat( getConstraints( db ), containsOnly( constraint ) );
+        assertThat( getConstraints( db ), inTx( db, containsOnly( constraint ) ) );
     }
 
     @ParameterizedTest
@@ -84,7 +85,10 @@ class SchemaWithPECAcceptanceTest
         createNodePropertyExistenceConstraint( helper, Labels.MY_OTHER_LABEL, propertyKey );
 
         // WHEN THEN
-        assertThat( getConstraints( db, label ), containsOnly( constraint1, constraint2, constraint3 ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( getConstraints( db, label ), containsOnly( constraint1, constraint2, constraint3 ) );
+        }
     }
 
     @ParameterizedTest
@@ -96,7 +100,10 @@ class SchemaWithPECAcceptanceTest
         createRelationshipPropertyExistenceConstraint( helper, Types.MY_OTHER_TYPE, propertyKey );
 
         // WHEN THEN
-        assertThat( getConstraints( db, Types.MY_TYPE ), containsOnly( constraint1 ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( getConstraints( db, Types.MY_TYPE ), containsOnly( constraint1 ) );
+        }
     }
 
     @ParameterizedTest
@@ -110,7 +117,10 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint4 = createNodeKeyConstraint( helper, label, propertyKey2 );
 
         // WHEN THEN
-        assertThat( getConstraints( db ), containsOnly( constraint1, constraint2, constraint3, constraint4 ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( getConstraints( db ), containsOnly( constraint1, constraint2, constraint3, constraint4 ) );
+        }
     }
 
     @ParameterizedTest
@@ -130,10 +140,18 @@ class SchemaWithPECAcceptanceTest
 
     private ConstraintDefinition createUniquenessConstraint( SchemaHelper helper, Label label, String propertyKey )
     {
-        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-        helper.createUniquenessConstraint( db, label, propertyKey );
+        Collection<ConstraintDefinition> before;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            before = getConstraints( db ).collection();
+            helper.createUniquenessConstraint( db, label, propertyKey );
+            transaction.commit();
+        }
         helper.awaitIndexes( db );
-        return getCreatedConstraint( before );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            return getCreatedConstraint( before );
+        }
     }
 
     private ConstraintDefinition getCreatedConstraint( Collection<ConstraintDefinition> before )
@@ -149,33 +167,63 @@ class SchemaWithPECAcceptanceTest
 
     private ConstraintDefinition createNodeKeyConstraint( SchemaHelper helper, Label label, String propertyKey )
     {
-        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-        helper.createNodeKeyConstraint( db, label, propertyKey );
+        Collection<ConstraintDefinition> before;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            before = getConstraints( db ).collection();
+            helper.createNodeKeyConstraint( db, label, propertyKey );
+            transaction.commit();
+        }
+
         helper.awaitIndexes( db );
-        return getCreatedConstraint( before );
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            return getCreatedConstraint( before );
+        }
     }
 
     private void createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
     {
-        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-        ConstraintDefinition constraint = helper.createNodeKeyConstraint( db, name, label, propertyKey );
+        Collection<ConstraintDefinition> before;
+        ConstraintDefinition constraint;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            before = getConstraints( db ).collection();
+            constraint = helper.createNodeKeyConstraint( db, name, label, propertyKey );
+            transaction.commit();
+        }
 
         helper.awaitIndexes( db );
-        ConstraintDefinition foundConstraint = getCreatedConstraint( before );
-        assertEquals( constraint, foundConstraint );
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            ConstraintDefinition foundConstraint = getCreatedConstraint( before );
+            assertEquals( constraint, foundConstraint );
+        }
     }
 
     private ConstraintDefinition createNodePropertyExistenceConstraint( SchemaHelper helper, Label label, String propertyKey )
     {
-        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-        helper.createNodePropertyExistenceConstraint( db, label, propertyKey );
-        return getCreatedConstraint( before );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+            helper.createNodePropertyExistenceConstraint( db, label, propertyKey );
+            var constraint = getCreatedConstraint( before );
+            transaction.commit();
+            return constraint;
+        }
     }
 
     private ConstraintDefinition createRelationshipPropertyExistenceConstraint( SchemaHelper helper, Types type, String propertyKey )
     {
-        Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-        helper.createRelPropertyExistenceConstraint( db, type, propertyKey );
-        return getCreatedConstraint( before );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+            helper.createRelPropertyExistenceConstraint( db, type, propertyKey );
+            var constraint = getCreatedConstraint( before );
+            transaction.commit();
+            return constraint;
+        }
     }
 }

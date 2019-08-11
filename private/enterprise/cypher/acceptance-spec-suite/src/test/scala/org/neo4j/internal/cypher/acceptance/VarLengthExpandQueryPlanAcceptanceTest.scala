@@ -7,8 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Path
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, Planners, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 
 class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -122,7 +121,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllNodesInPath") {
-    graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})")
+    graph.inTx(graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN nodes(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -134,7 +133,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllRelationships") {
-    graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
+    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3  {foo:'bar'}]->(pB)
                   |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -146,7 +145,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllRelationshipsInPath") {
-    graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
+    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -158,7 +157,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("NoNodeInPath") {
-    graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})")
+    graph.inTx(graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN nodes(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin
@@ -170,7 +169,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("NoRelationshipInPath") {
-    graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})")
+    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN relationships(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin

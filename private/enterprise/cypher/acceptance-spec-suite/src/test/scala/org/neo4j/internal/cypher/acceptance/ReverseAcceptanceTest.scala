@@ -21,55 +21,65 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
 
   test("reverse function should work with collections of integers") {
     // When
-    val result = graph.execute("with [4923,489,521,487] as ids RETURN reverse(ids)")
+    inTx { _ =>
+      val result = graph.execute("with [4923,489,521,487] as ids RETURN reverse(ids)")
 
-    val results= result.columnAs("reverse(ids)").next().toString
+      val results = result.columnAs("reverse(ids)").next().toString
 
-    // Then
-    results should equal ("[487, 521, 489, 4923]")
+      // Then
+      results should equal("[487, 521, 489, 4923]")
+    }
   }
 
   test("reverse function should work with collections that contains null") {
-    // When
-    val result = graph.execute("with [4923,null,521,487] as ids RETURN reverse(ids)")
+    inTx { _ =>
+      // When
+      val result = graph.execute("with [4923,null,521,487] as ids RETURN reverse(ids)")
 
-    val results= result.columnAs("reverse(ids)").next().toString
+      val results = result.columnAs("reverse(ids)").next().toString
 
-    // Then
-    results should equal ("[487, 521, null, 4923]")
+      // Then
+      results should equal("[487, 521, null, 4923]")
+    }
   }
 
   test("reverse function should work with empty collections") {
-    // When
-    val result = graph.execute("with [] as ids RETURN reverse(ids)")
+    inTx { _ =>
+      // When
+      val result = graph.execute("with [] as ids RETURN reverse(ids)")
 
-    val results= result.columnAs("reverse(ids)").next().toString
+      val results = result.columnAs("reverse(ids)").next().toString
 
-    // Then
-    results should equal ("[]")
+      // Then
+      results should equal("[]")
+    }
   }
 
   test("reverse function should work with collections of mixed types") {
-    // When
-    val result = graph.execute("with [4923,'abc',521,487] as ids RETURN reverse(ids)")
+    inTx { _ =>
+      // When
+      val result = graph.execute("with [4923,'abc',521,487] as ids RETURN reverse(ids)")
 
-    val results= result.columnAs("reverse(ids)").next().toString
+      val results = result.columnAs("reverse(ids)").next().toString
 
-    // Then
-    results should equal ("[487, 521, abc, 4923]")
+      // Then
+      results should equal("[487, 521, abc, 4923]")
+    }
   }
 
   test("reverse should be able to concatenate to original list") {
-    // When
-    val query =
-      """
-        | WITH range(1, 2) AS xs
-        | RETURN xs + reverse(xs) AS res
-        | """.stripMargin
+    inTx { _ =>
+      // When
+      val query =
+        """
+          | WITH range(1, 2) AS xs
+          | RETURN xs + reverse(xs) AS res
+          | """.stripMargin
 
-    val results = graph.execute(query).columnAs("res").next().toString
+      val results = graph.execute(query).columnAs("res").next().toString
 
-    // Then
-    results should equal("[1, 2, 2, 1]")
+      // Then
+      results should equal("[1, 2, 2, 1]")
+    }
   }
 }

@@ -42,15 +42,19 @@ class ExecutionResultTest
         createNode();
         createNode();
 
-        // When
-        List<Map<String,Object>> listResult;
-        try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            listResult = Iterators.asList( result );
-        }
+            // When
+            List<Map<String,Object>> listResult;
+            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            {
+                listResult = Iterators.asList( result );
+            }
 
-        // Then
-        assertThat( listResult, hasSize( 2 ) );
+            // Then
+            assertThat( listResult, hasSize( 2 ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -60,18 +64,22 @@ class ExecutionResultTest
         createNode();
         createNode();
 
-        // When
-        Map<String,Object> firstRow = null;
-        try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            if ( result.hasNext() )
+            // When
+            Map<String,Object> firstRow = null;
+            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
             {
-                firstRow = result.next();
+                if ( result.hasNext() )
+                {
+                    firstRow = result.next();
+                }
             }
-        }
 
-        // Then
-        assertThat( firstRow, notNullValue() );
+            // Then
+            assertThat( firstRow, notNullValue() );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -82,18 +90,22 @@ class ExecutionResultTest
         createNode();
 
         // When
-        final List<Result.ResultRow> listResult = new ArrayList<>();
-        try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+        try ( Transaction transaction = db.beginTx() )
         {
-            result.accept( row ->
+            final List<Result.ResultRow> listResult = new ArrayList<>();
+            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
             {
-                listResult.add( row );
-                return true;
-            } );
-        }
+                result.accept( row ->
+                {
+                    listResult.add( row );
+                    return true;
+                } );
+            }
 
-        // Then
-        assertThat( listResult, hasSize( 2 ) );
+            // Then
+            assertThat( listResult, hasSize( 2 ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -106,19 +118,23 @@ class ExecutionResultTest
         // When
         for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
         {
-            final List<Result.ResultRow> listResult = new ArrayList<>();
-            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                result.accept( row ->
+                final List<Result.ResultRow> listResult = new ArrayList<>();
+                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
-                    listResult.add( row );
-                    // return false so that no more result rows would be visited
-                    return false;
-                } );
-            }
+                    result.accept( row ->
+                    {
+                        listResult.add( row );
+                        // return false so that no more result rows would be visited
+                        return false;
+                    } );
+                }
 
-            // Then
-            assertThat( listResult, hasSize( 1 ) );
+                // Then
+                assertThat( listResult, hasSize( 1 ) );
+                transaction.commit();
+            }
         }
     }
 
@@ -132,21 +148,25 @@ class ExecutionResultTest
         // When
         for ( String runtime : asList( "INTERPRETED", "SLOTTED" ) )//TODO MORSEL leaves cursors open
         {
-            final List<Result.ResultRow> listResult = new ArrayList<>();
-            //This is really a read query but the planner will think of it as a read-write and force it to be
-            //materialized
-            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MERGE (n) RETURN n", runtime ) ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                result.accept( row ->
+                final List<Result.ResultRow> listResult = new ArrayList<>();
+                //This is really a read query but the planner will think of it as a read-write and force it to be
+                //materialized
+                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MERGE (n) RETURN n", runtime ) ) )
                 {
-                    listResult.add( row );
-                    // return false so that no more result rows would be visited
-                    return false;
-                } );
-            }
+                    result.accept( row ->
+                    {
+                        listResult.add( row );
+                        // return false so that no more result rows would be visited
+                        return false;
+                    } );
+                }
 
-            // Then
-            assertThat( listResult, hasSize( 1 ) );
+                // Then
+                assertThat( listResult, hasSize( 1 ) );
+                transaction.commit();
+            }
         }
     }
 
@@ -160,19 +180,23 @@ class ExecutionResultTest
         // When
         for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
         {
-            final List<Result.ResultRow> listResult = new ArrayList<>();
-            try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+            try ( Transaction transaction = db.beginTx() )
             {
-                result.accept( row ->
+                final List<Result.ResultRow> listResult = new ArrayList<>();
+                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
-                    listResult.add( row );
-                    // return false so that no more result rows would be visited
-                    return true;
-                } );
-            }
+                    result.accept( row ->
+                    {
+                        listResult.add( row );
+                        // return false so that no more result rows would be visited
+                        return true;
+                    } );
+                }
 
-            // Then
-            assertThat( listResult, hasSize( 2 ) );
+                // Then
+                assertThat( listResult, hasSize( 2 ) );
+                transaction.commit();
+            }
         }
     }
 
@@ -182,155 +206,199 @@ class ExecutionResultTest
         // Given
         createNode();
 
-        // Then
-        // just close result without consuming it
-        db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).close();
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Then
+            // just close result without consuming it
+            db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).close();
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCreateAndDropUniqueConstraints()
     {
-        Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
-        Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
+            Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
 
-        assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
-        assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
-        assertThat( drop.getQueryStatistics().getConstraintsAdded(), equalTo( 0 ) );
-        assertThat( drop.getQueryStatistics().getConstraintsRemoved(), equalTo( 1 ) );
+            assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
+            assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsAdded(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsRemoved(), equalTo( 1 ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldCreateAndDropExistenceConstraints()
     {
-        Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
-        Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
+            Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
 
-        assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
-        assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
-        assertThat( drop.getQueryStatistics().getConstraintsAdded(), equalTo( 0 ) );
-        assertThat( drop.getQueryStatistics().getConstraintsRemoved(), equalTo( 1 ) );
+            assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
+            assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsAdded(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsRemoved(), equalTo( 1 ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowRuntimeInExecutionPlanDescription()
     {
-        // Given
-        Result result = db.execute( "EXPLAIN MATCH (n) RETURN n.prop" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "EXPLAIN MATCH (n) RETURN n.prop" );
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-        assertThat( arguments.get( "runtime" ), notNullValue() );
-        assertThat( arguments.get( "runtime-impl" ), notNullValue() );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+            assertThat( arguments.get( "runtime" ), notNullValue() );
+            assertThat( arguments.get( "runtime-impl" ), notNullValue() );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowCompiledRuntimeInExecutionPlan()
     {
-        // Given
-        Result result = db.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "COMPILED" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "COMPILED" ) );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "COMPILED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "COMPILED" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowInterpretedRuntimeInExecutionPlan()
     {
-        // Given
-        Result result = db.execute( "EXPLAIN CYPHER runtime=interpreted MATCH (n) RETURN n.prop" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "EXPLAIN CYPHER runtime=interpreted MATCH (n) RETURN n.prop" );
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "INTERPRETED" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "INTERPRETED" ) );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "INTERPRETED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "INTERPRETED" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowArgumentsExecutionPlan()
     {
-        // Given
-        Result result = db.execute( "EXPLAIN CALL db.labels()" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "EXPLAIN CALL db.labels()" );
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowArgumentsInProfileExecutionPlan()
     {
-        // Given
-        Result result = db.execute( "PROFILE CALL db.labels()" );
-        result.resultAsString();
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "PROFILE CALL db.labels()" );
+            result.resultAsString();
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldShowArgumentsInSchemaExecutionPlan()
     {
-        // Given
-        Result result = db.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = db.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
 
-        // When
-        Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
 
-        // Then
-        assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-        assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-        assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            transaction.commit();
+        }
     }
 
     @Test
     void shouldReturnListFromSplit()
     {
-        assertThat( db.execute( "RETURN split('hello, world', ',') AS s" ).next().get( "s" ), instanceOf( List.class ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Object s = db.execute( "RETURN split('hello, world', ',') AS s" ).next().get( "s" );
+            assertThat( s, instanceOf( List.class ) );
+        }
     }
 
     @Test
     void shouldReturnCorrectArrayType()
     {
-        // Given
-        db.execute( "CREATE (p:Person {names:['adsf', 'adf' ]})" );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            db.execute( "CREATE (p:Person {names:['adsf', 'adf' ]})" );
 
-        // When
-        Object result = db.execute( "MATCH (n) RETURN n.names" ).next().get( "n.names" );
+            // When
+            Object result = db.execute( "MATCH (n) RETURN n.names" ).next().get( "n.names" );
 
-        // Then
-        assertThat( result, CoreMatchers.instanceOf( String[].class ) );
+            // Then
+            assertThat( result, CoreMatchers.instanceOf( String[].class ) );
+            transaction.commit();
+        }
     }
 
     @Test
@@ -338,15 +406,19 @@ class ExecutionResultTest
     {
         for ( String version : new String[]{"3.5", "4.0"} )
         {
-            // Given
-            Result result = db.execute( String.format( "EXPLAIN CYPHER %s MATCH (n) RETURN n", version ) );
+            try ( Transaction transaction = db.beginTx() )
+            {
+                // Given
+                Result result = db.execute( String.format( "EXPLAIN CYPHER %s MATCH (n) RETURN n", version ) );
 
-            // When
-            ExecutionPlanDescription description = result.getExecutionPlanDescription();
+                // When
+                ExecutionPlanDescription description = result.getExecutionPlanDescription();
 
-            // Then
-            assertThat( description.getName(), equalTo( "ProduceResults" ) );
-            assertThat( description.getChildren().get( 0 ).getName(), equalTo( "AllNodesScan" ) );
+                // Then
+                assertThat( description.getName(), equalTo( "ProduceResults" ) );
+                assertThat( description.getChildren().get( 0 ).getName(), equalTo( "AllNodesScan" ) );
+                transaction.commit();
+            }
         }
     }
 
@@ -364,21 +436,24 @@ class ExecutionResultTest
         for ( String version : new String[]{"3.5", "4.0"} )
         {
             // When
-            Result result = db.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );
-            result.resultAsString();
-            ExecutionPlanDescription.ProfilerStatistics stats =
-                    result.getExecutionPlanDescription()//ProduceResult
-                            .getChildren().get( 0 ) //AllNodesScan
-                            .getProfilerStatistics();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                Result result = db.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );
+                result.resultAsString();
+                ExecutionPlanDescription.ProfilerStatistics stats = result.getExecutionPlanDescription()//ProduceResult
+                        .getChildren().get( 0 ) //AllNodesScan
+                        .getProfilerStatistics();
 
-            // Then
-            assertThat( "Mismatching db-hits for version " + version, stats.getDbHits(), equalTo( 2L ) );
-            assertThat( "Mismatching rows for version " + version, stats.getRows(), equalTo( 1L ) );
+                // Then
+                assertThat( "Mismatching db-hits for version " + version, stats.getDbHits(), equalTo( 2L ) );
+                assertThat( "Mismatching rows for version " + version, stats.getRows(), equalTo( 1L ) );
 
-            //These stats are not available in older versions, but should at least return 0, and >0 for newer
-            assertThat( "Mismatching page cache hits for version " + version, stats.getPageCacheHits(), greaterThanOrEqualTo( 0L ) );
-            assertThat( "Mismatching page cache misses for version " + version, stats.getPageCacheMisses(), greaterThanOrEqualTo( 0L ) );
-            assertThat( "Mismatching page cache hit ratio for version " + version, stats.getPageCacheHitRatio(), greaterThanOrEqualTo( 0.0 ) );
+                //These stats are not available in older versions, but should at least return 0, and >0 for newer
+                assertThat( "Mismatching page cache hits for version " + version, stats.getPageCacheHits(), greaterThanOrEqualTo( 0L ) );
+                assertThat( "Mismatching page cache misses for version " + version, stats.getPageCacheMisses(), greaterThanOrEqualTo( 0L ) );
+                assertThat( "Mismatching page cache hit ratio for version " + version, stats.getPageCacheHitRatio(), greaterThanOrEqualTo( 0.0 ) );
+                transaction.commit();
+            }
         }
     }
 

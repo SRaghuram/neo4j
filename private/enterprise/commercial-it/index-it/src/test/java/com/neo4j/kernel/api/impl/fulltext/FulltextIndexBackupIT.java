@@ -203,11 +203,7 @@ class FulltextIndexBackupIT
 
     private void verifyData( GraphDatabaseAPI db )
     {
-        try ( Transaction tx = db.beginTx() )
-        {
-            awaitPopulation( db );
-            tx.commit();
-        }
+        awaitPopulation( db );
         try ( Transaction tx = db.beginTx() )
         {
             try ( Result nodes = db.execute( format( QUERY_NODES, NODE_INDEX, "integration" ) ) )

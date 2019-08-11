@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -59,7 +61,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailRead( subject, 3 );
 
         // When
-        neo.getSystemGraph().execute( "GRANT TRAVERSE ON GRAPH * TO custom" );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( "GRANT TRAVERSE ON GRAPH * TO custom" );
+            transaction.commit();
+        }
 
         // Then
         testSuccessfulRead( subject, 3 );
@@ -82,15 +89,24 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailWrite( subject );
 
         // When
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", roleName ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", roleName ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", roleName ) );
+            systemGraph.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", roleName ) );
+            transaction.commit();
+        }
 
         // Then
         testSuccessfulRead( subject, 3 );
         testSuccessfulWrite( subject );
 
         // When
-        neo.getSystemGraph().execute( String.format( "REVOKE WRITE {*} ON GRAPH * FROM %s", roleName ) );
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "REVOKE WRITE {*} ON GRAPH * FROM %s", roleName ) );
+            transaction.commit();
+        }
 
         // Then
         testSuccessfulRead( subject, 4 );
@@ -103,8 +119,17 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )
         {
-            neo.getSystemGraph().execute( String.format( "GRANT READ {foo} ON GRAPH * TO %s", role ) );
-            neo.getSystemGraph().execute( String.format( "REVOKE READ {foo} ON GRAPH * FROM %s", role ) );
+            GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+            try ( Transaction tx = systemGraph.beginTx() )
+            {
+                systemGraph.execute( String.format( "GRANT READ {foo} ON GRAPH * TO %s", role ) );
+                tx.commit();
+            }
+            try ( Transaction tx = systemGraph.beginTx() )
+            {
+                systemGraph.execute( String.format( "REVOKE READ {foo} ON GRAPH * FROM %s", role ) );
+                tx.commit();
+            }
         }
     }
 
@@ -117,8 +142,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
@@ -137,8 +167,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( subject, "MATCH (n:Node) return n.number", r -> assertKeyIs( r, "n.number", 0, 1, 2, 3 ) );
@@ -152,8 +187,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B, C TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B, C TO %s", role ) );
+            transaction.commit();
+        }
 
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
@@ -197,12 +237,21 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String roRole = "readOnlyRole";
         createUserWithRole( "readOnlyUser", roRole );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", roRole ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", roRole ) );
+            transaction.commit();
+        }
 
         String rfRole = "readFindRole";
         createUserWithRole( "readFindUser", rfRole );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", rfRole ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * Nodes Node TO %s", rfRole ) );
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", rfRole ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * Nodes Node TO %s", rfRole ) );
+            transaction.commit();
+        }
 
         CommercialLoginContext readOnly = neo.login( "readOnlyUser", PASSWORD );
         CommercialLoginContext findAndRead = neo.login( "readFindUser", PASSWORD );
@@ -230,8 +279,17 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number > 0 return n.number",
@@ -247,8 +305,17 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
@@ -265,8 +332,17 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES Node TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
@@ -286,7 +362,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -302,7 +383,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
@@ -318,8 +404,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH ()-[:R]->(n) return n.number", r -> assertKeyIs( r, "n.number", 1, 2 ) );
@@ -337,8 +428,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String varlenBasic = "MATCH (:A)-[:R*3]-(n:B) return n.number";
@@ -360,8 +456,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B, C TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, B, C TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
@@ -380,8 +481,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
@@ -396,8 +502,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         setupGraph();
@@ -416,16 +527,25 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         String role1 = "role1";
         createUserWithRole( "user1", role1 );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role1 ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {foo} ON GRAPH * NODES A TO %s", role1 ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {bar} ON GRAPH * NODES B TO %s", role1 ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role1 ) );
+            systemGraph.execute( String.format( "GRANT READ {foo} ON GRAPH * NODES A TO %s", role1 ) );
+            systemGraph.execute( String.format( "GRANT READ {bar} ON GRAPH * NODES B TO %s", role1 ) );
+            transaction.commit();
+        }
         CommercialLoginContext findSome = neo.login( "user1", PASSWORD );
 
         String role2 = "role2";
         createUserWithRole( "user2", role2 );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role2 ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {foo} ON GRAPH * NODES A TO %s", role2 ) );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {bar} ON GRAPH * NODES B TO %s", role2 ) );
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role2 ) );
+            systemGraph.execute( String.format( "GRANT READ {foo} ON GRAPH * NODES A TO %s", role2 ) );
+            systemGraph.execute( String.format( "GRANT READ {bar} ON GRAPH * NODES B TO %s", role2 ) );
+            transaction.commit();
+        }
         CommercialLoginContext findAll = neo.login( "user2", PASSWORD );
 
         assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
@@ -457,7 +577,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertEmpty( adminSubject, "MATCH (n) DETACH DELETE n" );
@@ -475,7 +600,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 5 ) );
@@ -494,8 +624,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, C, D TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, C, D TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (a:A)--(n1:D) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
@@ -512,7 +647,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, C, D TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {*} ON GRAPH * NODES A, C, D TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (a:A)--(n1:D)--(c:C) RETURN count(*)", r -> assertKeyIs( r, "count(*)", 1 ) );
@@ -527,8 +667,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String varlenBasic = "MATCH p = (:A)-[:R*3]-(n:C) return length(p)";
@@ -550,8 +695,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A, B, C TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
@@ -572,8 +722,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * NODES A TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertSuccess( adminSubject, "MATCH (n) return count(n)", r -> assertKeyIs( r, "count(n)", 4 ) );
@@ -587,7 +742,12 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
+            transaction.commit();
+        }
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         String query = "MATCH (:A)-[r]->(:B) RETURN r.foo";
@@ -599,7 +759,11 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
             assertNull( rows.get( 0 ).get( "r.foo" ) );
         } );
 
-        neo.getSystemGraph().execute( String.format( "GRANT READ {foo} ON GRAPH * RELATIONSHIPS REL TO %s", role ) );
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "GRANT READ {foo} ON GRAPH * RELATIONSHIPS REL TO %s", role ) );
+            transaction.commit();
+        }
 
         assertSuccess( subject, query, r -> assertKeyIs( r, "r.foo", 1 ) );
     }
@@ -617,8 +781,13 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
     private void createUserWithRole( String username, String role )
     {
-        neo.getSystemGraph().execute( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, PASSWORD ) );
-        neo.getSystemGraph().execute( String.format( "CREATE ROLE %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT ROLE %s TO %s", role, username ) );
+        GraphDatabaseFacade systemGraph = neo.getSystemGraph();
+        try ( Transaction transaction = systemGraph.beginTx() )
+        {
+            systemGraph.execute( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, PASSWORD ) );
+            systemGraph.execute( String.format( "CREATE ROLE %s", role ) );
+            systemGraph.execute( String.format( "GRANT ROLE %s TO %s", role, username ) );
+            transaction.commit();
+        }
     }
 }

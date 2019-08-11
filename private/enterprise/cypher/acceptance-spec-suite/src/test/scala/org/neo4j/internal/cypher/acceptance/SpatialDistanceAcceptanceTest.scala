@@ -217,22 +217,22 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("points with distance query and mixed crs") {
     // Given
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 50.7, x: 12.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 56.7, x: 10.78, crs: 'cartesian'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, z: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, z: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 50.7, x: 12.78, z: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 56.7, x: 10.78, z: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, height: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, height: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, height: 100.0})")
-    graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, height: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 50.7, x: 12.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 10.78, crs: 'cartesian'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 12.78, z: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 55.7, x: 11.78, z: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 50.7, x: 12.78, z: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 56.7, x: 10.78, z: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, height: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 55.7, longitude: 11.78, height: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 50.7, longitude: 12.78, height: 100.0})")
+    executeSingle("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, height: 100.0})")
 
     Set(CoordinateReferenceSystem.WGS84, CoordinateReferenceSystem.Cartesian,
       CoordinateReferenceSystem.WGS84_3D, CoordinateReferenceSystem.Cartesian_3D).foreach { crs =>
@@ -360,7 +360,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     graph.createIndex("Place", "location")
     setupPointsBothCRS()
 
-    graph.execute(
+    executeSingle(
       """MATCH (p:Place) CREATE (:Preference {maxDistance: 10})<-[:R]-(p),
         |                       (:Preference {maxDistance: 10})<-[:R]-(p),
         |                       (:Preference {maxDistance: 10})<-[:R]-(p)""".stripMargin)
@@ -391,21 +391,21 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("indexed points at date line") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -170})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 170})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -170})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 170})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 180})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -170})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 180})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -170})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 170})")
 
     // Create enough points so that an index seek gets planned
-    Range(0, 50).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: $i, longitude: $i})"))
+    Range(0, 50).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: $i, longitude: $i})"))
 
     // Have a slightly bigger circle, and expect points on both sides of the date line, except the "corners" of the square.
     Seq("<=","<").foreach { inequality =>
@@ -709,8 +709,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("invalid location with index") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = 5")
-    Range(11, 100).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
+    executeSingle("CREATE (p:Place) SET p.location = 5")
+    Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
     val query =
       s"""MATCH (p:Place)
@@ -726,8 +726,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("invalid location without index") {
     // Given
-    graph.execute("CREATE (p:Place) SET p.location = 5")
-    Range(11, 100).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
+    executeSingle("CREATE (p:Place) SET p.location = 5")
+    Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
     val query =
       s"""MATCH (p:Place)
@@ -749,8 +749,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("no error for distance with no point when using parameters") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
-    Range(11, 100).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
+    Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
     val query =
       """MATCH (p:Place)
@@ -764,7 +764,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     result.toList shouldBe empty
 
     // And given
-    graph.execute(s"DROP INDEX ON :Place(location)")
+    executeSingle(s"DROP INDEX ON :Place(location)")
     // when
     val resultNoIndex = executeWith(Configs.CachedProperty, query,  params = Map("poi" -> 5))
 
@@ -775,8 +775,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("no error for distance with no point when using no parameters") {
     // Given
     graph.createIndex("Place", "location")
-    graph.execute("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
-    Range(11, 100).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
+    executeSingle("CREATE (p:Place) SET p.location = point({y: 0, x: 0, crs: 'cartesian'})")
+    Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i, crs: 'cartesian'})"))
 
     val query =
       """MATCH (p:Place)
@@ -790,7 +790,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     result.toList shouldBe empty
 
     // And given
-    graph.execute(s"DROP INDEX ON :Place(location)")
+    executeSingle(s"DROP INDEX ON :Place(location)")
     // when
     val resultNoIndex = executeWith(Configs.CachedProperty, query)
 
@@ -799,34 +799,34 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   private def setupPointsCartesian(zText: String = ""): Unit = {
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: -10, x: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: -10, x: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 10, x: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 10, x: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: -10, x: 0$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 10, x: 0$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 0, x: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 0, x: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 0, x: 0$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({y: 9.99, x: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: -10, x: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: -10, x: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 10, x: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 10, x: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: -10, x: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 10, x: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 0, x: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 0, x: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 0, x: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({y: 9.99, x: 0$zText})")
 
     // Create enough points so that an index seek gets planned
-    Range(11, 100).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i$zText})"))
+    Range(11, 100).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({y: $i, x: $i$zText})"))
   }
 
   private def setupPointsWGS84(zText: String = ""): Unit = {
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 0$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 0$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 10$zText})")
-    graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: -10, longitude: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 10, longitude: 0$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: -10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 10$zText})")
+    executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: 0, longitude: 0$zText})")
 
     // Create enough points so that an index seek gets planned
-    Range(11, 89).foreach(i => graph.execute(s"CREATE (p:Place) SET p.location = point({latitude: $i, longitude: $i$zText})"))
+    Range(11, 89).foreach(i => executeSingle(s"CREATE (p:Place) SET p.location = point({latitude: $i, longitude: $i$zText})"))
   }
 
   private def setupPointsBothCRS(): Unit = {

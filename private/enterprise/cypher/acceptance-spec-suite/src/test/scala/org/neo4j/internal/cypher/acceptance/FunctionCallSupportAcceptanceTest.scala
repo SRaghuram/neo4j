@@ -23,16 +23,18 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("my.first.value()", value)
-    ))
+    )))
   }
 
   test("should not fail to type check this") { // Waiting for the next release of openCypher
     graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
 
     // We just want to make sure that running the query does not throw exceptions
-    graph.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)").stream().toArray.length should equal(1)
+    graph.inTx(
+    graph.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)")
+      .stream().toArray.length should equal(1))
   }
 
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {
@@ -43,9 +45,9 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should return correctly typed stream result (even if converting to and from scala representation internally)") {
@@ -57,9 +59,9 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
-    ))
+    )))
   }
 
   test("should not copy lists unnecessarily") {
@@ -70,10 +72,12 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    graph.inTx({
+      val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
 
-    returned shouldBe an [util.ArrayList[_]]
-    returned shouldBe value
+      returned shouldBe an [util.ArrayList[_]]
+      returned shouldBe value
+    })
   }
 
   test("should not copy unnecessarily with nested types") {
@@ -85,10 +89,12 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    graph.inTx({
+      val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
 
-    returned shouldBe an [util.ArrayList[_]]
-    returned shouldBe value
+      returned shouldBe an [util.ArrayList[_]]
+      returned shouldBe value
+    })
   }
 
   test("should handle interacting with list") {
@@ -99,10 +105,12 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTList(Neo4jTypes.NTInteger))
 
     // Using graph execute to get a Java value
-    val returned = graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
-      .next().get("out")
+    graph.inTx({
+      val returned = graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
+        .next().get("out")
 
-    returned should equal(4)
+      returned should equal(4)
+    })
   }
 
   test("should be able to use function returning list with list comprehension") {
@@ -112,10 +120,12 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTAny)
 
-    val result = graph.execute("RETURN [x in my.first.value() | x + 1] as y")
+    graph.inTx({
+      val result = graph.execute("RETURN [x in my.first.value() | x + 1] as y")
 
-    result.hasNext shouldBe true
-    result.next.get("y").asInstanceOf[util.List[_]].asScala should equal(List(2, 3))
+      result.hasNext shouldBe true
+      result.next.get("y").asInstanceOf[util.List[_]].asScala should equal(List(2, 3))
+    })
   }
 
   test("should be able to use function returning list with ANY") {
@@ -125,9 +135,11 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTAny)
 
-    val result = graph.execute("RETURN ANY(x in my.first.value() WHERE x = 2) as u")
+    graph.inTx({
+      val result = graph.execute("RETURN ANY(x in my.first.value() WHERE x = 2) as u")
 
-    result.hasNext shouldBe true
-    result.next.get("u") should equal(true)
+      result.hasNext shouldBe true
+      result.next.get("u") should equal(true)
+    })
   }
 }

@@ -191,10 +191,10 @@ public class ConnectionTrackingIT
                 updateNodeViaHttp( dummyNodeId, OTHER_USER, OTHER_USER_PWD );
             }
 
-            awaitNumberOfAuthenticatedConnectionsToBe( 7 );
-            verifyAuthenticatedConnectionCount( HTTP, "neo4j", 4 );
-            verifyAuthenticatedConnectionCount( HTTP, OTHER_USER, 3 );
         } );
+        awaitNumberOfAuthenticatedConnectionsToBe( 7 );
+        verifyAuthenticatedConnectionCount( HTTP, "neo4j", 4 );
+        verifyAuthenticatedConnectionCount( HTTP, OTHER_USER, 3 );
     }
 
     @Test
@@ -212,9 +212,9 @@ public class ConnectionTrackingIT
             }
 
             awaitNumberOfAuthenticatedConnectionsToBe( 9 );
-            verifyAuthenticatedConnectionCount( HTTPS, "neo4j", 4 );
-            verifyAuthenticatedConnectionCount( HTTPS, OTHER_USER, 5 );
         } );
+        verifyAuthenticatedConnectionCount( HTTPS, "neo4j", 4 );
+        verifyAuthenticatedConnectionCount( HTTPS, OTHER_USER, 5 );
     }
 
     @Test
@@ -231,10 +231,10 @@ public class ConnectionTrackingIT
                 updateNodeViaBolt( dummyNodeId, OTHER_USER, OTHER_USER_PWD );
             }
 
-            awaitNumberOfAuthenticatedConnectionsToBe( 7 );
-            verifyAuthenticatedConnectionCount( BOLT, "neo4j", 2 );
-            verifyAuthenticatedConnectionCount( BOLT, OTHER_USER, 5 );
         } );
+        awaitNumberOfAuthenticatedConnectionsToBe( 7 );
+        verifyAuthenticatedConnectionCount( BOLT, "neo4j", 2 );
+        verifyAuthenticatedConnectionCount( BOLT, OTHER_USER, 5 );
     }
 
     @Test
@@ -256,10 +256,10 @@ public class ConnectionTrackingIT
             }
 
             awaitNumberOfAuthenticatedConnectionsToBe( 10 );
-            verifyConnectionCount( BOLT, OTHER_USER, 4 );
-            verifyConnectionCount( HTTP, "neo4j", 1 );
-            verifyConnectionCount( HTTPS, "neo4j", 5 );
         } );
+        verifyConnectionCount( BOLT, OTHER_USER, 4 );
+        verifyConnectionCount( HTTP, "neo4j", 1 );
+        verifyConnectionCount( HTTPS, "neo4j", 5 );
     }
 
     @Test
@@ -366,31 +366,36 @@ public class ConnectionTrackingIT
 
     private static List<Map<String,Object>> listMatchingConnection( TestConnector connector, String username, boolean expectAuthenticated )
     {
-        Result result = neo4j.defaultDatabaseService().execute( "CALL dbms.listConnections()" );
-        assertEquals( LIST_CONNECTIONS_PROCEDURE_COLUMNS, result.columns() );
-        List<Map<String,Object>> records = result.stream().collect( toList() );
-
         List<Map<String,Object>> matchingRecords = new ArrayList<>();
-        for ( Map<String,Object> record : records )
+        GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+        try ( Transaction transaction = graphDatabaseService.beginTx() )
         {
-            String actualConnector = record.get( "connector" ).toString();
-            assertNotNull( actualConnector );
-            Object actualUsername = record.get( "username" );
-            if ( Objects.equals( connector.name, actualConnector ) && Objects.equals( username, actualUsername ) )
+            Result result = graphDatabaseService.execute( "CALL dbms.listConnections()" );
+            assertEquals( LIST_CONNECTIONS_PROCEDURE_COLUMNS, result.columns() );
+            List<Map<String,Object>> records = result.stream().collect( toList() );
+
+            for ( Map<String,Object> record : records )
             {
-                if ( expectAuthenticated )
+                String actualConnector = record.get( "connector" ).toString();
+                assertNotNull( actualConnector );
+                Object actualUsername = record.get( "username" );
+                if ( Objects.equals( connector.name, actualConnector ) && Objects.equals( username, actualUsername ) )
                 {
-                    assertEquals( connector.userAgent, record.get( "userAgent" ) );
+                    if ( expectAuthenticated )
+                    {
+                        assertEquals( connector.userAgent, record.get( "userAgent" ) );
+                    }
+
+                    matchingRecords.add( record );
                 }
 
-                matchingRecords.add( record );
+                assertThat( record.get( "connectionId" ).toString(), startsWith( actualConnector ) );
+                OffsetDateTime connectTime = ISO_OFFSET_DATE_TIME.parse( record.get( "connectTime" ).toString(), OffsetDateTime::from );
+                assertNotNull( connectTime );
+                assertThat( record.get( "serverAddress" ), instanceOf( String.class ) );
+                assertThat( record.get( "clientAddress" ), instanceOf( String.class ) );
             }
-
-            assertThat( record.get( "connectionId" ).toString(), startsWith( actualConnector ) );
-            OffsetDateTime connectTime = ISO_OFFSET_DATE_TIME.parse( record.get( "connectTime" ).toString(), OffsetDateTime::from );
-            assertNotNull( connectTime );
-            assertThat( record.get( "serverAddress" ), instanceOf( String.class ) );
-            assertThat( record.get( "clientAddress" ), instanceOf( String.class ) );
+            transaction.commit();
         }
         return matchingRecords;
     }
@@ -433,10 +438,17 @@ public class ConnectionTrackingIT
 
     private static long createDummyNode()
     {
-        try ( Result result = neo4j.defaultDatabaseService().execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
+        GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+        try ( Transaction transaction = graphDatabaseService.beginTx() )
         {
-            Map<String,Object> record = single( result );
-            return (long) record.get( "i" );
+            long id;
+            try ( Result result = graphDatabaseService.execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
+            {
+                Map<String,Object> record = single( result );
+                id = (long) record.get( "i" );
+            }
+            transaction.commit();
+            return id;
         }
     }
 

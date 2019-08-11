@@ -13,6 +13,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
@@ -61,7 +62,11 @@ class StartupConstraintSemanticsTest
         GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
-            graphDb.execute( constraintCreationQuery );
+            try ( Transaction transaction = graphDb.beginTx() )
+            {
+                graphDb.execute( constraintCreationQuery );
+                transaction.commit();
+            }
         }
         finally
         {
@@ -96,7 +101,11 @@ class StartupConstraintSemanticsTest
         GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
-            graphDb.execute( constraintCreationQuery );
+            try ( Transaction transaction = graphDb.beginTx() )
+            {
+                graphDb.execute( constraintCreationQuery );
+                transaction.commit();
+            }
         }
         finally
         {

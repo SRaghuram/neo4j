@@ -30,6 +30,7 @@ import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
@@ -228,13 +229,21 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE INDEX ON :Person(name)" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE INDEX ON :Person(name)" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -253,13 +262,21 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE INDEX ON :Person(name, age)" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE INDEX ON :Person(name, age)" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42', age: 42})" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42', age: 42})" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -278,20 +295,32 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CALL db.index.fulltext.createNodeIndex('idx',['Person'],['name'])" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CALL db.index.fulltext.createNodeIndex('idx',['Person'],['name'])" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void verify( GraphDatabaseService db )
         {
-            Result result = db.execute( "CALL db.index.fulltext.queryNodes('idx', '42') YIELD node RETURN count(node) AS count" );
-            assertEquals( 42L, single( result ).get( "count" ) );
+            try ( Transaction transaction = db.beginTx() )
+            {
+                Result result = db.execute( "CALL db.index.fulltext.queryNodes('idx', '42') YIELD node RETURN count(node) AS count" );
+                assertEquals( 42L, single( result ).get( "count" ) );
+                transaction.commit();
+            }
         }
     }
 
@@ -300,20 +329,31 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CALL db.index.fulltext.createRelationshipIndex('idx',['LIKES'],['name'])" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CALL db.index.fulltext.createRelationshipIndex('idx',['LIKES'],['name'])" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person)-[:LIKES {name: '42'}]->(:Person)" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person)-[:LIKES {name: '42'}]->(:Person)" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void verify( GraphDatabaseService db )
         {
-            Result result = db.execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
-            assertEquals( 42L, single( result ).get( "count" ) );
+            try ( Transaction transaction = db.beginTx() )
+            {
+                Result result = db.execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
+                assertEquals( 42L, single( result ).get( "count" ) );
+            }
         }
     }
 
@@ -322,13 +362,21 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name IS UNIQUE" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name IS UNIQUE" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x)})" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x)})" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -342,8 +390,11 @@ class BackupSchemaIT
                     assertNotNull( db.findNode( label( "Person" ), "name", String.valueOf( i ) ) );
                 }
             }
-            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1'})" ).close() );
-            assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
+            try ( Transaction transaction = db.beginTx() )
+            {
+                QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1'})" ).close() );
+                assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
+            }
         }
     }
 
@@ -352,13 +403,21 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT (p.name, p.age) IS NODE KEY" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT (p.name, p.age) IS NODE KEY" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
         public void populate( GraphDatabaseService db )
         {
-            db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x), age: x})" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x), age: x})" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -374,8 +433,12 @@ class BackupSchemaIT
                     assertEquals( 1L, single( result ).get( "count" ) );
                 }
             }
-            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1', age: 1})" ).close() );
-            assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
+            try ( Transaction transaction = db.beginTx() )
+            {
+                QueryExecutionException error =
+                        assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1', age: 1})" ).close() );
+                assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
+            }
         }
     }
 
@@ -384,7 +447,11 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT exists(p.name)" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT exists(p.name)" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -398,9 +465,12 @@ class BackupSchemaIT
             try ( Transaction tx = db.beginTx() )
             {
                 assertEquals( 1, countNodeConstraints( db, "Person", NODE_PROPERTY_EXISTENCE, "name" ) );
+                ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
+                    db.execute( "CREATE (:Person)" ).close();
+                    tx.commit();
+                } );
+                assertThat( findCauseOrSuppressed( error, instanceOf( NodePropertyExistenceException.class ) ), not( empty() ) );
             }
-            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person)" ).close() );
-            assertThat( findCauseOrSuppressed( error, instanceOf( ConstraintViolationException.class ) ), not( empty() ) );
         }
     }
 
@@ -409,7 +479,11 @@ class BackupSchemaIT
         @Override
         public void create( GraphDatabaseService db )
         {
-            db.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT exists(like.name)" ).close();
+            try ( Transaction transaction = db.beginTx() )
+            {
+                db.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT exists(like.name)" ).close();
+                transaction.commit();
+            }
         }
 
         @Override
@@ -423,9 +497,12 @@ class BackupSchemaIT
             try ( Transaction tx = db.beginTx() )
             {
                 assertEquals( 1, countRelationshipConstraints( db, "LIKES", RELATIONSHIP_PROPERTY_EXISTENCE, "name" ) );
+                ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
+                    db.execute( "CREATE ()-[:LIKES]->()" ).close();
+                    tx.commit();
+                } );
+                assertThat( findCauseOrSuppressed( error, instanceOf( ConstraintViolationException.class ) ), not( empty() ) );
             }
-            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE ()-[:LIKES]->()" ).close() );
-            assertThat( findCauseOrSuppressed( error, instanceOf( ConstraintViolationException.class ) ), not( empty() ) );
         }
     }
 }

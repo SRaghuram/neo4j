@@ -15,10 +15,12 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("Clearing the query caches should work with empty caches") {
     val query = "CALL dbms.clearQueryCaches()"
-    val result = graph.execute(query)
+    graph.inTx({
+      val result = graph.execute(query)
 
-    result.next().toString should equal ("{value=Query cache already empty.}")
-    result.hasNext should be (false)
+      result.next().toString should equal ("{value=Query cache already empty.}")
+      result.hasNext should be (false)
+    })
   }
 
   test("Clearing the query caches should work properly") {
@@ -26,33 +28,38 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
     val q2 = "MATCH (n) WHERE n.prop = 3 RETURN n"
     val q3 = "MATCH (n) WHERE n.prop = 4 RETURN n"
 
-    graph.execute(q1)
-    graph.execute(q2)
-    graph.execute(q3)
-    graph.execute(q1)
+    graph.inTx({
+      graph.execute(q1).close()
+      graph.execute(q2).close()
+      graph.execute(q3).close()
+      graph.execute(q1).close()
+    })
 
-    val query = "CALL dbms.clearQueryCaches()"
-    val result = graph.execute(query)
+    graph.inTx({
+      val query = "CALL dbms.clearQueryCaches()"
+      val result = graph.execute(query)
 
-    result.next().toString should equal ("{value=Query caches successfully cleared of 3 queries.}")
-    result.hasNext should be (false)
+      result.next().toString should equal ("{value=Query caches successfully cleared of 3 queries.}")
+      result.hasNext should be (false)
+    })
   }
 
   test("Multiple calls to clearing the cache should work") {
     val q1 = "MATCH (n) RETURN n.prop"
 
-    graph.execute(q1)
+    graph.inTx(graph.execute(q1).close())
 
-    val query = "CALL dbms.clearQueryCaches()"
-    val result = graph.execute(query)
+    graph.inTx({
+      val query = "CALL dbms.clearQueryCaches()"
+      val result = graph.execute(query)
 
-    result.next().toString should equal ("{value=Query caches successfully cleared of 1 queries.}")
-    result.hasNext should be (false)
+      result.next().toString should equal ("{value=Query caches successfully cleared of 1 queries.}")
+      result.hasNext should be (false)
 
-    val result2 = graph.execute(query)
-    result2.next().toString should equal ("{value=Query cache already empty.}")
-    result2.hasNext should be (false)
-
+      val result2 = graph.execute(query)
+      result2.next().toString should equal ("{value=Query cache already empty.}")
+      result2.hasNext should be (false)
+    })
   }
 
   test("Test that cache clearing procedure writes to log") {
@@ -61,10 +68,14 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
     val graphDatabaseService = managementService.database(DEFAULT_DATABASE_NAME)
 
     try {
-      graphDatabaseService.execute("MATCH (n) RETURN n.prop")
+      val transaction = graphDatabaseService.beginTx()
+      graphDatabaseService.execute("MATCH (n) RETURN n.prop").close()
+      transaction.commit()
 
+      val tx = graphDatabaseService.beginTx()
       val query = "CALL dbms.clearQueryCaches()"
-      graphDatabaseService.execute(query)
+      graphDatabaseService.execute(query).close()
+      tx.commit()
 
       logProvider.rawMessageMatcher().assertContains("Called dbms.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
     }
