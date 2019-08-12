@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.internal.Neo4j;
+import org.neo4j.harness.junit.extension.Neo4j;
 
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getCcEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getStatus;
@@ -182,7 +182,7 @@ class CausalClusterStatusEndpointMatchers
 
     static Long getNodeCount( Neo4j serverControls )
     {
-        GraphDatabaseService db = serverControls.graph();
+        GraphDatabaseService db = serverControls.defaultDatabaseService();
         long count;
         try ( Transaction ignored = db.beginTx() )
         {

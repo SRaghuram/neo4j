@@ -8,7 +8,8 @@ package com.neo4j.harness.junit.extension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import org.neo4j.harness.internal.Neo4j;
+import org.neo4j.annotations.api.PublicApi;
+import org.neo4j.harness.junit.extension.Neo4j;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.harness.junit.extension.Neo4jExtensionBuilder;
 
@@ -43,6 +44,7 @@ import static com.neo4j.harness.internal.CommercialTestNeo4jBuilders.newInProces
  *  </code>
  * </pre>
  */
+@PublicApi
 public class CommercialNeo4jExtension extends Neo4jExtension
 {
     public static Neo4jExtensionBuilder builder()

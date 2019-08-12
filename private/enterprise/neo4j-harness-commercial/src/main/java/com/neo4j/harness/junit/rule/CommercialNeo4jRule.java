@@ -9,6 +9,7 @@ import com.neo4j.harness.internal.CommercialTestNeo4jBuilders;
 
 import java.io.File;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 /**
@@ -20,6 +21,7 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
  * <p>
  * In case if starting embedded web server is not desirable it can be fully disabled by using {@link #withDisabledServer()} configuration option.
  */
+@PublicApi
 public class CommercialNeo4jRule extends Neo4jRule
 {
     public CommercialNeo4jRule()

@@ -17,10 +17,11 @@ import java.time.ZoneOffset;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.internal.Neo4j;
+import org.neo4j.harness.junit.extension.Neo4j;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogTimeZone;
@@ -35,6 +36,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.legacy_certificates_directory;
 import static org.neo4j.server.ServerTestUtils.createTempDir;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
@@ -92,6 +95,14 @@ class CommercialNeo4jExtensionRegisterIT
                 transaction.commit();
             }
         } );
+    }
+
+    @Test
+    void databaseManagementServiceIsAvailable( DatabaseManagementService managementService, GraphDatabaseService databaseService )
+    {
+        assertNotNull( managementService );
+        assertNotNull( databaseService );
+        assertSame( managementService.database( DEFAULT_DATABASE_NAME ), databaseService );
     }
 
     @Test

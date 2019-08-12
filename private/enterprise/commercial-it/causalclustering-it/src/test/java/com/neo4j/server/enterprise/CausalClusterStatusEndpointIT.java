@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.Neo4j;
+import org.neo4j.harness.junit.extension.Neo4j;
 import org.neo4j.test.extension.TestDirectoryClassExtension;
 
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.availabilityStatuses;

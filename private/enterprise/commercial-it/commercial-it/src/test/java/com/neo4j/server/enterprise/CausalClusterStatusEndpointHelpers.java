@@ -23,7 +23,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.Neo4j;
+import org.neo4j.harness.junit.extension.Neo4j;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
@@ -43,7 +43,7 @@ class CausalClusterStatusEndpointHelpers
 
     static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
     {
-        GraphDatabaseService db = getLeader( cluster ).graph();
+        GraphDatabaseService db = getLeader( cluster ).defaultDatabaseService();
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode( Label.label( "MyNode" ) );
@@ -93,7 +93,7 @@ class CausalClusterStatusEndpointHelpers
 
     private static Role getCurrentCoreRole( InProcessNeo4j core )
     {
-        return ((GraphDatabaseFacade) core.graph()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+        return ((GraphDatabaseFacade) core.databaseManagementService()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     static Boolean[] availabilityStatuses( URI server )
