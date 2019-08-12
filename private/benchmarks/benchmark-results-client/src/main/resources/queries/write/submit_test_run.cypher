@@ -38,7 +38,7 @@ WITH test_run,
      metrics_tuple[3] AS metricsValues,
      metrics_tuple[4] AS neo4jBenchmarkConfig,
      // hacky hack for dealing with conditional updates
-     CASE length(metrics_tuple) WHEN 6 THEN [metrics_tuple[5]] ELSE [] END AS profiles_maps
+     CASE size(metrics_tuple) WHEN 6 THEN [metrics_tuple[5]] ELSE [] END AS profiles_maps
 MERGE (benchmark_group:BenchmarkGroup {name:benchmarkGroupName})<-[:IMPLEMENTS]-(benchmark_tool)
 MERGE (benchmark_group)-[:HAS_BENCHMARK]->(benchmark:Benchmark {name:benchmarkName})-[:HAS_PARAMS]->(params:BenchmarkParams)
 // Is new benchmark
