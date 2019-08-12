@@ -85,7 +85,7 @@ class ShortestPathEdgeCasesAcceptanceTest extends ExecutionEngineFunSuite with C
                   |MATCH (wpstart {id:wpstartid})
                   |MATCH (wpend {id:wpendid})
                   |MATCH p=shortestPath((wpstart)-[*..10]-(wpend))
-                  |WHERE ALL(id IN wps WHERE id IN EXTRACT(n IN nodes(p) | n.id))
+                  |WHERE ALL(id IN wps WHERE id IN [n IN nodes(p) | n.id])
                   |WITH p, size(nodes(p)) as length order by length limit 1
                   |RETURN size(nodes(p)) as size""".stripMargin
     val results = executeWith(Configs.InterpretedAndSlotted, query)

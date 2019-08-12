@@ -20,7 +20,7 @@ class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite wit
         |UNWIND joeyS AS joeySantiago
         |MATCH pathx = allShortestPaths((charlesThompson)-[*1..5]-(joeySantiago))
         |WHERE none (n IN nodes(pathx) WHERE id(n) = id(kimDeal))
-        |RETURN extract(node in nodes(pathx) | id(node)) as ids
+        |RETURN [node in nodes(pathx) | id(node)] as ids
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)"))))
 
@@ -38,7 +38,7 @@ class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite wit
         |UNWIND joeyS AS joeySantiago
         |MATCH pathx = shortestPath((charlesThompson)-[*1..5]-(joeySantiago))
         |WHERE none (n IN nodes(pathx) WHERE id(n) = id(kimDeal))
-        |RETURN extract(node in nodes(pathx) | id(node)) as ids
+        |RETURN [node in nodes(pathx) | id(node)] as ids
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)"))))
 

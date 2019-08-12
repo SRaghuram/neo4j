@@ -73,7 +73,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |WHERE toLower(COALESCE(subject.Archived,'false')) = 'false' AND toLower(COALESCE(dataset.Archived,'false')) = 'false'
         |WITH DISTINCT study, { RecordID: COALESCE(hasSubject.RecordID, subject.RecordID), SubjectUUID: subject.UUID } AS derivedData, subject
         |MATCH (subject)-[:HAS_DATASET]-(dataset:Study_Dataset)<-[:HAS_DATASET]-(study)
-        |  WHERE size(FILTER(x in labels(dataset) WHERE x in ['YPQ','WASI'])) = 1 AND toLower(COALESCE(dataset.Archived,'false')) = 'false'
+        |  WHERE size([x in labels(dataset) WHERE x in ['YPQ','WASI']]) = 1 AND toLower(COALESCE(dataset.Archived,'false')) = 'false'
         |WITH study, derivedData, subject, collect(dataset) AS datasets
         |MATCH (stai:Study_Dataset:STAI) WHERE (stai IN datasets)
         |MATCH (pswq:Study_Dataset:PSWQ) WHERE (pswq IN datasets)

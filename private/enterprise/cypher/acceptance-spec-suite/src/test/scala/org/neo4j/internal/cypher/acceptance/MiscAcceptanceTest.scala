@@ -57,7 +57,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.toList should equal(List(Map("n" -> a), Map("n" -> b)))
   }
 
-  test("should not explode on complex filter() projection in write query") {
+  test("should not explode on complex pattern comprehension projection in write query") {
 
     val query = """UNWIND [{children : [
                   |            {_type : "browseNodeId", _text : "20" },
@@ -68,8 +68,8 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |            {_type : "childNodes", _text : "31" }
                   |        ]}] AS row
                   |
-                  |WITH   head(filter( child IN row.children WHERE child._type = "browseNodeId" ))._text as nodeId,
-                  |       head(filter( child IN row.children WHERE child._type = "childNodes" )) as childElement
+                  |WITH   head([child IN row.children WHERE child._type = "browseNodeId"])._text as nodeId,
+                  |       head([child IN row.children WHERE child._type = "childNodes"]) as childElement
                   |
                   |MERGE  (parent:Category { id: toInteger(nodeId) })
                   |
@@ -171,7 +171,15 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
          |OPTIONAL MATCH (var1)-[:UNKNOWN52]->(var39)
          |OPTIONAL MATCH (var1)-[:UNKNOWN53]->(var40)
          |OPTIONAL MATCH (var0)-[var41:UNKNOWN54]->(var1)
-         |RETURN var1, var6{.*, UNKNOWN55: var2.p0, UNKNOWN56: collect(DISTINCT var20)}, var28.p0 AS var42, var3 AS var43, var26 AS var26, var2.p0 AS var44, var2.p1 AS var45, var14, var15, var19, var4, var16.UNKNOWN57 AS var46, var17.UNKNOWN58 AS var47, var18, var27, var39, var40, var41, var11, var12, var13, var7, collect(var21{.*, UNKNOWN59: var22, UNKNOWN60: var23}) AS var48, collect(var25) AS var49, case when count(var38) > 0 then "string[8]" else "string[8]" end AS var50, filter(var51 IN collect(DISTINCT {UNKNOWN61: var8}) WHERE var51.UNKNOWN61 IS NOT NULL) AS var52, var9, var10, filter(var53 IN collect(DISTINCT {UNKNOWN62: var30, UNKNOWN63: var31}) WHERE var53.UNKNOWN62 IS NOT NULL) AS var54, filter(var55 IN collect(DISTINCT {UNKNOWN62: var33, UNKNOWN63: var34}) WHERE var55.UNKNOWN62 IS NOT NULL) AS var56, filter(var57 IN collect(DISTINCT {UNKNOWN62: var36, UNKNOWN63: var37}) WHERE var57.UNKNOWN62 IS NOT NULL) AS var58
+         |RETURN var1, var6{.*, UNKNOWN55: var2.p0, UNKNOWN56: collect(DISTINCT var20)},
+         |var28.p0 AS var42, var3 AS var43, var26 AS var26, var2.p0 AS var44, var2.p1 AS var45, var14, var15, var19, var4, var16.UNKNOWN57 AS var46,
+         |var17.UNKNOWN58 AS var47, var18, var27, var39, var40, var41, var11, var12, var13, var7,
+         |collect(var21{.*, UNKNOWN59: var22, UNKNOWN60: var23}) AS var48, collect(var25) AS var49,
+         |case when count(var38) > 0 then "string[8]" else "string[8]" end AS var50,
+         |[var51 IN collect(DISTINCT {UNKNOWN61: var8}) WHERE var51.UNKNOWN61 IS NOT NULL] AS var52, var9, var10,
+         |[var53 IN collect(DISTINCT {UNKNOWN62: var30, UNKNOWN63: var31}) WHERE var53.UNKNOWN62 IS NOT NULL] AS var54,
+         |[var55 IN collect(DISTINCT {UNKNOWN62: var33, UNKNOWN63: var34}) WHERE var55.UNKNOWN62 IS NOT NULL] AS var56,
+         |[var57 IN collect(DISTINCT {UNKNOWN62: var36, UNKNOWN63: var37}) WHERE var57.UNKNOWN62 IS NOT NULL] AS var58
        """.stripMargin
 
     // Should plan without throwing exception

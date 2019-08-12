@@ -590,9 +590,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                   |MATCH (wpstart {id:wpstartid})
                   |MATCH (wpend {id:wpendid})
                   |MATCH p=shortestPath((wpstart)-[*..10]-(wpend))
-                  |WHERE ALL(id IN wps WHERE id IN EXTRACT(n IN nodes(p) | n.id))
+                  |WHERE ALL(id IN wps WHERE id IN [n IN nodes(p) | n.id])
                   |WITH p, size(nodes(p)) as length order by length DESC limit 1
-                  |RETURN EXTRACT(n IN nodes(p) | n.id) as nodes""".stripMargin
+                  |RETURN [n IN nodes(p) | n.id] as nodes""".stripMargin
     val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.toList should equal(List(Map("nodes" -> List(3, 2, 1, 11, 12, 13, 26, 27, 14))))

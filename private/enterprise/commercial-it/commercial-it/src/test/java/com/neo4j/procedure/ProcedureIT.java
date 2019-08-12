@@ -1130,7 +1130,7 @@ public class ProcedureIT
     void shouldReturnNodeListTypedAsNodeList()
     {
         // When
-        Result res = db.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN extract( x IN nodes | id(x) ) as ids" );
+        Result res = db.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN [ x IN nodes | id(x) ] as ids" );
 
         // Then
         assertTrue( res.hasNext() );
