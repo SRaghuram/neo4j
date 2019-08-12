@@ -57,6 +57,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
                 .out( "databases", Neo4jTypes.NTMap )
                 .out( "groups", Neo4jTypes.NTList( Neo4jTypes.NTString ) )
                 .description( "Overview of all currently accessible cluster members, their databases and roles." )
+                .systemProcedure()
                 .build() );
         this.topologyService = topologyService;
     }

@@ -57,7 +57,6 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -224,7 +223,7 @@ public final class CausalClusteringTestHelpers
 
     private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
     {
-        return membersHaveDatabaseState( expected, cluster.allMembers().collect( toSet() ), databaseName );
+        return membersHaveDatabaseState( expected, cluster.allMembers(), databaseName );
     }
 
     private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Set<ClusterMember> members, String databaseName )
@@ -236,7 +235,7 @@ public final class CausalClusteringTestHelpers
 
     private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Cluster cluster )
     {
-        return memberDatabaseStates( databaseName, cluster.allMembers().collect( toSet() ) );
+        return memberDatabaseStates( databaseName, cluster.allMembers() );
     }
 
     private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Set<ClusterMember> members )

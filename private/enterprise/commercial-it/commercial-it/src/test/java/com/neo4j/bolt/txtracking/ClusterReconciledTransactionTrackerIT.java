@@ -108,7 +108,7 @@ class ClusterReconciledTransactionTrackerIT
 
     private Map<ClusterMember,Long> lastClosedSystemTxIdsForClusterMembers()
     {
-        return cluster.allMembers().collect( toMap( identity(), this::lastClosedSystemTxId ) );
+        return cluster.allMembers().stream().collect( toMap( identity(), this::lastClosedSystemTxId ) );
     }
 
     private long lastClosedSystemTxId( ClusterMember member )

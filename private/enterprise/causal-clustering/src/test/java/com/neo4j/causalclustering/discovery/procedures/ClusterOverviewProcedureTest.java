@@ -47,6 +47,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.kernel.api.procs.FieldSignature.outputField;
@@ -66,6 +67,7 @@ class ClusterOverviewProcedureTest
 
         assertEquals( "dbms.cluster.overview", signature.name().toString() );
         assertEquals( List.of(), signature.inputSignature() );
+        assertTrue( signature.systemProcedure() );
         assertEquals(
                 List.of( outputField( "id", Neo4jTypes.NTString ),
                         outputField( "addresses", Neo4jTypes.NTList( Neo4jTypes.NTString ) ),

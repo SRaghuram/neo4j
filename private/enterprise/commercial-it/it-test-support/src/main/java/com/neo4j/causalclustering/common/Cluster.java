@@ -29,6 +29,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -334,14 +335,22 @@ public class Cluster
         readReplicas.values().remove( memberToRemove );
     }
 
-    public Collection<CoreClusterMember> coreMembers()
+    public Set<CoreClusterMember> coreMembers()
     {
-        return coreMembers.values();
+        return Set.copyOf( coreMembers.values() );
     }
 
-    public Collection<ReadReplica> readReplicas()
+    public Set<ReadReplica> readReplicas()
     {
-        return readReplicas.values();
+        return Set.copyOf( readReplicas.values() );
+    }
+
+    public Set<ClusterMember> allMembers()
+    {
+        var result = new HashSet<ClusterMember>();
+        result.addAll( coreMembers.values() );
+        result.addAll( readReplicas.values() );
+        return result;
     }
 
     public ReadReplica findAnyReadReplica()
@@ -754,11 +763,6 @@ public class Cluster
         }
         int ordinal = ThreadLocalRandom.current().nextInt( list.size() );
         return Optional.of( list.get( ordinal ) );
-    }
-
-    public Stream<ClusterMember> allMembers()
-    {
-        return Stream.concat( coreMembers.values().stream(), readReplicas.values().stream() );
     }
 
     private static void dataMatchesEventually( Supplier<DbRepresentation> expected, Collection<? extends ClusterMember> members ) throws TimeoutException

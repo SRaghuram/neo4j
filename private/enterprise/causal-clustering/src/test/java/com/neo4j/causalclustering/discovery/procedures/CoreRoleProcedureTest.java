@@ -11,8 +11,10 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
@@ -76,6 +78,18 @@ class CoreRoleProcedureTest
     void shouldReturnUnknown() throws Exception
     {
         testProcedureCall( RoleInfo.UNKNOWN );
+    }
+
+    @Test
+    void shouldHaveCorrectName()
+    {
+        assertEquals( new QualifiedName( List.of( "dbms", "cluster" ), "role" ), procedure.signature().name() );
+    }
+
+    @Test
+    void shouldBeASystemProcedure()
+    {
+        assertTrue( procedure.signature().systemProcedure() );
     }
 
     private void testProcedureCall( RoleInfo role ) throws Exception

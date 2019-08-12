@@ -8,6 +8,9 @@ package com.neo4j.causalclustering.discovery.procedures;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -58,5 +61,17 @@ class ReadReplicaRoleProcedureTest
 
         var element = row[0];
         assertEquals( stringValue( RoleInfo.READ_REPLICA.toString() ), element );
+    }
+
+    @Test
+    void shouldHaveCorrectName()
+    {
+        assertEquals( new QualifiedName( List.of( "dbms", "cluster" ), "role" ), procedure.signature().name() );
+    }
+
+    @Test
+    void shouldBeASystemProcedure()
+    {
+        assertTrue( procedure.signature().systemProcedure() );
     }
 }

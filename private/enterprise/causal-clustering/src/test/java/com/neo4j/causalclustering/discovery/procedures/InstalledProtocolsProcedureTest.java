@@ -17,12 +17,15 @@ import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.values.AnyValue;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedureTest
@@ -119,5 +122,21 @@ public class InstalledProtocolsProcedureTest
                 arrayContaining( stringValue( "inbound" ), stringValue( "host4:4" ), stringValue( "raft" ),
                         stringValue( "4.0" ), stringValue( "[]" ) ) );
         assertFalse( result.hasNext() );
+    }
+
+    @Test
+    void shouldHaveCorrectName()
+    {
+        var procedure = new InstalledProtocolsProcedure( Stream::empty, Stream::empty );
+
+        assertEquals( new QualifiedName( List.of( "dbms", "cluster" ), "protocols" ), procedure.signature().name() );
+    }
+
+    @Test
+    void shouldBeASystemProcedure()
+    {
+        var procedure = new InstalledProtocolsProcedure( Stream::empty, Stream::empty );
+
+        assertTrue( procedure.signature().systemProcedure() );
     }
 }

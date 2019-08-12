@@ -14,9 +14,10 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -30,7 +31,6 @@ import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -38,22 +38,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 class CausalClusteringProceduresIT
 {
-    private static final String[] PROCEDURES_WITHOUT_PARAMS = {
-            "dbms.cluster.overview",
-            "dbms.procedures",
-            "dbms.listQueries"
-    };
-
-    private static final String[] PROCEDURES_WITH_CONTEXT_PARAM = {
-            "dbms.routing.getRoutingTable",
-            "dbms.cluster.routing.getRoutingTable",
-    };
-
     @Inject
     private static ClusterFactory clusterFactory;
 
@@ -71,46 +61,75 @@ class CausalClusteringProceduresIT
     }
 
     @Test
-    void coreProceduresShouldBeAvailable()
+    void dbmsProceduresShouldBeAvailable()
     {
-        testProcedureExistence( PROCEDURES_WITHOUT_PARAMS, cluster.coreMembers(), false );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsProcedures );
     }
 
     @Test
-    void coreProceduresWithContextParamShouldBeAvailable()
+    void dbmsListQueriesShouldBeAvailable()
     {
-        testProcedureExistence( PROCEDURES_WITH_CONTEXT_PARAM, cluster.coreMembers(), true );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsListQueries );
     }
 
     @Test
-    void readReplicaProceduresShouldBeAvailable()
+    void dbmsClusterOverviewShouldBeAvailable()
     {
-        testProcedureExistence( PROCEDURES_WITHOUT_PARAMS, cluster.readReplicas(), false );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void readReplicaProceduresWithContextParamShouldBeAvailable()
+    void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
     {
-        testProcedureExistence( PROCEDURES_WITH_CONTEXT_PARAM, cluster.readReplicas(), true );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void clusterRoleProcedure() throws Exception
+    void routingProcedureShouldBeAvailable()
     {
-        var databaseName = DEFAULT_DATABASE_NAME;
-        var leader = cluster.awaitLeader();
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
+    }
 
-        for ( var member : cluster.coreMembers() )
-        {
-            var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
-        }
+    @Test
+    void routingProcedureShouldBeAvailableOnSystemDatabase()
+    {
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
+    }
 
-        for ( var member : cluster.readReplicas() )
-        {
-            var expectedRole = RoleInfo.READ_REPLICA;
-            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
-        }
+    @Test
+    void legacyRoutingProcedureShouldBeAvailable()
+    {
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
+    }
+
+    @Test
+    void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase()
+    {
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
+    }
+
+    @Test
+    void installedProtocolsProcedure()
+    {
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+    }
+
+    @Test
+    void installedProtocolsProcedureOnSystemDatabase()
+    {
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+    }
+
+    @Test
+    void clusterRoleProcedureShouldBeAvailable() throws Exception
+    {
+        verifyClusterRoleProcedure( DEFAULT_DATABASE_NAME );
+    }
+
+    @Test
+    void clusterRoleProcedureShouldBeAvailableOnSystemDatabase() throws Exception
+    {
+        verifyClusterRoleProcedure( SYSTEM_DATABASE_NAME );
     }
 
     @Test
@@ -140,42 +159,81 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private static void testProcedureExistence( String[] procedures, Collection<? extends ClusterMember> members, boolean withContextParameter )
+    private static void verifyProcedureAvailability( String databaseName, Set<? extends ClusterMember> members,
+            Function<GraphDatabaseService,Result> procedureExecutor )
     {
-        for ( var procedure : procedures )
+        for ( var member : members )
         {
-            for ( var member : members )
+            var db = member.database( databaseName );
+            try ( var result = procedureExecutor.apply( db ) )
             {
-                try ( var result = invokeProcedure( member.defaultDatabase(), procedure, withContextParameter ) )
-                {
-                    var records = Iterators.asList( result );
-                    assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
-                }
+                var records = Iterators.asList( result );
+                assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
             }
         }
     }
 
-    private static Result invokeProcedure( GraphDatabaseService db, String name, boolean withContextParameter )
+    private void verifyClusterRoleProcedure( String databaseName ) throws Exception
     {
-        if ( withContextParameter )
+        var leader = cluster.awaitLeader( databaseName );
+
+        for ( var member : cluster.coreMembers() )
         {
-            return db.execute( "CALL " + name + "($value)", singletonMap( "value", emptyMap() ) );
+            var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
         }
-        else
+
+        for ( var member : cluster.readReplicas() )
         {
-            return db.execute( "CALL " + name + "()" );
+            var expectedRole = RoleInfo.READ_REPLICA;
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
         }
     }
 
-    private static ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
+    private ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
     {
         return () ->
         {
-            var db = member.defaultDatabase();
-            try ( var result = db.execute( "CALL dbms.cluster.role($database)", Map.of( "database", databaseName ) ) )
+            var db = member.database( databaseName );
+            try ( var result = invokeClusterRoleProcedure( db, databaseName ) )
             {
                 return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
             }
         };
+    }
+
+    private Result invokeDbmsProcedures( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.procedures()" );
+    }
+
+    private Result invokeDbmsListQueries( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.listQueries()" );
+    }
+
+    private Result invokeDbmsClusterOverview( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.cluster.overview()" );
+    }
+
+    private Result invokeRoutingProcedure( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
+    }
+
+    private Result invokeLegacyRoutingProcedure( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.cluster.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
+    }
+
+    private Result invokeClusterProtocolsProcedure( GraphDatabaseService db )
+    {
+        return db.execute( "CALL dbms.cluster.protocols()" );
+    }
+
+    private Result invokeClusterRoleProcedure( GraphDatabaseService db, String databaseName )
+    {
+        return db.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) );
     }
 }

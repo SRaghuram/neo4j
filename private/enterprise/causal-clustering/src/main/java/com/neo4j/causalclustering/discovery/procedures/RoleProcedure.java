@@ -38,6 +38,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
                 .in( PARAMETER_NAME, Neo4jTypes.NTString )
                 .out( OUTPUT_NAME, Neo4jTypes.NTString )
                 .description( "The role of this instance in the cluster for the specified database." )
+                .systemProcedure()
                 .build() );
         this.databaseIdRepository = databaseIdRepository;
     }

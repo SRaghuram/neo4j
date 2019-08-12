@@ -66,7 +66,7 @@ class ClusterOverviewProcedureIT
     void shouldReturnClusterOverview() throws Exception
     {
         var leader = cluster.awaitLeader();
-        var membersById = cluster.allMembers().collect( toMap( ClusterMember::id, identity() ) );
+        var membersById = cluster.allMembers().stream().collect( toMap( ClusterMember::id, identity() ) );
         assertEquals( CORES + REPLICAS, membersById.size() );
 
         var clusterOverviewMatcher = buildClusterOverviewMatcher( leader, membersById );

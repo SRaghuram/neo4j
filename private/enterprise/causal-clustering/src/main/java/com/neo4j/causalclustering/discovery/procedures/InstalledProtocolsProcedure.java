@@ -48,6 +48,7 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
                 .out( "applicationProtocolVersion", Neo4jTypes.NTInteger )
                 .out( "modifierProtocols", Neo4jTypes.NTString )
                 .description( "Overview of installed protocols" )
+                .systemProcedure()
                 .build() );
         this.clientInstalledProtocols = clientInstalledProtocols;
         this.serverInstalledProtocols = serverInstalledProtocols;

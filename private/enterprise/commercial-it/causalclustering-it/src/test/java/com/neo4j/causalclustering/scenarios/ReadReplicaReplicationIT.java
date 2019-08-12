@@ -247,6 +247,7 @@ class ReadReplicaReplicationIT
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
         var dbs = cluster.allMembers()
+                .stream()
                 .map( member -> DbRepresentation.of( member.defaultDatabase() ) )
                 .collect( toSet() );
 

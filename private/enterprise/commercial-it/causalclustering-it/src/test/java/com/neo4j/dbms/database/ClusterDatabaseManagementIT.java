@@ -89,7 +89,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseDoesNotExist( "foo", cluster );
 
         var rejoiningMembers = oneCoreAndOneReadReplica( cluster );
-        var remainingMembers = cluster.allMembers().filter( m -> !rejoiningMembers.contains( m ) ).collect( toSet() );
+        var remainingMembers = cluster.allMembers().stream().filter( m -> !rejoiningMembers.contains( m ) ).collect( toSet() );
 
         rejoiningMembers.forEach( ClusterMember::shutdown );
 
