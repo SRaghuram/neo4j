@@ -628,13 +628,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
-      QueryHandler
-        .handleResult((offset, value) => {
-          if (offset == 0 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"$startOfErrorMessage The role '$roleName' does not exist."))
-          else if (offset == 1 && (value eq Values.NO_VALUE)) Some(new InvalidArgumentsException(s"$startOfErrorMessage The role '$roleName' does not have the specified privilege: ${describePrivilege(actionName, resource, database, qualifier, revokeType)}."))
-          else None
-        })
-        .handleNoResult(() => Some(new InvalidArgumentsException(s"$startOfErrorMessage The privilege '${describePrivilege(actionName, resource, database, qualifier, revokeType)}' does not exist."))),
+      QueryHandler.handleNoResult(() => None),
       source
     )
   }

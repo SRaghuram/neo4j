@@ -2161,7 +2161,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should fail revoke $grantOrDeny elements privilege when granted only nodes or relationships with REVOKE $revokeType") {
+      test(s"should revoke existing part when revoking $grantOrDeny elements privilege when granted only nodes or relationships with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2178,72 +2178,54 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        val error1 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {foo} ON GRAPH * ELEMENTS * FROM custom")
-        }
-        // THEN
-        error1.getMessage should include(s"The privilege '${revokeType}read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
+        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {foo} ON GRAPH * ELEMENTS * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          traverse(grantOrDenyRelType).role("custom").node("*").map, // TODO: should be removed when revoking MATCH also revokes traverse
           traverse(grantOrDenyRelType).role("custom").relationship("*").map,
-          read(grantOrDenyRelType).role("custom").property("foo").node("*").map,
           read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map
         ))
 
         // WHEN
-        val error2 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {bar} ON GRAPH * FROM custom")
-        }
-        // THEN
-        error2.getMessage should include(s"The privilege '${revokeType}read bar ON GRAPH * NODES *' does not exist.")
+        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {bar} ON GRAPH * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          // TODO: this should be an empty set when revoking MATCH also revokes traverse
           traverse(grantOrDenyRelType).role("custom").node("*").map,
-          traverse(grantOrDenyRelType).role("custom").relationship("*").map,
-          read(grantOrDenyRelType).role("custom").property("foo").node("*").map,
-          read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map
+          traverse(grantOrDenyRelType).role("custom").relationship("*").map
         ))
       }
 
-      test(s"should fail revoke $grantOrDeny privilege from non-existent role with REVOKE $revokeType") {
+      test(s"should do nothing when revoking $grantOrDeny privilege from non-existent role with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
         execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A (*) TO custom")
+        execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val error1 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
-        }
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM wrongRole")
 
         // THEN
-        error1.getMessage should (be("Failed to revoke traversal privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: traverse ON GRAPH * NODES *.") or
-          be("Failed to revoke traversal privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
+        execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val error2 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM wrongRole")
-        }
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM wrongRole")
 
         // THEN
-        error2.getMessage should (be("Failed to revoke read privilege from role 'wrongRole': The role 'wrongRole' does not have the specified privilege: read * ON GRAPH * NODES *.") or
-          be("Failed to revoke read privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
+        execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val error3 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM wrongRole")
-        }
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM wrongRole")
         // THEN
-        error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
-          include("privilege from role 'wrongRole': The role 'wrongRole' does not exist."))
+        execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should fail revoke $grantOrDeny privilege not granted to role with REVOKE $revokeType") {
+      test(s"should do nothing when revoking $grantOrDeny privilege not granted to role with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2251,62 +2233,73 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
         execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A (*) TO custom")
+        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val errorTraverse = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM role")
-        }
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM role")
+
         // THEN
-        errorTraverse.getMessage should include("The role 'role' does not have the specified privilege")
+        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val errorRead = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM role")
-        }
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM role")
         // THEN
-        errorRead.getMessage should include("The role 'role' does not have the specified privilege")
+        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
-        val errorMatch = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM role")
-        }
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM role")
         // THEN
-        errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
+        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should fail when revoking $grantOrDeny traversal privilege with missing database with REVOKE $revokeType") {
+      test(s"should do nothing when revoking $grantOrDeny traversal privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
-        the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"Failed to revoke traversal privilege from role 'custom': The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist."
+
+        val customPrivileges = Set(traverse(grantOrDenyRelType).role("custom").node("*").map)
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+
+        // WHEN
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
       }
 
-      test(s"should fail when revoking $grantOrDeny read privilege with missing database with REVOKE $revokeType") {
+      test(s"should do nothing when revoking $grantOrDeny read privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
-        the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ {*} ON GRAPH foo NODES * (*) FROM custom")
-        } should have message s"Failed to revoke read privilege from role 'custom': The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."
+
+        val customPrivileges = Set(read(grantOrDenyRelType).role("custom").node("*").map)
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+
+        // WHEN
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo NODES * (*) FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
       }
 
-      test(s"should fail when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
+      test(s"should do nothing when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
+        val customPrivileges = Set(
+          traverse(grantOrDenyRelType).role("custom").node("*").map,
+          read(grantOrDenyRelType).role("custom").node("*").map
+        )
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+
         // WHEN
-        val e = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo NODES * (*) FROM custom")
-        }
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo NODES * (*) FROM custom")
         // THEN
-        e.getMessage should (include(s"privilege from role 'custom': The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist.") or
-          include(s"privilege from role 'custom': The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."))
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
       }
 
       test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE $revokeType") {
