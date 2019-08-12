@@ -203,21 +203,21 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public byte[] serializeMap( BoltMachine machine ) throws BoltConnectionFatality
     {
-        return machine.run( "RETURN {p}", machine.mapParam );
+        return machine.run( "RETURN $p", machine.mapParam );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public byte[] serializeList( BoltMachine machine ) throws BoltConnectionFatality
     {
-        return machine.run( "RETURN {p}", machine.listParam );
+        return machine.run( "RETURN $p", machine.listParam );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public byte[] serializeString( BoltMachine machine ) throws BoltConnectionFatality
     {
-        return machine.run( "RETURN {p}", machine.stringParam );
+        return machine.run( "RETURN $p", machine.stringParam );
     }
 
     public static void main( String... methods ) throws Exception

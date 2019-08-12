@@ -1,1 +1,1 @@
-MERGE (p:PROFILES { _key: { key }})
+MERGE (p:PROFILES { _key: $key })

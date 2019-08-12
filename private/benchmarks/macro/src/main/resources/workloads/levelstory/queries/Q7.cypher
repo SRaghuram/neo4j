@@ -1,4 +1,4 @@
-MATCH (u:user {id: {p01}}), (x:material {id: {p02}})
+MATCH (u:user {id: $p01}), (x:material {id: $p02})
 WITH u, x
 MATCH (p:project {id: x.projectid})
 WITH u, p, x

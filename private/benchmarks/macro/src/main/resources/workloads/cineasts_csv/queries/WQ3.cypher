@@ -1,4 +1,4 @@
-USING PERIODIC COMMIT 500 LOAD CSV WITH HEADERS FROM {csv_filename} AS line
+USING PERIODIC COMMIT 500 LOAD CSV WITH HEADERS FROM $csv_filename AS line
   CREATE (m:Movie {id: line.id})
   SET m = line
   SET m.version = toInteger(line.version)

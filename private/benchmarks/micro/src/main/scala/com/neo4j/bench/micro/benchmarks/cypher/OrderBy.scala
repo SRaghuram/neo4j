@@ -39,7 +39,7 @@ class OrderBy extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var OrderBy_type: String = _
 
-  override def description = "Order By, e.g., UNWIND {list} AS x RETURN x ORDER BY x"
+  override def description = "Order By, e.g., UNWIND $list AS x RETURN x ORDER BY x"
 
   val EXPECTED_ROW_COUNT = 1000000
 

@@ -1,4 +1,4 @@
-MATCH (writer:Entity { Id: { eId }}),(writer)-[:wrote]->(segment)-[r1:regarding_entity]->(entity)
+MATCH (writer:Entity { Id: $eId }),(writer)-[:wrote]->(segment)-[r1:regarding_entity]->(entity)
 WITH entity AS names, count(entity) AS counts
 ORDER BY count(entity) DESC LIMIT 100
 WITH names, counts

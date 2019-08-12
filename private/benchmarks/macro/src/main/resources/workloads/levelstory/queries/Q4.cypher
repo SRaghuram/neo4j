@@ -1,4 +1,4 @@
-MATCH (u:user {id: {p01}}), (p:project {id: {p02}})
+MATCH (u:user {id: $p01}), (p:project {id: $p02})
 WITH u, p
 MATCH (u)-[:CONTACT]->(c:contact {teamid: p.teamid})-[:CONTACT]->(cr:role {teamid: p.teamid})
 WITH p, c, cr, [r IN (c)-[:CONTACT]->(:projectrole {projectid: p.id}) | last(nodes(r))] AS prs

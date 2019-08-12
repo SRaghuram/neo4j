@@ -1,13 +1,13 @@
-MATCH (u:user {id: {p01}})
+MATCH (u:user {id: $p01})
 WITH u
 MATCH (u)-[:CONTACT]->(c:contact)-[:CONTACT]->(cr:role)
   WHERE exists(cr.teamid)
 WITH c, cr
 MATCH (:team {id: cr.teamid})-[:SCHEDULE]->(:calendar)-->(y:year)
-  WHERE y.endat >= {p03} AND y.startat <= {p04}
+  WHERE y.endat >= $p03 AND y.startat <= $p04
 WITH c, cr, y
 MATCH (y)-->(w:week)-->(p:project)
-  WHERE w.endat >= {p03} AND w.startat <= {p04}
+  WHERE w.endat >= $p03 AND w.startat <= $p04
 WITH DISTINCT c, cr, p
 WITH c, cr, p, [r IN (c)-[:CONTACT]->(:projectrole {projectid: p.id}) | last(nodes(r))] AS prs
   WHERE cr.name IN ['Owners', 'Admins'] OR length(prs) > 0
