@@ -30,7 +30,7 @@ class MultiDatabaseManagerTest
     private static final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private static final DatabaseId sysId = SYSTEM_DATABASE_ID;
     private static final DatabaseId neoId = databaseIdRepository.defaultDatabase();
-    private static final DatabaseId customId = databaseIdRepository.get( CUSTOM_DATABASE_NAME );
+    private static final DatabaseId customId = databaseIdRepository.getRaw( CUSTOM_DATABASE_NAME );
 
     private MultiDatabaseManager<DatabaseContext> databaseManager;
     private DatabaseContext sys;

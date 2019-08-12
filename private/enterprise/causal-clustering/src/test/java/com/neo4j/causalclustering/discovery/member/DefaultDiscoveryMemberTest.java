@@ -21,8 +21,8 @@ class DefaultDiscoveryMemberTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    private final DatabaseId databaseId1 = databaseIdRepository.get( "one" );
-    private final DatabaseId databaseId2 = databaseIdRepository.get( "two" );
+    private final DatabaseId databaseId1 = databaseIdRepository.get( "one" ).get();
+    private final DatabaseId databaseId2 = databaseIdRepository.get( "two" ).get();
 
     @Test
     void shouldReturnMemberId()

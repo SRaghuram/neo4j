@@ -13,10 +13,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
-
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static org.junit.runners.Parameterized.Parameters;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 @RunWith( Parameterized.class )
 public class ReadReplicaInfoMarshalTest extends BaseMarshalTest<ReadReplicaInfo>
@@ -29,11 +28,10 @@ public class ReadReplicaInfoMarshalTest extends BaseMarshalTest<ReadReplicaInfo>
     @Parameters( name = "{0}" )
     public static Collection<ReadReplicaInfo> data()
     {
-        var dbIdRepo = new TestDatabaseIdRepository();
         return List.of(
                 addressesForReadReplica( 42, Set.of() ),
-                addressesForReadReplica( 789, Set.of( dbIdRepo.get( "db_one" ) ) ),
-                addressesForReadReplica( 123, Set.of( dbIdRepo.get( "db_one" ), dbIdRepo.get( "db_two" ), dbIdRepo.get( "db_three" ) ) )
+                addressesForReadReplica( 789, Set.of( randomDatabaseId() ) ),
+                addressesForReadReplica( 123, Set.of( randomDatabaseId(), randomDatabaseId(), randomDatabaseId() ) )
         );
     }
 }

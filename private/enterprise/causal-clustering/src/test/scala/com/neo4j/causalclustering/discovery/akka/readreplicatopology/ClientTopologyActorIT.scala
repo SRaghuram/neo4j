@@ -21,7 +21,8 @@ import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSin
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -50,7 +51,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
         val newCoreTopology = new DatabaseCoreTopology(
-          databaseIdRepository.defaultDatabase(),
+          randomDatabaseId(),
           new RaftId(UUID.randomUUID()),
           Map(
             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
@@ -70,7 +71,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
-        val newRRTopology = new DatabaseReadReplicaTopology(databaseIdRepository.defaultDatabase(), Map(
+        val newRRTopology = new DatabaseReadReplicaTopology(randomDatabaseId(), Map(
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
                   new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
                 ).asJava)
@@ -88,8 +89,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming leaders" in new Fixture {
         Given("new leaders")
         val newLeaders = new LeaderInfoDirectoryMessage(Map(
-                    databaseIdRepository.get("db1") -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
-                    databaseIdRepository.get("db2") -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
+                    randomDatabaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
+                    randomDatabaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
                   ).asJava)
 
         When("incoming topology")
@@ -120,8 +121,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "handle database started messages" in new Fixture {
         Given("database IDs to start")
-        val databaseId1 = databaseIdRepository.get("foo")
-        val databaseId2 = databaseIdRepository.get("bar")
+        val databaseId1 = randomDatabaseId()
+        val databaseId2 = randomDatabaseId()
 
         When("receive both start messages")
         topologyActorRef ! new DatabaseStartedMessage(databaseId1)
@@ -133,8 +134,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "handle database stopped messages" in new Fixture {
         Given("database IDs to start and stop")
-        val databaseId1 = databaseIdRepository.get("foo")
-        val databaseId2 = databaseIdRepository.get("bar")
+        val databaseId1 = randomDatabaseId()
+        val databaseId2 = randomDatabaseId()
 
         And("both databases started")
         topologyActorRef ! new DatabaseStartedMessage(databaseId1)
@@ -179,8 +180,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val memberId = new MemberId(UUID.randomUUID())
 
-    val databaseIdRepository = new TestDatabaseIdRepository()
-    val databaseIds = Set(databaseIdRepository.get("orders"), databaseIdRepository.get("employees"), databaseIdRepository.get("customers"))
+    val databaseIds = Set(randomDatabaseId(), randomDatabaseId(), randomDatabaseId())
 
     val readReplicaInfo = TestTopology.addressesForReadReplica(0, databaseIds.asJava)
 
@@ -191,7 +191,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       val conf = Config.newBuilder()
         .fromConfig(myCoreServerConfig)
         .set(CausalClusteringSettings.cluster_topology_refresh, java.time.Duration.ofSeconds( refresh.toSeconds ) )
-        .build();
+        .build()
       conf
     }
 

@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
 
 class CoreTopologyChangeListenerTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_db" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();

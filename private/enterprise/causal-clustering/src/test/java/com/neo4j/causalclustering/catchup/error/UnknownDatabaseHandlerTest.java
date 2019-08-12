@@ -28,7 +28,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class UnknownDatabaseHandlerTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "orders" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final CatchupProtocolMessage.WithDatabaseId message = new CoreSnapshotRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();

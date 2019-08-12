@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import java.util.Arrays;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
@@ -62,7 +63,9 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         var value = input[0];
         if ( value instanceof TextValue )
         {
-            return databaseIdRepository.get( ((TextValue) value).stringValue() );
+            String databaseName = ((TextValue) value).stringValue();
+            return databaseIdRepository.get( databaseName )
+                    .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
         }
         throw new IllegalArgumentException( "Parameter '" + PARAMETER_NAME + "' value should be a string: " + value );
     }

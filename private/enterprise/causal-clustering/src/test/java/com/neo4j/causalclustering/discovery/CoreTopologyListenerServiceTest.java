@@ -25,8 +25,8 @@ import static org.mockito.Mockito.when;
 class CoreTopologyListenerServiceTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId id1 = databaseIdRepository.get( "database_one" );
-    private final DatabaseId id2 = databaseIdRepository.get( "database_two" );
+    private final DatabaseId id1 = databaseIdRepository.get( "database_one" ).get();
+    private final DatabaseId id2 = databaseIdRepository.get( "database_two" ).get();
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
 

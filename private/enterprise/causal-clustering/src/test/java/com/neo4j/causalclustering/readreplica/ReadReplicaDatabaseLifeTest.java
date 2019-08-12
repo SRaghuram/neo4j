@@ -57,7 +57,7 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 class ReadReplicaDatabaseLifeTest
 {
     private final RaftId raftId = new RaftId( UUID.randomUUID() );
-    private final DatabaseId databaseA = new TestDatabaseIdRepository().get( "dbA" );
+    private final DatabaseId databaseA = TestDatabaseIdRepository.randomDatabaseId();
     private final MemberId memberA = new MemberId( UUID.randomUUID() );
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );

@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Arrays.asList;
@@ -26,17 +25,17 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class ShutdownOperatorTest
 {
-    private TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private DatabaseManager<?> databaseManager = new StubMultiDatabaseManager();
     private ShutdownOperator operator = new ShutdownOperator( databaseManager );
     private DbmsReconciler dbmsReconciler = mock( DbmsReconciler.class );
     private TestOperatorConnector connector = new TestOperatorConnector( dbmsReconciler );
     private List<DatabaseId> databases = asList( SYSTEM_DATABASE_ID,
-            databaseIdRepository.defaultDatabase(),
-            databaseIdRepository.get( "foo" )
+            randomDatabaseId(),
+            randomDatabaseId()
     );
 
     @BeforeEach

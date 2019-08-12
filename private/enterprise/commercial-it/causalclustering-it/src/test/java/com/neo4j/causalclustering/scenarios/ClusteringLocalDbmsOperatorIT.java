@@ -83,7 +83,7 @@ class ClusteringLocalDbmsOperatorIT
 
     private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember member, String databaseName )
     {
-        return databaseManager( member ).getDatabaseContext( new TestDatabaseIdRepository().get( databaseName ) );
+        return databaseManager( member ).getDatabaseContext( TestDatabaseIdRepository.randomDatabaseId() );
     }
 
     private DatabaseAvailabilityGuard availabilityGuard( ClusterMember member, String databaseName )

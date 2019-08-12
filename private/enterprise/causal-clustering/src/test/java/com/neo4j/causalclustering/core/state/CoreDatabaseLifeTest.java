@@ -44,7 +44,7 @@ class CoreDatabaseLifeTest
     @Test
     void shouldNotifyTopologyServiceOnStart() throws Exception
     {
-        var databaseId = databaseIdRepository.get( "customers" );
+        var databaseId = databaseIdRepository.get( "customers" ).get();
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
@@ -57,7 +57,7 @@ class CoreDatabaseLifeTest
     @Test
     void shouldNotifyTopologyServiceOnStop() throws Exception
     {
-        var databaseId = databaseIdRepository.get( "orders" );
+        var databaseId = databaseIdRepository.get( "orders" ).get();
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 

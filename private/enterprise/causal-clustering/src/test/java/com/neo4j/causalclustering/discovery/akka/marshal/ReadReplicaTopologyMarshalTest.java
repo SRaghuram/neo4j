@@ -30,7 +30,7 @@ public class ReadReplicaTopologyMarshalTest extends BaseMarshalTest<DatabaseRead
         Map<MemberId,ReadReplicaInfo> replicas = IntStream.range( 0, 5 )
                 .mapToObj( id -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForReadReplica( id ) ) )
                 .collect( CollectorsUtil.pairsToMap() );
-        return new DatabaseReadReplicaTopology( new TestDatabaseIdRepository().get( "hello" ), replicas );
+        return new DatabaseReadReplicaTopology( TestDatabaseIdRepository.randomDatabaseId(), replicas );
     }
 
 }

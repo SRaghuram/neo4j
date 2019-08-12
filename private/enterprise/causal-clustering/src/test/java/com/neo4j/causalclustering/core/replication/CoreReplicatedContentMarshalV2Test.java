@@ -5,11 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.UUID;
-
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal;
@@ -27,9 +22,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.UUID;
+
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -38,12 +37,12 @@ import org.neo4j.storageengine.api.StorageCommand;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class CoreReplicatedContentMarshalV2Test
 {
     private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshalV2();
-    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId DATABASE_ID = DATABASE_ID_REPOSITORY.defaultDatabase();
+    private static final DatabaseId DATABASE_ID = randomDatabaseId();
 
     @Test
     void shouldMarshalTransactionReference() throws Exception
@@ -94,7 +93,7 @@ class CoreReplicatedContentMarshalV2Test
         after.setCreated();
         after.setNameId( 3232 );
         commands.add( new Command.LabelTokenCommand( before, after ) );
-        ReplicatedContent message = new ReplicatedTokenRequest( DATABASE_ID_REPOSITORY.get( "some.graph" ),
+        ReplicatedContent message = new ReplicatedTokenRequest( randomDatabaseId(),
                 TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands ) );
         assertMarshalingEquality( buffer, message );
     }

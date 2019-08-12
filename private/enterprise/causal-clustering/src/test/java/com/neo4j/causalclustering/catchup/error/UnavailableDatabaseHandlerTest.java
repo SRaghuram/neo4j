@@ -31,7 +31,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class UnavailableDatabaseHandlerTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "customers" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final CatchupProtocolMessage.WithDatabaseId message = new GetStoreIdRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();

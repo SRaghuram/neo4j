@@ -25,7 +25,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
@@ -46,12 +46,14 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.function.Suppliers.singleton;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 @ExtendWith( TestDirectoryExtension.class )
 class DatabaseMetricsExtensionTest
@@ -59,6 +61,8 @@ class DatabaseMetricsExtensionTest
     @Inject
     private TestDirectory testDirectory;
     private ExtensionContext context;
+
+    private static final DatabaseId DATABASE_ID = randomDatabaseId();
 
     @BeforeEach
     void setUp()
@@ -110,7 +114,7 @@ class DatabaseMetricsExtensionTest
         {
             try ( Lifespan ignored = new Lifespan( globalMetricsExtension, databaseMetricsExtension ) )
             {
-                assertThat( globalMetricsExtension.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+                assertThat( globalMetricsExtension.getRegistry().getNames(), hasItem( format( "neo4j.%s.check_point.events", DATABASE_ID.name() ) ) );
             }
         } );
     }
@@ -221,7 +225,7 @@ class DatabaseMetricsExtensionTest
         public Database database()
         {
             Database database = mock( Database.class );
-            when( database.getDatabaseId() ).thenReturn( new TestDatabaseIdRepository().get( "testdb" ) );
+            when( database.getDatabaseId() ).thenReturn( DATABASE_ID );
             return database;
         }
 

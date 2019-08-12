@@ -67,7 +67,7 @@ class CommercialSystemDatabaseIT
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
-        defaultDb = getDatabaseByName( databaseManager, databaseManager.databaseIdRepository().get( DEFAULT_DATABASE_NAME ) );
+        defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
         systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_ID );
     }
 
@@ -232,6 +232,11 @@ class CommercialSystemDatabaseIT
     private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, DatabaseId databaseId )
     {
         return databaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new ).databaseFacade();
+    }
+
+    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, String databaseName )
+    {
+        return databaseManager.getDatabaseContext( databaseName ).orElseThrow( IllegalStateException::new ).databaseFacade();
     }
 
     private static DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )

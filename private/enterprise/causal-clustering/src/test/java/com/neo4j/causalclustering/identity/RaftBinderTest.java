@@ -51,7 +51,7 @@ class RaftBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_database" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService )
     {

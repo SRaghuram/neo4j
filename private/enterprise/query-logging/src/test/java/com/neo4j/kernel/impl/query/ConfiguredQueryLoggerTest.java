@@ -21,7 +21,6 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorCounters;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.logging.AssertableLogProvider;
@@ -38,8 +37,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class ConfiguredQueryLoggerTest
@@ -53,7 +52,7 @@ class ConfiguredQueryLoggerTest
     private static final String QUERY_3 = "MATCH (c)-[:FOO]->(d) RETURN d.size";
     private static final String QUERY_4 = "MATCH (n) WHERE n.age IN $ages RETURN n";
     private final FakeClock clock = Clocks.fakeClock();
-    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId defaultDbId = randomDatabaseId();
     private final FakeCpuClock cpuClock = new FakeCpuClock();
     private final FakeHeapAllocation heapAllocation = new FakeHeapAllocation();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -166,7 +165,7 @@ class ConfiguredQueryLoggerTest
         // given
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
 
@@ -189,7 +188,7 @@ class ConfiguredQueryLoggerTest
         // given
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
         RuntimeException failure = new RuntimeException();
@@ -238,12 +237,12 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
         // when
-        ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_1, emptyMap(), map( "User", "UltiMate" ) );
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_1, emptyMap(), map( "User", "UltiMate" ) );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
         ExecutingQuery anotherQuery =
-                query( SESSION_1, databaseIdRepository.defaultDatabase(), "AnotherUser", QUERY_1, emptyMap(), map( "Place", "Town" ) );
+                query( SESSION_1, defaultDbId, "AnotherUser", QUERY_1, emptyMap(), map( "Place", "Town" ) );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         Throwable error = new Throwable();
         queryLogger.failure( anotherQuery, error );
@@ -413,7 +412,7 @@ class ConfiguredQueryLoggerTest
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
 
         // when
-        ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "neo", inputQuery, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "neo", inputQuery, params, emptyMap() );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -484,7 +483,7 @@ class ConfiguredQueryLoggerTest
     {
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, databaseIdRepository.defaultDatabase(), "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         Config config = Config.defaults();
         config.set( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true );
         config.set( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
@@ -513,16 +512,17 @@ class ConfiguredQueryLoggerTest
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
-        ExecutingQuery anotherQuery = query( SESSION_1, databaseIdRepository.get( "otherDb" ), "AnotherUser", QUERY_1 );
+        var otherDbId = randomDatabaseId();
+        ExecutingQuery anotherQuery = query( SESSION_1, otherDbId, "AnotherUser", QUERY_1 );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( anotherQuery );
 
         // then
         logProvider.assertExactly(
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser" ), QUERY_1 ) ),
+                        sessionConnectionDetails( SESSION_1, defaultDbId.name(), "TestUser" ), QUERY_1 ) ),
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, "otherdb", "AnotherUser" ), QUERY_1 ) )
+                        sessionConnectionDetails( SESSION_1, otherDbId.name(), "AnotherUser" ), QUERY_1 ) )
         );
     }
 
@@ -542,7 +542,7 @@ class ConfiguredQueryLoggerTest
             String username,
             String queryText )
     {
-        return query( sessionInfo, databaseIdRepository.defaultDatabase(), username, queryText );
+        return query( sessionInfo, defaultDbId, username, queryText );
     }
 
     private ExecutingQuery query(
@@ -556,7 +556,7 @@ class ConfiguredQueryLoggerTest
 
     private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String username )
     {
-        return sessionConnectionDetails( sessionInfo,  DEFAULT_DATABASE_NAME, username );
+        return sessionConnectionDetails( sessionInfo, defaultDbId.name(), username );
     }
 
     private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String databaseName, String username )

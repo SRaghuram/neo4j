@@ -125,7 +125,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         @Override
         public PreparedRequest<DatabaseId> getDatabaseId( String databaseName )
         {
-            return handler -> completedFuture( databaseIdRepository.get( databaseName ) );
+            return handler -> completedFuture( databaseIdRepository.get( databaseName ).get() );
         }
 
         @Override

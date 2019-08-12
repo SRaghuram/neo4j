@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 
 class CoreCommitProcessFactoryTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "orders" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final Replicator replicator = mock( Replicator.class );
     private final CoreStateMachines coreStateMachines = mock( CoreStateMachines.class );
     private final DatabasePanicker panicker = mock( DatabasePanicker.class );

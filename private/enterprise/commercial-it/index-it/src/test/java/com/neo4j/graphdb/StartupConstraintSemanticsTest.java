@@ -110,7 +110,7 @@ class StartupConstraintSemanticsTest
             graphDb = getCommunityDatabase();
             DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
             DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
-            DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseIdRepository.get( DEFAULT_DATABASE_NAME ) ).get();
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
             assertTrue( databaseContext.isFailed() );
             Throwable error = Exceptions.rootCause( databaseContext.failureCause() );
             assertThat( error, instanceOf( IllegalStateException.class ) );

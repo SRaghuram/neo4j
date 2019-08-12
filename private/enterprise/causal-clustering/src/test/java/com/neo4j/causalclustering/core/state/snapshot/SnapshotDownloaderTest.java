@@ -20,7 +20,6 @@ import org.junit.runners.Parameterized;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -50,7 +49,7 @@ public class SnapshotDownloaderTest
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SocketAddress remoteAddress = new SocketAddress( "localhost", 1234 );
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
     public void shouldRequestSnapshot() throws Exception
@@ -61,7 +60,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( databaseIdRepository.get( "database_name" ), remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress );
 
         // then
         assertTrue( downloadedSnapshot.isPresent() );
@@ -76,7 +75,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader downloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( databaseIdRepository.get( "database_name" ), remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress );
 
         // then
         assertFalse( downloadedSnapshot.isPresent() );

@@ -62,7 +62,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
@@ -73,7 +72,7 @@ public class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( DEFAULT_DATABASE_NAME );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();

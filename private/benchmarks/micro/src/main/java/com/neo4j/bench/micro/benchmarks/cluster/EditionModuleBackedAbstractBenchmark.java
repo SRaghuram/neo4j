@@ -29,7 +29,7 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
-import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -43,6 +43,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     private GraphDatabaseFacade graphDatabaseFacade;
     private Path tempDirectory;
     private DatabaseManagementService managementService;
+    public static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     protected GraphDatabaseService db()
     {
@@ -88,8 +89,6 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
 
     class TxProbingEditionModule extends CommunityEditionModule
     {
-        private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-
         TxProbingEditionModule( GlobalModule globalModule )
         {
             super( globalModule );
@@ -100,8 +99,8 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 CountingChannel countingChannel = new CountingChannel();
                 try
                 {
-                    TransactionRepresentationReplicatedTransaction txRepresentation = ReplicatedTransaction.from( batch.transactionRepresentation(),
-                                                                                                                  databaseIdRepository.get( "db-name" ) );
+                    TransactionRepresentationReplicatedTransaction txRepresentation =
+                            ReplicatedTransaction.from( batch.transactionRepresentation(), DATABASE_ID );
 
                     ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
 

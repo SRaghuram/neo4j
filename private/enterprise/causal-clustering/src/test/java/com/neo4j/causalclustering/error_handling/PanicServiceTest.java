@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -25,6 +23,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.util.concurrent.BinaryLatch;
 
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -45,9 +45,8 @@ class PanicServiceTest
 
     private final PanicService panicService = new PanicService( jobScheduler, logService );
 
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId1 = databaseIdRepository.get( "foo" );
-    private final DatabaseId databaseId2 = databaseIdRepository.get( "bar" );
+    private final DatabaseId databaseId1 = randomDatabaseId();
+    private final DatabaseId databaseId2 = randomDatabaseId();
 
     @AfterEach
     void afterEach() throws Exception
@@ -90,7 +89,9 @@ class PanicServiceTest
 
         panicExecutor.awaitBackgroundTaskCompletion();
         assertableLogProvider.assertExactly( inLog( panicService.getClass() )
-                .error( equalTo( "Clustering components for database 'bar' have encountered a critical error" ), equalTo( error ) ) );
+                .error(
+                        equalTo( format( "Clustering components for database '%s' have encountered a critical error", databaseId2.name() ) ),
+                        equalTo( error ) ) );
     }
 
     @Test

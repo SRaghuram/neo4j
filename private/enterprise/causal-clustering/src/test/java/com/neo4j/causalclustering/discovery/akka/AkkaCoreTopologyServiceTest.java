@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -50,6 +49,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class AkkaCoreTopologyServiceTest
 {
@@ -60,7 +60,6 @@ class AkkaCoreTopologyServiceTest
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
 
@@ -144,8 +143,8 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReturnRoleForLocalLeader()
     {
-        var databaseId1 = databaseIdRepository.get( "customers" );
-        var databaseId2 = databaseIdRepository.get( "orders" );
+        var databaseId1 = randomDatabaseId();
+        var databaseId2 = randomDatabaseId();
 
         var memberId1 = new MemberId( UUID.randomUUID() );
         var memberId2 = new MemberId( UUID.randomUUID() );
@@ -166,7 +165,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReturnRoleForRemoteLeader()
     {
-        var databaseId = databaseIdRepository.get( "customers" );
+        var databaseId = randomDatabaseId();
         var leaderId = new MemberId( UUID.randomUUID() );
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId );
@@ -177,7 +176,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReturnRoleForFollower()
     {
-        var databaseId = databaseIdRepository.get( "customers" );
+        var databaseId = randomDatabaseId();
         var leaderId = new MemberId( UUID.randomUUID() );
         var followerId1 = new MemberId( UUID.randomUUID() );
         var followerId2 = new MemberId( UUID.randomUUID() );
@@ -192,8 +191,8 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReturnRoleForUnknownDatabase()
     {
-        var knownDatabaseId = databaseIdRepository.get( "customers" );
-        var unknownDatabaseId = databaseIdRepository.get( "orders" );
+        var knownDatabaseId = randomDatabaseId();
+        var unknownDatabaseId = randomDatabaseId();
 
         var leaderId = new MemberId( UUID.randomUUID() );
         var followerId = new MemberId( UUID.randomUUID() );
@@ -207,7 +206,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReturnRoleForUnknownMemberId()
     {
-        var databaseId = databaseIdRepository.get( "customers" );
+        var databaseId = randomDatabaseId();
         var leaderId = new MemberId( UUID.randomUUID() );
         var followerId = new MemberId( UUID.randomUUID() );
         var unknownId = new MemberId( UUID.randomUUID() );
@@ -220,16 +219,14 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldNotBootstrapWhenEmpty()
     {
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.defaultDatabase() ) );
+        assertFalse( service.canBootstrapRaftGroup( randomDatabaseId() ) );
         assertFalse( service.canBootstrapRaftGroup( SYSTEM_DATABASE_ID ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "customers" ) ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "orders" ) ) );
     }
 
     @Test
     void shouldBootstrapKnownDatabase()
     {
-        var databaseId = databaseIdRepository.get( "cars" );
+        var databaseId = randomDatabaseId();
 
         var bootstrapState = mock( BootstrapState.class );
         when( bootstrapState.canBootstrapRaft( databaseId ) ).thenReturn( true );
@@ -237,9 +234,8 @@ class AkkaCoreTopologyServiceTest
 
         assertTrue( service.canBootstrapRaftGroup( databaseId ) );
 
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.defaultDatabase() ) );
+        assertFalse( service.canBootstrapRaftGroup( randomDatabaseId() ) );
         assertFalse( service.canBootstrapRaftGroup( SYSTEM_DATABASE_ID ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseIdRepository.get( "customers" ) ) );
     }
 
     @Test
@@ -292,7 +288,7 @@ class AkkaCoreTopologyServiceTest
 
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
     {
-        var databaseId = databaseIdRepository.get( "people" );
+        var databaseId = randomDatabaseId();
         var memberId1 = new MemberId( UUID.randomUUID() );
         var memberId2 = new MemberId( UUID.randomUUID() );
         var memberId3 = new MemberId( UUID.randomUUID() );

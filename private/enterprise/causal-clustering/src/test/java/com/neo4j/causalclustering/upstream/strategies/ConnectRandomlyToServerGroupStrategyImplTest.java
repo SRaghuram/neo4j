@@ -35,7 +35,7 @@ import static org.hamcrest.Matchers.is;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "employees" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     @Test
     void shouldStayWithinGivenSingleServerGroup()

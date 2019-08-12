@@ -47,7 +47,7 @@ class BackupDelegatorTest
     private BackupDelegator subject;
 
     private final SocketAddress anyAddress = new SocketAddress( "any.address", 1234 );
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "a database" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
 
     @BeforeEach
     void setup()

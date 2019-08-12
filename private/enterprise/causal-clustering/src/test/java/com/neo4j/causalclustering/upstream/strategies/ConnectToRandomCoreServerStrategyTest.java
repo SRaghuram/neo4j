@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 
 class ConnectToRandomCoreServerStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "hello" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     @Test
     void shouldConnectToRandomCoreServer() throws Exception

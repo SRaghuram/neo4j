@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 class CoreDownloaderTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "the_database" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final SocketAddress remoteAddress = new SocketAddress( "remoteAddress", 1234 );

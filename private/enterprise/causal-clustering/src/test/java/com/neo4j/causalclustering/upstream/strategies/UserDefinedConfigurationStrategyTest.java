@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -41,11 +40,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class UserDefinedConfigurationStrategyTest
 {
-    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId DATABASE_ID = DATABASE_ID_REPOSITORY.get( "customers" );
+    private static final DatabaseId DATABASE_ID = randomDatabaseId();
 
     private final String northGroup = "north";
     private final String southGroup = "south";
@@ -176,7 +175,7 @@ class UserDefinedConfigurationStrategyTest
 
         Map<MemberId,ReadReplicaInfo> readReplicas = Stream.of( readReplicaIds ).collect( Collectors.toMap( Function.identity(), toReadReplicaInfo ) );
 
-        return new DatabaseReadReplicaTopology( DATABASE_ID_REPOSITORY.defaultDatabase(), readReplicas );
+        return new DatabaseReadReplicaTopology( randomDatabaseId(), readReplicas );
     }
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
@@ -185,7 +184,7 @@ class UserDefinedConfigurationStrategyTest
                 new ConnectorUri( bolt, new SocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
         SocketAddress catchupAddress = new SocketAddress( "localhost", offset.getAndIncrement() );
         Set<String> groups = groupGenerator.apply( memberId );
-        Set<DatabaseId> databaseIds = Set.of( DATABASE_ID_REPOSITORY.defaultDatabase() );
+        Set<DatabaseId> databaseIds = Set.of( randomDatabaseId() );
         return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
     }
 

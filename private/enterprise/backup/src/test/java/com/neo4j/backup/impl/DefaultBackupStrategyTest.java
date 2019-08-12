@@ -41,7 +41,7 @@ class DefaultBackupStrategyTest
     private SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
     private StoreFiles storeFiles = mock( StoreFiles.class );
     private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
-    private DatabaseId databaseId = new TestDatabaseIdRepository().get( "database" );
+    private DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
     private final String databaseName = "database name";
 

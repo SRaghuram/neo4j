@@ -29,7 +29,7 @@ class RaftMonitorTest
     private final AssertableLogProvider user = new AssertableLogProvider();
     private final AssertableLogProvider debug = new AssertableLogProvider();
 
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "smurf" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
 
     private RaftBinder.Monitor raftBinderMonitor;
     private PersistentSnapshotDownloader.Monitor snapshotMonitor;
@@ -60,7 +60,8 @@ class RaftMonitorTest
     {
         raftBinderMonitor.waitingForCoreMembers( databaseId, 42 );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info( containsString( "Database '%s' is waiting for a total of %d core members" ), "smurf", 42 ) );
+        user.assertExactly( inLog( RaftMonitor.class ).info(
+                containsString( "Database '%s' is waiting for a total of %d core members" ), databaseId.name(), 42 ) );
     }
 
     @Test
@@ -68,7 +69,8 @@ class RaftMonitorTest
     {
         raftBinderMonitor.waitingForBootstrap( databaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info( containsString( "Database '%s' is waiting for bootstrap by other instance" ), "smurf" ) );
+        user.assertExactly( inLog( RaftMonitor.class ).info(
+                containsString( "Database '%s' is waiting for bootstrap by other instance" ), databaseId.name() ) );
     }
 
     @Test
@@ -76,7 +78,8 @@ class RaftMonitorTest
     {
         snapshotMonitor.startedDownloadingSnapshot( databaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info( containsString( "Started downloading snapshot for database '%s'" ), "smurf" ) );
+        user.assertExactly( inLog( RaftMonitor.class ).info(
+                containsString( "Started downloading snapshot for database '%s'" ), databaseId.name() ) );
     }
 
     @Test
@@ -84,6 +87,7 @@ class RaftMonitorTest
     {
         snapshotMonitor.downloadSnapshotComplete( databaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info( containsString( "Download of snapshot for database '%s' complete" ), "smurf" ) );
+        user.assertExactly( inLog( RaftMonitor.class ).info(
+                containsString( "Download of snapshot for database '%s' complete" ), databaseId.name() ) );
     }
 }

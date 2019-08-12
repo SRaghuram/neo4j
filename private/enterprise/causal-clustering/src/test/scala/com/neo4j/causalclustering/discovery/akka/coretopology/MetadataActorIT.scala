@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage,
 import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
 import org.neo4j.logging.NullLogProvider
 
@@ -83,8 +84,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
     "update data on database start" in new Fixture {
       Given("database IDs to start")
-      val databaseId1 = databaseIdRepository.get("customers")
-      val databaseId2 = databaseIdRepository.get("orders")
+      val databaseId1, databaseId2 = randomDatabaseId()
 
       And("initial update")
       expectReplicatorUpdates(replicator, dataKey)
@@ -100,8 +100,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
     "update data on database stop" in new Fixture {
       Given("database IDs to start and stop")
-      val databaseId1 = databaseIdRepository.get("foo")
-      val databaseId2 = databaseIdRepository.get("bar")
+      val databaseId1, databaseId2 = randomDatabaseId()
 
       And("initial update")
       expectReplicatorUpdates(replicator, dataKey)
@@ -128,7 +127,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
 
     val databaseIdRepository = new TestDatabaseIdRepository()
-    val databaseIds = Set(databaseIdRepository.get("system"), databaseIdRepository.get("not_system"))
+    val databaseIds = Set(databaseIdRepository.getRaw("system"), databaseIdRepository.getRaw("not_system"))
     var discoveryMember = new TestDiscoveryMember(myself, databaseIds.asJava)
 
     val coreServerInfo = TestTopology.addressesForCore(0, false, databaseIds.asJava)

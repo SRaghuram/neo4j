@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 
 class TxPullerTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "parts" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     private static final int MAX_FAILED_TX_PULL_REQUESTS = 5;
     private final LogProvider logProvider = NullLogProvider.getInstance();

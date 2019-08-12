@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<GetDatabaseIdRequest>
@@ -24,10 +25,11 @@ public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<Get
     }
 
     @Override
-    protected void channelRead0( ChannelHandlerContext ctx, GetDatabaseIdRequest msg ) throws Exception
+    protected void channelRead0( ChannelHandlerContext ctx, GetDatabaseIdRequest msg )
     {
         ctx.writeAndFlush( ResponseMessageType.DATABASE_ID_RESPONSE );
-        var databaseId = databaseIdRepository.get( msg.databaseName() );
+        var databaseId = databaseIdRepository.get( msg.databaseName() )
+                .orElseThrow( () -> new DatabaseNotFoundException( "Unknown database requested: " + msg.databaseName() ) );
         ctx.writeAndFlush( databaseId );
         protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
     }

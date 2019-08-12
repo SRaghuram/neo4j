@@ -146,11 +146,11 @@ class StoreCopyClientTest
     {
         // given
         mockClient( protocol );
-        DatabaseId altDbName = databaseIdRepository.get( "alternative" );
+        DatabaseId altDbName = databaseIdRepository.getRaw( "alternative" );
         StoreId defaultDbStoreId = new StoreId( 6, 3, 1, 2, 6 );
         StoreId altDbStoreId = new StoreId( 4, 6, 3, 1, 9 );
         Map<GetStoreIdRequest,StoreId> storeIdMap = new HashMap<>();
-        storeIdMap.put( new GetStoreIdRequest( databaseIdRepository.get( DEFAULT_DATABASE_NAME ) ), defaultDbStoreId );
+        storeIdMap.put( new GetStoreIdRequest( databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ) ), defaultDbStoreId );
         storeIdMap.put( new GetStoreIdRequest( altDbName ), altDbStoreId );
         clientResponses.withStoreId( storeIdMap::get );
 
@@ -174,7 +174,12 @@ class StoreCopyClientTest
         TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
         when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
 
-        subject = new StoreCopyClient( catchupClientFactory, databaseIdRepository.get( DEFAULT_DATABASE_NAME ), () -> monitors, logProvider, backoffStrategy );
+        subject = new StoreCopyClient(
+                catchupClientFactory,
+                databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
+                () -> monitors,
+                logProvider,
+                backoffStrategy );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );

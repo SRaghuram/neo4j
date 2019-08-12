@@ -21,7 +21,8 @@ import java.util.stream.IntStream;
 
 import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 @RunWith( Parameterized.class )
 public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
@@ -34,11 +35,10 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
     @Parameterized.Parameters
     public static Collection<DatabaseCoreTopology> data()
     {
-        var databaseIdRepository = new TestDatabaseIdRepository();
         return Arrays.asList(
-                new DatabaseCoreTopology( databaseIdRepository.get( "orders" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( databaseIdRepository.get( "customers" ), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
-                new DatabaseCoreTopology( databaseIdRepository.get( "cars" ), null, coreServerInfos( 4 ) )
+                new DatabaseCoreTopology( randomDatabaseId(), new RaftId( UUID.randomUUID() ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( randomDatabaseId(), new RaftId( UUID.randomUUID() ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( randomDatabaseId(), null, coreServerInfos( 4 ) )
         );
     }
 

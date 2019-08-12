@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.neo4j.kernel.database.TestDatabaseIdRepository
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
@@ -54,7 +54,7 @@ class TopologyBuilderTest
       }
 
       "no member contains the database" in new Fixture {
-        val otherDatabaseId = databaseIdRepository.get("some-other-database")
+        val otherDatabaseId = randomDatabaseId()
         val topology = topologyBuilder().buildCoreTopology(otherDatabaseId, raftId, clusterState(3), memberMetaData(3))
         topology.databaseId() shouldBe otherDatabaseId
         topology.members() shouldBe empty
@@ -98,9 +98,8 @@ class TopologyBuilderTest
     type IdMap = LWWMap[String,RaftId]
     type LeaderMap = LWWMap[String,LeaderInfo]
 
-    val databaseIdRepository = new TestDatabaseIdRepository()
     implicit val cluster = mock[Cluster]
-    val databaseId = databaseIdRepository.get("my_database")
+    val databaseId = randomDatabaseId()
     val raftId = new RaftId(UUID.randomUUID)
 
     def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head) =

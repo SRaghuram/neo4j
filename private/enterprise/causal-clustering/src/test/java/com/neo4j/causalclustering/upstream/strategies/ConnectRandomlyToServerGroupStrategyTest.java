@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyToServerGroupStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "managers" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     @Test
     void shouldConnectToGroupDefinedInStrategySpecificConfig()

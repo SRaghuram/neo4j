@@ -17,7 +17,8 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId
-import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
@@ -30,7 +31,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "update replicated data on receipt of leader info message" in new Fixture {
       Given("leader info update")
-      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, databaseIdRepository.get("dbName"))
+      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, randomDatabaseId())
 
       When("message received")
       replicatedDataActorRef ! event
@@ -41,10 +42,10 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "send incoming data to read replica actor and outside world" in new Fixture {
       Given("an incoming update")
-      val update1 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, databaseIdRepository.get("db1"), newReplicatedLeaderInfo)
+      val update1 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, randomDatabaseId(), newReplicatedLeaderInfo)
 
       And("another incoming update")
-      val update2 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, databaseIdRepository.get("db2"), newReplicatedLeaderInfo)
+      val update2 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, randomDatabaseId(), newReplicatedLeaderInfo)
 
       When("first update received")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update1)
@@ -85,6 +86,5 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
     val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, NullLogProvider.getInstance())
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
     override val dataKey: Key[ORMap[DatabaseId,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
-    val databaseIdRepository = new TestDatabaseIdRepository()
   }
 }

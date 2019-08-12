@@ -12,7 +12,8 @@ import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.identity.RaftId
-import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
 
 class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
@@ -22,7 +23,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
-      replicatedDataActorRef ! new RaftIdSettingMessage(new RaftId(UUID.randomUUID()), databaseIdRepository.get("dbName"))
+      replicatedDataActorRef ! new RaftIdSettingMessage(new RaftId(UUID.randomUUID()), randomDatabaseId())
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
@@ -30,8 +31,8 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "send raft ID to core topology actor from replicator" in new Fixture {
       Given("raft IDs for databases")
-      val db1 = LWWMap.empty.put(cluster, databaseIdRepository.get("db1"), new RaftId(UUID.randomUUID()))
-      val db2 = LWWMap.empty.put(cluster, databaseIdRepository.get("db2"), new RaftId(UUID.randomUUID()))
+      val db1 = LWWMap.empty.put(cluster, randomDatabaseId(), new RaftId(UUID.randomUUID()))
+      val db2 = LWWMap.empty.put(cluster, randomDatabaseId(), new RaftId(UUID.randomUUID()))
 
       When("raft IDs updated from replicator")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(db1)
@@ -48,6 +49,5 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     val coreTopologyProbe = TestProbe("coreTopologyActor")
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, NullLogProvider.getInstance())
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
-    val databaseIdRepository = new TestDatabaseIdRepository()
   }
 }

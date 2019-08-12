@@ -26,12 +26,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class ClusterInternalDbmsOperatorTest
 {
     private OperatorConnector connector = mock( OperatorConnector.class );
     private ClusterInternalDbmsOperator operator = new ClusterInternalDbmsOperator();
-    private DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setup()
@@ -50,7 +50,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldTriggerOnStartAndStop()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
 
         // when
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
@@ -69,8 +69,8 @@ class ClusterInternalDbmsOperatorTest
     void shouldReturnIndependentContexts()
     {
         // given
-        var databaseA = databaseIdRepository.get( "A" );
-        var databaseB = databaseIdRepository.get( "B" );
+        var databaseA = randomDatabaseId();
+        var databaseB = randomDatabaseId();
 
         // when
         var stopA1 = operator.stopForStoreCopy( databaseA );
@@ -132,7 +132,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldComplainWhenStartingTwice()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
         stoppedDatabase.restart();
 
@@ -144,7 +144,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldNotDesireStoreCopyingWhileBootstrapping()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
         var bootstrapping = operator.bootstrap( someDb );
 
         // when
@@ -170,7 +170,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldDesireStopForPanickedDatabase()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
         var desiredStateOnTrigger = new AtomicReference<OperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
@@ -186,7 +186,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldDesireStopForPanickedDatabaseWhileStoreCoping()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
         var desiredStateOnTrigger = new AtomicReference<OperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
@@ -202,7 +202,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldNotTriggerRestartAfterStoreCopyWhenPanicked()
     {
         // given
-        var someDb = databaseIdRepository.get( "some" );
+        var someDb = randomDatabaseId();
 
         // when
         operator.stopOnPanic( someDb );

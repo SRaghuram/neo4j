@@ -52,7 +52,7 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 class RemoteStoreTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "cars" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );

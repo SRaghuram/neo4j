@@ -15,6 +15,6 @@ public class DatabaseIdMarshalTest extends BaseMarshalTest<DatabaseId>
 {
     public DatabaseIdMarshalTest()
     {
-        super( new TestDatabaseIdRepository().get( "database name" ), DatabaseIdMarshal.INSTANCE );
+        super( TestDatabaseIdRepository.randomDatabaseId(), DatabaseIdMarshal.INSTANCE );
     }
 }

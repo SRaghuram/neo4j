@@ -31,7 +31,7 @@ import static org.neo4j.internal.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().get( "clients" );
+    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
 
     @Test
     void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception

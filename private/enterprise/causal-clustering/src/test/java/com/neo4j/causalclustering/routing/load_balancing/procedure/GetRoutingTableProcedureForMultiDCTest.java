@@ -18,8 +18,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
@@ -41,13 +39,12 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.stringValue;
 
 class GetRoutingTableProcedureForMultiDCTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-
     @Test
     void shouldHaveCorrectSignature()
     {
@@ -68,7 +65,7 @@ class GetRoutingTableProcedureForMultiDCTest
     {
         // given
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().get( "my_database" );
+        var databaseId = databaseManager.databaseIdRepository().get( "my_database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
@@ -116,14 +113,14 @@ class GetRoutingTableProcedureForMultiDCTest
     @Test
     void shouldThrowWhenDatabaseIsStopped()
     {
-        var databaseName = "orders";
+        var databaseId = randomDatabaseId();
         var databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseIdRepository.get( databaseName ) ).withStoppedDatabase().register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
 
         var plugin = mock( LoadBalancingPlugin.class );
         var proc = newProcedure( plugin, databaseManager );
 
-        var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseName )}, null ) );
+        var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
     }
 
@@ -131,7 +128,7 @@ class GetRoutingTableProcedureForMultiDCTest
     void shouldThrowWhenPluginReturnsAnEmptyRoutingTable() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().get( "customers" );
+        var databaseId = databaseManager.databaseIdRepository().get( "customers" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );

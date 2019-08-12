@@ -19,8 +19,6 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,12 +26,12 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId EXISTING_DB_ID = DATABASE_ID_REPOSITORY.get( "existing.neo4j" );
-    private static final DatabaseId NON_EXISTING_DB_ID = DATABASE_ID_REPOSITORY.get( "non.existing.neo4j" );
+    private static final DatabaseId EXISTING_DB_ID = randomDatabaseId();
+    private static final DatabaseId NON_EXISTING_DB_ID = randomDatabaseId();
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();

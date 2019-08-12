@@ -16,7 +16,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -24,6 +23,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseGuardIT
@@ -59,24 +59,22 @@ class MultiDatabaseGuardIT
 
         assertEquals( 2, compositeGuard.getGuards().size() );
 
-        String firstDatabase = "Fry";
-        String secondDatabase = "Lila";
-        String thirdDatabase = "Bender";
+        var firstDatabase = randomDatabaseId();
+        var secondDatabase = randomDatabaseId();
+        var thirdDatabase = randomDatabaseId();
 
-        // We are not creating database nodes in system db, so cannot use database id repository from DatabaseManager as it would not find database
-        var databaseIdRepository = new TestDatabaseIdRepository();
-        databaseManager.createDatabase( databaseIdRepository.get( firstDatabase ) );
+        databaseManager.createDatabase( firstDatabase );
         assertEquals( 3, compositeGuard.getGuards().size() );
 
-        databaseManager.createDatabase( databaseIdRepository.get( secondDatabase ) );
-        databaseManager.createDatabase( databaseIdRepository.get( thirdDatabase ) );
+        databaseManager.createDatabase( secondDatabase );
+        databaseManager.createDatabase( thirdDatabase );
         assertEquals( 5, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( databaseIdRepository.get( thirdDatabase ) );
+        databaseManager.stopDatabase( thirdDatabase );
         assertEquals( 4, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( databaseIdRepository.get( firstDatabase ) );
-        databaseManager.stopDatabase( databaseIdRepository.get( secondDatabase ) );
+        databaseManager.stopDatabase( firstDatabase );
+        databaseManager.stopDatabase( secondDatabase );
 
         assertEquals( 2, compositeGuard.getGuards().size() );
     }

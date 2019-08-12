@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TypicallyConnectToRandomReadReplicaStrategyTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "my_orders" );
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
 
     @Test

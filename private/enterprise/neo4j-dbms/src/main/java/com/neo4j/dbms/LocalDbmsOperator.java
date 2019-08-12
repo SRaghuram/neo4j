@@ -5,6 +5,8 @@
  */
 package com.neo4j.dbms;
 
+import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
@@ -25,23 +27,28 @@ public final class LocalDbmsOperator extends DbmsOperator
 
     public void dropDatabase( String databaseName )
     {
-        var id = databaseIdRepository.get( databaseName );
+        var id = databaseId( databaseName );
         desired.put( id, DROPPED );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void startDatabase( String databaseName )
     {
-        var id = databaseIdRepository.get( databaseName );
+        var id = databaseId( databaseName );
         desired.put( id, STARTED );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void stopDatabase( String databaseName )
     {
-        var id = databaseIdRepository.get( databaseName );
+        var id = databaseId( databaseName );
         desired.put( id, STOPPED );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
+    private DatabaseId databaseId( String databaseName )
+    {
+        return databaseIdRepository.get( databaseName )
+                .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
+    }
 }
