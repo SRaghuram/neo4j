@@ -13,7 +13,6 @@ import org.junit.rules.RuleChain;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
@@ -44,7 +43,7 @@ import static org.junit.Assert.fail;
  */
 public class ReadAndDeleteTransactionConflictIT
 {
-    private static SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    private static SuppressOutput suppressOutput = SuppressOutput.suppress();
     private static Neo4jRule graphDb = new Neo4jRule()
             .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
     private static CleanupRule cleanupRule = new CleanupRule();
@@ -77,22 +76,16 @@ public class ReadAndDeleteTransactionConflictIT
     }
 
     @Test
-    public void returningRelationshipsDeletedInSameTransactionMustThrow()
+    public void returningRelationshipsDeletedInSameTransactionMustEmptyRelationships()
     {
         try ( Session session = driver.session() )
         {
             Value nodeId = session.run( "create (n:L2)-[:REL]->(m) return id(n)" ).single().get( 0 );
             StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = {nodeId} delete n, m, r return r",
                     Values.parameters( "nodeId", nodeId ) );
-            try
-            {
-                result.single();
-                fail( "Expected an exception." );
-            }
-            catch ( ClientException e )
-            {
-                assertThat( e.getMessage(), containsString( "deleted in this transaction" ) );
-            }
+            Record record = result.single();
+            Map<String,Object> map = record.get( 0 ).asMap();
+            assertThat( map, equalTo( new HashMap<>() ) );
         }
     }
 
