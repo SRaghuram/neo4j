@@ -148,7 +148,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
         if (state.prepopulateResults) {
           ValuePopulation.populate(value)
         }
-        subscriber.onField(i, value)
+        subscriber.onField(value)
         i += 1
       }
       subscriber.onRecordCompleted()
@@ -222,13 +222,13 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       *   ....
       * }}}
      */
-    val project = block(columns.zipWithIndex.map {
-      case (name, index) =>
+    val project = block(columns.map {
+      name =>
         val slot = slots.get(name).getOrElse(
           throw new InternalException(s"Did not find `$name` in the slot configuration")
           )
-        invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
-                         constant(index), getFromSlot(slot))
+        invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, AnyValue]("onField"),
+                         getFromSlot(slot))
     }:_ *)
 
     /**

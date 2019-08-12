@@ -69,25 +69,46 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
         {
+            private int currentOffset = -1;
+
             @Override
-            public void onField( int offset, AnyValue value )
+            public void onRecord()
             {
-                switch ( offset )
+                currentOffset = 0;
+            }
+
+            @Override
+            public void onRecordCompleted()
+            {
+                currentOffset = -1;
+            }
+
+            @Override
+            public void onField( AnyValue value )
+            {
+                try
                 {
-                case 0://u.passwordChangeRequired
-                    existingUser.setTrue();
-                    passwordChangeRequired.setValue( ((BooleanValue) value).booleanValue() );
-                    break;
-                case 1://u.suspended
-                    suspended.setValue( ((BooleanValue) value).booleanValue() );
-                    break;
-                case 2://r.name
-                    if ( value != NO_VALUE )
+                    switch ( currentOffset )
                     {
-                        roleNames.add( ((TextValue) value).stringValue() );
+                    case 0://u.passwordChangeRequired
+                        existingUser.setTrue();
+                        passwordChangeRequired.setValue( ((BooleanValue) value).booleanValue() );
+                        break;
+                    case 1://u.suspended
+                        suspended.setValue( ((BooleanValue) value).booleanValue() );
+                        break;
+                    case 2://r.name
+                        if ( value != NO_VALUE )
+                        {
+                            roleNames.add( ((TextValue) value).stringValue() );
+                        }
+                        break;
+                    default://nothing to do
                     }
-                    break;
-                default://nothing to do
+                }
+                finally
+                {
+                    currentOffset++;
                 }
             }
         };
@@ -310,6 +331,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
             final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
             {
                 private AnyValue[] fields;
+                private int currentOffset = -1;
 
                 @Override
                 public void onResult( int numberOfFields )
@@ -318,14 +340,21 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 }
 
                 @Override
-                public void onField( int offset, AnyValue value )
+                public void onField( AnyValue value )
                 {
-                    fields[offset] = value;
+                    fields[currentOffset++] = value;
+                }
+
+                @Override
+                public void onRecord()
+                {
+                    currentOffset = 0;
                 }
 
                 @Override
                 public void onRecordCompleted()
                 {
+                    currentOffset = -1;
                     String roleName = ((TextValue) fields[0]).stringValue();
                     Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
 
