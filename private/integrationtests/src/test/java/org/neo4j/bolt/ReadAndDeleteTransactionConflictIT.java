@@ -5,9 +5,13 @@
  */
 package org.neo4j.bolt;
 
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
@@ -17,18 +21,22 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.Value;
+import org.neo4j.driver.v1.Values;
+import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.driver.v1.summary.SummaryCounters;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * We need to ensure that failures that come out of our read-committed isolation level, are turned into "transient" exceptions from the driver,
@@ -36,27 +44,84 @@ import static org.junit.Assert.assertThat;
  */
 public class ReadAndDeleteTransactionConflictIT
 {
-    private SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private RepeatRule outerRepeat = new RepeatRule( true, 10 );
-    private Neo4jRule graphDb = new Neo4jRule()
+    private static SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    private static Neo4jRule graphDb = new Neo4jRule()
             .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
-    private CleanupRule cleanupRule = new CleanupRule();
-    private RepeatRule innerRepeat = new RepeatRule( true, 10 );
+    private static CleanupRule cleanupRule = new CleanupRule();
 
-    private Driver driver;
+    private static Driver driver;
 
-    @Rule
-    public RuleChain rules = RuleChain.outerRule( suppressOutput ).around( outerRepeat ).around( graphDb ).around( cleanupRule ).around( innerRepeat );
+    @ClassRule
+    public static RuleChain rules = RuleChain.outerRule( suppressOutput ).around( graphDb ).around( cleanupRule );
+
+    @BeforeClass
+    public static void setUp()
+    {
+        Config config = Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
+        driver = GraphDatabase.driver( graphDb.boltURI(), config );
+        cleanupRule.add( driver );
+    }
+
+    @Test
+    public void returningNodesDeletedInSameTransactionMustReturnEmptyNodes()
+    {
+        // It is weird that we are returning these empty nodes, but this test is just codifying the current behaviour.
+        // In the future, deleted entities will behave as if they are NULLs.
+        // See CIP2018-10-19 for the details of these plans: https://github.com/opencypher/openCypher/pull/332
+        try ( Session session = driver.session() )
+        {
+            Value nodeId = session.run( "create (n:L1 {a: 'b'}) return id(n)" ).single().get( 0 );
+            Record record = session.run( "match (n:L1) where id(n) = {nodeId} delete n return n", Values.parameters( "nodeId", nodeId ) ).single();
+            Map<String,Object> map = record.get( 0 ).asMap();
+            assertThat( map, equalTo( new HashMap<>() ) );
+        }
+    }
+
+    @Test
+    public void returningRelationshipsDeletedInSameTransactionMustThrow()
+    {
+        try ( Session session = driver.session() )
+        {
+            Value nodeId = session.run( "create (n:L2)-[:REL]->(m) return id(n)" ).single().get( 0 );
+            StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = {nodeId} delete n, m, r return r",
+                    Values.parameters( "nodeId", nodeId ) );
+            try
+            {
+                result.single();
+                fail( "Expected an exception." );
+            }
+            catch ( ClientException e )
+            {
+                assertThat( e.getMessage(), containsString( "deleted in this transaction" ) );
+            }
+        }
+    }
+
+    @Test
+    public void returningRelationshipPropertiesOfRelationshipDeletedInSameTransactionMustNotThrow()
+    {
+        try ( Session session = driver.session() )
+        {
+            Value nodeId = session.run( "create (n:L3)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
+            StatementResult result = session.run( "" +
+                    "match (n:L3)-[r]->(m) " +
+                    "where id(n) = {nodeId} " +
+                    "with n, m, r, properties(r) as props " +
+                    "delete n, m, r " +
+                    "return props", Values.parameters( "nodeId", nodeId ) );
+            long value = result.single().get( 0 ).get( "a" ).asLong();
+            assertThat( value, equalTo( 1L ) );
+        }
+    }
 
     @Test
     public void relationshipsThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "create (n) with n unwind range(1, 1000) as x create (n)-[:REL]->(n)" );
+                    "create (n:L4) with n unwind range(1, 1000) as x create (n)-[:REL]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
             assertThat( counters.relationshipsCreated(), is( 1000 ) );
@@ -67,8 +132,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match ()-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n) detach delete n" );
+                    readResult = reader.run( "match (:L4)-[r]->() return 1 as whatever, r" );
+                    StatementResult deleteResult = deleter.run( "match (n:L4) detach delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -92,12 +157,11 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void relationshipsWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "create (n) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
+                    "create (n:L5) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
             assertThat( counters.relationshipsCreated(), is( 1000 ) );
@@ -108,8 +172,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match ()-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n) detach delete n" );
+                    readResult = reader.run( "match (:L5)-[r]->() return 1 as whatever, r" );
+                    StatementResult deleteResult = deleter.run( "match (n:L5) detach delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -133,12 +197,11 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void nodesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "unwind range(1, 1000) as x create (n:A:B:C:D:E:F:G:H:I:J:K:L:O:P:Q)" );
+                    "unwind range(1, 1000) as x create (n:L6:A:B:C:D:E:F:G:H:I:J:K:L:O:P:Q)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
             assertThat( counters.relationshipsCreated(), is( 0 ) );
@@ -149,8 +212,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match (n) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n) delete n" );
+                    readResult = reader.run( "match (n:L6) return 1 as whatever, n" );
+                    StatementResult deleteResult = deleter.run( "match (n:L6) delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -174,12 +237,11 @@ public class ReadAndDeleteTransactionConflictIT
     @Test
     public void nodesWithPropertiesThatAreConcurrentlyDeletedWhileStreamingResultThroughBoltMustBeIgnored()
     {
-        Driver driver = getDriver();
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
             StatementResult result = writeSession.run(
-                    "unwind range(1, 1000) as x create (n {a: 1})" );
+                    "unwind range(1, 1000) as x create (n:L7 {a: 1})" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
             assertThat( counters.relationshipsCreated(), is( 0 ) );
@@ -190,8 +252,8 @@ public class ReadAndDeleteTransactionConflictIT
                 StatementResult readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
-                    readResult = reader.run( "match (n) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n) delete n" );
+                    readResult = reader.run( "match (n:L7) return 1 as whatever, n" );
+                    StatementResult deleteResult = deleter.run( "match (n:L7) delete n" );
                     deleteResult.consume();
                     deleter.success();
                 }
@@ -210,22 +272,5 @@ public class ReadAndDeleteTransactionConflictIT
         {
             // Getting a transient exception is allowed, because that just signals to clients that their transaction conflicted, and should be retried.
         }
-    }
-
-    private Driver getDriver()
-    {
-        if ( driver == null )
-        {
-            Config config = Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig();
-            driver = GraphDatabase.driver( graphDb.boltURI(), config );
-            cleanupRule.add( driver );
-            cleanupRule.add( () ->
-            {
-                // Clear the driver field when the driver is closed, to ensure we will create a new driver in the next iteration.
-                driver = null;
-            } );
-
-        }
-        return driver;
     }
 }
