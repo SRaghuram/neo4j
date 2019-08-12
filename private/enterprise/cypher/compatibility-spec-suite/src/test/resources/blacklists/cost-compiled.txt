@@ -715,3 +715,6 @@ Feature "TemporalParseAcceptance": Scenario "Should parse local date time from s
 Feature "TemporalParseAcceptance": Scenario "Should parse date time from string"
 Feature "TemporalParseAcceptance": Scenario "Should parse date time with named time zone from string"
 Feature "TemporalParseAcceptance": Scenario "Should parse duration from string"
+
+// TCK expects error but query is valid
+Feature "SemanticErrorAcceptance": Scenario "Failing when using MATCH after OPTIONAL MATCH"

@@ -493,3 +493,6 @@ Feature "WithAcceptance": Scenario "Connected components succeeding WITH"
 Feature "WithAcceptance": Scenario "Handle dependencies across WITH with SKIP"
 Feature "WithAcceptance": Scenario "No dependencies between the query parts"
 Feature "WithAcceptance": Scenario "ORDER BY and LIMIT can be used"
+
+// TCK expects error but query is valid
+Feature "SemanticErrorAcceptance": Scenario "Failing when using MATCH after OPTIONAL MATCH"
