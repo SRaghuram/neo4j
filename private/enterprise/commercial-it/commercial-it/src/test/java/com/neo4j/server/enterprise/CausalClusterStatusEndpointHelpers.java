@@ -93,7 +93,7 @@ class CausalClusterStatusEndpointHelpers
 
     private static Role getCurrentCoreRole( InProcessNeo4j core )
     {
-        return ((GraphDatabaseFacade) core.databaseManagementService()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+        return ((GraphDatabaseFacade) core.defaultDatabaseService()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
     static Boolean[] availabilityStatuses( URI server )
