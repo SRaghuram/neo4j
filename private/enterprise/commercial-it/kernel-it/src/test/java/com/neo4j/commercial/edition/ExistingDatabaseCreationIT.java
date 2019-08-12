@@ -141,7 +141,7 @@ class ExistingDatabaseCreationIT
 
     private DatabaseManagementService startManagementService()
     {
-        return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
     }
 
     private void copyDatabase( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
