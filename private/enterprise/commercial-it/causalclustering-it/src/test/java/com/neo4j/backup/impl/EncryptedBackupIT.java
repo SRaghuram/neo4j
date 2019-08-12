@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileReader;
@@ -48,15 +47,14 @@ import java.util.function.IntSupplier;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryClassExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -67,11 +65,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
 {
+    @Inject
+    private static TestDirectory testDirectory;
+    @Inject
+    private static FileSystemAbstraction fs;
+
     @Nested
-    @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+    @TestInstance( TestInstance.Lifecycle.PER_CLASS )
     @DisplayName( "Cluster with encryptedTx=true encryptedBackup=true" )
     class TrueTrue extends Context
     {
@@ -82,7 +86,7 @@ class EncryptedBackupIT
     }
 
     @Nested
-    @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+    @TestInstance( TestInstance.Lifecycle.PER_CLASS )
     @DisplayName( "Cluster with encryptedTx=true encryptedBackup=false" )
     class TrueFalse extends Context
     {
@@ -93,7 +97,7 @@ class EncryptedBackupIT
     }
 
     @Nested
-    @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+    @TestInstance( TestInstance.Lifecycle.PER_CLASS )
     @DisplayName( "Cluster with encryptedTx=false encryptedBackup=false" )
     class FalseFalse extends Context
     {
@@ -104,7 +108,7 @@ class EncryptedBackupIT
     }
 
     @Nested
-    @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+    @TestInstance( TestInstance.Lifecycle.PER_CLASS )
     @DisplayName( "Cluster with encryptedTx=false encryptedBackup=true" )
     class FalseTrue extends Context
     {
@@ -116,11 +120,6 @@ class EncryptedBackupIT
 
     static class Context
     {
-        @RegisterExtension
-        public static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
-
-        private static DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-
         private static final int BACKUP_SSL_START = 6; // certs for backup start after 6
         private static final String backupPolicyName = "backup";
         private static final String clusterPolicyName = "cluster";
@@ -141,7 +140,7 @@ class EncryptedBackupIT
         @BeforeEach
         void init() throws Exception
         {
-            backupHome = testDirectoryClassExtension.getTestDirectory().directory( "backupNeo4jHome-" + UUID.randomUUID().toString() );
+            backupHome = testDirectory.directory( "backupNeo4jHome-" + UUID.randomUUID().toString() );
 
             // NOTE this causes tests to no be able to be run in parallel
             if ( cluster == null )
@@ -300,13 +299,13 @@ class EncryptedBackupIT
             }
         }
 
-        private static Cluster initialiseCluster( boolean encryptedTxPort, boolean encryptedBackupPort ) throws Exception
+        private Cluster initialiseCluster( boolean encryptedTxPort, boolean encryptedBackupPort ) throws Exception
         {
             Cluster cluster = null;
             try
             {
                 Map<Setting<?>, String> memberSettings = getClusterMemberSettingsWithEncryption( encryptedTxPort, encryptedBackupPort );
-                cluster = aCluster( testDirectoryClassExtension.getTestDirectory(), memberSettings );
+                cluster = aCluster( testDirectory, memberSettings );
                 setupClusterWithEncryption( cluster, encryptedTxPort, encryptedBackupPort );
                 cluster.start();
             }

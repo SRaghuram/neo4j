@@ -9,7 +9,8 @@ import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +19,9 @@ import java.util.stream.Collectors;
 
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.junit.extension.Neo4j;
-import org.neo4j.test.extension.TestDirectoryClassExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.availabilityStatuses;
 import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.getLeader;
@@ -52,17 +55,19 @@ import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
+@ExtendWith( TestDirectoryExtension.class )
 class CausalClusterStatusEndpointIT
 {
-    @RegisterExtension
-    static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
+    @Inject
+    private static TestDirectory testDirectory;
 
     private static CausalClusterInProcessBuilder.CausalCluster cluster;
 
     @BeforeAll
     static void setupClass()
     {
-        cluster = startCluster( testDirectoryClassExtension.getTestDirectory() );
+        cluster = startCluster( testDirectory );
     }
 
     @AfterAll
@@ -177,7 +182,7 @@ class CausalClusterStatusEndpointIT
         finally
         {
             cluster.shutdown();
-            cluster = startCluster( testDirectoryClassExtension.getTestDirectory() );
+            cluster = startCluster( testDirectory );
         }
     }
 
