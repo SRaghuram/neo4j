@@ -282,13 +282,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
-        QueryHandler
-          .handleResult((_, u) => {
-            if (!(u eq Values.NO_VALUE)) None
-            else Some(new InvalidArgumentsException(s"Failed to revoke role '$roleName' from user '$userName': User does not exist."))
-          })
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to revoke role '$roleName' from user '$userName': Role does not exist."))),
+        VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
+        QueryHandler.handleNoResult(() => None),
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 

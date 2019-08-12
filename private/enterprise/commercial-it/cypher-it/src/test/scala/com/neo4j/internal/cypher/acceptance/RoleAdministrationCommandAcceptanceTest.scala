@@ -727,47 +727,42 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
   }
 
-  test("should fail revoking non-existent role from (existing) user") {
+  test("should do nothing when revoking non-existent role from (existing) user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
 
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("REVOKE ROLE custom FROM user")
-      // THEN
-    } should have message "Failed to revoke role 'custom' from user 'user': Role does not exist."
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
   }
 
-  test("should fail revoking role from non-existing user") {
+  test("should do nothing when revoking (existing) role from non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
+    val roles = defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null)
+    execute("SHOW ROLES WITH USERS").toSet should be(roles)
 
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("REVOKE ROLE custom FROM user")
-      // THEN
-    } should have message "Failed to revoke role 'custom' from user 'user': User does not exist."
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(roles)
   }
 
-  test("should fail revoking non-existing role from non-existing user") {
+  test("should do nothing when revoking non-existing role from non-existing user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
 
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("REVOKE ROLE custom FROM user")
-      // THEN
-    } should have message "Failed to revoke role 'custom' from user 'user': Role does not exist."
+    // WHEN
+    execute("REVOKE ROLE custom FROM user")
 
-    // AND
+    // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
   }
 
