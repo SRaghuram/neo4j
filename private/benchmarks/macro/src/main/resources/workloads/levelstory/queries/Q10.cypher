@@ -11,7 +11,7 @@ MATCH (y)-->(w:week)-->(p:project)
 WITH DISTINCT c, cr, p
 WITH c, cr, p, [r IN (c)-[:CONTACT]->(:projectrole {projectid: p.id}) | last(nodes(r))] AS prs
   WHERE cr.name IN ['Owners', 'Admins'] OR length(prs) > 0
-WITH p, c, cr, extract(r IN prs | r.name) AS prs
+WITH p, c, cr, [r IN prs | r.name] AS prs
 WITH p, c,
      {
        accessedby:       c.id,

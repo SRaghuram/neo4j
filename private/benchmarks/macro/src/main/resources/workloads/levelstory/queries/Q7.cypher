@@ -4,7 +4,7 @@ MATCH (p:project {id: x.projectid})
 WITH u, p, x
 MATCH (u)-[:CONTACT]->(c:contact {teamid: p.teamid})-[:CONTACT]->(cr:role {teamid: p.teamid})
 WITH p, x, c, cr, [r IN (c)-[:CONTACT]->(:projectrole {projectid: p.id}) | last(nodes(r))] AS prs
-WITH p, x, c, cr, extract(r IN prs | r.name) AS prs
+WITH p, x, c, cr, [r IN prs | r.name] AS prs
 WITH x,
      c,
      {
