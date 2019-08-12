@@ -136,12 +136,14 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                          IndexedSeq.empty,
                                          RegularBufferVariant)(SlotConfiguration.empty))
       buffers(bufferDefinition.id.x) = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))(SlotConfiguration.empty)
+
       new MorselBufferSequence(bd)
     }
 
     def reducerOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
       buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHS = variant.reducersOnRHS :+ asd))(SlotConfiguration.empty))
+
       ExecutionGraphDefinitionMatcher.this
     }
   }

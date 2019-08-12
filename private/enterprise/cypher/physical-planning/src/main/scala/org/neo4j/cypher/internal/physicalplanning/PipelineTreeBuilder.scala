@@ -67,7 +67,6 @@ object PipelineTreeBuilder {
                                             val argumentStateMapId: ArgumentStateMapId,
                                             val argumentSlotOffset: Int,
                                             bufferConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id, bufferConfiguration)
-
   /**
     * Builder for [[RegularBufferVariant]], that is a delegate.
     */

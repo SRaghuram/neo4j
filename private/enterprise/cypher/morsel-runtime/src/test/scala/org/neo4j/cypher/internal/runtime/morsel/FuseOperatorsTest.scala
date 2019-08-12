@@ -214,11 +214,11 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                   fusingEnabled = true,
                                   tokenContext = TokenContext.EMPTY)
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
-      pipelineBuilder.pipeline.headPlan,
-      null,
-      pipelineBuilder.pipeline.outputDefinition,
-      pipelineBuilder.pipeline.middlePlans,
-      serial = false)
+                                      pipelineBuilder.pipeline.headPlan,
+                                      mock[BufferDefinition](RETURNS_DEEP_STUBS),
+                                      pipelineBuilder.pipeline.outputDefinition,
+                                      pipelineBuilder.pipeline.middlePlans,
+                                      serial = false)
     fuser.compilePipeline(pipeline)
   }
 
