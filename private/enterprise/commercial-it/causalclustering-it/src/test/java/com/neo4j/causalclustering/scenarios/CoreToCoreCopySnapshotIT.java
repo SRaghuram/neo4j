@@ -11,10 +11,12 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -26,6 +28,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
@@ -33,25 +37,30 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
-public class CoreToCoreCopySnapshotIT
+@ClusterExtension
+@ExtendWith( DefaultFileSystemExtension.class )
+@TestInstance( PER_METHOD )
+class CoreToCoreCopySnapshotIT
 {
-    protected static final int NR_CORE_MEMBERS = 3;
-
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( NR_CORE_MEMBERS )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+    @Inject
+    private FileSystemAbstraction fs;
 
     @Test
-    public void shouldBeAbleToDownloadLargerFreshSnapshot() throws Exception
+    void shouldBeAbleToDownloadLargerFreshSnapshot() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        Cluster cluster = startCluster( emptyMap() );
 
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
@@ -60,7 +69,6 @@ public class CoreToCoreCopySnapshotIT
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();
-        FileSystemAbstraction fs = clusterRule.testDirectory().getFileSystem();
         fs.deleteRecursively( follower.databaseLayout().databaseDirectory() );
         fs.deleteRecursively( follower.clusterStateDirectory() );
         follower.start();
@@ -70,14 +78,14 @@ public class CoreToCoreCopySnapshotIT
     }
 
     @Test
-    public void shouldBeAbleToDownloadToNewInstanceAfterPruning() throws Exception
+    void shouldBeAbleToDownloadToNewInstanceAfterPruning() throws Exception
     {
         // given
         Map<String,String> params = stringMap( CausalClusteringSettings.state_machine_flush_window_size.name(), "1",
                 CausalClusteringSettings.raft_log_pruning_strategy.name(), "3 entries",
                 CausalClusteringSettings.raft_log_rotation_size.name(), "1K" );
 
-        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        Cluster cluster = startCluster( params );
 
         CoreClusterMember leader = DataCreator.createDataInOneTransaction( cluster, 10000 );
 
@@ -99,8 +107,8 @@ public class CoreToCoreCopySnapshotIT
     }
 
     @Test
-    @Ignore( "Pending fixes for transactional ids" )
-    public void shouldBeAbleToDownloadToRejoinedInstanceAfterPruning() throws Exception
+    @Disabled( "Pending fixes for transactional ids" )
+    void shouldBeAbleToDownloadToRejoinedInstanceAfterPruning() throws Exception
     {
         // given
         Map<String,String> coreParams = stringMap();
@@ -111,7 +119,7 @@ public class CoreToCoreCopySnapshotIT
         int numberOfTransactions = 100;
 
         // start the cluster
-        Cluster cluster = clusterRule.withSharedCoreParams( coreParams ).startCluster();
+        Cluster cluster = startCluster( coreParams );
         Timeout timeout = new Timeout( Clocks.systemClock(), 120, SECONDS );
 
         // accumulate some log files
@@ -145,7 +153,19 @@ public class CoreToCoreCopySnapshotIT
         dataMatchesEventually( firstServer, List.of( secondServer ) );
     }
 
-    private class Timeout
+    private Cluster startCluster( Map<String,String> params ) throws Exception
+    {
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParams( params );
+
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        return cluster;
+    }
+
+    private static class Timeout
     {
         private final Clock clock;
         private final long absoluteTimeoutMillis;
@@ -165,17 +185,17 @@ public class CoreToCoreCopySnapshotIT
         }
     }
 
-    private int getOldestLogIdOn( CoreClusterMember clusterMember ) throws IOException
+    private static int getOldestLogIdOn( CoreClusterMember clusterMember ) throws IOException
     {
         return clusterMember.getLogFileNames().firstKey().intValue();
     }
 
-    private int getMostRecentLogIdOn( CoreClusterMember clusterMember ) throws IOException
+    private static int getMostRecentLogIdOn( CoreClusterMember clusterMember ) throws IOException
     {
         return clusterMember.getLogFileNames().lastKey().intValue();
     }
 
-    private CoreClusterMember doSomeTransactions( Cluster cluster, int count )
+    private static CoreClusterMember doSomeTransactions( Cluster cluster, int count )
     {
         try
         {
@@ -185,7 +205,7 @@ public class CoreToCoreCopySnapshotIT
                 last = cluster.coreTx( ( db, tx ) ->
                 {
                     Node node = db.createNode();
-                    node.setProperty( "that's a bam", string( 1024 ) );
+                    node.setProperty( "that's a bam", randomAlphanumeric( 1024 ) );
                     tx.commit();
                 } );
             }
@@ -196,15 +216,4 @@ public class CoreToCoreCopySnapshotIT
             throw new RuntimeException( e );
         }
     }
-
-    private String string( int numberOfCharacters )
-    {
-        StringBuilder s = new StringBuilder();
-        for ( int i = 0; i < numberOfCharacters; i++ )
-        {
-            s.append( String.valueOf( i ) );
-        }
-        return s.toString();
-    }
-
 }

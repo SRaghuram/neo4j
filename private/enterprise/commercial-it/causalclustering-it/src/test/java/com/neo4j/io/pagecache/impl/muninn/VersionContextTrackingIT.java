@@ -7,10 +7,10 @@ package com.neo4j.io.pagecache.impl.muninn;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,29 +26,37 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.core.Is.is;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class VersionContextTrackingIT
+@ClusterExtension
+class VersionContextTrackingIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule();
     private static final int NUMBER_OF_TRANSACTIONS = 3;
+
+    @Inject
+    private ClusterFactory clusterFactory;
+
     private Cluster cluster;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeAll
+    void beforeAll() throws Exception
     {
-        cluster = clusterRule.withSharedCoreParam( GraphDatabaseSettings.snapshot_query, TRUE )
-                             .withSharedReadReplicaParam( GraphDatabaseSettings.snapshot_query, TRUE )
-                             .startCluster();
+        var clusterConfig = clusterConfig()
+                .withSharedCoreParam( GraphDatabaseSettings.snapshot_query, TRUE )
+                .withSharedReadReplicaParam( GraphDatabaseSettings.snapshot_query, TRUE );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void coreMemberTransactionIdPageTracking() throws Exception
+    void coreMemberTransactionIdPageTracking() throws Exception
     {
         long baseTxId = getBaseTransactionId();
         for ( int i = 1; i < 4; i++ )
@@ -63,7 +71,7 @@ public class VersionContextTrackingIT
     }
 
     @Test
-    public void readReplicatesTransactionIdPageTracking() throws Exception
+    void readReplicatesTransactionIdPageTracking() throws Exception
     {
         long baseTxId = getBaseTransactionId();
         for ( int i = 1; i < 4; i++ )
@@ -77,7 +85,7 @@ public class VersionContextTrackingIT
         }
     }
 
-    private long getExpectedLatestPageVersion( long baseTxId, int round )
+    private static long getExpectedLatestPageVersion( long baseTxId, int round )
     {
         return baseTxId + round * NUMBER_OF_TRANSACTIONS;
     }

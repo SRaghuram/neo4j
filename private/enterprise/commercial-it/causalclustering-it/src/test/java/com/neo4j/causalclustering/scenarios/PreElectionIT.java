@@ -10,72 +10,74 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.test.extension.Inject;
+
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
-public class PreElectionIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class PreElectionIT
 {
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule()
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private final ClusterConfig clusterConfig = clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
             .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
             .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, TRUE );
 
     @Test
-    public void shouldActuallyStartAClusterWithPreVoting() throws Exception
+    void shouldActuallyStartAClusterWithPreVoting()
     {
-        clusterRule.startCluster();
-        // pass
+        assertDoesNotThrow( () -> startCluster( clusterConfig ) );
     }
 
     @Test
-    public void shouldActuallyStartAClusterWithPreVotingAndARefuseToBeLeader() throws Throwable
+    void shouldActuallyStartAClusterWithPreVotingAndARefuseToBeLeader()
     {
-        clusterRule
-                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE );
-        clusterRule.startCluster();
+        assertDoesNotThrow( () -> startCluster(
+                clusterConfig
+                        .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
+                        .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) ) );
     }
 
     @Test
-    public void shouldNotStartAnElectionIfAMinorityOfServersHaveTimedOutOnHeartbeats() throws Exception
+    void shouldNotStartAnElectionIfAMinorityOfServersHaveTimedOutOnHeartbeats() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        Cluster cluster = startCluster( clusterConfig );
         CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, TimeUnit.MINUTES );
 
         // when
         follower.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).triggerElection();
 
         // then
-        try
-        {
-            cluster.awaitCoreMemberWithRole( Role.CANDIDATE, 1, TimeUnit.MINUTES );
-            fail( "Should not have started an election if less than a quorum have timed out" );
-        }
-        catch ( TimeoutException e )
-        {
-            // pass
-        }
+        assertThrows( TimeoutException.class, () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, 1, TimeUnit.MINUTES ) );
     }
 
     @Test
-    public void shouldStartElectionIfLeaderRemoved() throws Exception
+    void shouldStartElectionIfLeaderRemoved() throws Exception
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
+        Cluster cluster = startCluster( clusterConfig );
         CoreClusterMember oldLeader = cluster.awaitLeader();
 
         // when
@@ -88,13 +90,12 @@ public class PreElectionIT
     }
 
     @Test
-    public void shouldElectANewLeaderIfAServerRefusesToBeLeader() throws Exception
+    void shouldElectANewLeaderIfAServerRefusesToBeLeader() throws Exception
     {
         // given
-        clusterRule
+        Cluster cluster = startCluster( clusterConfig
                 .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
-                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE );
-        Cluster cluster = clusterRule.startCluster();
+                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) );
         CoreClusterMember oldLeader = cluster.awaitLeader();
 
         // when
@@ -109,5 +110,12 @@ public class PreElectionIT
     private String firstServerRefusesToBeLeader( int id )
     {
         return id == 0 ? "true" : "false";
+    }
+
+    private Cluster startCluster( ClusterConfig clusterConfig ) throws Exception
+    {
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        return cluster;
     }
 }

@@ -11,9 +11,10 @@ import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -23,8 +24,10 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.read_replica.SpecificReplicaStrategy.upstreamFactory;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,20 +37,32 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class ReadReplicaToReadReplicaCatchupIT
+@ClusterExtension
+class ReadReplicaToReadReplicaCatchupIT
 {
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
-                    .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
-                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private Cluster cluster;
+
+    @BeforeEach
+    void beforeEach() throws Exception
+    {
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
+                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
 
     @Test
-    public void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable
+    void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
         int numberOfNodesToCreate = 100;
 
         cluster.coreTx( ( db, tx ) ->
@@ -83,10 +98,9 @@ public class ReadReplicaToReadReplicaCatchupIT
     }
 
     @Test
-    public void shouldCatchUpFromCoresWhenPreferredReadReplicasAreUnavailable() throws Throwable
+    void shouldCatchUpFromCoresWhenPreferredReadReplicasAreUnavailable() throws Throwable
     {
         // given
-        Cluster cluster = clusterRule.startCluster();
         int numberOfNodes = 1;
         int firstReadReplicaLocalMemberId = 101;
 

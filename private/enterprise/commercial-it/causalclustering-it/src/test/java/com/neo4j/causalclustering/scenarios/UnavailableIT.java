@@ -7,35 +7,42 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
 import static org.neo4j.kernel.api.exceptions.Status.statusCodeOf;
 
-public class UnavailableIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class UnavailableIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+        cluster.start();
     }
 
     @Test
-    public void shouldReturnUnavailableStatusWhenDoingLongOperation()
+    void shouldReturnUnavailableStatusWhenDoingLongOperation()
     {
         // given
         ClusterMember member = cluster.getCoreMemberById( 1 );
@@ -45,19 +52,18 @@ public class UnavailableIT
                 .require( () -> "Not doing long operation" );
 
         // then
-        try ( Transaction tx = member.defaultDatabase().beginTx() )
+        var error = assertThrows( Exception.class, () ->
         {
-            tx.commit();
-            fail();
-        }
-        catch ( Exception e )
-        {
-            assertEquals( Status.General.DatabaseUnavailable, statusCodeOf( e ) );
-        }
+            try ( Transaction tx = member.defaultDatabase().beginTx() )
+            {
+                tx.commit();
+            }
+        } );
+        assertEquals( DatabaseUnavailable, statusCodeOf( error ) );
     }
 
     @Test
-    public void shouldReturnUnavailableStatusWhenShutdown()
+    void shouldReturnUnavailableStatusWhenShutdown()
     {
         // given
         ClusterMember member = cluster.getCoreMemberById( 1 );
@@ -67,14 +73,13 @@ public class UnavailableIT
         member.shutdown();
 
         // then
-        try ( Transaction tx = db.beginTx() )
+        var error = assertThrows( Exception.class, () ->
         {
-            tx.commit();
-            fail();
-        }
-        catch ( Exception e )
-        {
-            assertEquals( Status.General.DatabaseUnavailable, statusCodeOf( e ) );
-        }
+            try ( Transaction tx = db.beginTx() )
+            {
+                tx.commit();
+            }
+        } );
+        assertEquals( DatabaseUnavailable, statusCodeOf( error ) );
     }
 }

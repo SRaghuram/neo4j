@@ -8,37 +8,52 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.test.causalclustering.ClusterRule;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.apache.commons.lang3.mutable.MutableLong;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 
-public class RaftIdReuseIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class RaftIdReuseIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            // increased to decrease likelihood of unnecessary leadership changes
-            .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+
     private Cluster cluster;
 
-    @Test
-    public void shouldReuseIdsInCluster() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                // increased to decrease likelihood of unnecessary leadership changes
+                .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
+                .withNumberOfReadReplicas( 0 );
 
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
+
+    @Test
+    void shouldReuseIdsInCluster() throws Exception
+    {
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
@@ -78,10 +93,8 @@ public class RaftIdReuseIT
     }
 
     @Test
-    public void newLeaderShouldReuseIdsFreedOnPreviousLeader() throws Exception
+    void newLeaderShouldReuseIdsFreedOnPreviousLeader() throws Exception
     {
-        cluster = clusterRule.startCluster();
-
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
@@ -114,8 +127,8 @@ public class RaftIdReuseIT
         CoreClusterMember newCreationLeader = cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode();
-            assertTrue( String.format("Created node had id %d, should be %d or %d", node.getId(), first.getValue(), second.getValue() ),
-                    node.getId() == first.getValue() || node.getId() == second.getValue());
+            assertTrue( node.getId() == first.getValue() || node.getId() == second.getValue(),
+                    String.format( "Created node had id %d, should be %d or %d", node.getId(), first.getValue(), second.getValue() ) );
 
             tx.commit();
         } );
@@ -123,10 +136,8 @@ public class RaftIdReuseIT
     }
 
     @Test
-    public void reusePreviouslyFreedIds() throws Exception
+    void reusePreviouslyFreedIds() throws Exception
     {
-        cluster = clusterRule.startCluster();
-
         final MutableLong first = new MutableLong();
         final MutableLong second = new MutableLong();
 
@@ -174,18 +185,18 @@ public class RaftIdReuseIT
         assertEquals( second.longValue(), node2id.longValue() );
     }
 
-    private void idMaintenanceOnLeader( CoreClusterMember leader )
+    private static void idMaintenanceOnLeader( CoreClusterMember leader )
     {
         IdController idController = resolveDependency( leader, IdController.class );
         idController.maintenance();
     }
 
-    private <T> T resolveDependency( CoreClusterMember leader, Class<T> clazz )
+    private static <T> T resolveDependency( CoreClusterMember leader, Class<T> clazz )
     {
         return leader.defaultDatabase().getDependencyResolver().resolveDependency( clazz );
     }
 
-    private CoreClusterMember removeTwoNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
+    private static CoreClusterMember removeTwoNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
     {
         return cluster.coreTx( ( db, tx ) ->
         {
@@ -198,7 +209,7 @@ public class RaftIdReuseIT
         } );
     }
 
-    private CoreClusterMember createThreeNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
+    private static CoreClusterMember createThreeNodes( Cluster cluster, MutableLong first, MutableLong second ) throws Exception
     {
         return cluster.coreTx( ( db, tx ) ->
         {

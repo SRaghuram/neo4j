@@ -11,38 +11,49 @@ import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Map;
 import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
-public class ReadReplicaHierarchicalCatchupIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ReadReplicaHierarchicalCatchupIT
 {
-    private static final Map<Integer,String> serverGroups = Map.of( 0, "NORTH", 1, "NORTH", 2, "NORTH", 3, "EAST", 5, "EAST", 4, "WEST", 6, "WEST" );
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    @Rule
-    public ClusterRule clusterRule =
-            new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
-                    .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
-                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
-                    .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
+    private final ClusterConfig clusterConfig = clusterConfig()
+            .withNumberOfCoreMembers( 3 )
+            .withNumberOfReadReplicas( 0 )
+            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
+            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+            .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE );
 
     @Test
-    public void shouldCatchupThroughHierarchy() throws Throwable
+    void shouldCatchupThroughHierarchy() throws Throwable
     {
-        clusterRule = clusterRule
-                .withInstanceReadReplicaParam( CausalClusteringSettings.server_groups, serverGroups::get )
-                .withInstanceCoreParam( CausalClusteringSettings.server_groups, serverGroups::get );
-
         // given
-        Cluster cluster = clusterRule.startCluster();
+        var serverGroups = Map.of( 0, "NORTH", 1, "NORTH", 2, "NORTH", 3, "EAST", 5, "EAST", 4, "WEST", 6, "WEST" );
+
+        Cluster cluster = clusterFactory.createCluster( clusterConfig
+                .withInstanceReadReplicaParam( CausalClusteringSettings.server_groups, serverGroups::get )
+                .withInstanceCoreParam( CausalClusteringSettings.server_groups, serverGroups::get ) );
+
+        cluster.start();
+
         int numberOfNodesToCreate = 100;
 
         cluster.coreTx( ( db, tx ) ->

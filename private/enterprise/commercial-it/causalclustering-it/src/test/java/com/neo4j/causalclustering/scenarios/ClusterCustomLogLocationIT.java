@@ -8,9 +8,10 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -19,24 +20,32 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
-public class ClusterCustomLogLocationIT
+@ClusterExtension
+class ClusterCustomLogLocationIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 2 );
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private Cluster cluster;
+
+    @BeforeAll
+    void beforeAll() throws Exception
+    {
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 2 ) );
+        cluster.start();
+    }
 
     @Test
-    public void clusterWithCustomTransactionLogLocation() throws Exception
+    void clusterWithCustomTransactionLogLocation() throws Exception
     {
-        Cluster cluster = clusterRule.startCluster();
-
         for ( int i = 0; i < 10; i++ )
         {
             cluster.coreTx( ( db, tx ) ->

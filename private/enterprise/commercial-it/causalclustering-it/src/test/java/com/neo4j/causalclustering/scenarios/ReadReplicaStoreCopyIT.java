@@ -9,9 +9,12 @@ import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -26,27 +29,40 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
+import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.Matchers.instanceOf;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class ReadReplicaStoreCopyIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ReadReplicaStoreCopyIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withSharedCoreParam( GraphDatabaseSettings.keep_logical_logs, FALSE )
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 1 );
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    @Test( timeout = 240_000 )
-    public void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore() throws Throwable
+    private Cluster cluster;
+
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        Cluster cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withSharedCoreParam( GraphDatabaseSettings.keep_logical_logs, FALSE )
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 1 );
 
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
+
+    @Test
+    @Timeout( 240 )
+    void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore() throws Throwable
+    {
         ReadReplica readReplica = cluster.findAnyReadReplica();
 
         readReplica.txPollingClient().stop();
@@ -59,15 +75,7 @@ public class ReadReplicaStoreCopyIT
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
             GraphDatabaseFacade replicaGraphDatabase = readReplica.defaultDatabase();
-            try
-            {
-                replicaGraphDatabase.beginTx();
-                fail( "Exception expected" );
-            }
-            catch ( Exception e )
-            {
-                assertThat( e, instanceOf( DatabaseShutdownException.class ) );
-            }
+            assertThrows( DatabaseShutdownException.class, replicaGraphDatabase::beginTx );
         }
         finally
         {

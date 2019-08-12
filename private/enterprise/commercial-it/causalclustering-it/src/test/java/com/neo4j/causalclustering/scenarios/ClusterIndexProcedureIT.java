@@ -8,10 +8,11 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -28,35 +29,42 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.schema.ConstraintType.NODE_KEY;
 import static org.neo4j.graphdb.schema.ConstraintType.UNIQUENESS;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
-public class ClusterIndexProcedureIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ClusterIndexProcedureIT
 {
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule()
-                    .withNumberOfCoreMembers( 3 )
-                    .withNumberOfReadReplicas( 3 )
-                    .withTimeout( 1000, SECONDS );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withTimeout( 1000, SECONDS );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void createIndexProcedureMustPropagate() throws Exception
+    void createIndexProcedureMustPropagate() throws Exception
     {
         // create an index
         cluster.coreTx( ( db, tx ) ->
@@ -78,8 +86,8 @@ public class ClusterIndexProcedureIT
         dataMatchesEventually( leader, cluster.readReplicas() );
 
         // now the indexes must exist, so we wait for them to come online
-        cluster.coreMembers().forEach( this::awaitIndexOnline );
-        cluster.readReplicas().forEach( this::awaitIndexOnline );
+        cluster.coreMembers().forEach( ClusterIndexProcedureIT::awaitIndexOnline );
+        cluster.readReplicas().forEach( ClusterIndexProcedureIT::awaitIndexOnline );
 
         // verify indexes
         cluster.coreMembers().forEach( core -> verifyIndexes( core.defaultDatabase() ) );
@@ -87,7 +95,7 @@ public class ClusterIndexProcedureIT
     }
 
     @Test
-    public void createUniquePropertyConstraintMustPropagate() throws Exception
+    void createUniquePropertyConstraintMustPropagate() throws Exception
     {
         // create a constraint
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
@@ -118,7 +126,7 @@ public class ClusterIndexProcedureIT
     }
 
     @Test
-    public void createNodeKeyConstraintMustPropagate() throws Exception
+    void createNodeKeyConstraintMustPropagate() throws Exception
     {
         // create a node key
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
@@ -148,7 +156,7 @@ public class ClusterIndexProcedureIT
         cluster.readReplicas().forEach( rr -> verifyConstraints( rr.defaultDatabase(), NODE_KEY ) );
     }
 
-    private void awaitIndexOnline( ClusterMember member )
+    private static void awaitIndexOnline( ClusterMember member )
     {
         GraphDatabaseAPI db = member.defaultDatabase();
         try ( Transaction tx = db.beginTx() )
@@ -158,52 +166,52 @@ public class ClusterIndexProcedureIT
         }
     }
 
-    private void verifyIndexes( GraphDatabaseAPI db )
+    private static void verifyIndexes( GraphDatabaseAPI db )
     {
         try ( Transaction tx = db.beginTx() )
         {
             // only one index
             Iterator<IndexDefinition> indexes = db.schema().getIndexes().iterator();
-            assertTrue( "has one index", indexes.hasNext() );
+            assertTrue( indexes.hasNext(), "has one index" );
             IndexDefinition indexDefinition = indexes.next();
-            assertFalse( "not more than one index", indexes.hasNext() );
+            assertFalse( indexes.hasNext(), "not more than one index" );
 
             Label label = single( indexDefinition.getLabels() );
             String property = indexDefinition.getPropertyKeys().iterator().next();
 
             // with correct pattern and provider
-            assertEquals( "correct label", "Person", label.name() );
-            assertEquals( "correct property", "name", property );
+            assertEquals( "Person", label.name(), "correct label" );
+            assertEquals( "name", property, "correct property" );
             assertCorrectProvider( db, label, property );
 
             tx.commit();
         }
     }
 
-    private void verifyConstraints( GraphDatabaseAPI db, ConstraintType expectedConstraintType )
+    private static void verifyConstraints( GraphDatabaseAPI db, ConstraintType expectedConstraintType )
     {
         try ( Transaction tx = db.beginTx() )
         {
             // only one index
             Iterator<ConstraintDefinition> constraints = db.schema().getConstraints().iterator();
-            assertTrue( "has one index", constraints.hasNext() );
+            assertTrue( constraints.hasNext(), "has one index" );
             ConstraintDefinition constraint = constraints.next();
-            assertFalse( "not more than one index", constraints.hasNext() );
+            assertFalse( constraints.hasNext(), "not more than one index" );
 
             Label label = constraint.getLabel();
             String property = constraint.getPropertyKeys().iterator().next();
             ConstraintType constraintType = constraint.getConstraintType();
 
             // with correct pattern and provider
-            assertEquals( "correct label", "Person", label.name() );
-            assertEquals( "correct property", "name", property );
-            assertEquals( "correct constraint type", expectedConstraintType, constraintType );
+            assertEquals( "Person", label.name(), "correct label" );
+            assertEquals( "name", property, "correct property" );
+            assertEquals( expectedConstraintType, constraintType, "correct constraint type" );
 
             tx.commit();
         }
     }
 
-    private void assertCorrectProvider( GraphDatabaseAPI db, Label label, String property )
+    private static void assertCorrectProvider( GraphDatabaseAPI db, Label label, String property )
     {
         ThreadToStatementContextBridge bridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( false, db.databaseId() );
@@ -212,7 +220,7 @@ public class ClusterIndexProcedureIT
         int propId = tokenRead.propertyKey( property );
         SchemaRead schemaRead = kernelTransaction.schemaRead();
         IndexDescriptor index = schemaRead.index( labelId, propId );
-        assertEquals( "correct provider key", "lucene+native", index.getIndexProvider().getKey() );
-        assertEquals( "correct provider version", "3.0", index.getIndexProvider().getVersion() );
+        assertEquals( "lucene+native", index.getIndexProvider().getKey(), "correct provider key" );
+        assertEquals( "3.0", index.getIndexProvider().getVersion(), "correct provider version" );
     }
 }

@@ -9,12 +9,13 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.test.causalclustering.ClusterRule;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,11 +47,14 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.values.storable.Value;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
@@ -66,7 +70,9 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfig
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asProcedureConfigMap;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
-public class FulltextIndexCausalClusterIT
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class FulltextIndexCausalClusterIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
@@ -80,22 +86,23 @@ public class FulltextIndexCausalClusterIT
     private static final String REL_INDEX_EC = "relIndexEventuallyConsistent";
     private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + PROCEDURE_EVENTUALLY_CONSISTENT + ": 'true'}";
 
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
     private long nodeId1;
     private long nodeId2;
     private long relId1;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 ) );
+        cluster.start();
     }
 
     @Test
-    public void fulltextIndexContentsMustBeReplicatedWhenPopulating() throws Exception
+    void fulltextIndexContentsMustBeReplicatedWhenPopulating() throws Exception
     {
         cluster.coreTx( ( db, tx ) ->
         {
@@ -135,7 +142,7 @@ public class FulltextIndexCausalClusterIT
     }
 
     @Test
-    public void fulltextIndexContentsMustBeReplicatedWhenUpdating() throws Exception
+    void fulltextIndexContentsMustBeReplicatedWhenUpdating() throws Exception
     {
         cluster.coreTx( ( db, tx ) ->
         {
@@ -178,7 +185,7 @@ public class FulltextIndexCausalClusterIT
     }
 
     @Test
-    public void fulltextSettingsMustBeReplicatedToAllClusterMembers() throws Exception
+    void fulltextSettingsMustBeReplicatedToAllClusterMembers() throws Exception
     {
         String analyserNodeIndex = new UrlOrEmail().getName();
         boolean eventuallyConsistentNodeIndex = true;
@@ -306,11 +313,11 @@ public class FulltextIndexCausalClusterIT
                 results.add( ((Entity) result.next().get( queryNodes ? NODE : RELATIONSHIP )).getId() );
             }
             String errorMessage = errorMessage( results, expected ) + " (" + db + ", leader is " + cluster.awaitLeader() + ") query = " + queryString;
-            assertEquals( errorMessage, expected.size(), results.size() );
+            assertEquals( expected.size(), results.size(), errorMessage );
             int i = 0;
             while ( !results.isEmpty() )
             {
-                assertTrue( errorMessage, results.remove( expected.get( i++ ) ) );
+                assertTrue( results.remove( expected.get( i++ ) ), errorMessage );
             }
         }
     }

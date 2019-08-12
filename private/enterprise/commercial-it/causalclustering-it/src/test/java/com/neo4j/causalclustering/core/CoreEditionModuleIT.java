@@ -8,9 +8,10 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Predicate;
 
@@ -20,21 +21,32 @@ import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CoreEditionModuleIT
+@ClusterExtension
+class CoreEditionModuleIT
 {
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule();
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private Cluster cluster;
+
+    @BeforeAll
+    void beforeAll() throws Exception
+    {
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+        cluster.start();
+    }
 
     @Test
-    public void createBufferedIdComponentsByDefault() throws Exception
+    void createBufferedIdComponentsByDefault() throws Exception
     {
-        Cluster cluster = clusterRule.startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
         DependencyResolver dependencyResolver = leader.defaultDatabase().getDependencyResolver();
 
@@ -46,9 +58,9 @@ public class CoreEditionModuleIT
     }
 
     @Test
-    public void fileWatcherFileNameFilter()
+    void fileWatcherFileNameFilter() throws Exception
     {
-        DatabaseLayout layout = clusterRule.testDirectory().databaseLayout();
+        DatabaseLayout layout = cluster.awaitLeader().databaseLayout();
         Predicate<String> filter = CoreEditionModule.fileWatcherFileNameFilter();
         String metadataStoreName = layout.metadataStore().getName();
         assertFalse( filter.test( metadataStoreName ) );

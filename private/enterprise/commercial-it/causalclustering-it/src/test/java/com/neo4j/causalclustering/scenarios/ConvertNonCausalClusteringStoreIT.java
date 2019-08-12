@@ -10,16 +10,15 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.restore.RestoreDatabaseCommand;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -29,51 +28,46 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@RunWith( Parameterized.class )
-public class ConvertNonCausalClusteringStoreIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+@TestInstance( PER_METHOD )
+class ConvertNonCausalClusteringStoreIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+    @Inject
+    private TestDirectory testDirectory;
 
-    @Parameterized.Parameter()
-    public String recordFormat;
-
-    @Parameterized.Parameters( name = "Record format {0}" )
-    public static Collection<Object> data()
-    {
-        return Arrays.asList( new Object[]{Standard.LATEST_NAME, HighLimit.NAME} );
-    }
-
-    @Test
-    public void shouldReplicateTransactionToCoreMembers() throws Throwable
+    @ParameterizedTest( name = "Record format '{0}'" )
+    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
+    void shouldReplicateTransactionToCoreMembers( String recordFormat ) throws Throwable
     {
         // given
-        TestDirectory testDirectory = clusterRule.testDirectory();
         File dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
-        File classicNeo4jDatabase = createNeoDatabase( dbDir, classicNodeCount ).layout().databaseDirectory();
+        File classicNeo4jDatabase = createNeoDatabase( dbDir, recordFormat, classicNodeCount ).layout().databaseDirectory();
 
-        Cluster cluster = this.clusterRule.withRecordFormat( recordFormat ).createCluster();
+        Cluster cluster = createCluster( recordFormat );
 
-        try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
+        for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            for ( CoreClusterMember core : cluster.coreMembers() )
-            {
-                var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-                new RestoreDatabaseCommand( fileSystem, classicNeo4jDatabase, core.config(), databaseName, true ).execute();
-            }
+            var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, core.config(), databaseName, true ).execute();
         }
 
         cluster.start();
@@ -109,7 +103,17 @@ public class ConvertNonCausalClusteringStoreIT
         }
     }
 
-    private ClassicNeo4jDatabase createNeoDatabase( File dbDir, int classicNodeCount ) throws IOException
+    private Cluster createCluster( String recordFormat )
+    {
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withRecordFormat( recordFormat );
+
+        return clusterFactory.createCluster( clusterConfig );
+    }
+
+    private static ClassicNeo4jDatabase createNeoDatabase( File dbDir, String recordFormat, int classicNodeCount ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {

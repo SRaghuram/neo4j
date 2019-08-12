@@ -12,45 +12,51 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitorAdapter;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.util.concurrent.BinaryLatch;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
-public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
+@ClusterExtension
+class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
 {
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfReadReplicas( 0 )
-            .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
-            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
-            .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
-            .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? FALSE : TRUE )
-            .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE )
-            .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
     private CoreClusterMember leader;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeAll
+    void beforeAll() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        var clusterConfig = clusterConfig()
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
+                .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                .withSharedCoreParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY )
+                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, id -> id == 0 ? FALSE : TRUE )
+                .withSharedReadReplicaParam( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" )
+                .withSharedReadReplicaParam( CausalClusteringSettings.multi_dc_license, TRUE )
+                .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )
+                .withSharedReadReplicaParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     private long warmUpCluster() throws Exception
@@ -109,7 +115,7 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     }
 
     @Test
-    public void cacheProfilesMustBeIncludedInStoreCopyToCore() throws Exception
+    void cacheProfilesMustBeIncludedInStoreCopyToCore() throws Exception
     {
         long pagesInMemory = warmUpCluster();
         CoreClusterMember member = cluster.newCoreMember();
@@ -117,7 +123,7 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
     }
 
     @Test
-    public void cacheProfilesMustBeIncludedInStoreCopyToReadReplica() throws Exception
+    void cacheProfilesMustBeIncludedInStoreCopyToReadReplica() throws Exception
     {
         long pagesInMemory = warmUpCluster();
         ReadReplica member = cluster.newReadReplica();
