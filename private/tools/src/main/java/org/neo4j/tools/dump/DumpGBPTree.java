@@ -9,8 +9,8 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.index.internal.gbptree.GBPTreeStructure;
+import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
@@ -48,7 +48,7 @@ public class DumpGBPTree
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = pageCache( jobScheduler ) )
         {
-            PrintingGBPTreeVisitor visitor = new PrintingGBPTreeVisitor( System.out, false, false, false, false );
+            PrintingGBPTreeVisitor visitor = new PrintingGBPTreeVisitor( System.out, false, false, false, false, false );
             GBPTreeStructure.visitHeader( pageCache, file, visitor );
         }
     }
