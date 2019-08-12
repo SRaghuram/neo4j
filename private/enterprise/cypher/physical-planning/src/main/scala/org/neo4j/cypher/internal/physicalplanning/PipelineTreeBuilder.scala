@@ -80,7 +80,7 @@ object PipelineTreeBuilder {
   class ApplyBufferDefinitionBuild(id: BufferId,
                                    producingPipelineId: PipelineId,
                                    val argumentSlotOffset: Int,
-                                   val bufferSlotConfiguration: SlotConfiguration
+                                   bufferSlotConfiguration: SlotConfiguration
                              ) extends MorselBufferDefinitionBuild(id, producingPipelineId, bufferSlotConfiguration) {
     // These are ArgumentStates of reducers on the RHS
     val reducersOnRHS = new ArrayBuffer[ArgumentStateDefinitionBuild]
@@ -93,7 +93,7 @@ object PipelineTreeBuilder {
   class ArgumentStateBufferDefinitionBuild(id: BufferId,
                                            producingPipelineId: PipelineId,
                                            val argumentStateMapId: ArgumentStateMapId,
-                                           val bufferSlotConfiguration: SlotConfiguration) extends MorselBufferDefinitionBuild(id, producingPipelineId, bufferSlotConfiguration)
+                                           bufferSlotConfiguration: SlotConfiguration) extends MorselBufferDefinitionBuild(id, producingPipelineId, bufferSlotConfiguration)
 
   /**
     * Builder for [[LHSAccumulatingRHSStreamingBufferVariant]]
