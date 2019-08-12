@@ -16,6 +16,7 @@ import org.openjdk.jmc.common.item.IMemberAccessor;
 import org.openjdk.jmc.common.item.IType;
 import org.openjdk.jmc.common.item.ItemFilters;
 import org.openjdk.jmc.common.unit.IQuantity;
+import org.openjdk.jmc.common.util.FormatToolkit;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
@@ -141,7 +142,7 @@ public class StackCollapse implements AutoCloseable
 
     private static String toString( IMCFrame frame )
     {
-        return format("%s#%s",frame.getMethod().getType().getFullName(), frame.getMethod().getMethodName() );
+        return FormatToolkit.getHumanReadable( frame.getMethod(), false, false, true, true, true, true );
     }
 
     private static <T> Stream<T> reverse( List<T> lst )

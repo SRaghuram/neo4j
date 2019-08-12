@@ -16,11 +16,14 @@ import com.neo4j.bench.common.util.JsonUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toSet;
 
 abstract class SecondaryRecordingCreator
 {
@@ -56,6 +59,44 @@ abstract class SecondaryRecordingCreator
         }
     }
 
+    private static class AllOf extends SecondaryRecordingCreator
+    {
+
+        private final List<SecondaryRecordingCreator> secondaryRecordingCreators;
+
+        AllOf( List<SecondaryRecordingCreator> secondaryRecordingCreators )
+        {
+            this.secondaryRecordingCreators = secondaryRecordingCreators;
+        }
+
+        @Override
+        Set<String> requiredEnvironmentVariables()
+        {
+            return secondaryRecordingCreators.stream()
+                    .flatMap( c -> c.requiredEnvironmentVariables().stream() )
+                    .collect( toSet() );
+        }
+
+        @Override
+        Set<RecordingType> recordingTypes()
+        {
+            return secondaryRecordingCreators.stream()
+                    .flatMap( c -> c.recordingTypes().stream() )
+                    .collect( toSet() );
+        }
+
+        @Override
+        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        {
+            secondaryRecordingCreators.forEach( r -> r.create( recordingDescriptor, forkDirectory ) );
+        }
+    }
+
+    public static SecondaryRecordingCreator allOf( SecondaryRecordingCreator ...creators )
+    {
+        return new AllOf( Arrays.asList( creators ) );
+    }
+
     static class MemoryAllocationFlamegrapCreator extends SecondaryRecordingCreator
     {
 
@@ -68,27 +109,36 @@ abstract class SecondaryRecordingCreator
         @Override
         Set<RecordingType> recordingTypes()
         {
-            return null;
+            return Sets.newHashSet( RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
         }
 
         @Override
         void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
         {
-            Path jfrRecording = forkDirectory.pathFor( recordingDescriptor );
+
+            Path jfrRecording = getProfilerRecording( forkDirectory, recordingDescriptor );
 
             try
             {
-                StackCollapse.forMemoryAllocation(
-                        jfrRecording,
-                        forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.JFR_FLAMEGRAPH ) ) );
+                // generate collapsed stack frames, into temporary location
+                Path collapsedStackFrames = Files.createTempFile( Paths.get( forkDirectory.toAbsolutePath() ), "", ".jfr.collapsed.stack" );
+                StackCollapse.forMemoryAllocation( jfrRecording, collapsedStackFrames );
+                // generate flamegraphs
+                Path flameGraphSvg = getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
+                Path flameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
+                BenchmarkUtil.assertDirectoryExists( flameGraphDir );
+
+                List<String> args = Lists.newArrayList( "perl",
+                                                        "flamegraph.pl",
+                                                        "--colors=java",
+                                                        collapsedStackFrames.toAbsolutePath().toString() );
+                SecondaryRecordingCreator.waitOnProcess( args, flameGraphDir, ProfilerType.JFR, collapsedStackFrames, flameGraphSvg );
             }
             catch ( Exception e )
             {
                 System.out.println( format( "Unable to collapse stacks for memory allocation from JFR recording %s", jfrRecording ) );
             }
-
         }
-
     }
 
     static class GcLogProcessor extends SecondaryRecordingCreator
