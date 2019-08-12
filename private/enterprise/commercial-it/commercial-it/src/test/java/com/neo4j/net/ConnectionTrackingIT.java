@@ -366,7 +366,7 @@ public class ConnectionTrackingIT
 
     private static List<Map<String,Object>> listMatchingConnection( TestConnector connector, String username, boolean expectAuthenticated )
     {
-        Result result = neo4j.getDefaultDatabaseService().execute( "CALL dbms.listConnections()" );
+        Result result = neo4j.defaultDatabaseService().execute( "CALL dbms.listConnections()" );
         assertEquals( LIST_CONNECTIONS_PROCEDURE_COLUMNS, result.columns() );
         List<Map<String,Object>> records = result.stream().collect( toList() );
 
@@ -404,7 +404,7 @@ public class ConnectionTrackingIT
 
     private static List<TrackedNetworkConnection> acceptedConnectionsFromConnectionTracker()
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) neo4j.getDefaultDatabaseService();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) neo4j.defaultDatabaseService();
         NetworkConnectionTracker connectionTracker = db.getDependencyResolver().resolveDependency( NetworkConnectionTracker.class );
         return connectionTracker.activeConnections();
     }
@@ -433,7 +433,7 @@ public class ConnectionTrackingIT
 
     private static long createDummyNode()
     {
-        try ( Result result = neo4j.getDefaultDatabaseService().execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
+        try ( Result result = neo4j.defaultDatabaseService().execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
         {
             Map<String,Object> record = single( result );
             return (long) record.get( "i" );
@@ -442,7 +442,7 @@ public class ConnectionTrackingIT
 
     private static void lockNodeAndExecute( long id, ThrowingAction<Exception> action ) throws Exception
     {
-        GraphDatabaseService db = neo4j.getDefaultDatabaseService();
+        GraphDatabaseService db = neo4j.defaultDatabaseService();
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.getNodeById( id );
@@ -557,7 +557,7 @@ public class ConnectionTrackingIT
 
     private static void terminateAllTransactions()
     {
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) neo4j.getDefaultDatabaseService()).getDependencyResolver();
+        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) neo4j.defaultDatabaseService()).getDependencyResolver();
         KernelTransactions kernelTransactions = dependencyResolver.resolveDependency( KernelTransactions.class );
         kernelTransactions.activeTransactions().forEach( h -> h.markForTermination( Terminated ) );
     }

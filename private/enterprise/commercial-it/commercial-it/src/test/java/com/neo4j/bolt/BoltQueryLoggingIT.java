@@ -99,7 +99,7 @@ public class BoltQueryLoggingIT
 
         // *** THEN ***
 
-        Path queriesLog = neo4j.getConfig().get( log_queries_filename );
+        Path queriesLog = neo4j.config().get( log_queries_filename );
         List<String> lines = Files.readAllLines( queriesLog );
         assertThat( lines, hasSize( 5 ) );
         for ( String line : lines )

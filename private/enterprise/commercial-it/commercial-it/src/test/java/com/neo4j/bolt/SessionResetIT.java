@@ -264,7 +264,7 @@ public class SessionResetIT
 
     private GraphDatabaseAPI db()
     {
-        return (GraphDatabaseAPI) db.getDefaultDatabaseService();
+        return (GraphDatabaseAPI) db.defaultDatabaseService();
     }
 
     private static void resetAny( Set<Session> sessions )
