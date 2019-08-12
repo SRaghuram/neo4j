@@ -312,8 +312,8 @@ public class CommercialSecurityModule extends SecurityModule
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
         SecurityGraphInitializer securityGraphInitializer =
-                isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor,
-                        securityLog, systemGraphOperations, configureImportOptions( config, logProvider, fileSystem ), secureHasher );
+                isClustered ? new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, securityLog, systemGraphOperations,
+                        configureImportOptions( config, logProvider, fileSystem ), secureHasher ) : SecurityGraphInitializer.NO_OP;
 
         return new SystemGraphRealm(
                 systemGraphOperations,

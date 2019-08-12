@@ -50,7 +50,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
-@ExtendWith( { TestDirectoryExtension.class } )
+@ExtendWith( TestDirectoryExtension.class )
 class SystemGraphAuthCacheClearingIT
 {
 
@@ -94,7 +94,7 @@ class SystemGraphAuthCacheClearingIT
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "CREATE USER foo SET PASSWORD 'f00'" );
-            tx.success();
+            tx.commit();
         }
 
         // When initial login attempt is made, user is stored in cache
@@ -104,7 +104,7 @@ class SystemGraphAuthCacheClearingIT
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
-            tx.success();
+            tx.commit();
         }
 
         // Then the auth cache should be cleared and login with new password is required
@@ -130,7 +130,7 @@ class SystemGraphAuthCacheClearingIT
             systemDb.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
             systemDb.execute( "CREATE ROLE role" );
             systemDb.execute( "GRANT ROLE role TO foo" );
-            tx.success();
+            tx.commit();
         }
 
         // When initial login attempt is made, user is stored in cache
@@ -141,7 +141,7 @@ class SystemGraphAuthCacheClearingIT
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
-            tx.success();
+            tx.commit();
         }
 
         // Then the privilege cache should be cleared giving read access
@@ -151,7 +151,7 @@ class SystemGraphAuthCacheClearingIT
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             systemDb.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
-            tx.success();
+            tx.commit();
         }
 
         // Then the privilege cache should be cleared giving no read access
@@ -161,7 +161,7 @@ class SystemGraphAuthCacheClearingIT
     @Test
     void systemDbUpdatesShouldClearAuthCacheInCluster() throws Exception
     {
-        // Given a cluster and 2 users
+        // Given a cluster with 1 user
         var clusterConfig = ClusterConfig.clusterConfig()
             .withSharedCoreParams( getConfig() )
             .withNumberOfCoreMembers( 3 );
@@ -173,7 +173,7 @@ class SystemGraphAuthCacheClearingIT
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "CREATE USER foo SET PASSWORD 'f00'" );
-            tx.success();
+            tx.commit();
         } );
 
         // When initial login attempt is made, user is stored in cache
@@ -183,7 +183,7 @@ class SystemGraphAuthCacheClearingIT
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
-            tx.success();
+            tx.commit();
         } );
 
         // Then the auth cache should be cleared and login with new password is required
@@ -208,7 +208,7 @@ class SystemGraphAuthCacheClearingIT
             sys.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
             sys.execute( "CREATE ROLE role" );
             sys.execute( "GRANT ROLE role TO foo" );
-            tx.success();
+            tx.commit();
         } );
 
         // When initial login attempt is made, role to privilege is cached
@@ -219,7 +219,7 @@ class SystemGraphAuthCacheClearingIT
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
-            tx.success();
+            tx.commit();
         } );
 
         // Then the privilege cache should be cleared giving read access
@@ -229,7 +229,7 @@ class SystemGraphAuthCacheClearingIT
         cluster.systemTx( ( sys, tx ) ->
         {
             sys.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
-            tx.success();
+            tx.commit();
         } );
 
         // Then the privilege cache should be cleared giving no read access
@@ -277,7 +277,7 @@ class SystemGraphAuthCacheClearingIT
         {
             Result result = database.execute( query );
             result.accept( row -> true );
-            tx.success();
+            tx.commit();
         }
         catch ( AuthorizationViolationException e )
         {

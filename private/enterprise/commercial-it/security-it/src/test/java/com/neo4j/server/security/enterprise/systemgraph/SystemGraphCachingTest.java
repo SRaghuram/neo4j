@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@ExtendWith( { TestDirectoryExtension.class } )
+@ExtendWith( TestDirectoryExtension.class )
 class SystemGraphCachingTest
 {
     private GraphDatabaseService database;
@@ -119,14 +119,6 @@ class SystemGraphCachingTest
 
         // Then
         assertFalse( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
-    }
-
-    @Test
-    void shouldClearCacheForNonCachedRole()
-    {
-        // TODO rewrite this test
-        // should not throw
-        realm.clearCacheForRoles();
     }
 
     private class TestQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
