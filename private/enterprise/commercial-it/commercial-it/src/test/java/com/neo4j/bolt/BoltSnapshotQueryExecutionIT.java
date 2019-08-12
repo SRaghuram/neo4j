@@ -40,7 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -107,19 +107,15 @@ class BoltSnapshotQueryExecutionIT
     {
         // We need to stay dirty because the driver will re-attempt the query with a TransientError and otherwise it will work the 2nd time.
         testCursorContext.stayDirty( true );
-        try
+        TransientException e = assertThrows( TransientException.class, () ->
         {
             try ( Session session = driver.session() )
             {
                 session.readTransaction( tx -> tx.run( "MATCH (n:toRetry) CREATE () RETURN n.c" ) );
-                fail( "No exception thrown" );
             }
-        }
-        catch ( TransientException e )
-        {
-            assertEquals( "Unable to get clean data snapshot for query " +
-                          "'MATCH (n:toRetry) CREATE () RETURN n.c' that performs updates.", e.getMessage() );
-        }
+        } );
+        assertEquals( "Unable to get clean data snapshot for query " +
+                      "'MATCH (n:toRetry) CREATE () RETURN n.c' that performs updates.", e.getMessage() );
     }
 
     private void connectDriver()
