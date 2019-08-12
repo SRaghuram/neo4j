@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.{ManySeekableArgs, SeekableArgs, SingleSeekableArg}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
