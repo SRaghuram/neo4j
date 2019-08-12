@@ -66,7 +66,7 @@ object OperatorExpressionCompiler {
   }
 }
 
-class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNamer)
+class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguration: SlotConfiguration, namer: VariableNamer)
   extends ExpressionCompiler(slots, namer) {
 
   import org.neo4j.codegen.api.IntermediateRepresentation._
@@ -115,20 +115,26 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, val namer: VariableNa
     assign(local, value)
   }
 
-
-  override def getCachedPropertyAt(offset: Int): IntermediateRepresentation = {
+  override def getCachedPropertyAt(offset: Int, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)
-    val loadOp =
-      if (local == null) {
-        local = locals.addCachedProperty(offset)
+    val hasCachedProperty = inputSlotConfiguration.hasCachedPropertyForOffset(offset)
+    val prepareOps =
+      if (local == null && hasCachedProperty) {
         block(
           assign(local, getCachedPropertyFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-          load(local)
+          condition(isNull(load(local)))(
+            block(
+              setCachedPropertyAt(offset, getFromStore))
+            ),
           )
+      } else if (local == null) {
+        local = locals.addCachedProperty(offset)
+        assign(local, getFromStore)
       } else {
-        load(local)
+        noop()
       }
-    cast[Value](loadOp)
+
+    block(prepareOps, cast[Value](load(local)))
   }
 
   override def setCachedPropertyAt(offset: Int,

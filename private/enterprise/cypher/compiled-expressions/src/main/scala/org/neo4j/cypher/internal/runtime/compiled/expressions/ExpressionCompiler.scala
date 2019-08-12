@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.{Optional, regex}
 
 import org.neo4j.codegen.api.CodeGeneration.compileClass
-import org.neo4j.codegen.api.IntermediateRepresentation.{invoke, load, method, noValue, or, ternary, variable}
+import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
@@ -57,7 +57,7 @@ class VariableNamer {
 /**
   * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer = new VariableNamer) {
+abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableNamer = new VariableNamer) {
 
   import ExpressionCompiler._
   import IntermediateRepresentation._
@@ -1299,19 +1299,14 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                 assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, constant(token))),
                 condition(isNull(load(variableName)))(
                   block(
-                    assign(variableName, getCachedPropertyAt(cachedPropertyOffset)),
-                    condition(isNull(load(variableName)))(
-                      block(
-                        assign(variableName,
-                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor,
-                                      PROPERTY_CURSOR, constant(true))),
-                        setCachedPropertyAt(cachedPropertyOffset, load(variableName)))
-                      )
+                    assign(variableName,
+                           getCachedPropertyAt(cachedPropertyOffset,
+                                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor, PROPERTY_CURSOR, constant(true))))),
                     )
                   )
                 )
               )
-            ))
+            )
         val ops = block(getAndCacheProperty, load(variableName))
         val nullChecks = block(getAndCacheProperty, equal(load(variableName), noValue))
         Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
@@ -1335,7 +1330,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
-      val cacheProperty = setCachedPropertyAt(cachedPropertyOffset, load(variableName))
       val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
 
       /**
@@ -1361,15 +1355,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
               assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, loadField(f))),
               condition(isNull(load(variableName)))(
                 block(
-                  assign(variableName, getCachedPropertyAt(cachedPropertyOffset)),
-                  condition(isNull(load(variableName)))(
-                    block(
-                      assign(variableName,
-                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor,
-                                    PROPERTY_CURSOR, constant(true))),
-                      cacheProperty
-                      )
-                    )
+                  assign(variableName,
+                         getCachedPropertyAt(cachedPropertyOffset,
+                                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true)))),
                   )
                 )
               )
@@ -2092,7 +2080,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
 
   protected def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
-  protected def getCachedPropertyAt(offset: Int): IntermediateRepresentation
+  protected def getCachedPropertyAt(offset: Int, getFromStore: IntermediateRepresentation): IntermediateRepresentation
 
   final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
@@ -2775,15 +2763,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                  invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
                 ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
                   block(
-                    declareAndAssign(typeRefOf[Value], propertyVariable, getCachedPropertyAt(propertyOffset)),
-                    condition(isNull(load(propertyVariable)))(
-                      block(
-                        assign(propertyVariable,
-                               invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
-                                      PROPERTY_CURSOR, constant(true))),
-                        setCachedPropertyAt(propertyOffset, load(propertyVariable))
-                        )
-                      ),
+                    declareAndAssign(typeRefOf[Value], propertyVariable,
+                                     getCachedPropertyAt(propertyOffset,
+                                                         invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor, PROPERTY_CURSOR, constant(true)))),
                     assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
                     )
                   )(assign(existsVariable,
@@ -2804,7 +2786,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       val existsVariable = namer.nextVariableName()
       val propertyVariable = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
-      val cacheProperty = setCachedPropertyAt(propertyOffset, load(propertyVariable))
       val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
 
       val hasChanges = namer.nextVariableName()
@@ -2836,15 +2817,9 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
                                invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
               ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
                 block(
-                  declareAndAssign(typeRefOf[Value], propertyVariable, getCachedPropertyAt(propertyOffset)),
-                  condition(isNull(load(propertyVariable)))(
-                    block(
-                      assign(propertyVariable,
-                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor,
-                                    PROPERTY_CURSOR, constant(true))),
-                      cacheProperty
-                      )
-                    ),
+                  declareAndAssign(typeRefOf[Value], propertyVariable,
+                                   getCachedPropertyAt(propertyOffset,
+                                                       invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true)))),
                   assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
                   )
                 )(assign(existsVariable,
@@ -2971,5 +2946,15 @@ private class DefaultExpressionCompiler(slots: SlotConfiguration) extends Expres
                                              value: IntermediateRepresentation): IntermediateRepresentation =
     setCachedPropertyInExecutionContext(offset, value)
 
-  override protected def getCachedPropertyAt(offset: Int): IntermediateRepresentation = getCachedPropertyFromExecutionContext(offset)
+  override protected def getCachedPropertyAt(offset: Int, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
+    val variableName = namer.nextVariableName()
+    block(
+      declareAndAssign(typeRefOf[Value], variableName, getCachedPropertyFromExecutionContext(offset)),
+      condition(isNull(load(variableName)))(
+      block(
+        assign(variableName, getFromStore),
+        setCachedPropertyAt(offset, load(variableName)))
+      ),
+      load(variableName))
+  }
 }

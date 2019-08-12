@@ -68,7 +68,7 @@ object PipelineBuilder {
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }
-    BufferDefinition(bufferDefinition.id, downstreamReducers, workCancellerIDs, downstreamStateIDs, variant)
+    BufferDefinition(bufferDefinition.id, downstreamReducers, workCancellerIDs, downstreamStateIDs, variant)(bufferDefinition.bufferConfiguration)
   }
 
   private def mapArgumentStateDefinition(build: ArgumentStateDefinitionBuild): ArgumentStateDefinition =

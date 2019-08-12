@@ -5,11 +5,10 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
-import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.values.AnyValue
 
@@ -226,7 +225,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def updateAccessorFunctions(key: String, getter: ExecutionContext => AnyValue, setter: (ExecutionContext, AnyValue) => Unit,
                               primitiveNodeSetter: Option[(ExecutionContext, Long, EntityById) => Unit],
-                              primitiveRelationshipSetter: Option[(ExecutionContext, Long, EntityById) => Unit]) = {
+                              primitiveRelationshipSetter: Option[(ExecutionContext, Long, EntityById) => Unit]): Unit = {
     getters += key -> getter
     setters += key -> setter
     primitiveNodeSetter.map(primitiveNodeSetters += key -> _)
@@ -349,6 +348,11 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     }.sorted(SlotWithAliasesOrdering)
 
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = cachedProperties.contains(key)
+
+  def hasCachedPropertyForOffset(offset: Int): Boolean = cachedProperties.values.exists {
+    case r if r.offset == offset => true
+    case _ => false
+  }
 
   def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = cachedProperties.get(key)
 

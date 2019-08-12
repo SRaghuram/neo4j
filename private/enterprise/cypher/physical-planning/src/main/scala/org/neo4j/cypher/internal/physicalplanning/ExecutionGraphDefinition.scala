@@ -58,10 +58,10 @@ case class BufferDefinition(id: BufferId,
                             reducers: IndexedSeq[ArgumentStateMapId],
                             workCancellers: IndexedSeq[ArgumentStateMapId],
                             downstreamStates: IndexedSeq[ArgumentStateMapId],
-                            variant: BufferVariant) {
-  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(reducers = reducers)
+                            variant: BufferVariant)(val bufferSlotConfiguration: SlotConfiguration) {
+  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(reducers = reducers)(bufferSlotConfiguration)
 
-  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(workCancellers = workCancellers)
+  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(workCancellers = workCancellers)(bufferSlotConfiguration)
 }
 
 /**

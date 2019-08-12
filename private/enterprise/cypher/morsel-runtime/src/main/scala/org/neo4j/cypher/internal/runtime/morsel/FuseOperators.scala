@@ -34,7 +34,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
-      if (fusingEnabled) fuseOperators(p.headPlan, p.middlePlans, p.outputDefinition)
+      if (fusingEnabled) fuseOperators(p.inputBuffer.bufferSlotConfiguration, p.headPlan, p.middlePlans, p.outputDefinition)
       else (None, p.middlePlans, p.outputDefinition)
 
     //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel
@@ -55,14 +55,15 @@ class FuseOperators(operatorFactory: OperatorFactory,
                        needsMorsel)
   }
 
-  private def fuseOperators(headPlan: LogicalPlan,
+  private def fuseOperators(inputSlotConfiguration: SlotConfiguration,
+                            headPlan: LogicalPlan,
                             middlePlans: Seq[LogicalPlan],
                             output: OutputDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
     val namer = new VariableNamer
-    val expressionCompiler = new OperatorExpressionCompiler(slots, namer) // NOTE: We assume slots are the same within an entire pipeline
+    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, namer) // NOTE: We assume slots is the same within an entire pipeline
 
     def compileExpression(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression)
