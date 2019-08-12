@@ -5,7 +5,7 @@
  */
 package com.neo4j.bolt;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -89,7 +89,7 @@ class MultiDatabaseBoltIT
 
     private DatabaseManagementService createManagementService()
     {
-        return new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        return new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
