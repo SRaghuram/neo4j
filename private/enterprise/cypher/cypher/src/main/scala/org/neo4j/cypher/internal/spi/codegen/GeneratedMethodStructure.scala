@@ -635,8 +635,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   private def parameterNotFoundException(key: String) =
     invoke(newInstance(typeRef[ParameterNotFoundException]),
-           MethodReference.constructorReference(typeRef[ParameterNotFoundException], typeRef[String]),
-           constant(s"Expected a parameter named $key"))
+           MethodReference.constructorReference(typeRef[ParameterNotFoundException], typeRef[String], typeRef[Throwable]),
+           constant(s"Expected a parameter named $key"), constant(null))
 
   private def dir(dir: SemanticDirection): Expression = dir match {
     case SemanticDirection.INCOMING => Templates.incoming
