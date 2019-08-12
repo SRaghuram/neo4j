@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import java.util.concurrent.{CountDownLatch, Executors, ThreadLocalRandom}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent._
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -15,63 +16,125 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
 
-  private val SIZE = 100000
-  private val THREADS = 10
+  private val THREAD_PAIRS = 6
 
-  test("should handle concurrent access") {
-    val tracker = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
-      mock[QueryContext](RETURNS_DEEP_STUBS),
-      mock[QueryExecutionTracer])
-    (1 to SIZE * THREADS) foreach { _ =>
-      tracker.increment()
-    }
+  test("should handle concurrent QueryRunner and Worker") {
 
     // When
-    val executor = Executors.newFixedThreadPool(THREADS)
+    val stopSignal = new AtomicBoolean(false)
+    val errors = new ConcurrentLinkedQueue[Throwable]()
+
+    val threads =
+      for {
+        i <- 0 until THREAD_PAIRS
+        ongoingWork = new ArrayBlockingQueue[QueryCompletionTracker](8)
+        runnable <- List(new QueryRunner(ongoingWork, stopSignal),
+                         new Worker(ongoingWork, stopSignal))
+      } yield {
+        val thread = new Thread(runnable)
+        thread.setName(runnable.getClass.getSimpleName)
+        thread.start()
+        thread.setUncaughtExceptionHandler((_, e) => errors.add(e))
+        thread
+      }
 
     // Then
-    val request = SIZE * THREADS
-    tracker.request(request)
-    val latch = new CountDownLatch(THREADS)
+    Thread.sleep(2000)
+    stopSignal.set(true)
 
-    val threads = (1 to THREADS).map { _ => new DemandServingThread(tracker, request / THREADS, latch) }
-    threads.foreach(executor.submit)
+    for (thread <- threads) {
+      thread.join(1000)
+      if (thread.isAlive) {
+        thread.interrupt()
+        thread.join(1000)
+        if (thread.isAlive) {
+          fail(s"Thread $thread hung indefinitely and was not interruptable")
+        }
+      }
+    }
 
-    tracker.await() shouldBe false
-    tracker.isCompleted shouldBe true
-
-    executor.shutdown()
+    if (!errors.isEmpty) {
+      val exception = errors.poll()
+      var anotherException = errors.poll()
+      while (anotherException != null) {
+        exception.addSuppressed(anotherException)
+        anotherException = errors.poll()
+      }
+      throw exception
+    }
   }
-}
 
-class DemandServingThread(tracker: ConcurrentQueryCompletionTracker,
-                          var count: Long,
-                          latch: CountDownLatch) extends Runnable {
+  class QueryRunner(ongoingWork: ArrayBlockingQueue[QueryCompletionTracker],
+                    stopSignal: AtomicBoolean) extends Runnable {
 
-  private val random = ThreadLocalRandom.current()
+    private val random = ThreadLocalRandom.current()
+    private var totalQueriesStarted = 0L
+    private var totalRequestsServed = 0L
 
-  override def run(): Unit = {
-    latch.countDown()
-    latch.await()
-    while (count > 0) {
-      count = count - 1
+    override def run(): Unit = {
+      try {
+        while (!stopSignal.get()) {
+          val newQuery = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
+            mock[QueryContext](RETURNS_DEEP_STUBS),
+            mock[QueryExecutionTracer])
 
-      val incDecCount = random.nextInt(10)
-      val reqServeCount = random.nextInt(10)
+          newQuery.increment()
+          ongoingWork.put(newQuery)
+          totalQueriesStarted += 1
 
-      (1 to incDecCount).foreach { _ =>
-        tracker.increment()
-        tracker.decrement()
+          var request = random.nextInt(3) + 1
+          while (request > 0) {
+            newQuery.request(request)
+
+            val moreToCome = newQuery.await()
+            totalRequestsServed += request
+            if (moreToCome) {
+              request = random.nextInt(10) + 1
+            } else {
+              request = 0
+            }
+          }
+          val moreToCome = newQuery.await()
+          moreToCome shouldBe false
+          newQuery.hasEnded shouldBe true
+        }
+      } catch {
+        case e: InterruptedException =>
+          fail(s"QueryRunner hung after starting $totalQueriesStarted queries and consuming $totalRequestsServed rows", e)
       }
-      (1 to reqServeCount).foreach{_ =>
-        tracker.request(1)
-        tracker.addServed(1)
+    }
+  }
+
+  class Worker(ongoingWork: ArrayBlockingQueue[QueryCompletionTracker],
+               stopSignal: AtomicBoolean) extends Runnable {
+
+    private val random = ThreadLocalRandom.current()
+
+    override def run(): Unit = {
+      while (!stopSignal.get()) {
+        val query = ongoingWork.take()
+        emulateQuery(query)
       }
 
-      // Because this test 'requests' exactly how much data exists, there is a race between decrementing the tracker and decrementing demand.
-      // For that reason, decrement must be called first to count down the latch, which will also update the status correctly.
-      tracker.decrement()
-      tracker.addServed(1)
+      val finalQuery = ongoingWork.poll()
+      if (finalQuery != null) {
+        emulateQuery(finalQuery)
+      }
+    }
+
+    private def emulateQuery(query: QueryCompletionTracker): Unit = {
+      val queryWorkItems = random.nextInt(100)
+
+      var i = queryWorkItems
+      while (i > 0) {
+        query.increment()
+        if (random.nextBoolean() && query.hasDemand) {
+          query.addServed(1)
+        }
+        query.decrement()
+        i -= 1
+      }
+      query.decrement() // final decrement
     }
   }
 }

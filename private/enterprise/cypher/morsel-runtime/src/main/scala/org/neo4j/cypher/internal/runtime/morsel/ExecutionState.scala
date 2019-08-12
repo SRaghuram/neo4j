@@ -228,10 +228,10 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def cleanUpTask(): CleanUpTask
 
   /**
-    * Check whether this query has completed. A query is completed if it has
-    * produced all results, or an exception has occurred.
+    * Check whether this query has ended. A query has ended if it has
+    * produced all results, been cancelled, or an exception has occurred.
     */
-  def isCompleted: Boolean
+  def hasEnded: Boolean
 
   /**
     * Return a string representation of the state related to the given pipeline. Meant for debugging.

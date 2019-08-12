@@ -60,7 +60,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
-    x.isCompleted shouldBe true
+    x.hasEnded shouldBe true
   }
 
   test("should behave correctly on query cancel") {
@@ -75,7 +75,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer, never()).stopQuery()
     verify(transaction, never()).thawLocks()
-    x.isCompleted shouldBe false
+    x.hasEnded shouldBe false
 
     // when
     x.decrement() // The clean shutdown happens automatically when all tasks finished after a call to cancel
@@ -86,7 +86,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
     x.await() shouldBe false
-    x.isCompleted shouldBe true
+    x.hasEnded shouldBe true
   }
 
   test("should behave correctly if query has no demand") {
@@ -103,7 +103,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(tracer, never()).stopQuery()
     verify(transaction, never()).thawLocks()
     x.await() shouldBe true
-    x.isCompleted shouldBe false
+    x.hasEnded shouldBe false
   }
 
   test("should behave correctly if query has failed") {
@@ -119,7 +119,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer, never()).stopQuery()
     verify(transaction, never()).thawLocks()
-    x.isCompleted shouldBe false
+    x.hasEnded shouldBe false
 
     // when
     x.decrement()
@@ -129,7 +129,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     verify(subscriber, never()).onResultCompleted(stats)
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
-    x.isCompleted shouldBe true
+    x.hasEnded shouldBe true
     intercept[IllegalArgumentException] {
       x.await()
     }
@@ -142,6 +142,6 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.increment()
 
     // then
-    x.isCompleted should be(false)
+    x.hasEnded should be(false)
   }
 }

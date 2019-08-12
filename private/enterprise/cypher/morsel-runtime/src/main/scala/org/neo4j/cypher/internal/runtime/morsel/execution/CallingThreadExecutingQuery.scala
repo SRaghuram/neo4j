@@ -25,14 +25,14 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
 
   override def request(numberOfRecords: Long): Unit = {
     super.request(numberOfRecords)
-    while (!executionState.isCompleted && flowControl.hasDemand) {
+    while (!executionState.hasEnded && flowControl.hasDemand) {
       worker.workOnQuery(this, workerResources)
     }
   }
 
   override def cancel(): Unit = {
     // We have to check this before we call cancel on the flow control
-    val isCompleted = executionState.isCompleted
+    val isCompleted = executionState.hasEnded
     flowControl.cancel()
     if (!isCompleted) {
       executionState.cancelQuery(workerResources)
@@ -48,7 +48,7 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   }
 
   override def await(): Boolean = {
-    if (executionState.isCompleted) {
+    if (executionState.hasEnded) {
       try {
         AssertionRunner.runUnderAssertion { () =>
           worker.assertIsNotActive()

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.exceptionHandler
@@ -50,11 +50,9 @@ trait QueryCompletionTracker extends FlowControl {
   def error(throwable: Throwable): Unit
 
   /**
-    * Query completion state. Non-blocking.
-    *
-    * @return true iff the query has completed. A query is completed when it delivered all data.
+    * Checks if the query has ended. Non-blocking. A query has ended when there is no more work to be done.
     */
-  def isCompleted: Boolean
+  def hasEnded: Boolean
 
   /**
     * Add an assertion to be run when the query is completed.
@@ -70,6 +68,28 @@ trait QueryCompletionTracker extends FlowControl {
   protected def runAssertions(): Unit = {
     assertions.foreach(AssertionRunner.runUnderAssertion)
   }
+
+  private val instanceName = if (DebugSupport.TRACKER.enabled) s"[${getClass.getSimpleName}@${System.identityHashCode(this)}] " else ""
+
+  def debug(str: String): Unit =
+    if (DebugSupport.TRACKER.enabled) {
+      DebugSupport.TRACKER.log(instanceName + str)
+    }
+
+  def debug(str: String, x: Any): Unit =
+    if (DebugSupport.TRACKER.enabled) {
+      DebugSupport.TRACKER.log(instanceName + str, x)
+    }
+
+  def debug(str: String, x1: Any, x2: Any): Unit =
+    if (DebugSupport.TRACKER.enabled) {
+      DebugSupport.TRACKER.log(instanceName + str, x1, x2)
+    }
+
+  def debug(str: String, x1: Any, x2: Any, x3: Any): Unit =
+    if (DebugSupport.TRACKER.enabled) {
+      DebugSupport.TRACKER.log(instanceName + str, x1, x2, x3)
+    }
 }
 
 /**
@@ -85,19 +105,19 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def increment(): Unit = {
     count += 1
-    DebugSupport.TRACKER.log("Incremented %s. New count: %d", getClass.getSimpleName, count)
+    debug("Incremented to %d", count)
   }
 
   override def incrementBy(n: Long): Unit = {
     if (n != 0) {
       count += n
-      DebugSupport.TRACKER.log("Incremented %s by %d. New count: %d", getClass.getSimpleName, n, count)
+      debug("Incremented by %d to %d", n, count)
     }
   }
 
   override def decrement(): Unit = {
     count -= 1
-    DebugSupport.TRACKER.log("Decremented %s. New count: %d", getClass.getSimpleName, count)
+    debug("Decremented to %d", count)
     if (count < 0) {
       throw new IllegalStateException(s"Should not decrement below zero: $count")
     }
@@ -107,7 +127,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   override def decrementBy(n: Long): Unit = {
     if (n != 0) {
       count -= n
-      DebugSupport.TRACKER.log("Decremented %s by %d. New count: %d", getClass.getSimpleName, n, count)
+      debug("Decremented by %d to %d", n, count)
       postDecrement()
     }
   }
@@ -139,7 +159,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     demand -= newlyServed
   }
 
-  override def isCompleted: Boolean = count == 0
+  override def hasEnded: Boolean = count == 0
 
   // -------- Subscription Methods --------
 
@@ -185,56 +205,57 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext,
                                        tracer: QueryExecutionTracer) extends QueryCompletionTracker {
+
   // Count of "things" that haven't been closed yet
   private val count = new AtomicLong(0)
 
   // Errors that happened during execution
   private val errors = new ConcurrentLinkedQueue[Throwable]()
 
-  // Used to implement await. Released each time we meet the demand or the query is done
-  private var latch = new CountDownLatch(1)
+  @volatile private var _cancelled = false
+  @volatile private var _hasEnded = false
 
-  // Current demand in number of rows
-  private val demand = new AtomicLong(0)
+  // Requested number of rows
+  private val requested = new AtomicLong(0)
 
-  sealed trait Status
-  case object Running extends Status
-  case object CountReachedZero extends Status
-  case object Errors extends Status
-  case object Cancelled extends Status
+  // Served number of rows
+  private val served = new AtomicLong(0)
 
-  // The status of the query
-  private val status = new AtomicReference[Status](Running)
+  // List of latches that are waited on. Note that because requested is monotonically incremented, waiters will typically be in requestedRow ascending order.
+  private val waiters = new ConcurrentLinkedQueue[WaitState]()
+  case class WaitState(latch: CountDownLatch, requestedRows: Long)
+
+  override def toString: String = s"[ConcurrentQueryCompletionTracker@${System.identityHashCode(this)}](${count.get()})"
+
+  // -------- Query completion tracking methods --------
 
   override def increment(): Unit = {
     AssertionRunner.runUnderAssertion { () =>
-      status.get() match {
-        case CountReachedZero =>
-          throw new IllegalStateException(s"Increment called even though CountReachedZero. That should not happen. Current count: ${count.get()}")
-        case _ => // Nothing to do
+      if (_hasEnded) {
+        throw new IllegalStateException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
       }
     }
     val newCount = count.incrementAndGet()
-    DebugSupport.TRACKER.log("Incremented %s. New count: %d", toString, newCount)
+    debug("Increment to %d", newCount)
   }
 
   override def incrementBy(n: Long): Unit = {
     if (n != 0) {
       val newCount = count.addAndGet(n)
-      DebugSupport.TRACKER.log("Incremented %s by %d. New count: %d", getClass.getSimpleName, n, newCount)
+      debug("Increment by %d to %d", n, newCount)
     }
   }
 
   override def decrement(): Unit = {
     val newCount = count.decrementAndGet()
-    DebugSupport.TRACKER.log("Decremented %s. New count: %d", toString, newCount)
+    debug("Decrement to %d", newCount)
     postDecrement(newCount)
   }
 
   override def decrementBy(n: Long): Unit = {
     if (n != 0) {
       val newCount = count.addAndGet(-n)
-      DebugSupport.TRACKER.log("Decremented %s by %d. New count: %d", getClass.getSimpleName, n, newCount)
+      debug("Decrement by %d to %d", n, newCount)
       postDecrement(newCount)
     }
   }
@@ -242,20 +263,22 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount == 0) {
       try {
-        status.compareAndExchange(Running, CountReachedZero) match {
-          case CountReachedZero =>
-            throw new IllegalStateException("Someone else updated the state to CountReachedZero. That should not happen.")
-          case Errors =>
-            subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
-          case Running =>
-            subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
-          case Cancelled =>
-            // Nothing to do for now. Probably a subscriber.onCancelled callback later
+        // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
+        _hasEnded = true
+
+        waiters.forEach(waitState => waitState.latch.countDown())
+        waiters.clear()
+
+        if (!errors.isEmpty) {
+          subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
+        } else if (_cancelled) {
+          // Nothing to do for now. Probably a subscriber.onCancelled callback later
+        } else {
+          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         }
       } finally {
         tracer.stopQuery()
         queryContext.transactionalContext.transaction.thawLocks()
-        releaseLatch()
       }
     } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")
@@ -263,83 +286,87 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def error(throwable: Throwable): Unit = {
-    // First add and then set the status, to avoid the situation where decrement encounters the status `Error` but has no error to report.
-    errors.add(throwable)
-    status.set(Errors)
+    errors.add(throwable) // add error first to avoid seeing this as a cancellation in postDecrement()
+    _cancelled = true
   }
 
-  override def isCompleted: Boolean = count.get() == 0
+  override def hasEnded: Boolean = _hasEnded
 
-  override def toString: String = s"ConcurrentQueryCompletionTracker ${System.identityHashCode(this)}(${count.get()})"
+  // -------- Flow control methods --------
 
   // We avoid ProduceResults (which reads this) doing any more work if the query is cancelled or had an error
-  override def getDemand: Long = if (status.get() != Running) 0 else demand.get()
+  override def getDemand: Long = if (_cancelled) 0 else requested.get() - served.get()
 
   override def hasDemand: Boolean = getDemand > 0
 
   override def addServed(newlyServed: Long): Unit = {
-    DebugSupport.TRACKER.log("Subtracting %d of demand in %s", newlyServed, toString)
-    val newDemand = demand.addAndGet(-newlyServed)
-    if (newDemand == 0) {
-      releaseLatch()
+    debug("Served %d rows", newlyServed)
+    // IMPORTANT: update served before releasing waiters, to coordinate properly with await().
+    val newServed = served.addAndGet(newlyServed)
+    var waitState = waiters.peek()
+    while (waitState != null && waitState.requestedRows <= newServed) {
+      debug("Releasing latch %s", waitState.latch)
+      waitState.latch.countDown()
+      waiters.poll()
+      waitState = waiters.peek()
     }
   }
 
-  // -------- Subscription Methods --------
+  // -------- Subscription methods --------
 
   override def cancel(): Unit = {
-    if (status.compareAndSet(Running, Cancelled)) {
-      DebugSupport.TRACKER.log("Canceled %s", toString)
-    }
+    _cancelled = true
+    debug("Cancelled")
   }
 
   override def request(numberOfRecords: Long): Unit = {
-    // Instead of just adding demand when the state is `Running`, we also do it in the case of error or cancel.
-    // Otherwise we would count down the latch immediately on any subsequent `await` call, and not allow
-    // for proper cleanup of in-flight tasks.
-    if (status.get() != CountReachedZero) {
-      //there is new demand make sure to reset the latch
-      if (numberOfRecords > 0) {
-        resetLatch()
-        DebugSupport.TRACKER.log("Adding %d to demand in %s", numberOfRecords, toString)
-        demand.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
-          val newDemand = oldVal + newVal
-          //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
-          if (newDemand < 0) {
-            Long.MaxValue
-          } else {
-            newDemand
-          }
-        })
-      }
+    if (numberOfRecords > 0) {
+      debug("Request %d rows", numberOfRecords)
+
+      requested.accumulateAndGet(numberOfRecords, (oldVal, newVal) => {
+        val newDemand = oldVal + newVal
+        //check for overflow, this might happen since Bolt sends us `Long.MAX_VALUE` for `PULL_ALL`
+        if (newDemand < 0) {
+          Long.MaxValue
+        } else {
+          newDemand
+        }
+      })
     }
   }
 
   override def await(): Boolean = {
-    DebugSupport.TRACKER.log("Awaiting latch %s in %s ....", latch, toString)
-    latch.await()
-    DebugSupport.TRACKER.log("Awaiting latch %s in %s done", latch, toString)
+    val moreToCome =
+      if (hasEnded) {
+        debug("Awaiting query which has ended")
+        false
+      } else {
+        val currentRequested = requested.get()
+        val currentServed = served.get()
+        if (currentRequested > currentServed) {
+          val latch = new CountDownLatch(1)
+          waiters.add(WaitState(latch, currentRequested))
+
+          // We re-read served and hasEnded here to guard against concurrent serving or query completion having happened
+          // in between the first reads and adding the latch to waiters. If we didn't do this, we could leave this latch
+          // at 1 forever.
+          if (served.get() >= currentRequested || hasEnded) {
+            latch.countDown()
+          }
+          debug("Awaiting latch %s ....", latch)
+          latch.await()
+          debug("Awaiting latch %s done", latch)
+        }
+        !hasEnded
+      }
+
     if (!errors.isEmpty) {
       throw allErrors()
     }
-    val moreToCome = status.get() == Running
     if (!moreToCome) {
       runAssertions()
     }
     moreToCome
-  }
-
-  private def releaseLatch(): Unit = this.synchronized {
-    DebugSupport.TRACKER.log("Releasing latch %s in %s", latch, toString)
-    latch.countDown()
-  }
-
-  private def resetLatch(): Unit = this.synchronized {
-    if (latch.getCount == 0) {
-      val oldLatch = latch
-      latch = new CountDownLatch(1)
-      DebugSupport.TRACKER.log("Resetting latch in %s. Old: %s. new: %s", toString, oldLatch, latch)
-    }
   }
 
   private def allErrors(): Throwable = {
