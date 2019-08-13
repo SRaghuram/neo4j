@@ -5,8 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
-import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
-import org.neo4j.exceptions.TransactionOutOfMemoryException
+import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, WithHeapUsageEstimation}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -45,21 +44,16 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   }
 }
 
-class BoundedStandardBuffer[T <: WithHeapUsageEstimation](bound: Long) extends StandardBuffer[T] {
-  private var heapSize = 0L
-
+class MemoryTrackingStandardBuffer[T <: WithHeapUsageEstimation](memoryTracker: QueryMemoryTracker) extends StandardBuffer[T] {
   override def put(t: T): Unit = {
-    heapSize += t.estimatedHeapUsage
-    if (heapSize > bound) {
-      throw new TransactionOutOfMemoryException()
-    }
+    memoryTracker.allocated(t.estimatedHeapUsage)
     super.put(t)
   }
 
   override def take(): T = {
     val t = super.take()
     if (t != null) {
-      heapSize -= t.estimatedHeapUsage
+      memoryTracker.deallocated(t.estimatedHeapUsage)
     }
     t
   }
