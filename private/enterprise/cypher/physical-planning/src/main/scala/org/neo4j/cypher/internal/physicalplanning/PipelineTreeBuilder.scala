@@ -103,7 +103,7 @@ object PipelineTreeBuilder {
                                                          val rhsPipelineId: PipelineId,
                                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                                          val rhsArgumentStateMapId: ArgumentStateMapId,
-                                                         val bufferSlotConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id)
+                                                         bufferSlotConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id, bufferSlotConfiguration)
 
   /**
     * Builder for [[ExecutionGraphDefinition]]
@@ -243,7 +243,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                 argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
     if (breakingPolicy.breakOn(plan)) {
       val pipeline = newPipeline(plan)
-      val delegate = stateDefinition.newDelegateBuffer(argument, argument.bufferSlotConfiguration)
+      val delegate = stateDefinition.newDelegateBuffer(argument, argument.bufferConfiguration)
       argument.delegates += delegate.id
       pipeline.inputBuffer = delegate
       pipeline
