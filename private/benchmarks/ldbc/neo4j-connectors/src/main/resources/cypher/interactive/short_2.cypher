@@ -1,10 +1,10 @@
-MATCH (:Person {id:{1}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
+MATCH (:Person {id:$1})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
 WITH
  message,
  message.id AS messageId,
  message.creationDate AS messageCreationDate
 ORDER BY messageCreationDate DESC, messageId ASC
-LIMIT {2}
+LIMIT $2
 MATCH (message)-[:REPLY_OF_COMMENT|REPLY_OF_POST*0..]->(post:Post),
       (post)-[:POST_HAS_CREATOR]->(person)
 RETURN

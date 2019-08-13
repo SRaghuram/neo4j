@@ -1,4 +1,4 @@
-MATCH (author)<-[:COMMENT_HAS_CREATOR|POST_HAS_CREATOR]-(message:Message {id:{Message}}),
+MATCH (author)<-[:COMMENT_HAS_CREATOR|POST_HAS_CREATOR]-(message:Message {id:$Message}),
       (message)<-[:REPLY_OF_COMMENT|REPLY_OF_POST]-(reply),
       (reply)-[:COMMENT_HAS_CREATOR]->(replyAuthor)
 RETURN

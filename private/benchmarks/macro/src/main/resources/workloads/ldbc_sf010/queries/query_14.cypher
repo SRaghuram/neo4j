@@ -1,4 +1,4 @@
-MATCH path = allShortestPaths((person1:Person {id:{Person1}})-[:KNOWS*0..]-(person2:Person {id:{Person2}}))
+MATCH path = allShortestPaths((person1:Person {id:$Person1})-[:KNOWS*0..]-(person2:Person {id:$Person2}))
 RETURN
  [n IN nodes(path) | n.id] AS pathNodeIds,
  reduce(weight=0.0, r IN relationships(path) |
