@@ -7,46 +7,58 @@ package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.test.rule.CommercialDbmsRule;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
-import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
-public class NativeAuthIT extends EnterpriseAuthenticationTestBase
+public class NativeAuthIT
 {
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
+
+    private DbmsRule dbRule = new CommercialDbmsRule( testDirectory ).startLazily();
+
+    @Rule
+    public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
+
     private static final String READ_USER = "neo";
     private static final String WRITE_USER = "tank";
     private static final String ADMIN_USER = "neo4j";
 
-    @Override
-    protected Map<Setting<?>, Object> getSettings()
-    {
-        return Map.of(
-                SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ),
-                SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME )
-        );
-    }
-
     private final String password = "secret";
+
+    private String boltUri;
 
     protected String getPassword()
     {
@@ -54,10 +66,16 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Before
-    @Override
     public void setup() throws Exception
     {
-        super.setup();
+        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
+                .withSetting( BoltConnector.enabled, true )
+                .withSetting( BoltConnector.encryption_level, DISABLED )
+                .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
+                .withSetting( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
+                .withSetting( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
+        dbRule.ensureStarted();
+        dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
 
         CommercialAuthAndUserManager authManager = dbRule.resolveDependency( CommercialAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
@@ -66,12 +84,13 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
         userManager.setUserPassword( ADMIN_USER, password.getBytes(), false );
         userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
         userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
+        boltUri = DriverAuthHelper.boltUri( dbRule );
     }
 
     @Test
     public void shouldNotFailOnUpdatingSecurityCommandsOnSystemDb()
     {
-        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
@@ -94,7 +113,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldNotFailOnDatabaseSchemaProceduresWithReadOnlyUser()
     {
-        try ( Driver driver = connectDriver( WRITE_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, WRITE_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( DEFAULT_DATABASE_NAME ) ) )
             {
@@ -105,7 +124,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
             }
         }
 
-        try ( Driver driver = connectDriver( READ_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, READ_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( DEFAULT_DATABASE_NAME ) ) )
             {
@@ -119,7 +138,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldNotFailOnDatabaseSchemaProceduresWithRestrictedUserOnNewDatabase()
     {
-        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
@@ -141,7 +160,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
             }
         }
 
-        try ( Driver driver = connectDriver( WRITE_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, WRITE_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( "foo" ) ) )
             {
@@ -158,7 +177,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
         for ( String user : userExpectedResults.keySet() )
         {
             Map<String,List<String>> expectedResults = userExpectedResults.get( user );
-            try ( Driver driver = connectDriver( user, getPassword() ) )
+            try ( Driver driver = connectDriver( boltUri, user, getPassword() ) )
             {
                 try ( Session session = driver.session( forDatabase( "foo" ) ) )
                 {
@@ -173,7 +192,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldNotFailOnDatabaseSchemaProceduresWithRestrictedUserOnNewMoreComplexDatabase()
     {
-        try ( Driver driver = connectDriver( ADMIN_USER, getPassword() ) )
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, getPassword() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
@@ -205,7 +224,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
                         "PROCURATOR", "LIQUIDATOR", "PERSONALLY_LIABLE_PARTNER", "CHAIRMAN", "OWNER", "DONATED_TO", "IS_LIKELY_TO_BE", "IS_VERY_LIKELY_TO_BE",
                         "IS_MAYBE_BECAUSE_OF_SAME_PLACE" );
 
-        try ( var driver = connectDriver( WRITE_USER, getPassword() ) )
+        try ( var driver = connectDriver( boltUri, WRITE_USER, getPassword() ) )
         {
             try ( var session = driver.session( forDatabase( "foo" ) ) )
             {
@@ -239,7 +258,7 @@ public class NativeAuthIT extends EnterpriseAuthenticationTestBase
         for ( String user : userExpectedResults.keySet() )
         {
             Map<String,List<String>> expectedResults = userExpectedResults.get( user );
-            try ( Driver driver = connectDriver( user, getPassword() ) )
+            try ( Driver driver = connectDriver( boltUri, user, getPassword() ) )
             {
                 try ( Session session = driver.session( forDatabase( "foo" ) ) )
                 {

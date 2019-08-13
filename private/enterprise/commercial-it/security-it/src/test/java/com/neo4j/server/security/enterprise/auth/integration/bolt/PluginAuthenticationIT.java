@@ -9,21 +9,38 @@ import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthenticationPlugin;
 import com.neo4j.server.security.enterprise.auth.plugin.TestCustomCacheableAuthenticationPlugin;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.test.rule.CommercialDbmsRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthorizationExpired;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.clearAuthCacheFromDifferentConnection;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.connectDriver;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.PLUGIN_REALM_NAME_PREFIX;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authentication_providers;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.authorization_providers;
@@ -31,9 +48,10 @@ import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
-public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
+public class PluginAuthenticationIT
 {
     private static final List<String> defaultTestPluginRealmList = Arrays.asList(
             "TestAuthenticationPlugin",
@@ -49,63 +67,87 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
             .map( s -> prependIfMissing( s, PLUGIN_REALM_NAME_PREFIX ) )
             .collect( Collectors.toList() );
 
-    @Override
-    protected Map<Setting<?>,Object> getSettings()
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
+
+    private DbmsRule dbRule = new CommercialDbmsRule( testDirectory ).startLazily();
+
+    @Rule
+    public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
+
+    private String boltUri;
+
+    private void startDatabase()
     {
-        return Map.of( authentication_providers, DEFAULT_TEST_PLUGIN_REALMS, authorization_providers, DEFAULT_TEST_PLUGIN_REALMS ); }
+        startDatabaseWithSettings( Collections.emptyMap() );
+    }
+
+    private void startDatabaseWithSettings( Map<Setting<?>,Object> settings )
+    {
+        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
+                .withSetting( BoltConnector.enabled, true )
+                .withSetting( BoltConnector.encryption_level, DISABLED )
+                .withSetting( BoltConnector.listen_address, new SocketAddress( InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
+                .withSetting( authentication_providers, DEFAULT_TEST_PLUGIN_REALMS )
+                .withSetting( authorization_providers, DEFAULT_TEST_PLUGIN_REALMS );
+        dbRule.withSettings( settings );
+        dbRule.ensureStarted();
+        boltUri = DriverAuthHelper.boltUri( dbRule );
+    }
 
     @Test
     public void shouldAuthenticateWithTestAuthenticationPlugin()
     {
-        assertAuth( "neo4j", "neo4j", "plugin-TestAuthenticationPlugin" );
+        startDatabase();
+        assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestAuthenticationPlugin" );
     }
 
     @Test
-    public void shouldAuthenticateWithTestCacheableAuthenticationPlugin() throws Throwable
+    public void shouldAuthenticateWithTestCacheableAuthenticationPlugin()
     {
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
         TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
 
         // When we log in the first time our plugin should get a call
-        assertAuth( "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
+        assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
         assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
 
         // When we log in the second time our plugin should _not_ get a call since authentication info should be cached
-        assertAuth( "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
+        assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
         assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
 
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since authentication info should be cached
-        assertAuthFail( "neo4j", "wrong_password", "plugin-TestCacheableAuthenticationPlugin" );
+        assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCacheableAuthenticationPlugin" );
         assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
     }
 
     @Test
-    public void shouldAuthenticateWithTestCustomCacheableAuthenticationPlugin() throws Throwable
+    public void shouldAuthenticateWithTestCustomCacheableAuthenticationPlugin()
     {
         TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
 
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
         // When we log in the first time our plugin should get a call
-        assertAuth( "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
+        assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
         assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
 
         // When we log in the second time our plugin should _not_ get a call since authentication info should be cached
-        assertAuth( "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
+        assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
         assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
 
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since authentication info should be cached
-        assertAuthFail( "neo4j", "wrong_password", "plugin-TestCustomCacheableAuthenticationPlugin" );
+        assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCustomCacheableAuthenticationPlugin" );
         assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
     }
 
     @Test
     public void shouldAuthenticateAndAuthorizeWithTestAuthPlugin()
     {
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestAuthPlugin" ) )
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestAuthPlugin" ) )
         {
             assertReadSucceeds( driver );
             assertWriteFails( driver );
@@ -115,7 +157,8 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     @Test
     public void shouldAuthenticateAndAuthorizeWithCacheableTestAuthPlugin()
     {
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
+        startDatabase();
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
         {
             assertReadSucceeds( driver );
             assertWriteFails( driver );
@@ -123,14 +166,14 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldAuthenticateWithTestCacheableAuthPlugin() throws Throwable
+    public void shouldAuthenticateWithTestCacheableAuthPlugin()
     {
         TestCacheableAuthPlugin.getAuthInfoCallCount.set( 0 );
 
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
         // When we log in the first time our plugin should get a call
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
         {
             assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
             assertReadSucceeds( driver );
@@ -138,7 +181,7 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
         }
 
         // When we log in the second time our plugin should _not_ get a call since auth info should be cached
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
         {
             assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
             assertReadSucceeds( driver );
@@ -147,17 +190,17 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
 
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since auth info should be cached
-        assertAuthFail( "neo4j", "wrong_password", "plugin-TestCacheableAuthPlugin" );
+        assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCacheableAuthPlugin" );
         assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
     }
 
     @Test
-    public void shouldAuthenticateAndAuthorizeWithTestCombinedAuthPlugin() throws Throwable
+    public void shouldAuthenticateAndAuthorizeWithTestCombinedAuthPlugin()
     {
-        restartServerWithOverriddenSettings( Map.of(  authentication_providers, List.of( "plugin-TestCombinedAuthPlugin" ),
+        startDatabaseWithSettings( Map.of(  authentication_providers, List.of( "plugin-TestCombinedAuthPlugin" ),
                 authorization_providers, List.of( "plugin-TestCombinedAuthPlugin" ) ) );
 
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCombinedAuthPlugin" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCombinedAuthPlugin" ) )
         {
             assertReadSucceeds( driver );
             assertWriteFails( driver );
@@ -165,12 +208,12 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldAuthenticateAndAuthorizeWithTwoSeparateTestPlugins() throws Throwable
+    public void shouldAuthenticateAndAuthorizeWithTwoSeparateTestPlugins()
     {
-        restartServerWithOverriddenSettings( Map.of(  authentication_providers, List.of( "plugin-TestAuthenticationPlugin", "plugin-TestAuthorizationPlugin" ),
+        startDatabaseWithSettings( Map.of(  authentication_providers, List.of( "plugin-TestAuthenticationPlugin", "plugin-TestAuthorizationPlugin" ),
                 authorization_providers, List.of( "plugin-TestAuthenticationPlugin", "plugin-TestAuthorizationPlugin" ) ) );
 
-        try ( Driver driver = connectDriver( "neo4j", "neo4j" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j" ) )
         {
             assertReadSucceeds( driver );
             assertWriteFails( driver );
@@ -178,17 +221,17 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldFailIfAuthorizationExpiredWithAuthPlugin() throws Throwable
+    public void shouldFailIfAuthorizationExpiredWithAuthPlugin()
     {
-        restartServerWithOverriddenSettings( Map.of(  authentication_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ),
+        startDatabaseWithSettings( Map.of(  authentication_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ),
                 authorization_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ) ) );
 
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" ) )
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" ) )
         {
             assertReadSucceeds( driver );
 
             // When
-            clearAuthCacheFromDifferentConnection( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
+            clearAuthCacheFromDifferentConnection( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
 
             // Then
             assertAuthorizationExpired( driver, "plugin-TestCacheableAdminAuthPlugin" );
@@ -196,13 +239,13 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithAuthPlugin() throws Throwable
+    public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithAuthPlugin()
     {
-        restartServerWithOverriddenSettings( Map.of(  authentication_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ),
+        startDatabaseWithSettings( Map.of(  authentication_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ),
                 authorization_providers, List.of( "plugin-TestCacheableAdminAuthPlugin" ) ) );
 
         // Then
-        try ( Driver driver = connectDriver( "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
+        try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAdminAuthPlugin" );
                 Session session = driver.session() )
         {
             try ( Transaction tx = session.beginTransaction() )
@@ -215,20 +258,21 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldAuthenticateWithTestCustomParametersAuthenticationPlugin() throws Throwable
+    public void shouldAuthenticateWithTestCustomParametersAuthenticationPlugin()
     {
+        startDatabase();
         AuthToken token = AuthTokens.custom( "neo4j", "", "plugin-TestCustomParametersAuthenticationPlugin", "custom",
                 map( "my_credentials", Arrays.asList( 1L, 2L, 3L, 4L ) ) );
-        assertAuth( token );
+        assertAuth( boltUri, token );
     }
 
     @Test
-    public void shouldPassOnAuthorizationExpiredException() throws Throwable
+    public void shouldPassOnAuthorizationExpiredException()
     {
-        restartServerWithOverriddenSettings( Map.of(  authentication_providers, List.of( "plugin-TestCombinedAuthPlugin" ),
+        startDatabaseWithSettings( Map.of(  authentication_providers, List.of( "plugin-TestCombinedAuthPlugin" ),
                 authorization_providers, List.of( "plugin-TestCombinedAuthPlugin" ) ) );
 
-        try ( Driver driver = connectDriver( "authorization_expired_user", "neo4j" ) )
+        try ( Driver driver = connectDriver( boltUri, "authorization_expired_user", "neo4j" ) )
         {
             assertAuthorizationExpired( driver, "plugin-TestCombinedAuthPlugin" );
         }

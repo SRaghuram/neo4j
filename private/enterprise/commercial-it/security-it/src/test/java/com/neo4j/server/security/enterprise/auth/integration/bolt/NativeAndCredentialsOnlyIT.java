@@ -6,25 +6,51 @@
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.test.rule.CommercialDbmsRule;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
+import java.net.InetAddress;
 import java.util.List;
-import java.util.Map;
 
-import org.neo4j.graphdb.config.Setting;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.TestDirectory;
 
-public class NativeAndCredentialsOnlyIT extends EnterpriseAuthenticationTestBase
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
+
+public class NativeAndCredentialsOnlyIT
 {
-    @Override
-    protected Map<Setting<?>, Object> getSettings()
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
+
+    private DbmsRule dbRule = new CommercialDbmsRule( testDirectory ).startLazily();
+
+    @Rule
+    public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
+
+    private String boltUri;
+
+    @Before
+    public void setup()
     {
-        return Map.of( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ),
-                SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) );
+        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
+                .withSetting( BoltConnector.enabled, true )
+                .withSetting( BoltConnector.encryption_level, DISABLED )
+                .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
+                .withSetting( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) )
+                .withSetting( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) );
+        dbRule.ensureStarted();
+        boltUri = DriverAuthHelper.boltUri( dbRule );
     }
 
     @Test
     public void shouldAuthenticateWithCredentialsOnlyPlugin()
     {
-        assertAuth( "", "BASE64-ENC-PASSWORD", "plugin-TestCredentialsOnlyPlugin" );
+        assertAuth( boltUri, "", "BASE64-ENC-PASSWORD", "plugin-TestCredentialsOnlyPlugin" );
     }
 }
