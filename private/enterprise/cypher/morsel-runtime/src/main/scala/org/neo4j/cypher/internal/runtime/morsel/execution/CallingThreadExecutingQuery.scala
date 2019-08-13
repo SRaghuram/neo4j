@@ -32,9 +32,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
 
   override def cancel(): Unit = {
     // We have to check this before we call cancel on the flow control
-    val isCompleted = executionState.hasEnded
+    val hasEnded = executionState.hasEnded
     flowControl.cancel()
-    if (!isCompleted) {
+    if (!hasEnded) {
       executionState.cancelQuery(workerResources)
     }
     try {

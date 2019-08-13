@@ -50,7 +50,9 @@ trait QueryCompletionTracker extends FlowControl {
   def error(throwable: Throwable): Unit
 
   /**
-    * Checks if the query has ended. Non-blocking. A query has ended when there is no more work to be done.
+    * Checks if the query has ended. Non-blocking. This method can return
+    * true if all query work is done, if the query was cancelled, or if
+    * an exception occurred.
     */
   def hasEnded: Boolean
 
@@ -212,7 +214,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   // Errors that happened during execution
   private val errors = new ConcurrentLinkedQueue[Throwable]()
 
-  @volatile private var _cancelled = false
+  @volatile private var _cancelledOrFailed = false
   @volatile private var _hasEnded = false
 
   // Requested number of rows
@@ -230,10 +232,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   // -------- Query completion tracking methods --------
 
   override def increment(): Unit = {
-    AssertionRunner.runUnderAssertion { () =>
-      if (_hasEnded) {
-        throw new IllegalStateException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
-      }
+    if (_hasEnded) {
+      throw new IllegalStateException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
     }
     val newCount = count.incrementAndGet()
     debug("Increment to %d", newCount)
@@ -271,7 +271,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
         if (!errors.isEmpty) {
           subscriber.onError(exceptionHandler.mapToCypher(allErrors()))
-        } else if (_cancelled) {
+        } else if (_cancelledOrFailed) {
           // Nothing to do for now. Probably a subscriber.onCancelled callback later
         } else {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
@@ -287,7 +287,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def error(throwable: Throwable): Unit = {
     errors.add(throwable) // add error first to avoid seeing this as a cancellation in postDecrement()
-    _cancelled = true
+    _cancelledOrFailed = true
   }
 
   override def hasEnded: Boolean = _hasEnded
@@ -295,7 +295,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   // -------- Flow control methods --------
 
   // We avoid ProduceResults (which reads this) doing any more work if the query is cancelled or had an error
-  override def getDemand: Long = if (_cancelled) 0 else requested.get() - served.get()
+  override def getDemand: Long = if (_cancelledOrFailed) 0 else requested.get() - served.get()
 
   override def hasDemand: Boolean = getDemand > 0
 
@@ -315,7 +315,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   // -------- Subscription methods --------
 
   override def cancel(): Unit = {
-    _cancelled = true
+    _cancelledOrFailed = true
     debug("Cancelled")
   }
 
@@ -345,7 +345,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         val currentServed = served.get()
         if (currentRequested > currentServed) {
           val latch = new CountDownLatch(1)
-          waiters.add(WaitState(latch, currentRequested))
+          waiters.offer(WaitState(latch, currentRequested))
 
           // We re-read served and hasEnded here to guard against concurrent serving or query completion having happened
           // in between the first reads and adding the latch to waiters. If we didn't do this, we could leave this latch
