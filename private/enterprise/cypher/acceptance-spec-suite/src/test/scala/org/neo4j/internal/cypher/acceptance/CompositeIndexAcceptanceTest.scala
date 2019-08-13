@@ -878,8 +878,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should use composite index for is not null and regex") {
-    //  TODO not equals
-
     // Given
     graph.createIndex("User", "name", "surname")
     createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
@@ -896,33 +894,21 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     Seq(
       ("n.name = 'Joe' AND n.surname IS NOT NULL", "(equality,exists)", Set(Map("name" -> "Joe Soap")), false, false, Seq.empty),
       ("n.name = 'Ivan' AND n.surname =~ 'S.*p'", "(equality,exists)", Set(Map("name" -> "Ivan Soap")), false, true, Seq(".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name = 'Ivan' AND n.surname <> 'Smoke'", "(equality,exists)", Set(Map("name" -> "Ivan Soap")), false, true, Seq(".*cache\\[n\\.surname\\] <> .*".r)),
       ("n.name >= 'J' AND n.surname IS NOT NULL", "(range,exists)", Set(Map("name" -> "Joe Soap")), false, false, Seq.empty),
       ("n.name <= 'J' AND n.surname =~ 'S.*p'", "(range,exists)", Set(Map("name" -> "Ivan Soap")), false, true, Seq(".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name <= 'J' AND n.surname <> 'Smoke'", "(range,exists)", Set(Map("name" -> "Ivan Soap")), false, true, Seq(".*cache\\[n\\.surname\\] <> .*".r)),
       ("exists(n.name) AND n.surname IS NOT NULL", "", Set(Map("name" -> "Joe Soap"), Map("name" -> "Ivan Soap"), Map("name" -> "Ivan Smoke")), true, false, Seq.empty),
       ("exists(n.name) AND n.surname =~ 'S.*p'", "", Set(Map("name" -> "Joe Soap"), Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("exists(n.name) AND n.surname <> 'Smoke'", "", Set(Map("name" -> "Joe Soap"), Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.surname\\] <> .*".r)),
 
       ("n.name IS NOT NULL AND n.surname = 'Smoke'", "", Set(Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.surname\\] = .*".r)),
       ("n.name IS NOT NULL AND n.surname =~ 'Sm.*e'", "", Set(Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name IS NOT NULL AND n.surname <> 'Soap'", "", Set(Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.surname\\] =~ .*".r)),
       ("n.name IS NOT NULL AND n.surname < 'So'", "", Set(Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.surname\\] < .*".r)),
       ("n.name IS NOT NULL AND exists(n.surname)", "", Set(Map("name" -> "Joe Soap"), Map("name" -> "Ivan Soap"), Map("name" -> "Ivan Smoke")), true, false, Seq.empty),
       ("n.name IS NOT NULL AND n.surname IS NOT NULL", "", Set(Map("name" -> "Joe Soap"), Map("name" -> "Ivan Soap"), Map("name" -> "Ivan Smoke")), true, false, Seq.empty),
       ("n.name =~ 'J.*' AND n.surname = 'Smoke'", "", Set.empty, true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] = .*".r)),
       ("n.name =~ 'I.*' AND n.surname =~ 'S.*p'", "", Set(Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name =~ 'J.*' AND n.surname <> 'Soap'", "", Set.empty, true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] = .*".r)),
       ("n.name =~ 'I.*' AND n.surname > 'Sn'", "", Set(Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] > .*".r)),
       ("n.name =~ 'J.*' AND exists(n.surname)", "", Set(Map("name" -> "Joe Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r)),
       ("n.name =~ 'J.*' AND n.surname IS NOT NULL", "", Set(Map("name" -> "Joe Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r))
-//      ("n.name <> 'Joe' AND n.surname = 'Soap'", "", Set(Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name <> 'Joe' AND n.surname =~ '.*e'", "", Set(Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name <> 'Joe' AND n.surname <> 'Smoke'", "", Set(Map("name" -> "Ivan Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name <> 'Joe' AND n.surname >= 'S'", "", Set(Map("name" -> "Ivan Soap"), Map("name" -> "Ivan Smoke")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r, ".*cache\\[n\\.surname\\] =~ .*".r)),
-//      ("n.name <> 'Ivan' AND exists(n.surname)", "", Set(Map("name" -> "Joe Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r)),
-//      ("n.name <> 'Ivan' AND n.surname IS NOT NULL", "", Set(Map("name" -> "Joe Soap")), true, true, Seq(".*cache\\[n\\.name\\] =~ .*".r))
-
     ).foreach {
       case (predicates, seekString, resultSet, useScan, shouldFilter, filterArguments) =>
         // When
