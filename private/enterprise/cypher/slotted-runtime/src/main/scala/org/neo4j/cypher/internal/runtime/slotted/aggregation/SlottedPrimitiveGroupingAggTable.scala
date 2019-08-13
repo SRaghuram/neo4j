@@ -69,6 +69,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = computeGroupingKey(row)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
+      state.memoryTracker.allocated(groupingValue.estimatedHeapUsage())
       val functions = new Array[AggregationFunction](aggregationExpressions.length)
       var i = 0
       while (i < aggregationExpressions.length) {
@@ -77,7 +78,6 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
       }
       functions
     })
-    state.memoryTracker.checkMemoryRequirement(resultMap.keySet().asScala.toList.map(_.estimatedHeapUsage).sum)
     var i = 0
     while (i < functions.length) {
       functions(i)(row, state)

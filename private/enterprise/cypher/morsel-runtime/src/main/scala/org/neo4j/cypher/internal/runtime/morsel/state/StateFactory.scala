@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.morsel.ExecutionState
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, SingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, QueryContext, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, QueryContext, WithHeapUsageEstimation}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
@@ -33,5 +33,5 @@ trait StateFactory {
   /**
     * Obtain the memory tracker (this call does not create a new object).
     */
-  def memoryTracker: MemoryTracker
+  def memoryTracker: QueryMemoryTracker
 }

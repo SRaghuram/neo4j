@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, MemoryTracker, QueryContext, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryMemoryTracker, QueryContext, WithHeapUsageEstimation}
 import org.neo4j.values.storable.{LongArray, Values}
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
@@ -99,7 +99,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinOperator {
 
-  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTable] {
+  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[HashTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
       new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
@@ -117,7 +117,7 @@ object NodeHashJoinOperator {
   class StandardHashTable(override val argumentRowId: Long,
                           lhsOffsets: Array[Int],
                           override val argumentRowIdsForReducers: Array[Long],
-                          memoryTracker: MemoryTracker) extends HashTable with WithHeapUsageEstimation {
+                          memoryTracker: QueryMemoryTracker) extends HashTable {
     private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
@@ -133,8 +133,9 @@ object NodeHashJoinOperator {
           //        }
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
-          table.put(Values.longArray(key), morsel.view(morsel.getCurrentRow, morsel.getCurrentRow + 1))
-          memoryTracker.checkMemoryRequirement(estimatedHeapUsage)
+          val view = morsel.view(morsel.getCurrentRow, morsel.getCurrentRow + 1)
+          table.put(Values.longArray(key), view)
+          memoryTracker.allocated(view.estimatedHeapUsage)
         }
         morsel.moveToNextRow()
       }
@@ -142,11 +143,6 @@ object NodeHashJoinOperator {
 
     override def lhsRows(nodeIds: LongArray): util.Iterator[MorselExecutionContext] =
       table.get(nodeIds).iterator()
-
-
-    override def estimatedHeapUsage: Long =
-      lhsOffsets.length * java.lang.Long.BYTES * table.size() // keys
-    + table.valuesView().toList.collectLong(_.estimatedHeapUsage).sum // values
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,

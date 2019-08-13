@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, TopLevelA
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, NoMemoryTracker, QueryContext, WithHeapUsageEstimation}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
@@ -39,5 +39,5 @@ class ConcurrentStateFactory extends StateFactory {
     }
   }
 
-  override val memoryTracker: MemoryTracker = NoMemoryTracker
+  override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
 }

@@ -11,24 +11,22 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, Aggregators, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, MaxAggregator, MinAggregator, Reducer, SumAggregator, Updater}
+import org.neo4j.cypher.internal.runtime.morsel.aggregators._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.IndexReadSession
-
-import scala.collection.JavaConverters._
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext, QueryMemoryTracker}
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -142,7 +140,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   class StandardAggregatingAccumulator(override val argumentRowId: Long,
                                        aggregators: Array[Aggregator],
                                        override val argumentRowIdsForReducers: Array[Long],
-                                       memoryTracker: MemoryTracker) extends AggregatingAccumulator {
+                                       memoryTracker: QueryMemoryTracker) extends AggregatingAccumulator {
 
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -150,8 +148,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
      val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
-        val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newStandardReducer(memoryTracker)))
-        memoryTracker.checkMemoryRequirement(reducerMap.keySet().asScala.toList.map(_.estimatedHeapUsage).sum)
+        val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
+          memoryTracker.allocated(entry.getKey.estimatedHeapUsage())
+          aggregators.map(_.newStandardReducer(memoryTracker))
+        })
 
         var i = 0
         while (i < reducers.length) {
@@ -188,7 +188,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   object AggregatingAccumulator {
 
-    class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
+    class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
       override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker)
 

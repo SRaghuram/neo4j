@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import scala.collection.JavaConverters._
 
@@ -72,7 +72,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   }
 
-  class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
+  class DistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
       new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
 
@@ -83,12 +83,12 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   class DistinctState(override val argumentRowId: Long,
                       seen: util.Set[groupings.KeyType],
                       override val argumentRowIdsForReducers: Array[Long],
-                      memoryTracker: MemoryTracker) extends ArgumentState {
+                      memoryTracker: QueryMemoryTracker) extends ArgumentState {
 
     def filterOrProject(row: MorselExecutionContext, queryState: OldQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
-        memoryTracker.checkMemoryRequirement(seen.asScala.toList.map(_.estimatedHeapUsage).sum)
+        memoryTracker.allocated(groupingKey.estimatedHeapUsage())
         groupings.project(row, groupingKey)
         true
       } else {

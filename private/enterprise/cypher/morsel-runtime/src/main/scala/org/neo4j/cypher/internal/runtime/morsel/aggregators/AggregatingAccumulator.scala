@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.aggregators
 
-import org.neo4j.cypher.internal.runtime.MemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.values.AnyValue
@@ -33,7 +33,7 @@ class AggregatingAccumulator(override val argumentRowId: Long,
 
 object AggregatingAccumulator {
 
-  class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
+  class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
       new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker)), argumentRowIdsForReducers)
 
@@ -52,7 +52,7 @@ object AggregatingAccumulator {
   */
 trait Aggregator {
   def newUpdater: Updater
-  def newStandardReducer(memoryTracker: MemoryTracker): Reducer
+  def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer
   def newConcurrentReducer: Reducer
 }
 

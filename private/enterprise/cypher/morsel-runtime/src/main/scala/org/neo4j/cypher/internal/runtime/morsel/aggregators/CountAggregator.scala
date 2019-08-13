@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.aggregators
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.cypher.internal.runtime.MemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
@@ -17,7 +17,7 @@ import org.neo4j.values.storable.Values
 case object CountAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 
   class CountUpdater() extends CountUpdaterBase {
@@ -33,7 +33,7 @@ case object CountAggregator extends Aggregator {
 case object CountStarAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountStarUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 
   class CountStarUpdater() extends CountUpdaterBase {

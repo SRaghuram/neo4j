@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.aggregators
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.neo4j.cypher.internal.runtime.MemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 case object CollectAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CollectUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
@@ -34,14 +34,15 @@ class CollectUpdater() extends Updater {
     }
 }
 
-class CollectStandardReducer(memoryTracker: MemoryTracker) extends Reducer {
+class CollectStandardReducer(memoryTracker: QueryMemoryTracker) extends Reducer {
   private val collections = new ArrayBuffer[ListValue]
   override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
-        collections += VirtualValues.fromList(u.collection)
+        val value = VirtualValues.fromList(u.collection)
+        collections += value
+        memoryTracker.allocated(value.estimatedHeapUsage())
     }
-    memoryTracker.checkMemoryRequirement(collections.map(_.estimatedHeapUsage()).sum)
   }
 
   override def result: AnyValue = VirtualValues.concat(collections: _*)
