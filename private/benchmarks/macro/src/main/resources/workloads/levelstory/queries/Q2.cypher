@@ -1,11 +1,11 @@
-MATCH (i:task {id: {p01}})
+MATCH (i:task {id: $p01})
 WITH i
 MATCH (i)-[rel:HISTORY*0..20]->(a:activity)
   WHERE ALL(r IN rel
     WHERE r.id = i.id)
 WITH DISTINCT a
-  SKIP {p02}
-  LIMIT {p03}
+  SKIP $p02
+  LIMIT $p03
 MATCH (c:contact {id: a.contactid})
 RETURN
   collect({

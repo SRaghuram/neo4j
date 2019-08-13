@@ -1,2 +1,2 @@
-MATCH (s:PROFILES { _key: { key }})
+MATCH (s:PROFILES { _key: $key })
 RETURN s

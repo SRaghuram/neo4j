@@ -1,6 +1,6 @@
-MATCH (u:user {id: {p01}}), (x:task {id: {p02}})
+MATCH (u:user {id: $p01}), (x:task {id: $p02})
 WITH u, x
-MATCH (u:user {id: {p01}}), (t:task {id: {p02}})
+MATCH (u:user {id: $p01}), (t:task {id: $p02})
 WITH u, t
 MATCH (u)-[:CONTACT]->(c:contact), (xp:project)-->(:tasks)-->(t)
   WHERE c.teamid = xp.teamid

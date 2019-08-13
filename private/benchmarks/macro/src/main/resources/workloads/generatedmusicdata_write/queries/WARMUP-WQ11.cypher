@@ -1,4 +1,4 @@
-MATCH (n:Album { releasedIn: { year }})
+MATCH (n:Album { releasedIn: $year })
 WHERE NOT exists(n.tracks)
 WITH n
 LIMIT 10

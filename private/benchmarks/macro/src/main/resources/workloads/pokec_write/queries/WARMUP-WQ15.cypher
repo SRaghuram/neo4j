@@ -1,2 +1,2 @@
-MATCH (:PROFILES { _key: { key }})-[r:RELATION]->()
+MATCH (:PROFILES { _key: $key })-[r:RELATION]->()
 RETURN r

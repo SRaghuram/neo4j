@@ -4,6 +4,6 @@ WHERE acted >= 10
 WITH a, acted
 MATCH (a)-[:DIRECTED]->(m)
 WITH a, acted, collect(m.title) AS directed
-WHERE length(directed)>= 2
+WHERE size(directed)>= 2
 RETURN a.name, acted, directed
-ORDER BY length(directed) DESC , acted DESC
+ORDER BY size(directed) DESC , acted DESC

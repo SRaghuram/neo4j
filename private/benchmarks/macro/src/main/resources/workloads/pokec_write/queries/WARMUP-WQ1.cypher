@@ -1,2 +1,2 @@
-MATCH (u:User { name: { key }})
+MATCH (u:User { name: $key })
 RETURN u._key

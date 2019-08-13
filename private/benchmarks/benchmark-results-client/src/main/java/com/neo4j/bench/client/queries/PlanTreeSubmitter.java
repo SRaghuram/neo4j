@@ -64,8 +64,8 @@ public class PlanTreeSubmitter
                     // plan tree root was created, now remainder of tree (operators) must be attached to root
                     StringBuilder sb = new StringBuilder()
                             .append( "MATCH (planTree:PlanTree)\n" )
-                            .append( "WHERE planTree.description_hash={plan_description_hash} AND \n" )
-                            .append( "      planTree.description={plan_description}\n" )
+                            .append( "WHERE planTree.description_hash=$plan_description_hash AND \n" )
+                            .append( "      planTree.description=$plan_description\n" )
                             .append( "CREATE (planTree)-[:HAS_OPERATORS]->" )
                             .append( toTreePattern( plan.planTree(), params ) );
                     tx.run( format( "CYPHER planner=%s %s", planner.value(), sb.toString() ), params );
@@ -133,7 +133,7 @@ public class PlanTreeSubmitter
         String rootName = operatorNamer.nextName();
         String rootPropertiesName = propertiesNamer.nextName();
         params.put( rootPropertiesName, root.asMap() );
-        sb.append( format( "(%s:Operator {%s})", rootName, rootPropertiesName ) );
+        sb.append( format( "(%s:Operator $%s)", rootName, rootPropertiesName ) );
         planOperatorStack.push( root );
         operatorNames.put( root, rootName );
 
@@ -149,7 +149,7 @@ public class PlanTreeSubmitter
                                             String childPropertiesName = propertiesNamer.nextName();
 
                                             params.put( childPropertiesName, child.asMap() );
-                                            sb.append( format( ",\n(%s)-[:HAS_CHILD]->(%s:Operator {%s})",
+                                            sb.append( format( ",\n(%s)-[:HAS_CHILD]->(%s:Operator $%s)",
                                                                currentOperatorName, childOperatorName, childPropertiesName ) );
 
                                             planOperatorStack.push( child );

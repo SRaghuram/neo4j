@@ -1,4 +1,4 @@
-MATCH (current:App { app_id: { app_id }})-[:DEFINED_BY_SERGE]->(tag:Tag)
+MATCH (current:App { app_id: $app_id })-[:DEFINED_BY_SERGE]->(tag:Tag)
 WITH current, tag
 MATCH (recommendation:App)
 WHERE recommendation <> current
