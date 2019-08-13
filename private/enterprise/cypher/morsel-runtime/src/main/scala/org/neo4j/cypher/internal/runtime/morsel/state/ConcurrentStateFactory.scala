@@ -39,5 +39,6 @@ class ConcurrentStateFactory extends StateFactory {
     }
   }
 
+  // We currently don't track memory in parallel
   override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
 }

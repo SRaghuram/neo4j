@@ -51,7 +51,6 @@ class FixedWorkersQueryExecutor(transactionBinder: TransactionBinder,
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
-    // We currently don't track memory in parallel
     val stateFactory = new ConcurrentStateFactory
 
     val tracer = schedulerTracer.traceQuery()
@@ -97,6 +96,6 @@ class FixedWorkersQueryExecutor(transactionBinder: TransactionBinder,
 
     executionState.initializeState()
     workerManager.queryManager.addQuery(executingQuery)
-    ProfiledQuerySubscription(executingQuery, queryProfile)
+    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }

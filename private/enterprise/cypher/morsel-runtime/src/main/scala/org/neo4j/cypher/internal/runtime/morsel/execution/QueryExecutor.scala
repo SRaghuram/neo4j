@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.morsel.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryMemoryTracker}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
@@ -42,4 +42,4 @@ trait QueryExecutor {
   def assertAllReleased(): Unit
 }
 
-case class ProfiledQuerySubscription(subscription: QuerySubscription, profile: QueryProfile)
+case class ProfiledQuerySubscription(subscription: QuerySubscription, profile: QueryProfile, memoryTracker: QueryMemoryTracker)

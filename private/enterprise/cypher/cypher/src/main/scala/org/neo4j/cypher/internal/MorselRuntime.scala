@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal
 
+import java.lang
+import java.util.Optional
+
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
@@ -164,8 +167,11 @@ class MorselRuntime(parallelExecution: Boolean,
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
+    private var _memoryTracker: QueryMemoryTracker = _
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
+
+    override def totalAllocatedMemory(): Optional[lang.Long] = _memoryTracker.totalAllocatedMemory
 
     override def consumptionState: RuntimeResult.ConsumptionState =
       if (querySubscription == null) ConsumptionState.NOT_STARTED
@@ -192,7 +198,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     private def ensureQuerySubscription(): Unit = {
       if (querySubscription == null) {
-        val ProfiledQuerySubscription(sub, prof) = queryExecutor.execute(
+        val ProfiledQuerySubscription(sub, prof, memTrack) = queryExecutor.execute(
           executablePipelines,
           executionGraphDefinition,
           inputDataStream,
@@ -208,6 +214,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
         querySubscription = sub
         _queryProfile = prof
+        _memoryTracker = memTrack
 
         //Only call onResult on first call
         subscriber.onResult(fieldNames.length)

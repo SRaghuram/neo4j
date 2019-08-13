@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled
 
+import java.lang
+import java.util.Optional
+
 import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -43,6 +46,8 @@ class CompiledExecutionResult(context: QueryContext,
   }
 
   override def queryStatistics() = QueryStatistics()
+
+  override def totalAllocatedMemory(): Optional[lang.Long] = Optional.empty()
 
   override def consumptionState: RuntimeResult.ConsumptionState =
     if (!resultRequested) ConsumptionState.NOT_STARTED

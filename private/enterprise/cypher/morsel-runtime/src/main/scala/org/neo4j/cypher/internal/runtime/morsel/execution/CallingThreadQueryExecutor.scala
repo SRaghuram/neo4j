@@ -93,6 +93,6 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
                                                          workersProfiler,
                                                          worker,
                                                          workerResourceProvider)
-    ProfiledQuerySubscription(executingQuery, queryProfile)
+    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }
