@@ -28,10 +28,10 @@ import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
+import org.junit.Assume;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import javax.naming.NamingException;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
@@ -126,14 +127,20 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     private int ldapPort;
     private int sslLdapPort;
 
+    @BeforeClass
+    public static void ignoreOnWindows()
+    {
+        boolean isWindows = System.getProperty( "os.name" ).toLowerCase().startsWith( "windows" );
+        Assume.assumeFalse( isWindows );
+    }
+
     @Before
-    public void setup() throws Exception
+    public void setup()
     {
         LdapServer ldapServer = getLdapServer();
         ldapPort = ldapServer.getPort();
         sslLdapPort = ldapServer.getPortSSL();
         ldapServer.setConfidentialityRequired( false );
-        startDatabase();
         checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapPort );
     }
 
@@ -159,9 +166,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldShowCurrentUser()
     {
+        startDatabase();
         try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
                 Session session = driver.session() )
         {
@@ -177,10 +184,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldBeAbleToLoginAndAuthorizeNoPermissionUserWithLdapOnlyAndNoGroupToRoleMapping() throws IOException
+    public void shouldBeAbleToLoginAndAuthorizeNoPermissionUserWithLdapOnlyAndNoGroupToRoleMapping()
     {
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "" ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "" ) );
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
@@ -188,10 +194,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldFailIfAuthorizationExpiredWithserLdapContext()
     {
         // Given
+        startDatabase();
         try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" ) )
         {
             assertReadSucceeds( driver );
@@ -214,9 +220,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldSucceedIfAuthorizationExpiredWithinTransactionWithUserLdapContext()
     {
+        startDatabase();
         // Given
         try ( Driver driver = connectDriver( boltUri, "neo4j", "abc123" ) )
         {
@@ -235,18 +241,17 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldKeepAuthorizationForLifetimeOfTransaction() throws Throwable
     {
+        startDatabase();
         assertKeepAuthorizationForLifetimeOfTransaction( "neo",
                 tx -> assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) ) );
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldKeepAuthorizationForLifetimeOfTransactionWithProcedureAllowed() throws Throwable
     {
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
                 tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
@@ -296,11 +301,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldFailIfInvalidLdapServer() throws IOException
+    public void shouldFailIfInvalidLdapServer()
     {
         // When
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldap://127.0.0.1" ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_server, "ldap://127.0.0.1" ) );
         try
         {
             connectDriver( boltUri, "neo", "abc123" );
@@ -313,12 +317,11 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldTimeoutIfLdapServerDoesNotRespond() throws IOException
+    public void shouldTimeoutIfLdapServerDoesNotRespond()
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
-            restartServerWithOverriddenSettings( Map.of(
+            startDatabaseWithSettings( Map.of(
                     SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ),
                     SecuritySettings.ldap_authorization_connection_pooling, true,
                     SecuritySettings.ldap_authorization_use_system_account, true
@@ -329,12 +332,11 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldTimeoutIfLdapServerDoesNotRespondWithoutConnectionPooling() throws IOException
+    public void shouldTimeoutIfLdapServerDoesNotRespondWithoutConnectionPooling()
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
-            restartServerWithOverriddenSettings( Map.of(
+            startDatabaseWithSettings( Map.of(
                     // NOTE: Pooled connections from previous test runs will not be affected by this read timeout setting
                     SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ),
                     SecuritySettings.ldap_authorization_connection_pooling, false,
@@ -346,12 +348,11 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldFailIfLdapSearchFails() throws IOException
+    public void shouldFailIfLdapSearchFails()
     {
         try ( DirectoryServiceFailOnSearch ignore = new DirectoryServiceFailOnSearch() )
         {
-            restartServerWithOverriddenSettings( Map.of(
+            startDatabaseWithSettings( Map.of(
                     SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ),
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
@@ -361,13 +362,12 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldTimeoutIfLdapServerDoesNotRespondWithLdapUserContext() throws IOException
+    public void shouldTimeoutIfLdapServerDoesNotRespondWithLdapUserContext()
     {
         try ( DirectoryServiceWaitOnSearch ignore = new DirectoryServiceWaitOnSearch( 5000 ) )
         {
             // When
-            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) ) );
+            startDatabaseWithSettings( Map.of( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) ) );
 
             try
             {
@@ -382,10 +382,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldGetCombinedAuthorization() throws Throwable
+    public void shouldGetCombinedAuthorization() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.ldap_authorization_use_system_account, true
@@ -413,10 +412,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     // ===== Logging tests =====
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME,SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME,SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.ldap_authorization_use_system_account, true )
@@ -435,10 +433,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.LDAP_REALM_NAME,SecuritySettings.NATIVE_REALM_NAME ),
                 SecuritySettings.authorization_providers, List.of( SecuritySettings.LDAP_REALM_NAME,SecuritySettings.NATIVE_REALM_NAME ),
                 SecuritySettings.ldap_authorization_use_system_account, true )
@@ -457,9 +454,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldLogInvalidCredentialErrorFromLdapRealm() throws Throwable
+    public void shouldLogInvalidCredentialErrorFromLdapRealm() throws IOException
     {
+        startDatabase();
+
         // When
         assertAuthFail( boltUri, "neo", "wrong-password" );
 
@@ -468,10 +466,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws Throwable
+    public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws IOException, InvalidArgumentsException
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
                 SecuritySettings.ldap_authorization_use_system_account, true )
@@ -489,11 +486,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldLogConnectionRefusedFromLdapRealm() throws Throwable
+    public void shouldLogConnectionRefusedFromLdapRealm() throws IOException
     {
         // When
-        restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldap://" + REFUSED_IP ) );
+        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_server, "ldap://" + REFUSED_IP ) );
 
         try
         {
@@ -511,10 +507,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws Throwable
+    public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws IOException
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
             SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
             SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
             SecuritySettings.ldap_authorization_use_system_account, true,
@@ -529,15 +524,14 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldClearAuthenticationCache() throws Throwable
+    public void shouldClearAuthenticationCache() throws NamingException
     {
         getLdapServer().setConfidentialityRequired( true );
 
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
+            startDatabaseWithSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
 
             // Then
             assertAuth( boltUri, "tank", "abc123" );
@@ -559,15 +553,14 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldClearAuthorizationCache() throws Throwable
+    public void shouldClearAuthorizationCache() throws NamingException
     {
         getLdapServer().setConfidentialityRequired( true );
 
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
+            startDatabaseWithSettings( Map.of( SecuritySettings.ldap_server, "ldaps://localhost:" + sslLdapPort ) );
 
             // Then
             try ( Driver driver = connectDriver( boltUri, "tank", "abc123" ) )
@@ -599,9 +592,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
     public void shouldNotSeeSystemPassword()
     {
+        startDatabase();
+
         String ldapSettingName = SecuritySettings.ldap_authorization_system_password.name();
         String value = new SecureString( "" ).toString();
         String expected = String.format( "%s=%s", ldapSettingName, value );
@@ -617,10 +611,9 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    @DisabledOnOs( OS.WINDOWS )
-    public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin() throws Throwable
+    public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin()
     {
-        restartServerWithOverriddenSettings( Map.of(
+        startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name() ),
                 SecuritySettings.authorization_providers, List.of( SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name() ) ) );
 
@@ -644,8 +637,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
 
     // ===== Helpers =====
 
-    private void modifyLDAPAttribute( String username, Object credentials, String attribute, Object value )
-            throws Throwable
+    private void modifyLDAPAttribute( String username, Object credentials, String attribute, Object value ) throws NamingException
     {
         String principal = String.format( "cn=%s,ou=users,dc=example,dc=com", username );
         String principal1 = String.format( "cn=%s,ou=users,dc=example,dc=com", username );
@@ -662,13 +654,13 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    private void changeLDAPPassword( String username, Object credentials, Object newCredentials ) throws Throwable
+    private void changeLDAPPassword( String username, Object credentials, Object newCredentials ) throws NamingException
     {
         modifyLDAPAttribute( username, credentials, "userpassword", newCredentials );
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    private void changeLDAPGroup( String username, Object credentials, String group ) throws Throwable
+    private void changeLDAPGroup( String username, Object credentials, String group ) throws NamingException
     {
         String gid;
         switch ( group )

@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.directory.server.annotations.CreateLdapServer;
@@ -42,7 +43,9 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
@@ -306,6 +309,8 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @BeforeClass
     public static void classSetup()
     {
+        boolean isWindows = System.getProperty( "os.name" ).toLowerCase().startsWith( "windows" );
+        Assume.assumeFalse( isWindows );
         embeddedTestCertificates = new EmbeddedTestCertificates();
     }
 
@@ -417,8 +422,9 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldGetCorrectAuthorizationAllowedProcedure()
+    public void shouldGetCorrectAuthorizationAllowedProcedure() throws KernelException
     {
+        dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         try ( Driver driver = connectDriver( boltUri, PROC_USER, password ) )
         {
             assertProcSucceeds( driver );

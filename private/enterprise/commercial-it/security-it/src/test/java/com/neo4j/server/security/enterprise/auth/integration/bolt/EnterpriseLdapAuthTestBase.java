@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -51,20 +52,20 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
 
     String boltUri;
 
-    void startDatabase() throws Exception
+    void startDatabase()
     {
-        startDatabaseWithSettings( getSettings() );
+        startDatabaseWithSettings( Collections.emptyMap() );
     }
 
-    void startDatabaseWithSettings( Map<Setting<?>,Object> settings ) throws Exception
+    void startDatabaseWithSettings( Map<Setting<?>,Object> settings )
     {
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
               .withSetting( BoltConnector.enabled, true )
               .withSetting( BoltConnector.encryption_level, DISABLED )
               .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) );
+        dbRule.withSettings( getSettings() );
         dbRule.withSettings( settings );
         dbRule.ensureStarted();
-        dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         boltUri = boltUri( dbRule );
     }
 
@@ -75,12 +76,6 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     }
 
     protected abstract Map<Setting<?>,Object> getSettings();
-
-    void restartServerWithOverriddenSettings( Map<Setting<?>,Object> configChanges ) throws IOException
-    {
-        dbRule.restartDatabase( configChanges );
-        boltUri = boltUri( dbRule );
-    }
 
     void checkIfLdapServerIsReachable( String host, int port )
     {
