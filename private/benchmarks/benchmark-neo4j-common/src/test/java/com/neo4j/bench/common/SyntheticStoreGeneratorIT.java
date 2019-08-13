@@ -374,7 +374,7 @@ public class SyntheticStoreGeneratorIT
 
         int personalNeo4jCount = executeCountQuery( session,
                                                     "MATCH (n:Project) " +
-                                                    "WHERE NOT n.owner IN {defaultOwner} " +
+                                                    "WHERE NOT n.owner IN $defaultOwner " +
                                                     "RETURN count(n) AS count",
                                                     singletonMap( "defaultOwner", Arrays.asList( NEO4J.defaultOwner(), CAPS.defaultOwner() ) ) );
 
@@ -393,7 +393,7 @@ public class SyntheticStoreGeneratorIT
             for ( String owner : generator.neo4jBranchOwners() )
             {
                 int countForOwner = executeCountQuery( session,
-                                                       "MATCH (n:Project {owner: {owner}}) RETURN count(n) AS count",
+                                                       "MATCH (n:Project {owner: $owner}) RETURN count(n) AS count",
                                                        singletonMap( "owner", owner ) );
 
                 assertThat( countForOwner,

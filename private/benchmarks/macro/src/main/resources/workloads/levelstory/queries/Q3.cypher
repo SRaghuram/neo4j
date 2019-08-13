@@ -1,4 +1,4 @@
-MATCH (u:user {id: {p01}})
+MATCH (u:user {id: $p01})
 WITH u
 MATCH (u)-[:CONTACT]->(c:contact)-[:CONTACT*1..3]->(r:projectrole)-[:CONTACT*1..3]->(p:project {status: 'active'})
 WITH u, r

@@ -1,10 +1,10 @@
-MATCH (u:user {id: {p01}}), (x:task {id: {p02}})
+MATCH (u:user {id: $p01}), (x:task {id: $p02})
 WITH u, x
 MATCH (p:project {id: x.projectid})
 WITH u, p, x
 MATCH  (u)-[:CONTACT]->(c:contact {teamid: p.teamid})-[:CONTACT]->(cr:role {teamid: p.teamid})
 WITH p, x, c, cr, [r IN (c)-[:CONTACT]->(:projectrole {projectid: p.id}) | last(nodes(r))] AS prs
-WITH p, x, c, cr, extract(r IN prs | r.name) AS prs
+WITH p, x, c, cr, [r IN prs | r.name] AS prs
 WITH x,
      c,
      {
@@ -50,11 +50,11 @@ WITH t,
                        worklogs:        s.worklogs,
                        info:            s.info,
                        contacts:
-                                        extract(c IN reduce(a = [], c IN contacts |
+                                        [c IN reduce(a = [], c IN contacts |
                                         CASE
                                           WHEN c IN a THEN a
                                           ELSE a + c
-                                          END) | {id: c.id, object: 'contact', name: c.name}),
+                                          END) | {id: c.id, object: 'contact', name: c.name}],
                        equipments:      [x IN xs WHERE x:equipment | {id: x.id, object: 'equipment', name: x.name}]
                      },
        accessedrole: r.accessedrole,

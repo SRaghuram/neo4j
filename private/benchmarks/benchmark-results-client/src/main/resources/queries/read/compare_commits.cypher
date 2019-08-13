@@ -2,7 +2,7 @@
 // Retrieve full result metrics for every benchmark, for both commits
 MATCH (n:Project {name:'neo4j'})<-[:WITH_PROJECT]-(tr:TestRun)-[:HAS_METRICS]->(m:Metrics)-[:METRICS_FOR]->(b:Benchmark),
       (b)-[:HAS_PARAMS]->(p:BenchmarkParams)
-WHERE (b)<-[:HAS_BENCHMARK]-(:BenchmarkGroup {name:{group_name}}) AND n.commit IN {commits}
+WHERE (b)<-[:HAS_BENCHMARK]-(:BenchmarkGroup {name:$group_name}) AND n.commit IN $commits
 WITH n.commit AS neo4j_commit,
      n.version AS neo4j_version,
      n.edition AS neo4j_edition,

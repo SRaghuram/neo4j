@@ -1,7 +1,7 @@
-MATCH (:project {id: {p01}})-[:ACTIVITY*]->(a:activity)
+MATCH (:project {id: $p01})-[:ACTIVITY*]->(a:activity)
 WITH DISTINCT a
-  SKIP {p02}
-  LIMIT {p03}
+  SKIP $p02
+  LIMIT $p03
 MATCH (c:contact {id: a.contactid})
 RETURN
   collect({

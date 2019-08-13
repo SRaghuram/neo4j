@@ -46,7 +46,7 @@ class Top extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var Top_limit: Long = _
 
-  override def description = "Top, e.g., UNWIND {list} AS x RETURN x ORDER BY x LIMIT {limit}"
+  override def description = "Top, e.g., UNWIND $list AS x RETURN x ORDER BY x LIMIT $limit"
 
   val LIST_ITEM_COUNT = 1000000
 

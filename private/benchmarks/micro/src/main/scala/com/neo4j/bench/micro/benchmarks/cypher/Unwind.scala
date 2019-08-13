@@ -33,7 +33,7 @@ class Unwind extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var Unwind_type: String = _
 
-  override def description = "Unwind, e.g., UNWIND {list} AS value RETURN value"
+  override def description = "Unwind, e.g., UNWIND $list AS value RETURN value"
 
   val VALUE_COUNT = 1000000
 
