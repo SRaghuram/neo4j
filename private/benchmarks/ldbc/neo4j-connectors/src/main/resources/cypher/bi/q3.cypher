@@ -1,7 +1,7 @@
 WITH
   $year AS year1,
   $month AS month1,
-  $year + toInt($month / 12.0) AS year2, // TODO toInteger
+  $year + toInteger($month / 12.0) AS year2,
   $month % 12 + 1 AS month2
 // year-month 1
 MATCH (tag:Tag)
