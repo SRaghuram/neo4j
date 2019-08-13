@@ -6,6 +6,7 @@
 package com.neo4j.server.rest;
 
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+import com.neo4j.server.rest.causalclustering.CausalClusteringService;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -13,7 +14,6 @@ import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode.CORE;
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode.READ_REPLICA;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.absoluteDatabaseManagePath;
 import static org.neo4j.server.rest.discovery.CommunityDiscoverableURIs.communityDiscoverableURIsBuilder;
 
 public class EnterpriseDiscoverableURIs
@@ -25,7 +25,7 @@ public class EnterpriseDiscoverableURIs
         var mode = config.get( CommercialEditionSettings.mode );
         if ( mode == CORE || mode == READ_REPLICA )
         {
-            discoverableURIsBuilder.addEndpoint( "management", absoluteDatabaseManagePath( config ) );
+            discoverableURIsBuilder.addEndpoint( CausalClusteringService.NAME, CausalClusteringService.absoluteDatabaseManagePath( config ) );
         }
 
         return discoverableURIsBuilder.build();

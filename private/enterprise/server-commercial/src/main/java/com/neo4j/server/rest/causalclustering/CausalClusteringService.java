@@ -20,8 +20,10 @@ import org.neo4j.server.rest.repr.OutputFormat;
 @Path( CausalClusteringService.DB_MANAGE_PATH )
 public class CausalClusteringService
 {
+    public static final String NAME = "causalclustering";
+
     private static final String DB_NAME = "databaseName";
-    private static final String MANAGE_PATH = "/manage/causalclustering";
+    private static final String MANAGE_PATH = "/manage/" + NAME;
 
     static final String DB_MANAGE_PATH = "/{" + DB_NAME + "}" + MANAGE_PATH;
 
