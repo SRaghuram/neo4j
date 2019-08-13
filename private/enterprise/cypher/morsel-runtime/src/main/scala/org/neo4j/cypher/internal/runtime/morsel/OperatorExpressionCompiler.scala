@@ -120,18 +120,17 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
     val hasCachedProperty = inputSlotConfiguration.hasCachedPropertyForOffset(offset)
     val prepareOps =
       if (local == null && hasCachedProperty) {
+        local = locals.addCachedProperty(offset)
         block(
           assign(local, getCachedPropertyFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-          condition(isNull(load(local)))(
-            block(
-              setCachedPropertyAt(offset, getFromStore))
-            ),
+          condition(isNull(load(local)))(assign(local, getFromStore))
           )
       } else if (local == null) {
         local = locals.addCachedProperty(offset)
         assign(local, getFromStore)
       } else {
-        noop()
+        condition(isNull(load(local)))(assign(local, getFromStore))
+
       }
 
     block(prepareOps, cast[Value](load(local)))
