@@ -88,6 +88,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     def filterOrProject(row: MorselExecutionContext, queryState: OldQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
+        // Note: this allocation is currently never de-allocated
         memoryTracker.allocated(groupingKey.estimatedHeapUsage())
         groupings.project(row, groupingKey)
         true

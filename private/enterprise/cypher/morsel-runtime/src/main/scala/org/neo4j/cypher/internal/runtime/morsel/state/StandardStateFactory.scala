@@ -42,7 +42,6 @@ class StandardStateFactory extends StateFactory {
   override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
 }
 
-// TODO deallocations in morsel
 class MemoryTrackingStandardStateFactory(transactionMaxMemory: Long) extends StandardStateFactory {
   override val memoryTracker: QueryMemoryTracker = new BoundedMemoryTracker(transactionMaxMemory)
 

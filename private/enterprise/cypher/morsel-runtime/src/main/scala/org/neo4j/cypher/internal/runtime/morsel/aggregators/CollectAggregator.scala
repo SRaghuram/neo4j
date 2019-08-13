@@ -41,6 +41,7 @@ class CollectStandardReducer(memoryTracker: QueryMemoryTracker) extends Reducer 
       case u: CollectUpdater =>
         val value = VirtualValues.fromList(u.collection)
         collections += value
+        // Note: this allocation is currently never de-allocated
         memoryTracker.allocated(value.estimatedHeapUsage())
     }
   }

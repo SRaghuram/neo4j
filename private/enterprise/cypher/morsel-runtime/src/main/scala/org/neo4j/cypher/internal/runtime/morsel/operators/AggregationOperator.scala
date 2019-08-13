@@ -145,10 +145,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
     override def update(data: AggPreMap): Unit = {
-     val iterator = data.entrySet().iterator()
+      val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
+          // Note: this allocation is currently never de-allocated
           memoryTracker.allocated(entry.getKey.estimatedHeapUsage())
           aggregators.map(_.newStandardReducer(memoryTracker))
         })
