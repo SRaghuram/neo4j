@@ -40,11 +40,15 @@ import static java.util.Collections.emptyMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
-class CausalClusterStatusEndpointHelpers
+final class CausalClusterRestEndpointHelpers
 {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
     private static final HttpClient HTTP_CLIENT = newHttpClient();
+
+    private CausalClusterRestEndpointHelpers()
+    {
+    }
 
     static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
     {
@@ -185,7 +189,7 @@ class CausalClusterStatusEndpointHelpers
 
     private static BodyHandler<Map<String,Object>> ofJson()
     {
-        return responseInfo -> mapping( ofString( UTF_8 ), CausalClusterStatusEndpointHelpers::readJson );
+        return responseInfo -> mapping( ofString( UTF_8 ), CausalClusterRestEndpointHelpers::readJson );
     }
 
     @SuppressWarnings( "unchecked" )

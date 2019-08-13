@@ -21,7 +21,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4j;
 
-import static com.neo4j.server.enterprise.CausalClusterStatusEndpointHelpers.queryStatusEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
