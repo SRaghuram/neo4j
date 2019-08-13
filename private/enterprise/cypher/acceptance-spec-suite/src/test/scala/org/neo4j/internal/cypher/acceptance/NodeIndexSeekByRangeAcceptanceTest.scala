@@ -1270,6 +1270,28 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                 }, Configs.Version2_3 + Configs.Version3_1 + Configs.Version3_4))
   }
 
+  test("should not range seek index with 1 unique value (gt issue #12225)") {
+
+    graph.execute(
+      """UNWIND range(1, 10) AS i
+        |CREATE (t:Tweet {created_date: 1})
+        |WITH t, i
+        |UNWIND range(1,10) AS j
+        |CREATE (k:Keyword {value: i*10+j})
+        |CREATE (t)-[:CONTAINS_KEYWORD]->(k)""".stripMargin)
+
+    graph.createIndex("Tweet", "created_date")
+    graph.createIndex("Keyword", "value")
+
+    val query =
+      s"""EXPLAIN
+         |MATCH (k:Keyword)<-[r:CONTAINS_KEYWORD]-(t:Tweet)
+         |WHERE k.value = 1234 AND t.created_date > 0
+         |RETURN t, k""".stripMargin
+
+    executeSingle(query).executionPlanDescription() should not(includeSomewhere.aPlan("NodeIndexSeekByRange"))
+  }
+
   private def createTestModelBigEnoughToConsiderPickingIndexSeek: Int = {
     val size = 400
 
