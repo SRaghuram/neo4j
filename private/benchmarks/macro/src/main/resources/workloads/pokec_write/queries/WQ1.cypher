@@ -1,1 +1,1 @@
-MERGE (u:User { name: { key }})
+MERGE (u:User { name: $key })

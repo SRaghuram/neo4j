@@ -27,7 +27,7 @@ public class SetStoreVersion implements Query<Void>
     {
         try ( Session session = driver.session( WRITE ) )
         {
-            session.run( "MERGE (ss:StoreSchema) SET ss.version={version}", singletonMap( "version", version ) );
+            session.run( "MERGE (ss:StoreSchema) SET ss.version=$version", singletonMap( "version", version ) );
         }
         return null;
     }

@@ -1,2 +1,2 @@
-MATCH (p:PROFILES { _key: { key }})
+MATCH (p:PROFILES { _key: $key })
 RETURN p.gender
