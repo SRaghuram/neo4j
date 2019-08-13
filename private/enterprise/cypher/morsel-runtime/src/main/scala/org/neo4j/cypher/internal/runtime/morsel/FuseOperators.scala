@@ -134,7 +134,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                                     properties.head,
                                                                                     slots),
                                                              compile(expr),
-                                                             operatorFactory.indexRegistrator.registerQueryIndex(label, properties),,
+                                                             operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                              physicalPlan.argumentSizes(id))(expressionCompiler))
 
         case _ => None
