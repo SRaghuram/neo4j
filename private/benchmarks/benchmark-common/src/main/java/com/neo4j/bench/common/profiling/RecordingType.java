@@ -10,7 +10,7 @@ public enum RecordingType
     // jfr
     JFR( "jfr", ".jfr" ),
     JFR_FLAMEGRAPH( "jfr_flamegraph", ".jfr.svg" ),
-    JFR_MEMALLOC_FLAMEGRAPH( "jfr_memalloc_flamegraph", ".memalloc.jfr.svg" ),
+    JFR_MEMALLOC_FLAMEGRAPH( "jfr_memalloc_flamegraph", ".jfr.memalloc.svg" ),
     // async
     ASYNC( "async", ".async" ),
     ASYNC_FLAMEGRAPH( "async_flamegraph", ".async.svg" ),

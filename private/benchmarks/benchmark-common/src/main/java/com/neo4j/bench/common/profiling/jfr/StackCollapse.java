@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.profiling.jfr;
 
-import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCStackTrace;
@@ -89,12 +88,6 @@ public class StackCollapse implements AutoCloseable
                 }
             }
         }
-    }
-
-    public StackCollapse()
-    {
-        // prevents System.out from being closed
-        this( new PrintWriter( new CloseShieldOutputStream( System.out ) ) );
     }
 
     public StackCollapse( File file ) throws FileNotFoundException
