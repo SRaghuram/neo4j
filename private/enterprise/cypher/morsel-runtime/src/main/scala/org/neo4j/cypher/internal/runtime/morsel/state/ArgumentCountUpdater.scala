@@ -87,7 +87,12 @@ abstract class ArgumentCountUpdater {
   protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselExecutionContext): Unit = {
-    downstreamLoop[ArgumentStateMapId](argumentStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
+    downstreamLoop[ArgumentStateMapId](argumentStates, morsel, { id =>
+      val asm = argumentStateMaps(id)
+      // We may not always have an argument state map in case limit was fused
+      if (asm != null)
+        asm.initiate(argumentRowId, morsel, null)
+    })
   }
 
   /**

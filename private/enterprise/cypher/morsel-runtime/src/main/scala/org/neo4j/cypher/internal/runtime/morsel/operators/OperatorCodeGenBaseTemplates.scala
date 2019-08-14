@@ -236,7 +236,7 @@ trait OperatorTaskTemplate {
   // TODO: Make separate genOperate and genOperateSingleRow methods to clarify the distinction
   //       between streaming (loop over the whole output morsel) and stateless (processing of single row inlined into outer loop) usage
   /**
-    * Responsible for generating:
+    * Responsible for generating the loop code of:
     * {{{
     *     def operate(context: MorselExecutionContext,
     *                 dbAccess: QueryContext,
@@ -262,6 +262,16 @@ trait OperatorTaskTemplate {
   }
 
   protected def genOperate: IntermediateRepresentation
+
+  /**
+    * Responsible for generating code that comes before entering the loop of operate()
+    */
+  def genOperateEnter: IntermediateRepresentation = inner.genOperateEnter
+
+  /**
+   * Responsible for generating code that comes after exiting the loop of operate()
+   */
+  def genOperateExit: IntermediateRepresentation = inner.genOperateExit
 
   /**
     * Responsible for generating [[PreparedOutput]] method:
@@ -324,6 +334,17 @@ trait OperatorTaskTemplate {
     * }}}
     */
   def genCloseCursors: IntermediateRepresentation
+
+  /**
+    * Responsible for optionally generating:
+    * {{{
+    *   override filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
+    * }}}
+    *
+    * If this returns None the base class method will not be overridden by generated code
+    */
+  def genFilterCancelledArguments: Option[IntermediateRepresentation] =
+    inner.genFilterCancelledArguments
 }
 
 object OperatorTaskTemplate {
@@ -376,7 +397,11 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                               param[QueryResources]("resources"),
                               param[QueryProfiler]("queryProfiler")
                           ),
-                          body = genOperateWithExpressions,
+                          body = block(
+                            genOperateEnter,
+                            genOperateWithExpressions,
+                            genOperateExit
+                          ),
                           genLocalVariables = () => {
                             Seq(
                               variable[Array[AnyValue]]("params",
@@ -427,7 +452,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           owner = typeRefOf[CompiledTask],
                           returnType = typeRefOf[Boolean],
                           parameters = Seq.empty,
-                          body = genCanContinue.getOrElse(falseValue)
+                          body = genCanContinue.getOrElse(constant(false))
         ),
         MethodDeclaration("closeCursors",
                           owner = typeRefOf[CompiledTask],
@@ -456,7 +481,17 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           parameters = Seq.empty,
                           body = loadField(INPUT_MORSEL)
         )
-      ),
+      ) ++ {
+        val maybeOverrideFilterCancelledArguments = genFilterCancelledArguments
+        maybeOverrideFilterCancelledArguments.map { ir =>
+          MethodDeclaration("filterCancelledArguments",
+            owner = typeRefOf[CompiledTask],
+            returnType = typeRefOf[Boolean],
+            parameters = Seq(OPERATOR_CLOSER_PARAMETER),
+            body = ir
+          )
+        }
+      },
       // NOTE: This has to be called after genOperate!
       genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
                                                                                              op.genProfileEventField ++
@@ -526,14 +561,14 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     and(conditions)
   }
 
-  def onEnter: IntermediateRepresentation =
+  override def genOperateEnter: IntermediateRepresentation =
     noop()
 
   /**
     * If we need to care about demand (produceResult part of the fused operator)
     * we need to update the demand after having produced data.
     */
-  def onExit: IntermediateRepresentation = {
+  override def genOperateExit: IntermediateRepresentation = {
     val updates = new ArrayBuffer[IntermediateRepresentation]
 
     if (shouldWriteToContext)
@@ -576,4 +611,11 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override protected def genCreateState: IntermediateRepresentation = noop()
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
+
+  // Code of the base class method:
+  //  override def genFilterCancelledArguments: IntermediateRepresentation = {
+  //    invoke(load(OPERATOR_CLOSER_PARAMETER.name), method[OperatorCloser, Boolean, MorselExecutionContext]("filterCancelledArguments"),
+  //      loadField(INPUT_MORSEL))
+  //  }
+  override def genFilterCancelledArguments: Option[IntermediateRepresentation] = None
 }

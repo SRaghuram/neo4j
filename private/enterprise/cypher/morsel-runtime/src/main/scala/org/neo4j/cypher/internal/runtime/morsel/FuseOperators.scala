@@ -23,10 +23,12 @@ import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListL
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
-                    tokenContext: TokenContext) {
+                    tokenContext: TokenContext,
+                    parallelExecution: Boolean) {
 
   private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -34,7 +36,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
   def compilePipeline(p: PipelineDefinition): ExecutablePipeline = {
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
-      if (fusingEnabled) fuseOperators(p.inputBuffer.bufferSlotConfiguration, p.headPlan, p.middlePlans, p.outputDefinition)
+      if (fusingEnabled) fuseOperators(p)
       else (None, p.middlePlans, p.outputDefinition)
 
     //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel
@@ -55,10 +57,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
                        needsMorsel)
   }
 
-  private def fuseOperators(inputSlotConfiguration: SlotConfiguration,
-                            headPlan: LogicalPlan,
-                            middlePlans: Seq[LogicalPlan],
-                            output: OutputDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {
+  private def fuseOperators(pipeline: PipelineDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {
+    val inputSlotConfiguration = pipeline.inputBuffer.bufferSlotConfiguration
+    val headPlan = pipeline.headPlan
+    val middlePlans = pipeline.middlePlans
+    val output = pipeline.outputDefinition
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
@@ -224,6 +227,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
       }
     }
+
+    // These conditions can be checked to see if we can specialize some simple cases
+    def hasNoNestedArguments(plan: LogicalPlan): Boolean = physicalPlan.applyPlans(plan.id) == INVALID_ID
+    val serialExecutionOnly: Boolean = !parallelExecution || pipeline.serial
 
     val fusedPipeline =
       reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
@@ -501,6 +508,14 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
+
+          // Special case for limit when not nested under an apply and with serial execution
+          case plan@Limit(_, countExpression, DoNotIncludeTies) if hasNoNestedArguments(plan) && serialExecutionOnly =>
+            val newTemplate = new SimpleLimitOperatorTaskTemplate(acc.template, plan.id, compileExpression(countExpression))(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans
+            )
 
           case _ =>
             cantHandle(acc, nextPlan)

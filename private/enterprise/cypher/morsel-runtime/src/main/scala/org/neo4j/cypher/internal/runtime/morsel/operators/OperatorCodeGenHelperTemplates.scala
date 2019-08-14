@@ -49,7 +49,10 @@ object OperatorCodeGenHelperTemplates {
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
+
+  // Other method parameters
   val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")
+  val OPERATOR_CLOSER_PARAMETER: Parameter = param[OperatorCloser]("operatorCloser")
 
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
@@ -118,6 +121,8 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
+
+  val OUTER_LOOP_LABEL_NAME: String = "outerLoop"
 
   val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselExecutionContext, Boolean]("isValidRow"))
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselExecutionContext, Boolean]("isValidRow"))

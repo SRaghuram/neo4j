@@ -212,7 +212,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
                                   fusingEnabled = true,
-                                  tokenContext = TokenContext.EMPTY)
+                                  tokenContext = TokenContext.EMPTY,
+                                  parallelExecution = true)
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
                                       pipelineBuilder.pipeline.headPlan,
                                       mock[BufferDefinition](RETURNS_DEEP_STUBS),

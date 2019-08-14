@@ -127,11 +127,13 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
   private val canContinue = field[Boolean](codeGen.namer.nextVariableName())
 
   override def genCanContinue: Option[IntermediateRepresentation] =
-    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+    inner.genCanContinue.map(and(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
 
   override def genCloseCursors: IntermediateRepresentation =
     block(
-      invoke(loadField(inputCursorField), method[MutatingInputCursor, Unit]("close")),
+      condition(isNotNull(loadField(inputCursorField)))(
+        invoke(loadField(inputCursorField), method[MutatingInputCursor, Unit]("close"))
+      ),
       inner.genCloseCursors
     )
 
@@ -172,16 +174,15 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
                                                invoke(QUERY_STATE,
                                                       method[QueryState, InputDataStream]("input"))))),
       condition(not(loadField(canContinue)))(setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))),
-      loop(and(innermost.predicate, loadField(canContinue)))(
+      labeledLoop(OUTER_LOOP_LABEL_NAME, and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
           profileRow(id),
           inner.genOperateWithExpressions,
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
           innermost.resetCachedPropertyVariables
-          )
-        ),
-      innermost.onExit
+        )
+      )
     )
   }
 

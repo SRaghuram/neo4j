@@ -67,7 +67,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
-    val fuseOperators = new FuseOperators(operatorFactory, context.config.fuseOperators, context.tokenContext)
+    val fuseOperators = new FuseOperators(operatorFactory, context.config.fuseOperators, context.tokenContext, parallelExecution)
 
     val executablePipelines =
       for (p <- executionGraphDefinition.pipelines) yield {

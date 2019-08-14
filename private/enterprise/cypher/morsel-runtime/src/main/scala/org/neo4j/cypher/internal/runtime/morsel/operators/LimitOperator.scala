@@ -7,19 +7,42 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
+
+object LimitOperator extends NumericHelper {
+  def evaluateCountValue(countValue: AnyValue): Long = {
+    val limitNumber = asNumber(countValue)
+    if (limitNumber.isInstanceOf[FloatingPointValue]) {
+      val limit = limitNumber.doubleValue()
+      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
+    }
+    val limit = limitNumber.longValue()
+
+    if (limit < 0) {
+      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
+    }
+    limit
+  }
+}
 
 /**
   * Limit the number of rows to `countExpression` per argument.
@@ -38,18 +61,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                                        resources.expressionVariables(state.nExpressionSlots),
                                        state.subscriber,
                                        NoMemoryTracker)
-
-    val limitNumber = asNumber(countExpression(ExecutionContext.empty, queryState))
-    if (limitNumber.isInstanceOf[FloatingPointValue]) {
-      val limit = limitNumber.doubleValue()
-      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
-    }
-    val limit = limitNumber.longValue()
-
-    if (limit < 0) {
-      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
-    }
-
+    val countValue: AnyValue = countExpression(ExecutionContext.empty, queryState)
+    val limit = evaluateCountValue(countValue)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
                                                                       new LimitStateFactory(limit)))
   }
@@ -136,5 +149,69 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     override def isCancelled: Boolean = countLeft.get() <= 0
 
     override def toString: String = s"ConcurrentLimitState($argumentRowId, countLeft=${countLeft.get()})"
+  }
+}
+
+/**
+ * This is a (common) special case used when not nested under an apply, so we do not need to worry about the argument state map.
+ * It also needs to be run either single threaded execution or in a serial pipeline (i.e. the final produce pipeline) in parallel execution,
+ * since it does not synchronize the limit count between tasks.
+ */
+class SimpleLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                      override val id: Id,
+                                      generateCountExpression: () => IntermediateExpression)
+                                     (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+
+  private final val COUNT_NOT_INITIALIZED: Long = -2L
+
+  private var countExpression: IntermediateExpression = _
+  private val countLeft: InstanceField = field[Long](codeGen.namer.nextVariableName(), constant(COUNT_NOT_INITIALIZED))
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(countExpression)
+
+  override def genOperateEnter: IntermediateRepresentation = {
+    if (countExpression == null) {
+      countExpression = generateCountExpression()
+    }
+    // Initialize the counter
+    // We would prefer to do this in the constructor, but that is called using reflection, and the error handling
+    // does not work so well when exceptions are thrown from evaluateCountValue
+    block(
+      condition(equal(loadField(countLeft), constant(COUNT_NOT_INITIALIZED)))(
+        setField(countLeft, invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
+      ),
+      inner.genOperateEnter
+    )
+  }
+
+  override def genOperate: IntermediateRepresentation = {
+    block(
+      condition(lessThanOrEqual(loadField(countLeft), constant(0L))) (
+        break(OUTER_LOOP_LABEL_NAME)
+      ),
+      setField(countLeft, subtract(loadField(countLeft), constant(1L))),
+      inner.genOperateWithExpressions
+    )
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty[LocalVariable]
+
+  override def genFields: Seq[Field] = Seq(countLeft)
+
+  override def genCanContinue: Option[IntermediateRepresentation] = {
+    val canContinue = greaterThan(loadField(countLeft), constant(0L))
+    inner.genCanContinue.map(and(_, canContinue)).orElse(Some(canContinue))
+  }
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  // Since we do not create an actual entry in the argument state map, we need to override this
+  // method to prevent blowing up in the scheduler
+  override def genFilterCancelledArguments: Option[IntermediateRepresentation] = {
+    Some(constant(false))
   }
 }

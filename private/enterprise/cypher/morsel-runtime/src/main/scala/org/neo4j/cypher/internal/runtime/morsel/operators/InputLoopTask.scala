@@ -105,7 +105,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
   def genMoreFields: Seq[Field]
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
-    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+    inner.genCanContinue.map(and(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
   }
 
   override def genCloseCursors: IntermediateRepresentation = {
@@ -157,7 +157,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputRow.finishedWriting()
     block(
-      loop(and(or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP)), innermost.predicate))(
+      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP)), innermost.predicate))(
         block(
           condition(not(loadField(INNER_LOOP)))(setField(INNER_LOOP, genInitializeInnerLoop)),
           ifElse(loadField(INNER_LOOP))(
@@ -168,7 +168,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                   genCloseInnerLoop,
                   setField(INNER_LOOP, constant(false)),
                   INPUT_ROW_MOVE_TO_NEXT,
-                  setField(canContinue, INPUT_ROW_IS_VALID),
+                  setField(canContinue, INPUT_ROW_IS_VALID)
                 )
               )
             )
@@ -176,9 +176,8 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
             INPUT_ROW_MOVE_TO_NEXT
           ),
           innermost.resetCachedPropertyVariables
-          )
-      ),
-      innermost.onExit
+        )
+      )
     )
   }
 
