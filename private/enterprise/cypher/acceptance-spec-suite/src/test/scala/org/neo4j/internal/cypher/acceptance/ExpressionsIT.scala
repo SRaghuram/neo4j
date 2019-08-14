@@ -9,7 +9,6 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.cypher.{CypherTypeException, ExecutionEngineFunSuite, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.ast._
@@ -32,6 +31,7 @@ import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
+import org.neo4j.cypher.{ArithmeticException, CypherTypeException, ExecutionEngineFunSuite, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.graphdb.{Entity, Relationship}
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
