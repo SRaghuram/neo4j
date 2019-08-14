@@ -123,7 +123,7 @@ class DumpCountsStoreTest
     private SchemaRuleAccess createRuleAccess()
     {
         SchemaRuleAccess schemaRuleAccess = mock( SchemaRuleAccess.class );
-        IndexDescriptor rule = prototype.materialise( indexId );
+        IndexDescriptor rule = prototype.withName( "index" ).materialise( indexId );
         ArrayList<IndexDescriptor> rules = new ArrayList<>();
         rules.add( rule );
 

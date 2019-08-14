@@ -58,7 +58,7 @@ class InconsistencyReportReaderTest
         logger.error( RecordType.INDEX, new IndexEntry( someIndexDescriptor(), idTokenNameLookup, indexNodeId ), "Some index error",
                 "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
-                      IndexPrototype.forSchema( forLabel( 1, 2 ) ).materialise( indexId ).toString() );
+                      IndexPrototype.forSchema( forLabel( 1, 2 ) ).withName( "index_" + indexId ).materialise( indexId ).toString() );
         logger.error( RecordType.LABEL_SCAN_DOCUMENT, new LabelScanDocument( new NodeLabelRange( 0, new long[0][] ) ),
                 "Some label index error", new NodeRecord( nodeNotInTheLabelIndexId ) );
         String text = out.toString();
@@ -101,6 +101,6 @@ class InconsistencyReportReaderTest
 
     private IndexDescriptor someIndexDescriptor()
     {
-        return IndexPrototype.forSchema( SchemaDescriptor.forLabel( 1, 1 ) ).materialise( 1L );
+        return IndexPrototype.forSchema( SchemaDescriptor.forLabel( 1, 1 ) ).withName( "index_1" ).materialise( 1L );
     }
 }
