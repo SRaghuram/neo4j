@@ -7,9 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.CantCompileQueryException
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
