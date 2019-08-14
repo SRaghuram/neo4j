@@ -319,7 +319,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName, revokeType,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName':")
 
-    // GRANT/DENY/REVOKE WRITE (*) ON GRAPH foo NODES * (*) TO role
+    // GRANT/DENY/REVOKE WRITE {*} ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
         source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName':")

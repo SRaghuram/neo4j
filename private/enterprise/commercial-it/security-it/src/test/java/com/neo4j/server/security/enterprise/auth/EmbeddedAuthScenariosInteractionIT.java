@@ -83,14 +83,14 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", roleName ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", roleName ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", roleName ) );
 
         // Then
         testSuccessfulRead( subject, 3 );
         testSuccessfulWrite( subject );
 
         // When
-        neo.getSystemGraph().execute( String.format( "REVOKE WRITE (*) ON GRAPH * FROM %s", roleName ) );
+        neo.getSystemGraph().execute( String.format( "REVOKE WRITE {*} ON GRAPH * FROM %s", roleName ) );
 
         // Then
         testSuccessfulRead( subject, 4 );
@@ -286,7 +286,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A)", "with label `A` must have the property `number`" );
@@ -302,7 +302,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String role = "custom";
         createUserWithRole( "Alice", role );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertFail( adminSubject, "CREATE (:A {number: 4})", "already exists with label `A` and property `number` = 4" );
@@ -381,7 +381,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
@@ -397,7 +397,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String role = "custom";
         createUserWithRole( "Alice", role );
         neo.getSystemGraph().execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-        neo.getSystemGraph().execute( String.format( "GRANT WRITE (*) ON GRAPH * TO %s", role ) );
+        neo.getSystemGraph().execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         setupGraph();

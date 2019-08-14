@@ -24,10 +24,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
-      "GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
-      "REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom" -> 2,
-      "DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
-      "REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom" -> 2
+      "GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom" -> 2,
+      "DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "REVOKE DENY WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom" -> 2
     ))
   }
 
@@ -45,7 +45,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -61,7 +61,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE DATABASE foo")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -79,7 +79,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE DATABASE foo")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO role1, role2, role3")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) TO role1, role2, role3")
 
         // THEN
         val expected: Seq[PrivilegeMapBuilder] = Seq(
@@ -99,7 +99,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         // WHEN
         the[InvalidArgumentsException] thrownBy {
           // WHEN
-          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+          execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role 'custom' does not exist."
 
@@ -112,14 +112,14 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         the[DatabaseNotFoundException] thrownBy {
-          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+          execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
       }
 
       test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
-          execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+          execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
         } should have message s"This is an administration command and it should be executed against the system database: $grantOrDenyCommand WRITE"
       }
@@ -132,9 +132,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute("CREATE DATABASE bar")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH bar ELEMENTS * (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           write(grantOrDenyRelType).role("custom").node("*").map,
@@ -146,7 +146,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -157,7 +157,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
 
         // WHEN
-        execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -172,7 +172,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -181,7 +181,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
 
         // WHEN
-        execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute("REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -193,11 +193,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
         // WHEN
         val error = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
+          execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) FROM wrongRole")
         }
 
         // THEN
@@ -210,11 +210,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE ROLE role")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
         // WHEN
         val error = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
+          execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) FROM role")
         }
         // THEN
         error.getMessage should include("The role 'role' does not have the specified privilege")
@@ -224,11 +224,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
         // WHEN
         val e = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+          execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH foo ELEMENTS * (*) FROM custom")
         }
         // THEN
         e.getMessage should be(s"Failed to revoke write privilege from role 'custom': The privilege '$grantOrDenyCommand write * ON GRAPH foo NODES *' does not exist.")
@@ -237,7 +237,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
-          execute(s"REVOKE $grantOrDenyCommand WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+          execute(s"REVOKE $grantOrDenyCommand WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
           // THEN
         } should have message s"This is an administration command and it should be executed against the system database: REVOKE $grantOrDenyCommand WRITE"
       }
@@ -253,12 +253,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE DATABASE bar")
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH bar ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH bar ELEMENTS * (*) TO custom")
 
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write("GRANTED").role("custom").node("*").map,
@@ -275,7 +275,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+    execute("REVOKE WRITE {*} ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write("GRANTED").role("custom").node("*").map,
@@ -288,7 +288,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -297,7 +297,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute("REVOKE WRITE (*) ON GRAPH bar ELEMENTS * (*) FROM custom")
+    execute("REVOKE WRITE {*} ON GRAPH bar ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -308,12 +308,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute(s"REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM wrongRole")
+      execute(s"REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM wrongRole")
     }
 
     // THEN
@@ -326,12 +326,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE ROLE role")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute(s"REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM role")
+      execute(s"REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM role")
     }
     // THEN
     error.getMessage should include("The role 'role' does not have the specified privilege")
@@ -341,12 +341,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // WHEN
     val e = the[InvalidArgumentsException] thrownBy {
-      execute(s"REVOKE WRITE (*) ON GRAPH foo ELEMENTS * (*) FROM custom")
+      execute(s"REVOKE WRITE {*} ON GRAPH foo ELEMENTS * (*) FROM custom")
     }
     // THEN
     e.getMessage should be(s"Failed to revoke write privilege from role 'custom': The privilege 'write * ON GRAPH foo NODES *' does not exist.")
@@ -355,7 +355,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   test("should fail when revoking write privilege to custom role when not on system database") {
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
-      execute("REVOKE WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+      execute("REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
       // THEN
     } should have message s"This is an administration command and it should be executed against the system database: REVOKE WRITE"
   }
@@ -368,8 +368,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE ROLE custom")
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -384,8 +384,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write("GRANTED").role("custom").node("*").map,
@@ -395,7 +395,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute(s"REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute(s"REVOKE GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -404,8 +404,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute(s"GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) To custom")
-    execute(s"REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute(s"GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) To custom")
+    execute(s"REVOKE DENY WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -418,7 +418,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write("DENIED").role("custom").node("*").map,
@@ -427,7 +427,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute(s"REVOKE GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+      execute(s"REVOKE GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
     }
     // THEN
     error.getMessage should include("The role 'custom' does not have the specified privilege: GRANT write * ON GRAPH * NODES *.")
@@ -442,7 +442,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write().role("custom").node("*").map,
@@ -451,7 +451,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     val error = the[InvalidArgumentsException] thrownBy {
-      execute(s"REVOKE DENY WRITE (*) ON GRAPH * ELEMENTS * (*) FROM custom")
+      execute(s"REVOKE DENY WRITE {*} ON GRAPH * ELEMENTS * (*) FROM custom")
     }
     // THEN
     error.getMessage should include("The role 'custom' does not have the specified privilege: DENY write * ON GRAPH * NODES *.")
@@ -479,7 +479,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
@@ -498,7 +498,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
@@ -509,7 +509,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -520,7 +520,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -541,7 +541,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     val expected = List("b", null)
@@ -564,7 +564,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (n:A)-[:REL {name:'a'}]->()")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     val expected = List("b", null)
@@ -593,7 +593,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n: A) WITH n, n.name as name DETACH DELETE n RETURN name", resultHandler = (row, _) => {
@@ -623,7 +623,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b' REMOVE n.prop") should be(0)
@@ -641,7 +641,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN n.name", resultHandler = (row, _) => {
@@ -677,7 +677,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -697,7 +697,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     setupUserWithCustomRole()
 
     // WHEN
-    execute(s"GRANT WRITE (*) ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS * (*) TO custom")
+    execute(s"GRANT WRITE {*} ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
@@ -726,8 +726,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     setupUserWithCustomRole()
 
     // WHEN
-    execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE (*) ON GRAPH foo ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("DENY WRITE {*} ON GRAPH foo ELEMENTS * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "CREATE (:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
