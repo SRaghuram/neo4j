@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.Random;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -62,6 +64,8 @@ class CommercialSecurityModuleTest
         when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
+        when( config.get( GraphDatabaseSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
+        when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( mockFileSystem.fileExists( any() ) ).thenReturn( false );
     }
 

@@ -238,14 +238,14 @@ class SystemGraphAuthCacheClearingIT
 
     private List<GraphDatabaseAPI> clusterSystemDbs( Cluster cluster )
     {
-        return cluster.allMembers()
+        return cluster.allMembers().stream()
                 .map( ClusterMember::systemDatabase )
                 .collect( Collectors.toList() );
     }
 
     private List<GraphDatabaseAPI> clusteruserDbs( Cluster cluster )
     {
-        return cluster.allMembers()
+        return cluster.allMembers().stream()
                 .map( ClusterMember::defaultDatabase )
                 .collect( Collectors.toList() );
     }
