@@ -26,7 +26,7 @@ import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.FakeCpuClock;
-import org.neo4j.test.FakeHeapAllocation;
+import org.neo4j.test.FakeMemoryTracker;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
@@ -55,7 +55,7 @@ class ConfiguredQueryLoggerTest
     private final FakeClock clock = Clocks.fakeClock();
     private final DatabaseId defaultDbId = randomDatabaseId();
     private final FakeCpuClock cpuClock = new FakeCpuClock();
-    private final FakeHeapAllocation heapAllocation = new FakeHeapAllocation();
+    private final FakeMemoryTracker memoryTracker = new FakeMemoryTracker();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private long pageHits;
     private long pageFaults;
@@ -449,10 +449,11 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+        query.executionStarted( memoryTracker );
 
         // when
         clock.forward( 17, TimeUnit.MILLISECONDS );
-        heapAllocation.add( 4096 );
+        memoryTracker.add( 4096 );
         queryLogger.success( query );
 
         // then
@@ -644,7 +645,6 @@ class ConfiguredQueryLoggerTest
                 thread.getId(),
                 thread.getName(),
                 clock,
-                cpuClock,
-                heapAllocation );
+                cpuClock );
     }
 }

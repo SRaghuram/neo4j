@@ -199,8 +199,22 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       threadToStatementContextBridge,
       tx,
       initialStatement,
-      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, databaseId, "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
-      new DefaultValueMapper(proxySpi), transactionFactory) {
+      new ExecutingQuery(queryId,
+                         ClientConnectionInfo.EMBEDDED_CONNECTION,
+                         databaseId,
+                         "username",
+                         "query text",
+                         queryParameters,
+                         metaData,
+                         activeLockCount,
+                         new DefaultPageCursorTracer(),
+                         threadExecutingTheQuery.getId,
+                         threadExecutingTheQuery.getName,
+                         Clocks.nanoClock(),
+                         CpuClock.CPU_CLOCK),
+      new DefaultValueMapper(proxySpi),
+      transactionFactory) {
+
       override def close(): Unit = ()
     }
   }

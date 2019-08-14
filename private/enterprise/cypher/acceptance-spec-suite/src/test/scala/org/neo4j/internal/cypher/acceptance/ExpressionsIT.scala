@@ -3840,8 +3840,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
                             new ApplyPlans,
                             new NestedPlanArgumentConfigurations,
                             new AvailableExpressionVariables,
-                            ParameterMapping.empty,
-                            0)
+                            ParameterMapping.empty)
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(SlottedExpressionConverters(plan),

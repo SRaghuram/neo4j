@@ -46,7 +46,6 @@ class MorselRuntime(parallelExecution: Boolean,
                                             query.logicalPlan,
                                             query.semanticTable,
                                             MorselPipelineBreakingPolicy,
-                                            context.config.transactionMaxMemory,
                                             allocateArgumentSlots = true)
 
     MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
@@ -93,7 +92,8 @@ class MorselRuntime(parallelExecution: Boolean,
                         query.resultColumns,
                         executor,
                         context.runtimeEnvironment.tracer,
-                        morselSize)
+                        morselSize,
+                        context.config.memoryTracking)
   }
 
   private def selectMorselSize(query: LogicalQuery,
@@ -112,7 +112,8 @@ class MorselRuntime(parallelExecution: Boolean,
                                  fieldNames: Array[String],
                                  queryExecutor: QueryExecutor,
                                  schedulerTracer: SchedulerTracer,
-                                 morselSize: Int) extends ExecutionPlan {
+                                 morselSize: Int,
+                                 memoryTracking: MemoryTracking) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -135,7 +136,8 @@ class MorselRuntime(parallelExecution: Boolean,
                               schedulerTracer,
                               subscriber,
                               doProfile,
-                              morselSize)
+                              morselSize,
+                              memoryTracking)
     }
 
     override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
@@ -163,7 +165,8 @@ class MorselRuntime(parallelExecution: Boolean,
                             schedulerTracer: SchedulerTracer,
                             subscriber: QuerySubscriber,
                             doProfile: Boolean,
-                            morselSize: Int) extends RuntimeResult {
+                            morselSize: Int,
+                            memoryTracking: MemoryTracking) extends RuntimeResult {
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
@@ -210,7 +213,8 @@ class MorselRuntime(parallelExecution: Boolean,
           prePopulateResults,
           subscriber,
           doProfile,
-          morselSize)
+          morselSize,
+          memoryTracking)
 
         querySubscription = sub
         _queryProfile = prof

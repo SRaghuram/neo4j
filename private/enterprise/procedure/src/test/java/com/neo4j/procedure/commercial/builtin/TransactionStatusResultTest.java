@@ -189,7 +189,7 @@ class TransactionStatusResultTest
         return new ExecutingQuery( queryId, getTestConnectionInfo(), new TestDatabaseIdRepository().defaultDatabase(), "testUser", "testQuery", EMPTY_MAP,
                 stringObjectEmptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
-                new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );
+                new CountingNanoClock(), new CountingCpuClock() );
     }
 
     private static HttpConnectionInfo getTestConnectionInfo()

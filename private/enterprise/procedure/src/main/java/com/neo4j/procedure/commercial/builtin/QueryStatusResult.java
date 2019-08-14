@@ -97,7 +97,7 @@ public class QueryStatusResult
         this.planner = query.planner();
         this.runtime = query.runtime();
         this.indexes = query.indexes();
-        this.allocatedBytes = query.allocatedBytes();
+        this.allocatedBytes = query.allocatedBytes().orElse( null );
         this.pageHits = query.pageHits();
         this.pageFaults = query.pageFaults();
         this.connectionId = clientConnection.connectionId();

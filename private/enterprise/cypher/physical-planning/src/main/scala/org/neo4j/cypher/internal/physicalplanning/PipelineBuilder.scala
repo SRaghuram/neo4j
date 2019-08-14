@@ -21,12 +21,10 @@ object PipelineBuilder {
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,
-      executionStateDefinitionBuild.buffers.map(mapBuffer),
-      executionStateDefinitionBuild.argumentStateMaps.map(mapArgumentStateDefinition),
-      pipelineTreeBuilder.pipelines.map(mapPipeline),
-      pipelineTreeBuilder.applyRhsPlans.toMap,
-      physicalPlan.transactionMaxMemory
-    )
+                             executionStateDefinitionBuild.buffers.map(mapBuffer),
+                             executionStateDefinitionBuild.argumentStateMaps.map(mapArgumentStateDefinition),
+                             pipelineTreeBuilder.pipelines.map(mapPipeline),
+                             pipelineTreeBuilder.applyRhsPlans.toMap)
   }
 
   private def mapPipeline(pipeline: PipelineDefinitionBuild): PipelineDefinition = {

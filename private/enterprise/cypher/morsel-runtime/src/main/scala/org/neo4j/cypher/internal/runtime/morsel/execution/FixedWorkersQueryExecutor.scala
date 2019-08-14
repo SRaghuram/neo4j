@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManagement, WorkerResourceProvider}
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, MemoryTracking, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -47,7 +47,8 @@ class FixedWorkersQueryExecutor(transactionBinder: TransactionBinder,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
                                        doProfile: Boolean,
-                                       morselSize: Int): ProfiledQuerySubscription = {
+                                       morselSize: Int,
+                                       memoryTracking: MemoryTracking): ProfiledQuerySubscription = {
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 

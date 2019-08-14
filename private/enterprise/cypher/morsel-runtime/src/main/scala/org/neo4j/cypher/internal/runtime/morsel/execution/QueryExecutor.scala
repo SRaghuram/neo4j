@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.morsel.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryMemoryTracker}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, MemoryTracking, QueryContext, QueryMemoryTracker}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
@@ -33,7 +33,8 @@ trait QueryExecutor {
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber,
                               doProfile: Boolean,
-                              morselSize: Int): ProfiledQuerySubscription
+                              morselSize: Int,
+                              memoryTracking: MemoryTracking): ProfiledQuerySubscription
 
   /**
     * Assert that all resources that have been acquired for query execution by any query have also been released

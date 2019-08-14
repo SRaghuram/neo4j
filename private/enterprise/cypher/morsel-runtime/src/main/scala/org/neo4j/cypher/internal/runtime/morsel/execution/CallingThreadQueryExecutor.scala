@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{MemoryTrackingStandardStateFactory, StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker, WorkerResourceProvider}
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, _}
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -41,15 +41,17 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
                                        prePopulateResults: Boolean,
                                        subscriber: QuerySubscriber,
                                        doProfile: Boolean,
-                                       morselSize: Int): ProfiledQuerySubscription = {
+                                       morselSize: Int,
+                                       memoryTracking: MemoryTracking): ProfiledQuerySubscription = {
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
-    val stateFactory = if (executionGraphDefinition.transactionMaxMemory == 0) {
-      new StandardStateFactory
-    } else {
-      new MemoryTrackingStandardStateFactory(executionGraphDefinition.transactionMaxMemory)
-    }
+    val stateFactory =
+      memoryTracking match {
+        case NO_TRACKING => new StandardStateFactory
+        case MEMORY_TRACKING => new MemoryTrackingStandardStateFactory(Long.MaxValue)
+        case MEMORY_BOUND(maxAllocatedBytes) => new MemoryTrackingStandardStateFactory(maxAllocatedBytes)
+      }
 
     val resources = new QueryResources(cursors)
     val tracer = schedulerTracer.traceQuery()

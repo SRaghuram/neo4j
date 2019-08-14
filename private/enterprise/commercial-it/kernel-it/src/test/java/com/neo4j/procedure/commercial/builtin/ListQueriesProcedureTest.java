@@ -178,6 +178,7 @@ public class ListQueriesProcedureTest
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
         final Node node;
+        Object allocatedBytes;
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             node = test.resource();
@@ -186,9 +187,8 @@ public class ListQueriesProcedureTest
 
             // then
             assertThat( data, hasKey( "allocatedBytes" ) );
-            Object allocatedBytes = data.get( "allocatedBytes" );
-            assertThat( allocatedBytes, anyOf( nullValue(), (Matcher) allOf(
-                    instanceOf( Long.class ), greaterThan( 0L ) ) ) );
+            allocatedBytes = data.get( "allocatedBytes" );
+            assertThat( allocatedBytes, (Matcher) allOf( instanceOf( Long.class ), greaterThanOrEqualTo( 0L ) ) );
         }
 
         try ( Resource<Node> test = test( () -> node, query ) )
@@ -197,9 +197,7 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( query );
 
             assertThat( data, hasKey( "allocatedBytes" ) );
-            Object allocatedBytes = data.get( "allocatedBytes" );
-            assertThat( allocatedBytes,
-                    anyOf( nullValue(), (Matcher) allOf( instanceOf( Long.class ), greaterThan( 0L ) ) ) );
+            assertThat( data.get( "allocatedBytes" ), equalTo( allocatedBytes ) );
             assertSame( node, test.resource() );
         }
     }
@@ -481,6 +479,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
     }
 
+    // TODO: make this setting dynamic again
     @Test
     public void heapAllocationTrackingShouldBeADynamicSetting() throws Exception
     {

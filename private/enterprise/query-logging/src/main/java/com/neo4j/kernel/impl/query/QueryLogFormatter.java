@@ -8,6 +8,7 @@ package com.neo4j.kernel.impl.query;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.helpers.Strings;
@@ -30,11 +31,8 @@ class QueryLogFormatter
 
     static void formatAllocatedBytes( StringBuilder result, QuerySnapshot query )
     {
-        Long bytes = query.allocatedBytes();
-        if ( bytes != null )
-        {
-            result.append( bytes ).append( " B - " );
-        }
+        Optional<Long> bytes = query.allocatedBytes();
+        bytes.ifPresent( x -> result.append( x ).append( " B - " ) );
     }
 
     static void formatDetailedTime( StringBuilder result, QuerySnapshot query )
@@ -68,7 +66,7 @@ class QueryLogFormatter
         result.append( "}" );
     }
 
-    static String formatAnyValue( AnyValue value )
+    private static String formatAnyValue( AnyValue value )
     {
         PrettyPrinter printer = new PrettyPrinter( "'" );
         value.writeTo( printer );
@@ -80,7 +78,7 @@ class QueryLogFormatter
         formatMap( result, params, Collections.emptySet() );
     }
 
-    static void formatMap( StringBuilder result, Map<String, Object> params, Collection<String> obfuscate )
+    private static void formatMap( StringBuilder result, Map<String,Object> params, Collection<String> obfuscate )
     {
         result.append( '{' );
         if ( params != null )
