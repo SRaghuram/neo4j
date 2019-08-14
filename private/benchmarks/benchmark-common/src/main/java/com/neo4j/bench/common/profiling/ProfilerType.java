@@ -37,7 +37,7 @@ public enum ProfilerType
             RecordingType.JFR,
             // requires no environment variables
             Sets.newHashSet(),
-            SecondaryRecordingCreator.NONE ),
+            new SecondaryRecordingCreator.MemoryAllocationFlamegrapCreator() ),
     STRACE(
             StraceTracer.class,
             RecordingType.TRACE_STRACE,
