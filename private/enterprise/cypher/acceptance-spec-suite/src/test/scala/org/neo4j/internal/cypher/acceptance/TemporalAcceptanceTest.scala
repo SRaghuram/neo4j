@@ -905,7 +905,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("inMonths", "inDays"); arg1 <- args; arg2 <- args) {
       val query = s"RETURN duration.$func($arg1, $arg2)"
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, Seq.empty, Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, Seq.empty, Seq("UnsupportedTemporalUnitException"))
       }
     }
   }
@@ -1007,19 +1007,19 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (receiver <- receivers; arg <- args) {
       val query = s"RETURN $receiver.truncate('$truncationUnit', $arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, Seq(errorMsg), Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, Seq(errorMsg), Seq("UnsupportedTemporalUnitException"))
       }
     }
   }
 
   private def shouldNotSelectFrom(withX: String, returnFuncs: Seq[String], args: Seq[String]): Unit = {
     val validErrorMessages = Seq("Cannot get the date of", "Cannot get the time of", "Cannot select datetime from")
-    shouldNotSelectWithArg(withX, returnFuncs, args, "CypherTypeException", validErrorMessages)
+    shouldNotSelectWithArg(withX, returnFuncs, args, "UnsupportedTemporalUnitException", validErrorMessages)
   }
 
   private def shouldNotSelectInto(withX: String, returnFuncs: Seq[String], args: Seq[String]): Unit = {
     val validErrorMessages = Seq("Not supported", "Cannot assign time zone if also assigning other fields.")
-    shouldNotSelectWithArg(withX, returnFuncs, args, "CypherTypeException", validErrorMessages)
+    shouldNotSelectWithArg(withX, returnFuncs, args, "UnsupportedTemporalUnitException", validErrorMessages)
   }
 
   private def shouldNotSelectWithArg(withX: String, returnFuncs: Seq[String], args: Seq[String], errorType: String, validErrorMessages: Seq[String]): Unit = {
@@ -1036,7 +1036,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $typ($args).$acc"
       val validErrorMessages = Seq("No such field", "Unsupported field", "Cannot get the offset of", "Cannot get the time zone of", "not supported")
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, validErrorMessages, Seq("CypherTypeException"))
+        failWithError(Configs.UDF, query, validErrorMessages, Seq("UnsupportedTemporalUnitException"))
       }
     }
   }
@@ -1046,7 +1046,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $func($arg)"
       val validErrorMessages = Seq("Cannot assign", "cannot be selected together with", "cannot be specified without", "must be specified", "Invalid value")
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
+        failWithError(Configs.UDF, query, validErrorMessages, Seq("InvalidArgumentException", "UnsupportedTemporalUnitException", "TemporalParseException"))
       }
     }
   }
