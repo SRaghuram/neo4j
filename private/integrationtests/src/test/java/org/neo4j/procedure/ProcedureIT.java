@@ -1551,7 +1551,8 @@ public class ProcedureIT
 
             // Renaming should not interfere with this
             // When
-            res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield() yield string as s, integer as i, aFloat as f, aBoolean as b RETURN *" );
+            res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield() yield string as s, integer as i, aFloat as f, aBoolean as b " +
+                    "RETURN *" );
 
             // Then
             assertTrue(res.hasNext());
