@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -18,8 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -34,6 +33,7 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@Disabled
 @ExtendWith( SuppressOutputExtension.class )
 class PanicServiceTest
 {
