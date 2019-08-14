@@ -13,9 +13,9 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
-import org.neo4j.cypher.ParameterWrongTypeException
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.exceptions.ParameterWrongTypeException
 
 // TODO: Extract abstract base class in physical planning module, with subclass tests for both slotted and morsel runtimes
 

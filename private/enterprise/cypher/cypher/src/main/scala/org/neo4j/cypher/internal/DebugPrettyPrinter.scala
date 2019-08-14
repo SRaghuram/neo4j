@@ -6,12 +6,12 @@
 package org.neo4j.cypher.internal
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter._
-import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.v4_0.util.CypherException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.InternalException
 
 trait DebugPrettyPrinter {
   val PRINT_QUERY_TEXT = true

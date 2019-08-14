@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.cypher.{CantCompileQueryException, InternalException}
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
@@ -23,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionCo
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
 
 class FuseOperators(operatorFactory: OperatorFactory,

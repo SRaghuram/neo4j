@@ -16,8 +16,6 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.DatabaseAdministrationException
-import org.neo4j.cypher.{CantCompileQueryException, DatabaseAdministrationException}
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
@@ -26,6 +24,7 @@ import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
+import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException}
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.values.AnyValue

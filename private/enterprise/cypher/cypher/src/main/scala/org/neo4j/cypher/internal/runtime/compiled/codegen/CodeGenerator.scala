@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 import java.time.Clock
 import java.util
 
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
@@ -23,6 +22,7 @@ import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 

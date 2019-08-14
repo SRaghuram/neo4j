@@ -11,6 +11,8 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.plandescription.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+import org.neo4j.exceptions
+import org.neo4j.exceptions.{Neo4jException, LoadCsvStatusWrapCypherException, PeriodicCommitInOpenTransactionException, SyntaxException}
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.storageengine.api.TransactionIdStore
@@ -129,7 +131,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val query = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: (toInteger(line[0]) - 8)/0})"
 
     // when
-    val (_, txCounts) = prepareAndTrackTxCounts(intercept[ArithmeticException](
+    val (_, txCounts) = prepareAndTrackTxCounts(intercept[exceptions.ArithmeticException](
       unwrapLoadCSVStatus(executeScalar[Number](query))
     ))
 
@@ -157,7 +159,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val queryText = s"USING PERIODIC COMMIT 10 LOAD CSV FROM '$url' AS line CREATE ({x: 1 / (toInteger(line[0]) - 16)})"
 
     // when
-    val (_, txCounts) = prepareAndTrackTxCounts(intercept[ArithmeticException](
+    val (_, txCounts) = prepareAndTrackTxCounts(intercept[exceptions.ArithmeticException](
       unwrapLoadCSVStatus(executeScalar[Number](queryText))
     ))
 
@@ -211,7 +213,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
         s"CREATE ({name: 1/toInteger(line[0])})"
 
     // when executing 5 updates
-    val e = intercept[CypherException](execute(queryText))
+    val e = intercept[Neo4jException](execute(queryText))
 
     val errorMessage = "csv' on line 3"
     // then

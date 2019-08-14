@@ -9,7 +9,6 @@ import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -25,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryS
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, Read}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue

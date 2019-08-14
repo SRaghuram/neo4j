@@ -9,6 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.exceptions.ArithmeticException
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -42,7 +43,7 @@ abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRu
     val futureResult = Future(consume(execute(logicalQuery, runtime)))(global)
 
     // then
-    intercept[org.neo4j.cypher.ArithmeticException] {
+    intercept[ArithmeticException] {
       Await.result(futureResult, 30.seconds)
     }
   }

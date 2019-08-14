@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.InternalException
+import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable
 

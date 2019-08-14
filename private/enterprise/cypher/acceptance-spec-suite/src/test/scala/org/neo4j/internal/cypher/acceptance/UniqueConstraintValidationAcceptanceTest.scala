@@ -8,7 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import org.hamcrest.CoreMatchers._
 import org.junit.Assert._
 import org.neo4j.cypher.internal.compiler.helpers.ListSupport
-import org.neo4j.cypher.{CypherExecutionException, ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.exceptions.CypherExecutionException
 
 class UniqueConstraintValidationAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with ListSupport {

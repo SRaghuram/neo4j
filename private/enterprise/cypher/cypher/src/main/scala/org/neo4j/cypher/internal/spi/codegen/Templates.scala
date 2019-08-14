@@ -15,7 +15,6 @@ import org.neo4j.codegen.MethodDeclaration.Builder
 import org.neo4j.codegen.MethodReference._
 import org.neo4j.codegen._
 import org.neo4j.common.TokenNameLookup
-import org.neo4j.cypher.CypherExecutionException
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.javacompat.ResultRowImpl
 import org.neo4j.cypher.internal.profiling.QueryProfiler
@@ -23,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeProxyById, newRelationshipProxyById}
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
-import org.neo4j.exceptions.KernelException
+import org.neo4j.exceptions.{CypherExecutionException, KernelException}
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException

@@ -7,9 +7,8 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.{DatabaseAdministrationException, InvalidArgumentException}
+import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {

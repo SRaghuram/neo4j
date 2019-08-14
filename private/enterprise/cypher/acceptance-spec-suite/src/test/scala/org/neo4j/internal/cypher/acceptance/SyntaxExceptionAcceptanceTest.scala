@@ -5,7 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{CypherException, ExecutionEngineFunSuite}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.Neo4jException
 
 import scala.util.matching.Regex
 
@@ -113,7 +114,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
       execute(query)
       fail(s"Did not get the expected syntax error, expected: $message")
     } catch {
-      case x: CypherException =>
+      case x: Neo4jException =>
         val actual = x.getMessage.linesIterator.next.trim
         actual should startWith(message.init)
     }
@@ -124,7 +125,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
       execute(query)
       fail(s"Did not get the expected syntax error, expected matching: '$messageRegex'")
     } catch {
-      case x: CypherException =>
+      case x: Neo4jException =>
         val actual = x.getMessage.linesIterator.next().trim
         messageRegex findFirstIn actual match {
           case None => fail(s"Expected matching '$messageRegex', but was '$actual'")

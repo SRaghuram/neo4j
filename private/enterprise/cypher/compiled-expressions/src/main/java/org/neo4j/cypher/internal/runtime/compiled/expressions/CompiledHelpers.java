@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
-import org.neo4j.cypher.CypherTypeException;
+import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;

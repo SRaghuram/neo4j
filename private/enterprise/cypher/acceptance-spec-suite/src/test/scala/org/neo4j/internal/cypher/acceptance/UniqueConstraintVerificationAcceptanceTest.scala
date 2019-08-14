@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 import java.time.{LocalDate, LocalDateTime}
 
-import org.neo4j.cypher.{CypherExecutionException, ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.graphdb.{ConstraintViolationException, Label}
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException
 

@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
-import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.InternalException
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.storable.Values
 

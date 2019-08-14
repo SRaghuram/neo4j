@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.exceptions.CantCompileQueryException
 
 object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
 

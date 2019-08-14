@@ -15,7 +15,6 @@ import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet
 import org.neo4j.codegen.Expression.{invoke, not, or, _}
 import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen._
-import org.neo4j.cypher.ParameterNotFoundException
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
 import org.neo4j.cypher.internal.codegen._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -30,6 +29,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.helpers._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
+import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor

@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
@@ -15,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.CypherException
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
 
 object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {

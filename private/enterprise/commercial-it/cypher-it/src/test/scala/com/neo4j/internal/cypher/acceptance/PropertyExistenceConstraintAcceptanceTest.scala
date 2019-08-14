@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.compiler.helpers.ListSupport
+import org.neo4j.exceptions.{ConstraintValidationException, CypherExecutionException}
 import org.neo4j.kernel.api.exceptions.Status
 
 class PropertyExistenceConstraintAcceptanceTest

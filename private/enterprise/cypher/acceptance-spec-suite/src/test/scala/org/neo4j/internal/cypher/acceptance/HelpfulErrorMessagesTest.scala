@@ -5,7 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherComparisonSupport {

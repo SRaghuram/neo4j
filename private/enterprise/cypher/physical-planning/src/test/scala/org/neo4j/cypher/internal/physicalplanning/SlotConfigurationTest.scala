@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.exceptions.InternalException
 
 class SlotConfigurationTest extends CypherFunSuite {
   test("allocating same variable name with compatible type but different nullability should increase nullability 1") {

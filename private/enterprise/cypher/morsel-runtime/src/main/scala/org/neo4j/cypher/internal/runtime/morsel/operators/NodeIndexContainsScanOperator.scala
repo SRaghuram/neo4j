@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
-import org.neo4j.cypher.CypherTypeException
+import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.TextValue

@@ -8,7 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import java.lang.Boolean.TRUE
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ExhaustiveShortestPathForbiddenException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.ExhaustiveShortestPathForbiddenException
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.impl.notification.NotificationCode.EXHAUSTIVE_SHORTEST_PATH

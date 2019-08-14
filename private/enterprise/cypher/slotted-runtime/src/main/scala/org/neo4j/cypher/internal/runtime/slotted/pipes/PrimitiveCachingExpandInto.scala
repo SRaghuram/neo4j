@@ -9,7 +9,7 @@ import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{QueryContext, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
-import org.neo4j.cypher.InternalException
+import org.neo4j.exceptions.InternalException
 import org.neo4j.storageengine.api.RelationshipVisitor
 
 import scala.collection.mutable

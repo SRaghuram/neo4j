@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.expressions.{CachedProperty, NODE_TYPE, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.exceptions.InternalException
 import org.neo4j.values.storable.BooleanValue
 import org.neo4j.values.storable.Values.stringValue
 

@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.runtime._
@@ -13,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration,
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, removeCachedProperties}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue

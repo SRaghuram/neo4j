@@ -10,6 +10,7 @@ import java.io.PrintWriter
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.graphdb.{QueryExecutionException, TransactionFailureException}
 import org.neo4j.internal.cypher.acceptance.TestResourceProcedure._
 import org.neo4j.internal.kernel.api.Transaction

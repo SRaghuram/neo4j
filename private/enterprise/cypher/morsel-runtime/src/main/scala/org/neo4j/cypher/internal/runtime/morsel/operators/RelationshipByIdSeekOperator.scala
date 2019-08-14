@@ -9,7 +9,6 @@ import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.{ManySeekableArgs, SeekableArgs, SingleSeekableArg}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -26,6 +25,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, Que
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue

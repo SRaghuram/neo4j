@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.{Filename, Linenumber, Type}
+import org.neo4j.exceptions.CantCompileQueryException
 
 object MorselBlacklist {
 

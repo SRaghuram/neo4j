@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.CantCompileQueryException
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -21,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, NoMemor
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.CypherFunctions
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.ListValue

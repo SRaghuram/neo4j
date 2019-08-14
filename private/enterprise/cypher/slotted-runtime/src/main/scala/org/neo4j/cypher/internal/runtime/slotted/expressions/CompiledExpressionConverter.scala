@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -23,6 +22,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
-import org.neo4j.cypher.TransactionOutOfMemoryException
+import org.neo4j.exceptions.TransactionOutOfMemoryException
 import org.neo4j.kernel.impl.util.ValueUtils
 
 trait WithSlotsMemoryManagementTestBase {

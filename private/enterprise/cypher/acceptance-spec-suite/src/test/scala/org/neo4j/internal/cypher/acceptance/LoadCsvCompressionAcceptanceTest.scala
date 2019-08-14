@@ -12,7 +12,8 @@ import java.util.zip.{DeflaterOutputStream, GZIPOutputStream}
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
 import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, LoadExternalResourceException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.LoadExternalResourceException
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with BeforeAndAfterAll {

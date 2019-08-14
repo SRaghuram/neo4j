@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
-import org.neo4j.cypher.InvalidArgumentException
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.FloatingPointValue
 

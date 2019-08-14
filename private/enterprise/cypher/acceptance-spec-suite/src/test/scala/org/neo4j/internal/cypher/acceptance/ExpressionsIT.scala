@@ -31,7 +31,9 @@ import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
-import org.neo4j.cypher.{ArithmeticException, CypherTypeException, ExecutionEngineFunSuite, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions
+import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.graphdb.{Entity, Relationship}
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
@@ -852,10 +854,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(NO_VALUE, longValue(42))) should equal(NO_VALUE)
     evaluate(compiled, params(longValue(6), longValue(3))) should equal(longValue(2))
     evaluate(compiled, params(longValue(5), doubleValue(2))) should equal(doubleValue(2.5))
-    an[ArithmeticException] should be thrownBy evaluate(compiled, params(longValue(5), longValue(0)))
+    an[exceptions.ArithmeticException] should be thrownBy evaluate(compiled, params(longValue(5), longValue(0)))
     evaluate(compiled, params(doubleValue(3.0), doubleValue(0.0))) should equal(doubleValue(Double.PositiveInfinity))
     evaluate(compiled, params(durationValue(Duration.ofHours(4)), longValue(2))) should equal(durationValue(Duration.ofHours(2)))
-    an[ArithmeticException] should be thrownBy evaluate(compiled, params(NO_VALUE, longValue(0)))
+    an[exceptions.ArithmeticException] should be thrownBy evaluate(compiled, params(NO_VALUE, longValue(0)))
   }
 
   test("modulo") {

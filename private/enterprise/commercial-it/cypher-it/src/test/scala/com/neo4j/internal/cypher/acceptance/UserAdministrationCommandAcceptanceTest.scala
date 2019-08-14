@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher._
+import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, ParameterNotFoundException, ParameterWrongTypeException, SyntaxException}
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED

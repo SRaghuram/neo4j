@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.aggregators
 
-import org.neo4j.cypher.{CantCompileQueryException, SyntaxException}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, FunctionInvocation, Null, functions, Expression => AstExpression}
+import org.neo4j.exceptions.{CantCompileQueryException, SyntaxException}
 
 case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 

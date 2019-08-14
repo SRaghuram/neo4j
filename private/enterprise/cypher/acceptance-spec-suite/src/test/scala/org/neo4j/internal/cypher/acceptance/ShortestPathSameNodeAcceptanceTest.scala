@@ -13,7 +13,8 @@ import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, ShortestPathCommonEndNodesForbiddenException}
+import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
+import org.neo4j.exceptions.ShortestPathCommonEndNodesForbiddenException
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.kernel.impl.query.RecordingQuerySubscriber

@@ -14,7 +14,7 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.cypher.CypherExecutionException;
+import org.neo4j.exceptions.CypherExecutionException;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.DeadlockDetectedException;

@@ -7,6 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.exceptions
+import org.neo4j.exceptions.{CypherTypeException, InvalidSemanticsException, LoadCsvStatusWrapCypherException, LoadExternalResourceException}
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
@@ -64,7 +66,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
       })
 
       val queryText = s"CYPHER runtime=$runtime LOAD CSV FROM '$url' AS line CREATE ({name: 1/toInteger(line[0])})"
-      val e = intercept[ArithmeticException](execute(queryText))
+      val e = intercept[exceptions.ArithmeticException](execute(queryText))
       e.getMessage should include regex """/ by zero.+csv' on line 3.+"""
     }
 
@@ -84,7 +86,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | WITH count(o) as count
            | RETURN 1/count""".stripMargin
-      val e = intercept[ArithmeticException](execute(query))
+      val e = intercept[exceptions.ArithmeticException](execute(query))
       e.getMessage should include("/ by zero")
       e.getMessage should not include "' on line"
     }
@@ -105,7 +107,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | WITH count(o) as count
            | RETURN 1/count""".stripMargin
-      val e = intercept[ArithmeticException](execute(query))
+      val e = intercept[exceptions.ArithmeticException](execute(query))
       e.getMessage should include("/ by zero")
       e.getMessage should not include "' on line"
     }
@@ -126,7 +128,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId AND o.field1 = 1/toInteger(row.field1)
            | WITH count(o) as count
            | RETURN count""".stripMargin
-      val e = intercept[ArithmeticException](execute(query))
+      val e = intercept[exceptions.ArithmeticException](execute(query))
       e.getMessage should include regex """/ by zero.+csv' on line 2.+"""
     }
 
@@ -164,7 +166,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId AND 1/toInteger(o.field1) = 2
            | WITH DISTINCT o.OrderId AS order
            | RETURN order""".stripMargin
-      val e1 = intercept[ArithmeticException](execute(query1))
+      val e1 = intercept[exceptions.ArithmeticException](execute(query1))
       e1.getMessage should include regex """/ by zero.+csv' on line 3.+"""
 
       val query2 =
@@ -172,7 +174,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | WITH DISTINCT 1/toInteger(o.field1) AS f
            | RETURN f""".stripMargin
-      val e2 = intercept[ArithmeticException](execute(query2))
+      val e2 = intercept[exceptions.ArithmeticException](execute(query2))
       e2.getMessage should include regex """/ by zero.+csv' on line 3.+"""
 
       val query3 =
@@ -180,7 +182,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | WITH DISTINCT o
            | RETURN 1/toInteger(o.field1)""".stripMargin
-      val e3 = intercept[ArithmeticException](execute(query3))
+      val e3 = intercept[exceptions.ArithmeticException](execute(query3))
       e3.getMessage should include regex """/ by zero.+csv' on line 3.+"""
     }
 
@@ -208,7 +210,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
         s"""CYPHER runtime=$runtime PROFILE LOAD CSV WITH HEADERS FROM '$url' AS row
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId AND o.field1 = 1/toInteger(row.field1)
            | RETURN o""".stripMargin
-      val e2 = intercept[ArithmeticException](execute(query2))
+      val e2 = intercept[exceptions.ArithmeticException](execute(query2))
       e2.getMessage should include regex """/ by zero.+csv' on line 2.+"""
     }
 
@@ -250,7 +252,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            |MATCH (o:Order) WHERE o.OrderId = row.OrderId AND o.field1 = 1/toInteger(row.field1)
            |CREATE (o)-[:KNOWS]->()
          """.stripMargin
-      val e2 = intercept[ArithmeticException](execute(queryText2))
+      val e2 = intercept[exceptions.ArithmeticException](execute(queryText2))
       e2.getMessage should include regex """/ by zero.+orders\d+\.csv' on line 4 \(which is the last row in the file\).+"""
     }
 
@@ -279,7 +281,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            |RETURN o
          """.stripMargin
 
-      val e1 = intercept[ArithmeticException](execute(query1))
+      val e1 = intercept[exceptions.ArithmeticException](execute(query1))
       e1.getMessage should include regex """/ by zero.+orders-\d+\.csv' on line 4 \(which is the last row in the file\).+"""
 
       val query2 =
@@ -290,7 +292,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            |RETURN o
          """.stripMargin
 
-      val e2 = intercept[ArithmeticException](execute(query2))
+      val e2 = intercept[exceptions.ArithmeticException](execute(query2))
       e2.getMessage should include regex """/ by zero.+fields-\d+\.csv' on line 3.+"""
 
       val query3 =
@@ -302,7 +304,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
           |MATCH (x:Order) WHERE x.OrderId = order AND x.field1 = 1/toInteger(row2.field1)
           |RETURN x
         """.stripMargin
-      val e3 = intercept[ArithmeticException](execute(query3))
+      val e3 = intercept[exceptions.ArithmeticException](execute(query3))
       e3.getMessage should include regex """/ by zero.+fields-\d+\.csv' on line 3.+"""
     }
   }

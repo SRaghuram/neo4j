@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap._
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMapWithArgumentIdCounter, QueryCompletionTracker, StateFactory}
-import org.neo4j.cypher.InternalException
+import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable.ArrayBuffer
 
