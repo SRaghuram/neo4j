@@ -244,22 +244,22 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CREATE ROLE foo" );
 
         // WHEN
-        execute( adminContext, "GRANT MATCH (*) ON GRAPH * TO foo" );
-        execute( adminContext, "GRANT MATCH (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "GRANT MATCH (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
-        execute( adminContext, "GRANT READ (*) ON GRAPH * TO foo" );
-        execute( adminContext, "GRANT READ (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "GRANT READ (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
+        execute( adminContext, "GRANT MATCH {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
+        execute( adminContext, "GRANT READ {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 7 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT MATCH (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT MATCH (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT MATCH (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "GRANT READ (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT READ (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT READ (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "GRANT READ {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
     }
 
     @Test
@@ -303,22 +303,22 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CREATE ROLE foo" );
 
         // WHEN
-        execute( adminContext, "DENY MATCH (*) ON GRAPH * TO foo" );
-        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "DENY MATCH (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
-        execute( adminContext, "DENY READ (*) ON GRAPH * TO foo" );
-        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "DENY READ (bar,baz) ON GRAPH * RELATIONSHIPS C,D TO foo" );
+        execute( adminContext, "DENY MATCH {*} ON GRAPH * TO foo" );
+        execute( adminContext, "DENY MATCH {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "DENY MATCH {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
+        execute( adminContext, "DENY READ {*} ON GRAPH * TO foo" );
+        execute( adminContext, "DENY READ {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "DENY READ {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 7 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ (*) ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * NODES A, B (*) TO foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ (bar, baz) ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "DENY READ {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "DENY READ {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
     }
 
     @Test
@@ -363,34 +363,34 @@ class SecurityAdministrationCommandLoggingIT
     {
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
-        execute( adminContext, "GRANT MATCH (*) ON GRAPH * TO foo" );
-        execute( adminContext, "GRANT MATCH (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "GRANT MATCH (bar,baz) ON GRAPH * RELATIONSHIPS A,B TO foo" );
+        execute( adminContext, "GRANT MATCH {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B TO foo" );
 
         // WHEN
-        execute( adminContext, "REVOKE MATCH (bar,baz) ON GRAPH * RELATIONSHIPS A,B FROM foo" );
-        execute( adminContext, "REVOKE MATCH (bar,baz) ON GRAPH * NODES A,B FROM foo" );
-        execute( adminContext, "REVOKE MATCH (*) ON GRAPH * FROM foo" );
+        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B FROM foo" );
+        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * NODES A,B FROM foo" );
+        execute( adminContext, "REVOKE MATCH {*} ON GRAPH * FROM foo" );
 
         // GIVEN
-        execute( adminContext, "GRANT READ (*) ON GRAPH * TO foo" );
-        execute( adminContext, "GRANT READ (bar,baz) ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "GRANT READ (bar,baz) ON GRAPH * RELATIONSHIPS A,B TO foo" );
+        execute( adminContext, "GRANT READ {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * RELATIONSHIPS A,B TO foo" );
 
         // WHEN
-        execute( adminContext, "REVOKE READ (bar,baz) ON GRAPH * RELATIONSHIPS A,B FROM foo" );
-        execute( adminContext, "REVOKE READ (bar,baz) ON GRAPH * NODES A,B FROM foo" );
-        execute( adminContext, "REVOKE READ (*) ON GRAPH * FROM foo" );
+        execute( adminContext, "REVOKE READ {bar,baz} ON GRAPH * RELATIONSHIPS A,B FROM foo" );
+        execute( adminContext, "REVOKE READ {bar,baz} ON GRAPH * NODES A,B FROM foo" );
+        execute( adminContext, "REVOKE READ {*} ON GRAPH * FROM foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 13 ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH (bar, baz) ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH (bar, baz) ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH (*) ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
-        assertThat( logLines.get( 10 ), containsString( withSubject( adminContext, "REVOKE READ (bar, baz) ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 11 ), containsString( withSubject( adminContext, "REVOKE READ (bar, baz) ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 12 ), containsString( withSubject( adminContext, "REVOKE READ (*) ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 10 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 11 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 12 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
     @Test

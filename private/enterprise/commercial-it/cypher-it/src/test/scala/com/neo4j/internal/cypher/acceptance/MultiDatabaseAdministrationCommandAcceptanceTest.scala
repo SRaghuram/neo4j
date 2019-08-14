@@ -410,7 +410,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE ROLE custom")
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO joe")
-    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
@@ -469,7 +469,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
-    execute("GRANT MATCH (*) ON GRAPH foo NODES * (*) TO custom")
+    execute("GRANT MATCH {*} ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
@@ -514,7 +514,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
-    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(

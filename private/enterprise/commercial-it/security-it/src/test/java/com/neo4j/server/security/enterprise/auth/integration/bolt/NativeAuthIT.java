@@ -97,7 +97,7 @@ public class NativeAuthIT
                 session.run( "CREATE DATABASE foo" ).consume();
                 session.run( "CREATE ROLE fooRole" ).consume();
                 session.run( "CALL dbms.security.createUser('fooUser', 'fooPassword')" ).consume();
-                session.run( "GRANT MATCH (foo) ON GRAPH * NODES * TO fooRole" ).consume();
+                session.run( "GRANT MATCH {foo} ON GRAPH * NODES * TO fooRole" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO fooRole" ).consume();
             }
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
@@ -146,7 +146,7 @@ public class NativeAuthIT
                 session.run( "CREATE ROLE custom" ).consume();
                 session.run( "CREATE USER joe SET PASSWORD $password CHANGE NOT REQUIRED", map( "password", getPassword() ) ).consume();
                 session.run( "GRANT ROLE custom TO joe", map( "password", getPassword() ) ).consume();
-                session.run( "GRANT MATCH (prop1) ON GRAPH * NODES * TO custom" ).consume();
+                session.run( "GRANT MATCH {prop1} ON GRAPH * NODES * TO custom" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO custom" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH foo NODES A TO custom" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH foo RELATIONSHIPS X TO custom" ).consume();
@@ -199,10 +199,10 @@ public class NativeAuthIT
                 session.run( "CREATE USER tim SET PASSWORD $password CHANGE NOT REQUIRED", map( "password", getPassword() ) ).consume();
                 session.run( "CREATE ROLE role" ).consume();
                 session.run( "GRANT ROLE role TO tim" ).consume();
-                session.run( "GRANT MATCH(*) ON GRAPH * ELEMENTS * TO role" ).consume();
+                session.run( "GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH * NODES City TO role" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH * RELATIONSHIPS FROM TO role" ).consume();
-                session.run( "DENY READ(name) ON GRAPH * NODES Person TO role" ).consume();
+                session.run( "DENY READ {name} ON GRAPH * NODES Person TO role" ).consume();
                 session.run( "CREATE DATABASE foo" ).consume();
             }
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )

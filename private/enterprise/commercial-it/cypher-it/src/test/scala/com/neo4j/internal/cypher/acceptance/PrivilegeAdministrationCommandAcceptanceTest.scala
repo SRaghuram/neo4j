@@ -29,17 +29,17 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "DENY TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE DENY TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
 
-      "GRANT READ(prop) ON GRAPH * NODES * TO custom" -> 1,
-      "REVOKE GRANT READ(prop) ON GRAPH * NODES * FROM custom" -> 1,
-      "DENY READ(prop) ON GRAPH * NODES * TO custom" -> 1,
-      "REVOKE DENY READ(prop) ON GRAPH * NODES * FROM custom" -> 1,
+      "GRANT READ {prop} ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE GRANT READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
+      "DENY READ {prop} ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE DENY READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
 
-      "GRANT MATCH(prop) ON GRAPH * NODES * TO custom" -> 2,
-      "REVOKE GRANT MATCH(prop) ON GRAPH * NODES * FROM custom" -> 1,
-      "DENY MATCH(prop) ON GRAPH * NODES * TO custom" -> 2,
-      "REVOKE DENY MATCH(prop) ON GRAPH * NODES * FROM custom" -> 1,
+      "GRANT MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
+      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1,
+      "DENY MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
+      "REVOKE DENY MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1,
 
-      "GRANT READ(a,b,c) ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
+      "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
     ))
   }
 
@@ -291,8 +291,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
       Seq(
         ("traversal", "TRAVERSE", Set(traverse(grantOrDenyRelType))),
-        ("read", "READ (*)", Set(read(grantOrDenyRelType))),
-        ("match", "MATCH (*)", Set(traverse(grantOrDenyRelType), read(grantOrDenyRelType)))
+        ("read", "READ {*}", Set(read(grantOrDenyRelType))),
+        ("match", "MATCH {*}", Set(traverse(grantOrDenyRelType), read(grantOrDenyRelType)))
       ).foreach {
         case (actionName, actionCommand, startExpected) =>
 
@@ -626,7 +626,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -649,7 +649,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE ROLE custom")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * $segmentCommand * (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * $segmentCommand * (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -664,7 +664,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE ROLE custom")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * $segmentCommand A (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -680,7 +680,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand A (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -696,7 +696,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand * (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand * (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -712,8 +712,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand A (*) TO custom")
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand B (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand B (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -731,8 +731,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand A (*) TO custom")
-                execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo $segmentCommand A (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -749,8 +749,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo $segmentCommand A (*) TO custom")
-                execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo $segmentCommand B (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand A (*) TO custom")
+                execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo $segmentCommand B (*) TO custom")
 
                 // THEN
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -770,7 +770,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("CREATE DATABASE foo")
 
                 // WHEN
-                execute(s"$grantOrDenyCommand $actionCommand (a, b, c) ON GRAPH foo $segmentCommand A, B, C (*) TO role1, role2, role3")
+                execute(s"$grantOrDenyCommand $actionCommand {a, b, c} ON GRAPH foo $segmentCommand A, B, C (*) TO role1, role2, role3")
 
                 // THEN
                 val expected = (for (l <- Seq("A", "B", "C")) yield {
@@ -792,7 +792,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * ELEMENTS * (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * ELEMENTS * (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -809,7 +809,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH * ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * ELEMENTS A (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -827,7 +827,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -845,7 +845,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS * (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -863,8 +863,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS B (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS B (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -886,8 +886,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-            execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo ELEMENTS A (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -907,8 +907,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-            execute(s"$grantOrDenyCommand $actionCommand (baz) ON GRAPH foo ELEMENTS B (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo ELEMENTS B (*) TO custom")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(
@@ -932,7 +932,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE DATABASE foo")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand (a, b, c) ON GRAPH foo ELEMENTS A, B, C (*) TO role1, role2, role3")
+            execute(s"$grantOrDenyCommand $actionCommand {a, b, c} ON GRAPH foo ELEMENTS A, B, C (*) TO role1, role2, role3")
 
             // THEN
             val expected = (for (l <- Seq("A", "B", "C")) yield {
@@ -965,12 +965,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES B (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           read(grantOrDenyRelType).database("foo").role("custom").property("bar").relationship("*").map,
@@ -982,7 +982,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -994,7 +994,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1010,12 +1010,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES A (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo NODES B (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo NODES B (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo RELATIONSHIPS B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
@@ -1027,7 +1027,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1039,7 +1039,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1055,9 +1055,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS A (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (bar) ON GRAPH foo ELEMENTS B, C (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {bar} ON GRAPH foo ELEMENTS B, C (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           read(grantOrDenyRelType).database("foo").role("custom").property("bar").node("*").map,
@@ -1071,7 +1071,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1084,7 +1084,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1095,7 +1095,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -1106,9 +1106,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand READ (a) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand READ (b) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ {a} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ {b} ON GRAPH foo TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           read(grantOrDenyRelType).database("foo").role("custom").node("*").property("a").map,
@@ -1120,7 +1120,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (a) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {a} ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1132,7 +1132,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (*) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1143,7 +1143,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (b) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType READ {b} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1158,9 +1158,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute("CREATE DATABASE bar")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * TO custom")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH bar TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH bar TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           read(grantOrDenyRelType).role("custom").node("*").map,
@@ -1172,7 +1172,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1183,7 +1183,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (*) ON GRAPH * FROM custom")
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1433,9 +1433,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES A (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo NODES B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo NODES B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
@@ -1449,7 +1449,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1463,7 +1463,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1481,9 +1481,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo RELATIONSHIPS B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo RELATIONSHIPS B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
@@ -1497,7 +1497,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1511,7 +1511,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1529,8 +1529,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS A, B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo ELEMENTS A, B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
@@ -1548,7 +1548,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1565,7 +1565,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1580,7 +1580,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH foo ELEMENTS C (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH foo ELEMENTS C (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1599,7 +1599,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (bar) ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS B, C (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1620,9 +1620,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (b) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {b} ON GRAPH foo TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).database("foo").role("custom").node("*").map,
@@ -1636,7 +1636,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1649,7 +1649,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1660,7 +1660,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH {b} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1676,9 +1676,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute("CREATE DATABASE bar")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH bar TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH bar TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("*").map,
@@ -1696,7 +1696,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo FROM custom")
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1713,7 +1713,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * FROM custom")
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1733,8 +1733,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH foo NODES A,B (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH foo RELATIONSHIPS A,B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {foo,bar} ON GRAPH foo NODES A,B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {foo,bar} ON GRAPH foo RELATIONSHIPS A,B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).database("foo").role("custom").node("A").map,
@@ -1787,7 +1787,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH foo NODES B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo,bar} ON GRAPH foo NODES B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1802,7 +1802,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo,bar} ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1815,7 +1815,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo} ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1827,7 +1827,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo) ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo} ON GRAPH foo RELATIONSHIPS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1842,7 +1842,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH (foo,bar) ON GRAPH * ELEMENTS A,B (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {foo,bar} ON GRAPH * ELEMENTS A,B (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("A").map,
@@ -1892,7 +1892,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo,bar) ON GRAPH * ELEMENTS B (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo,bar} ON GRAPH * ELEMENTS B (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1903,7 +1903,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ (foo) ON GRAPH * ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {foo} ON GRAPH * ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1917,15 +1917,15 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo TO custom")
-        execute(s"$grantOrDenyCommand READ  (b) ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ  {b} ON GRAPH foo TO custom")
 
         execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH foo NODES A (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH foo NODES A (*) TO custom")
 
         execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH foo RELATIONSHIPS A (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH foo RELATIONSHIPS A (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").database("foo").node("*").map, // From both MATCH *
@@ -1944,7 +1944,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {b} ON GRAPH foo NODES * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1963,7 +1963,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo RELATIONSHIP * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH foo RELATIONSHIP * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1981,7 +1981,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH foo NODES A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -1998,7 +1998,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2018,12 +2018,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * ELEMENTS * (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ  (b) ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH * ELEMENTS * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ  {b} ON GRAPH * ELEMENTS * (*) TO custom")
 
         execute(s"$grantOrDenyCommand TRAVERSE  ON GRAPH * ELEMENTS A (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (a) ON GRAPH * ELEMENTS A (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {a} ON GRAPH * ELEMENTS A (*) TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("*").map, // From both MATCH ELEMENTS *
@@ -2042,7 +2042,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (b) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {b} ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2060,7 +2060,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH * ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH * ELEMENTS * (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2076,7 +2076,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (a) ON GRAPH * ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {a} ON GRAPH * ELEMENTS A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2094,11 +2094,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("A").map,
@@ -2112,7 +2112,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * ELEMENTS * FROM custom")
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * ELEMENTS * FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2129,11 +2129,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("A").map,
@@ -2147,7 +2147,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * ELEMENTS A FROM custom")
+        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * ELEMENTS A FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2166,8 +2166,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
         execute("ALTER USER neo4j SET PASSWORD 'abc' CHANGE NOT REQUIRED")
 
-        execute(s"$grantOrDenyCommand MATCH (foo) ON GRAPH * NODES * TO custom")
-        execute(s"$grantOrDenyCommand MATCH (bar) ON GRAPH * RELATIONSHIPS * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {foo} ON GRAPH * NODES * TO custom")
+        execute(s"$grantOrDenyCommand MATCH {bar} ON GRAPH * RELATIONSHIPS * TO custom")
 
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           traverse(grantOrDenyRelType).role("custom").node("*").map,
@@ -2178,7 +2178,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         val error1 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH (foo) ON GRAPH * ELEMENTS * FROM custom")
+          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {foo} ON GRAPH * ELEMENTS * FROM custom")
         }
         // THEN
         error1.getMessage should include(s"The privilege '${revokeType}read foo ON GRAPH * RELATIONSHIPS *' does not exist.")
@@ -2193,7 +2193,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         val error2 = the[QueryExecutionException] thrownBy {
-          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH (bar) ON GRAPH * FROM custom")
+          executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {bar} ON GRAPH * FROM custom")
         }
         // THEN
         error2.getMessage should include(s"The privilege '${revokeType}read bar ON GRAPH * NODES *' does not exist.")
@@ -2212,8 +2212,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
         // WHEN
         val error1 = the[InvalidArgumentsException] thrownBy {
@@ -2226,7 +2226,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         val error2 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM wrongRole")
+          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM wrongRole")
         }
 
         // THEN
@@ -2235,7 +2235,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         val error3 = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES A (*) FROM wrongRole")
+          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM wrongRole")
         }
         // THEN
         error3.getMessage should (include("The role 'wrongRole' does not have the specified privilege") or
@@ -2248,8 +2248,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
         execute("CREATE ROLE role")
         execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES A (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
         // WHEN
         val errorTraverse = the[InvalidArgumentsException] thrownBy {
@@ -2260,14 +2260,14 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         val errorRead = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM role")
+          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM role")
         }
         // THEN
         errorRead.getMessage should include("The role 'role' does not have the specified privilege")
 
         // WHEN
         val errorMatch = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES A (*) FROM role")
+          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM role")
         }
         // THEN
         errorMatch.getMessage should include("The role 'role' does not have the specified privilege")
@@ -2287,9 +2287,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand READ (*) ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
         the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType READ (*) ON GRAPH foo NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType READ {*} ON GRAPH foo NODES * (*) FROM custom")
         } should have message s"Failed to revoke read privilege from role 'custom': The privilege '${revokeType}read * ON GRAPH foo NODES *' does not exist."
       }
 
@@ -2297,11 +2297,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH (*) ON GRAPH * NODES * (*) TO custom")
+        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
         // WHEN
         val e = the[InvalidArgumentsException] thrownBy {
-          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH foo NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo NODES * (*) FROM custom")
         }
         // THEN
         e.getMessage should (include(s"privilege from role 'custom': The privilege '${revokeType}find  ON GRAPH foo NODES *' does not exist.") or
@@ -2320,7 +2320,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database with REVOKE $revokeType") {
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
-          execute(s"REVOKE $revokeType READ (*) ON GRAPH * NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
           s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}READ"
@@ -2329,7 +2329,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
-          execute(s"REVOKE $revokeType MATCH (*) ON GRAPH * NODES * (*) FROM custom")
+          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES * (*) FROM custom")
           // THEN
         } should have message
           s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}MATCH"
@@ -2370,8 +2370,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"GRANT READ (prop) ON GRAPH * $segmentCommand A (*) TO custom")
-        execute(s"DENY READ (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"GRANT READ {prop} ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"DENY READ {prop} ON GRAPH * $segmentCommand A (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2380,7 +2380,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE READ (prop) ON GRAPH * $segmentCommand A (*) FROM custom")
+        execute(s"REVOKE READ {prop} ON GRAPH * $segmentCommand A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -2392,8 +2392,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"GRANT MATCH (prop) ON GRAPH * $segmentCommand A (*) TO custom")
-        execute(s"DENY MATCH (prop) ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"GRANT MATCH {prop} ON GRAPH * $segmentCommand A (*) TO custom")
+        execute(s"DENY MATCH {prop} ON GRAPH * $segmentCommand A (*) TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2404,7 +2404,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE MATCH (prop) ON GRAPH * $segmentCommand A (*) FROM custom")
+        execute(s"REVOKE MATCH {prop} ON GRAPH * $segmentCommand A (*) FROM custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

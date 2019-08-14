@@ -222,7 +222,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE foo")
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
-    execute("GRANT READ (a,b,c) ON GRAPH * NODES A (*) TO foo")
+    execute("GRANT READ {a,b,c} ON GRAPH * NODES A (*) TO foo")
     val expected = Set(traverse().node("*").map,
       read().property("a").node("A").map,
       read().property("b").node("A").map,

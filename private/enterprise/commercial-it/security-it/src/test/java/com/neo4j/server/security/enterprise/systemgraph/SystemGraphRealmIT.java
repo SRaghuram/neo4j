@@ -431,7 +431,7 @@ class SystemGraphRealmIT
                 new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
-        systemDB.execute( String.format( "GRANT MATCH(*) ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
+        systemDB.execute( String.format( "GRANT MATCH {*} ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
 
         assertAuthenticationSucceeds( realm, "alice" );
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );

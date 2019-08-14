@@ -580,7 +580,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   test("should delete node when granted WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -606,7 +606,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   test("should set and remove property when granted WRITE privilege to custom role for all databases and all labels") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -640,7 +640,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
     execute("GRANT WRITE (*) ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN

@@ -48,7 +48,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     }) should be(1)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT READ {name} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -71,7 +71,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (name) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -80,7 +80,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE GRANT READ (name) ON GRAPH * NODES A (*) FROM custom")
+    execute("REVOKE GRANT READ {name} ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -101,7 +101,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupUserWithCustomRole()
 
     // WHEN
-    execute(s"GRANT MATCH (*) ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
@@ -121,7 +121,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE (n:A {name:'a'})")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT READ {name} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
@@ -135,7 +135,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ()-[:REL {name:'a'}]->()")
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * RELATIONSHIPS REL (*) TO custom")
+    execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS REL (*) TO custom")
 
     // WHEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
@@ -150,7 +150,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * ELEMENTS A (*) TO custom")
+    execute("GRANT READ {name} ON GRAPH * ELEMENTS A (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query) should be(0)
@@ -190,7 +190,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (name) ON GRAPH * ELEMENTS A, B TO custom")
+    execute("GRANT READ {name} ON GRAPH * ELEMENTS A, B TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -199,7 +199,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (name) ON GRAPH * ELEMENTS B TO custom")
+    execute("GRANT MATCH {name} ON GRAPH * ELEMENTS B TO custom")
 
     // THEN
     val expected1 = Seq(
@@ -214,7 +214,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ (name) ON GRAPH * ELEMENTS A FROM custom")
+    execute("REVOKE READ {name} ON GRAPH * ELEMENTS A FROM custom")
 
     // THEN
     val expected2 = Seq(
@@ -229,7 +229,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE MATCH (name) ON GRAPH * ELEMENTS B FROM custom")
+    execute("REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -255,15 +255,15 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ROLE role3")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO role1")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role2")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role2")
+    execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role2")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+    execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role3")
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -325,15 +325,15 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ROLE role2")
     execute("CREATE ROLE role3")
 
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO role1")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO role1")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
-    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO role2")
-    execute("GRANT MATCH (bar) ON GRAPH * NODES B (*) TO role2")
+    execute("GRANT MATCH {foo} ON GRAPH * NODES A (*) TO role2")
+    execute("GRANT MATCH {bar} ON GRAPH * NODES B (*) TO role2")
 
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO role3")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO role3")
+    execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role3")
+    execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role3")
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -401,9 +401,9 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT READ (foo) ON GRAPH * NODES A (*) TO custom")
-    execute("GRANT READ (bar) ON GRAPH * NODES B (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO custom")
 
     val expected1 = List(
       (":A", 1, 2),
@@ -418,7 +418,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
       }) should be(4)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE GRANT READ (*) ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE GRANT READ {*} ON GRAPH * NODES * (*) FROM custom")
 
     val expected2 = List(
       (":A", 1, null),
@@ -452,7 +452,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
@@ -483,7 +483,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
@@ -533,7 +533,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
@@ -585,7 +585,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupMultiLabelData2
 
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     val query = "MATCH (n) RETURN n.id, reduce(s = '', x IN labels(n) | s + ':' + x) AS labels ORDER BY n.id"
 
@@ -746,7 +746,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -763,7 +763,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("DENY READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -773,7 +773,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -792,7 +792,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -809,7 +809,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (foo) ON GRAPH * NODES * (*) TO custom")
+    execute("DENY READ {foo} ON GRAPH * NODES * (*) TO custom")
 
     val expected2 = List(
       (null, 2), // :A
@@ -826,7 +826,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -845,7 +845,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -862,7 +862,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * NODES A (*) TO custom")
+    execute("DENY READ {*} ON GRAPH * NODES A (*) TO custom")
 
     val expected2 = List(
       (3, 4), // :B
@@ -879,7 +879,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -898,7 +898,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -915,7 +915,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (foo) ON GRAPH * NODES A (*) TO custom")
+    execute("DENY READ {foo} ON GRAPH * NODES A (*) TO custom")
 
     val expected2 = List(
       (3, 4), // :B
@@ -932,7 +932,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -951,7 +951,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, null), // :A
@@ -968,7 +968,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (foo) ON GRAPH * NODES A (*) TO custom")
+    execute("DENY READ {foo} ON GRAPH * NODES A (*) TO custom")
 
     val expected2 = List(
       (3, null), // :B
@@ -985,7 +985,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (bar) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT READ {bar} ON GRAPH * NODES A (*) TO custom")
 
     val expected3 = List(
       (3, null), // :B
@@ -1002,7 +1002,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (bar) ON GRAPH * NODES B (*) TO custom")
+    execute("DENY READ {bar} ON GRAPH * NODES B (*) TO custom")
 
     val expected4 = List(
       (3, null), // :B
@@ -1019,7 +1019,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     val expected5 = List(
       (3, null), // :B
@@ -1045,7 +1045,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -1062,7 +1062,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (*) ON GRAPH * NODES * (*) TO custom")
+    execute("DENY MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1072,7 +1072,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1091,7 +1091,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -1108,7 +1108,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (foo) ON GRAPH * NODES * (*) TO custom")
+    execute("DENY MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1118,7 +1118,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1137,7 +1137,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -1154,7 +1154,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (*) ON GRAPH * NODES A (*) TO custom")
+    execute("DENY MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
     val expected2 = List(
       (3, 4), // :B
@@ -1169,7 +1169,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1188,7 +1188,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo,bar) ON GRAPH * NODES * (*) TO custom")
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * (*) TO custom")
 
     val expected1 = List(
       (1, 2), // :A
@@ -1205,7 +1205,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (foo) ON GRAPH * NODES A (*) TO custom")
+    execute("DENY MATCH {foo} ON GRAPH * NODES A (*) TO custom")
 
     val expected2 = List(
       (3, 4), // :B
@@ -1220,7 +1220,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -1233,8 +1233,8 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     //GIVEN
     setupUserWithCustomRole("customUser", "secret", "customRole")
     execute("GRANT TRAVERSE ON GRAPH * TO customRole")
-    execute("GRANT READ (foo) ON GRAPH * NODES A TO customRole")
-    execute("DENY READ (foo) ON GRAPH * NODES C TO customRole")
+    execute("GRANT READ {foo} ON GRAPH * NODES A TO customRole")
+    execute("DENY READ {foo} ON GRAPH * NODES C TO customRole")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {foo: 1}), (:B {foo: 2}), (:C {foo: 3}), (:A:B {foo: 4}), (:A:C {foo: 5})")
@@ -1283,8 +1283,8 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     //GIVEN
     setupUserWithCustomRole("customUser", "secret", "customRole")
     execute("GRANT TRAVERSE ON GRAPH * TO customRole")
-    execute("GRANT READ (foo) ON GRAPH * NODES A TO customRole")
-    execute("GRANT READ (prop) ON GRAPH * NODES B TO customRole")
+    execute("GRANT READ {foo} ON GRAPH * NODES A TO customRole")
+    execute("GRANT READ {prop} ON GRAPH * NODES B TO customRole")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
@@ -1330,8 +1330,8 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     //GIVEN
     setupUserWithCustomRole("customUser", "secret", "customRole")
     execute("GRANT TRAVERSE ON GRAPH * TO customRole")
-    execute("GRANT READ (foo, prop) ON GRAPH * NODES A TO customRole")
-    execute("DENY READ (prop) ON GRAPH * NODES C TO customRole")
+    execute("GRANT READ {foo, prop} ON GRAPH * NODES A TO customRole")
+    execute("DENY READ {prop} ON GRAPH * NODES C TO customRole")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
@@ -1378,7 +1378,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})")
@@ -1405,7 +1405,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   test("should not find relationship when denied all reltype traversal") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
@@ -1434,7 +1434,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   test("should not find relationship with grant and deny on all reltype traversal") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
@@ -1474,7 +1474,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   test("should find correct relationships with grant traversal on all reltypes and deny on specific reltype") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
@@ -1505,7 +1505,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   test("should find correct relationships with grant and deny traversal on specific reltypes") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})")
@@ -1527,7 +1527,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
@@ -1546,7 +1546,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
@@ -1567,7 +1567,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES A TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})")
@@ -1586,7 +1586,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * NODES B TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES B TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
@@ -1609,7 +1609,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
-    execute("GRANT MATCH (*) ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()")
@@ -1777,7 +1777,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT READ {id} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected1 = List(
@@ -1791,7 +1791,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected2 = List(
@@ -1821,7 +1821,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -1835,7 +1835,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -1844,7 +1844,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ(*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ{*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -1869,7 +1869,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -1883,7 +1883,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected2 = List(
@@ -1897,7 +1897,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -1923,7 +1923,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -1937,7 +1937,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected2 = List(
@@ -1951,7 +1951,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -1977,7 +1977,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -1991,7 +1991,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("DENY READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected2 = List(
@@ -2005,7 +2005,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -2031,7 +2031,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (id) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {id} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -2045,7 +2045,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (id) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("DENY READ {id} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected2 = List(
@@ -2059,7 +2059,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected3 = List(
@@ -2073,7 +2073,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (bar) ON GRAPH * RELATIONSHIPS B TO custom")
+    execute("DENY READ {bar} ON GRAPH * RELATIONSHIPS B TO custom")
 
     // THEN
     val expected4 = List(
@@ -2087,7 +2087,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected5 = List(
@@ -2106,7 +2106,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -2127,7 +2127,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected1 = List(
@@ -2142,7 +2142,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {bar} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected2 = List(
@@ -2163,7 +2163,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    execute("GRANT READ (id) ON GRAPH * TO custom")
+    execute("GRANT READ {id} ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -2188,7 +2188,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
@@ -2197,7 +2197,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (bar) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {bar} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     val expected = List(
@@ -2246,7 +2246,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (prop) ON GRAPH * RELATIONSHIP A TO custom")
+    execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2255,7 +2255,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (prop) ON GRAPH * RELATIONSHIP B TO custom")
+    execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP B TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2328,7 +2328,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (prop) ON GRAPH * RELATIONSHIP A TO custom")
+    execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2337,7 +2337,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (prop) ON GRAPH * RELATIONSHIP B TO custom")
+    execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP B TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2391,7 +2391,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -2405,7 +2405,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -2415,7 +2415,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -2441,7 +2441,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -2455,7 +2455,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -2465,7 +2465,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query,
@@ -2492,7 +2492,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -2506,7 +2506,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2515,7 +2515,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (*) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2541,7 +2541,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val expected1 = List(
@@ -2555,7 +2555,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2564,7 +2564,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH (foo) ON GRAPH * RELATIONSHIPS A TO custom")
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
@@ -2596,7 +2596,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * RELATIONSHIPS * TO custom" )
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom" )
 
     // THEN
     val expected1 = List(
@@ -2627,7 +2627,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (prop) ON GRAPH * RELATIONSHIPS A TO custom" )
+    execute("DENY READ {prop} ON GRAPH * RELATIONSHIPS A TO custom" )
 
     // THEN
     val expected3 = List(
@@ -2750,16 +2750,16 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // role1 whitelist A
-    execute("GRANT READ (foo) ON GRAPH * NODES * TO role1")
+    execute("GRANT READ {foo} ON GRAPH * NODES * TO role1")
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO role1")
 
     // role2 whitelist A and blacklist B
-    execute("GRANT READ (foo) ON GRAPH * NODES * TO role2")
+    execute("GRANT READ {foo} ON GRAPH * NODES * TO role2")
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO role2")
     execute("DENY TRAVERSE ON GRAPH * NODES B TO role2")
 
     // role3 whitelist all labels and blacklist B
-    execute("GRANT READ (foo) ON GRAPH * NODES * TO role3")
+    execute("GRANT READ {foo} ON GRAPH * NODES * TO role3")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO role3")
     execute("DENY TRAVERSE ON GRAPH * NODES B TO role3")
 
@@ -2840,7 +2840,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT READ (*) ON GRAPH * NODES A TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES A TO custom")
 
     // THEN
     // expect no change
@@ -2850,7 +2850,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (prop3) ON GRAPH * NODES B TO custom")
+    execute("DENY READ {prop3} ON GRAPH * NODES B TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -2859,7 +2859,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * NODES C TO custom")
+    execute("DENY READ {*} ON GRAPH * NODES C TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -2868,7 +2868,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (prop5) ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+    execute("DENY READ {prop5} ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -2877,7 +2877,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (prop5) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     val withoutFive = List("prop1", "prop2", "prop3", "prop4", "prop6", "prop7")
@@ -2887,7 +2887,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+    execute("DENY READ {*} ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
@@ -2896,7 +2896,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ (*) ON GRAPH * RELATIONSHIPS * TO custom")
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
@@ -2917,7 +2917,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE USER tim SET PASSWORD '123' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role")
     execute("GRANT ROLE role TO tim")
-    execute("GRANT MATCH(*) ON GRAPH * ELEMENTS * TO role")
+    execute("GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role")
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
 
     // RELS
