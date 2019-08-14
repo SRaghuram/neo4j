@@ -20,10 +20,7 @@ public class NativeMemoryTrackingSummaryParserTest
     {
         NativeMemoryTrackingSummaryParser parser = new NativeMemoryTrackingSummaryParser();
         NativeMemoryTrackingSummary summary = parser.parse( Paths.get(
-                "src/test/resources/NativeMemoryTrackingSummaryReportTest/accesscontrol/" +
-                "Q1__deployment_EMBEDDED___execution_mode_EXECUTE___planner_DEFAULT___runtime_DEFAULT___mode_LATENCY_/" +
-                "profiler_fork_nmt_summary/accesscontrol.Q1_(deployment,EMBEDDED)_(execution_mode,EXECUTE)_(planner,DEFAULT)" +
-                "_(runtime,DEFAULT)_(mode,LATENCY).(snapshot,0).nmt.summary" ) );
+                "src/test/resources/NativeMemoryTrackingSummaryReportTest/test.nmt.summary" ) );
 
         assertEquals( 4194304, summary.getCategory( "Java Heap" ).getReserved() );
         assertEquals( 4194304, summary.getCategory( "Java Heap" ).getCommitted() );

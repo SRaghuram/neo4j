@@ -29,6 +29,8 @@ import static java.util.Collections.emptyList;
 public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, ScheduledProfiler
 {
 
+    private static final String NATIVE_MEMORY_TRACKING_SUMMARY_CSV = "native_memory_tracking.summary.csv";
+
     public static final String SNAPSHOT_PARAM = "snapshot";
 
     // TODO: state, because we need to keep
@@ -87,7 +89,7 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
                     benchmarkGroup,
                     benchmark,
                     RunPhase.MEASUREMENT );
-            summaryReport.toCSV( forkDirectory.create( "native_memory_tracking.summary.csv" ) );
+            summaryReport.toCSV( forkDirectory.create( NATIVE_MEMORY_TRACKING_SUMMARY_CSV ) );
         }
         catch ( IOException e )
         {
@@ -118,12 +120,12 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
         {
             Process process = new ProcessBuilder( command )
                     .redirectOutput( forkDirectory.create( recordingDescriptorFilename ).toFile() ).start();
-            boolean waitFor = process.waitFor( 10, TimeUnit.SECONDS );
-            if ( waitFor )
+            boolean finishedOnTime = process.waitFor( 10, TimeUnit.SECONDS );
+            if ( finishedOnTime )
             {
                 if ( process.exitValue() != 0 )
                 {
-                    System.out.println( format( "jcmd exited with non-zero (%d) exit code", process.exitValue() ) );
+                    throw new RuntimeException( format( "jcmd exited with non-zero (%d) exit code", process.exitValue() ) );
                 }
             }
             else
@@ -133,7 +135,7 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
         }
         catch ( IOException | InterruptedException e )
         {
-            System.out.println( format( "failed to snapshot native memory tracking summary\n%s", e ) );
+            throw new RuntimeException( format( "failed to snapshot native memory tracking summary\n%s", e ) );
         }
     }
 

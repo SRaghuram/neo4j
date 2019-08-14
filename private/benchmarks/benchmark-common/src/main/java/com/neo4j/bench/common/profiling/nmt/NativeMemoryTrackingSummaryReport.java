@@ -35,7 +35,7 @@ public class NativeMemoryTrackingSummaryReport
 
     private List<NativeMemoryTrackingSummary> snapshots;
 
-    public NativeMemoryTrackingSummaryReport( List<NativeMemoryTrackingSummary> snapshots )
+    private NativeMemoryTrackingSummaryReport( List<NativeMemoryTrackingSummary> snapshots )
     {
         this.snapshots = snapshots;
     }
