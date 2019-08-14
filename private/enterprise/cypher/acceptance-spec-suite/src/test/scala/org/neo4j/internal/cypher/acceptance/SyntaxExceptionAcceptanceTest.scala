@@ -63,13 +63,6 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
-  test("unclosed curly") {
-    test(
-      "start a=node({0) return a",
-      "Invalid input ')': expected whitespace or '}' (line 1, column 16)"
-    )
-  }
-
   test("two equal signs") {
     test(
       "start a==node(0) return a",

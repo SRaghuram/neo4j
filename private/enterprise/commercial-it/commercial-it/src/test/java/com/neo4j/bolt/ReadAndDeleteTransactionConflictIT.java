@@ -66,7 +66,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session session = driver.session() )
         {
             Value nodeId = session.run( "create (n:L1 {a: 'b'}) return id(n)" ).single().get( 0 );
-            Record record = session.run( "match (n:L1) where id(n) = {nodeId} delete n return n", Values.parameters( "nodeId", nodeId ) ).single();
+            Record record = session.run( "match (n:L1) where id(n) = $nodeId delete n return n", Values.parameters( "nodeId", nodeId ) ).single();
             Map<String,Object> map = record.get( 0 ).asMap();
             assertThat( map, equalTo( new HashMap<>() ) );
         }
@@ -78,7 +78,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session session = driver.session() )
         {
             Value nodeId = session.run( "create (n:L2)-[:REL]->(m) return id(n)" ).single().get( 0 );
-            StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = {nodeId} delete n, m, r return r",
+            StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = $nodeId delete n, m, r return r",
                     Values.parameters( "nodeId", nodeId ) );
             Record record = result.single();
             Map<String,Object> map = record.get( 0 ).asMap();
@@ -94,7 +94,7 @@ public class ReadAndDeleteTransactionConflictIT
             Value nodeId = session.run( "create (n:L3)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
             StatementResult result = session.run( "" +
                     "match (n:L3)-[r]->(m) " +
-                    "where id(n) = {nodeId} " +
+                    "where id(n) = $nodeId " +
                     "with n, m, r, properties(r) as props " +
                     "delete n, m, r " +
                     "return props", Values.parameters( "nodeId", nodeId ) );
