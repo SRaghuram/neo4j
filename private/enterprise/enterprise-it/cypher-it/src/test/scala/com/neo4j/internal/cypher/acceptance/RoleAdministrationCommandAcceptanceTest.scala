@@ -338,6 +338,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
+  test("should drop existing role using if exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+
+    // WHEN
+    execute("DROP ROLE IF EXISTS foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+  }
+
   test("should drop built-in role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -353,12 +366,16 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should fail when dropping non-existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
       // THEN
     } should have message "Failed to delete the specified role 'foo': Role does not exist."
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
@@ -367,7 +384,28 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to delete the specified role '': Role does not exist."
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+  }
+
+  test("should do nothing when dropping non-existing role using if exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+
+    // WHEN
+    execute("DROP ROLE IF EXISTS foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+
+    // and an invalid (non-existing) one
+
+    // WHEN
+    execute("DROP ROLE IF EXISTS ``")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should fail when dropping role when not on system database") {

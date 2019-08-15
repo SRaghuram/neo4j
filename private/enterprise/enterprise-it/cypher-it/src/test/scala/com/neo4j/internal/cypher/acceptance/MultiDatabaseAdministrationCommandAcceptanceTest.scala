@@ -647,6 +647,19 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASES").toList should contain allOf(db("foo"), db("bar"))
   }
 
+  test("should drop existing database using if exists") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo")))
+
+    // WHEN
+    execute("DROP DATABASE foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
+  }
+
   test("should drop database using mixed case name") {
     // GIVEN
     setup(defaultConfig)
@@ -692,12 +705,36 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
     } should have message "Failed to drop the specified database 'foo': Database does not exist."
 
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
+
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE ``")
       // THEN
     } should have message "Failed to drop the specified database '': Database does not exist."
+
+    // THEN
+    execute("SHOW DATABASE ``").toSet should be(Set.empty)
+  }
+
+  test("should do nothing when dropping a non-existing database using if exists") {
+    setup(defaultConfig)
+
+    // WHEN
+    execute("DROP DATABASE IF EXISTS foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
+
+    // and an invalid (non-existing) one
+
+    // WHEN
+    execute("DROP DATABASE IF EXISTS ``")
+
+    // THEN
+    execute("SHOW DATABASE ``").toSet should be(Set.empty)
   }
 
   test("should fail when dropping a dropped database") {
@@ -705,32 +742,57 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // GIVEN
     execute("CREATE DATABASE foo")
-    execute("SHOW DATABASES")
     execute("STOP DATABASE foo")
     execute("DROP DATABASE foo")
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
 
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
     } should have message "Failed to drop the specified database 'foo': Database does not exist."
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
+  }
+
+  test("should do nothing when dropping a dropped database using if exists") {
+    setup(defaultConfig)
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    execute("DROP DATABASE foo")
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
+
+    // WHEN
+    execute("DROP DATABASE IF EXISTS foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set.empty)
   }
 
   test("should fail on dropping system database") {
     setup(defaultConfig)
 
-    // GIVEN
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
     } should have message "Not allowed to drop system database."
 
-    // WHEN
-    val result = execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME")
+    // THEN
+    execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
+
+    // GIVEN
+    the[DatabaseAdministrationException] thrownBy {
+      // WHEN
+      execute(s"DROP DATABASE IF EXISTS $SYSTEM_DATABASE_NAME")
+      // THEN
+    } should have message "Not allowed to drop system database."
 
     // THEN
-    result.toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
+    execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop default database") {

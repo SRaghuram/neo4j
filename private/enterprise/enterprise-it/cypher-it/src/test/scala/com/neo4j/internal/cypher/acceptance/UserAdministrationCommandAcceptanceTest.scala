@@ -314,6 +314,18 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
   }
 
+  test("should drop existing user using if exists") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    // WHEN
+    execute("DROP USER IF EXISTS foo")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+  }
+
   test("should re-create dropped user") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -388,6 +400,26 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("DROP USER `:foo`")
       // THEN
     } should have message "Failed to delete the specified user ':foo': User does not exist."
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+  }
+
+  test("should do nothing when dropping non-existing user using if exists") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    // WHEN
+    execute("DROP USER IF EXISTS foo")
+
+    // THEN
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    // and an invalid (non-existing) one
+
+    // WHEN
+    execute("DROP USER IF EXISTS `:foo`")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
