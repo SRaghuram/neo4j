@@ -31,16 +31,16 @@ import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.BoltResult;
-import org.neo4j.bolt.runtime.BoltStateMachineFactory;
-import org.neo4j.bolt.runtime.BoltStateMachineFactoryImpl;
+import org.neo4j.bolt.runtime.statemachine.BoltStateMachineFactory;
+import org.neo4j.bolt.runtime.statemachine.impl.BoltStateMachineFactoryImpl;
 import org.neo4j.bolt.runtime.Neo4jError;
 import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
-import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
-import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.packstream.PackOutput;
+import org.neo4j.bolt.v3.messaging.BoltResponseMessageWriterV3;
+import org.neo4j.bolt.packstream.Neo4jPackV1;
+import org.neo4j.bolt.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -56,7 +56,7 @@ import org.neo4j.values.AnyValue;
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 {
     static final String USER_AGENT = "BoltPropertySerialization/0.0";
-    public static final long BOLT_VERSION = 1;
+    public static final long BOLT_VERSION = 4;
 
     static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {
@@ -195,7 +195,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static class DummyBoltResultHandler implements BoltResponseHandler
     {
         private final PackedOutputArray out = new PackedOutputArray();
-        private final BoltResponseMessageWriterV1 writer = new BoltResponseMessageWriterV1(
+        private final BoltResponseMessageWriterV3 writer = new BoltResponseMessageWriterV3(
                 new Neo4jPackV1(),
                 out,
                 NullLogService.getInstance() );

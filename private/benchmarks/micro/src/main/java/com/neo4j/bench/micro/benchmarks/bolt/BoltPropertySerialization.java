@@ -22,12 +22,13 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.bolt.messaging.BoltIOException;
 import org.neo4j.bolt.runtime.BoltConnectionFatality;
-import org.neo4j.bolt.runtime.BoltStateMachine;
-import org.neo4j.bolt.runtime.BoltStateMachineFactory;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
-import org.neo4j.bolt.v1.messaging.request.RunMessage;
+import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
+import org.neo4j.bolt.runtime.statemachine.BoltStateMachineFactory;
+import org.neo4j.bolt.v3.messaging.request.HelloMessage;
+import org.neo4j.bolt.v4.messaging.PullMessage;
+import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -48,6 +49,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
+import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( TimeUnit.MICROSECONDS )
@@ -111,11 +113,12 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
                                    state.BoltPropertySerialization_runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
             machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
-            InitMessage init = new InitMessage( USER_AGENT, map(
+            var hello = new HelloMessage( map(
+                    "user_agent", USER_AGENT,
                     "scheme", "basic",
                     "principal", "neo4j",
                     "credentials", "neo4j" ) );
-            machine.process( init, RESPONSE_HANDLER );
+            machine.process( hello, RESPONSE_HANDLER );
         }
 
         @TearDown
@@ -132,18 +135,18 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
             }
         }
 
-        byte[] getPropertyForAllNodes() throws BoltConnectionFatality
+        byte[] getPropertyForAllNodes() throws BoltConnectionFatality, BoltIOException
         {
             handler.reset();
             machine.process( new RunMessage( query, VirtualValues.EMPTY_MAP ), handler );
-            machine.process( PullAllMessage.INSTANCE, handler );
+            machine.process( new PullMessage( asMapValue( map( "n", -1L ) ) ), handler );
             return handler.result();
         }
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
-    public byte[] serializeProperty( BoltMachine machine ) throws BoltConnectionFatality
+    public byte[] serializeProperty( BoltMachine machine ) throws BoltConnectionFatality, BoltIOException
     {
         return machine.getPropertyForAllNodes();
     }

@@ -13,11 +13,9 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.time.Duration;
 
-import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
-import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
-import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
+import org.neo4j.bolt.testing.TransportTestUtil;
+import org.neo4j.bolt.testing.client.SocketConnection;
+import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -47,7 +45,7 @@ class BoltMetricsIT
     @Inject
     private GraphDatabaseAPI db;
 
-    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+    private final TransportTestUtil util = new TransportTestUtil();
     private File metricsFolder;
     private TransportConnection conn;
 
@@ -78,9 +76,8 @@ class BoltMetricsIT
         // When
         conn = new SocketConnection()
                 .connect( new HostnamePort( "localhost", getBoltPort( db ) ) )
-                .send( util.acceptedVersions( 1, 0, 0, 0 ) )
-                .send( util.chunk( new InitMessage( "TestClient",
-                        map("scheme", "basic", "principal", "neo4j", "credentials", "neo4j") ) ) );
+                .send( util.defaultAcceptedVersions() )
+                .send( util.defaultAuth( map( "scheme", "basic", "principal", "neo4j", "credentials", "neo4j" ) ) );
 
         // Then
         assertEventually( "session shows up as started",

@@ -19,14 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
-import org.neo4j.bolt.v1.messaging.request.RunMessage;
-import org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket;
-import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
-import org.neo4j.bolt.v1.transport.socket.client.SecureSocketConnection;
-import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
+import org.neo4j.bolt.testing.TransportTestUtil;
+import org.neo4j.bolt.testing.client.SecureSocketConnection;
+import org.neo4j.bolt.testing.client.TransportConnection;
+import org.neo4j.bolt.transport.Neo4jWithSocket;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.config.Setting;
@@ -35,8 +31,8 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.string.SecureString;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgFailure;
-import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
+import static org.neo4j.bolt.testing.MessageMatchers.msgFailure;
+import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 /*
@@ -121,7 +117,7 @@ public class ActiveDirectoryAuthenticationIT
     {
         this.client = cf.newInstance();
         this.address = server.lookupDefaultConnector();
-        this.util = new TransportTestUtil( new Neo4jPackV1() );
+        this.util = new TransportTestUtil();
     }
 
     @After
@@ -267,8 +263,8 @@ public class ActiveDirectoryAuthenticationIT
     private void assertAuth( String username, String password, String realm ) throws Exception
     {
         client.connect( address )
-                .send( util.acceptedVersions( 1, 0, 0, 0 ) )
-                .send( util.chunk( new InitMessage( "TestClient/1.1", authToken( username, password, realm ) ) ) );
+                .send( util.defaultAcceptedVersions() )
+                .send( util.defaultAuth( authToken( username, password, realm ) ) );
 
         MatcherAssert.assertThat( client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
         MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess() ) );
@@ -289,12 +285,10 @@ public class ActiveDirectoryAuthenticationIT
     private void assertAuthFail( String username, String password ) throws Exception
     {
         client.connect( address )
-                .send( util.acceptedVersions( 1, 0, 0, 0 ) )
-                .send( util.chunk(
-                        new InitMessage( "TestClient/1.1", map( "principal", username,
-                                "credentials", password, "scheme", "basic" ) ) ) );
+                .send( util.defaultAcceptedVersions() )
+                .send( util.defaultAuth( map( "principal", username, "credentials", password, "scheme", "basic" ) ) );
 
-        MatcherAssert.assertThat( client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
+        MatcherAssert.assertThat( client, util.eventuallyReceivesSelectedProtocolVersion() );
         MatcherAssert.assertThat( client, util.eventuallyReceives( msgFailure( Status.Security.Unauthorized,
                 "The client is unauthorized due to authentication failure." ) ) );
     }
@@ -302,9 +296,7 @@ public class ActiveDirectoryAuthenticationIT
     protected void assertReadSucceeds() throws Exception
     {
         // When
-        client.send( util.chunk(
-                new RunMessage( "MATCH (n) RETURN n" ),
-                PullAllMessage.INSTANCE ) );
+        client.send( util.defaultRunAutoCommitTx( "MATCH (n) RETURN n" ) );
 
         // Then
         MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
@@ -313,9 +305,7 @@ public class ActiveDirectoryAuthenticationIT
     protected void assertReadFails( String username ) throws Exception
     {
         // When
-        client.send( util.chunk(
-                new RunMessage( "MATCH (n) RETURN n" ),
-                PullAllMessage.INSTANCE ) );
+        client.send( util.defaultRunAutoCommitTx( "MATCH (n) RETURN n" ) );
 
         // Then
         MatcherAssert.assertThat( client, util.eventuallyReceives(
@@ -326,9 +316,7 @@ public class ActiveDirectoryAuthenticationIT
     protected void assertWriteSucceeds() throws Exception
     {
         // When
-        client.send( util.chunk(
-                new RunMessage( "CREATE ()" ),
-                PullAllMessage.INSTANCE ) );
+        client.send( util.defaultRunAutoCommitTx( "CREATE ()" ) );
 
         // Then
         MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
@@ -337,9 +325,7 @@ public class ActiveDirectoryAuthenticationIT
     protected void assertWriteFails( String username ) throws Exception
     {
         // When
-        client.send( util.chunk(
-                new RunMessage( "CREATE ()" ),
-                PullAllMessage.INSTANCE ) );
+        client.send( util.defaultRunAutoCommitTx( "CREATE ()" ) );
 
         // Then
         MatcherAssert.assertThat( client, util.eventuallyReceives(

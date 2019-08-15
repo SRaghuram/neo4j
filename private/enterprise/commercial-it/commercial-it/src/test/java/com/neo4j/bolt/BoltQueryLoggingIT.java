@@ -5,14 +5,10 @@
  */
 package com.neo4j.bolt;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -23,12 +19,10 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.ServerTestUtils;
-import org.neo4j.server.configuration.ServerSettings;
 
-import static java.lang.Character.digit;
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_filename;
 
@@ -41,63 +35,22 @@ public class BoltQueryLoggingIT
     {
         Path tmpDir = ServerTestUtils.createTempDir().toPath().toAbsolutePath();
         this.neo4j = new Neo4jRule()
-            .withConfig( ServerSettings.http_logging_enabled, true )
-            .withConfig( GraphDatabaseSettings.auth_enabled, false )
-            .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
-            .withConfig( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
-            .withConfig( BoltConnector.enabled, true )
-            .withConfig( BoltConnector.advertised_address, new SocketAddress( "localhost", 0 ) )
-            .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED )
-            .withConfig( OnlineBackupSettings.online_backup_enabled, false );
+                .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
+                .withConfig( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO );
     }
 
     @Test
     public void shouldLogQueriesViaBolt() throws IOException
     {
-        // *** GIVEN ***
-
-        Socket socket = new Socket( "localhost", neo4j.boltURI().getPort() );
-        DataInputStream dataIn = new DataInputStream( socket.getInputStream() );
-        DataOutputStream dataOut = new DataOutputStream( socket.getOutputStream() );
-
-        // Bolt handshake
-        send( dataOut, new byte[] { (byte) 0x60, (byte) 0x60, (byte) 0xB0, (byte) 0x17, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } );
-        receive( dataIn, new byte[]{ 0, 0, 0, 1 } );
-
-        // This has been taken from: http://alpha.neohq.net/docs/server-manual/bolt-examples.html
-
-        // Send INIT "MyClient/1.0" { "scheme": "basic", "principal": "neo4j", "credentials": "secret"}
-        send( dataOut,
-                "00 40 B1 01  8C 4D 79 43  6C 69 65 6E  74 2F 31 2E\n" +
-                "30 A3 86 73  63 68 65 6D  65 85 62 61  73 69 63 89\n" +
-                "70 72 69 6E  63 69 70 61  6C 85 6E 65  6F 34 6A 8B\n" +
-                "63 72 65 64  65 6E 74 69  61 6C 73 86  73 65 63 72\n" +
-                "65 74 00 00" );
-        // Receive SUCCESS {}
-        receiveSuccess( dataIn );
-
-        // *** WHEN ***
-
-        for ( int i = 0; i < 5; i++ )
+        try ( var driver = graphDatabaseDriver( neo4j.boltURI() );
+              var session = driver.session() )
         {
-            // Send RUN "RETURN 1 AS num" {}
-            send( dataOut, "00 13 b2 10  8f 52 45 54  55 52 4e 20  31 20 41 53 20 6e 75 6d  a0 00 00" );
-            // Receive SUCCESS { "fields": ["num"], "result_available_after": X }
-            //non-deterministic so just ignore it here
-            receiveSuccess( dataIn );
-
-            //receive( dataIn, "00 0f b1 70  a1 86 66 69  65 6c 64 73  91 83 6e 75 6d 00 00" );
-
-            // Send PULL_ALL
-            send( dataOut, "00 02 B0 3F  00 00" );
-            // Receive RECORD[1]
-            receive( dataIn, "00 04 b1 71  91 01 00 00" );
-            // Receive SUCCESS { "type": "r", "result_consumed_after": Y }
-            //non-deterministic so just ignore it here
-            receiveSuccess(  dataIn );
+            for ( int i = 0; i < 5; i++ )
+            {
+                session.run( "RETURN 1 AS num" ).consume();
+            }
         }
-
-        // *** THEN ***
 
         Path queriesLog = neo4j.config().get( log_queries_filename );
         List<String> lines = Files.readAllLines( queriesLog );
@@ -106,84 +59,10 @@ public class BoltQueryLoggingIT
         {
             assertThat( line, containsString( "INFO" ) );
             assertThat( line, containsString( "bolt-session" ) );
-            assertThat( line, containsString( "MyClient/1.0" ) );
+            assertThat( line, containsString( "neo4j-java" ) );
             assertThat( line, containsString( "client/127.0.0.1:" ) );
             assertThat( line, containsString( "server/127.0.0.1:" + neo4j.boltURI().getPort() ) );
-            assertThat( line, containsString( " - RETURN 1 AS num - {}" ) );
+            assertThat( line, containsString( " - RETURN 1 AS num - {} - {}" ) );
         }
-
-        // *** CLEAN UP ***
-
-        // Send RESET
-        send( dataOut, "00 02 b0 0f 00 00" );
-        // Receive SUCCESS {}
-        receive( dataIn, "00 03 b1 70  a0 00 00" );
-
-        socket.close();
-    }
-
-    private static void send( DataOutputStream dataOut, String toSend ) throws IOException
-    {
-        send( dataOut, hexBytes( toSend ) );
-    }
-
-    private static void send( DataOutputStream dataOut, byte[] bytesToSend ) throws IOException
-    {
-        dataOut.write( bytesToSend );
-        dataOut.flush();
-    }
-
-    private void receiveSuccess( DataInputStream dataIn ) throws IOException
-    {
-        short bytes = dataIn.readShort();
-        assertThat(dataIn.readUnsignedByte(), equalTo(0xB1));
-        assertThat(dataIn.readUnsignedByte(), equalTo(0x70));
-        dataIn.skipBytes( bytes);
-    }
-
-    private static void receive( DataInputStream dataIn, String expected ) throws IOException
-    {
-        receive( dataIn, hexBytes( expected ) );
-    }
-    private static void receive( DataInputStream dataIn, byte[] expectedBytes ) throws IOException
-    {
-        byte[] actualBytes = read( dataIn, expectedBytes.length );
-        assertThat( actualBytes, equalTo( expectedBytes ) );
-    }
-
-    private static byte[] hexBytes( String input )
-    {
-        String[] pieces = input.trim().split( "\\s+" );
-        byte[] result = new byte[pieces.length];
-        for ( int i = 0; i < pieces.length; i++ )
-        {
-            result[i] = hexByte( pieces[i] );
-        }
-        return result;
-    }
-
-    private static byte hexByte( String s )
-    {
-        int hi = digit( s.charAt( 0 ), 16 ) << 4;
-        int lo = digit( s.charAt( 1 ), 16 );
-        return (byte) ( hi | lo );
-    }
-
-    private static byte[] read( DataInputStream dataIn, int howMany ) throws IOException
-    {
-        assert howMany > 0;
-
-        byte[] buffer = new byte[howMany];
-        int offset = 0;
-        while ( offset < howMany )
-        {
-            int read = dataIn.read( buffer, offset, howMany - offset );
-            if ( read == 0 )
-            {
-                Thread.yield();
-            }
-            offset += read;
-        }
-        return buffer;
     }
 }

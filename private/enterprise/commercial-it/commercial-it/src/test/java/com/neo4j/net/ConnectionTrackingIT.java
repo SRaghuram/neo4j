@@ -27,13 +27,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import javax.ws.rs.core.HttpHeaders;
 
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
-import org.neo4j.bolt.v1.messaging.request.RunMessage;
-import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
-import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
-import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
-import org.neo4j.bolt.v2.messaging.Neo4jPackV2;
+import org.neo4j.bolt.testing.TransportTestUtil;
+import org.neo4j.bolt.testing.client.SocketConnection;
+import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.function.Predicates;
@@ -68,9 +64,9 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
-import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
-import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
+import static org.neo4j.bolt.testing.MessageMatchers.msgRecord;
+import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
+import static org.neo4j.bolt.testing.StreamMatchers.eqRecord;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
@@ -98,7 +94,7 @@ class ConnectionTrackingIT
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Set<TransportConnection> connections = ConcurrentHashMap.newKeySet();
-    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV2() );
+    private final TransportTestUtil util = new TransportTestUtil();
 
     @Inject
     private TestDirectory dir;
@@ -503,8 +499,8 @@ class ConnectionTrackingIT
         {
             connectSocketTo( neo4j.boltURI() )
                     .send( util.defaultAcceptedVersions() )
-                    .send( util.chunk( initMessage( username, password ) ) )
-                    .send( util.chunk( new RunMessage( "MATCH (n) WHERE id(n) = " + id + " SET n.prop = 42" ), PullAllMessage.INSTANCE ) );
+                    .send( auth( username, password ) )
+                    .send( util.defaultRunAutoCommitTx( "MATCH (n) WHERE id(n) = " + id + " SET n.prop = 42" ) );
 
             return null;
         } );
@@ -527,8 +523,8 @@ class ConnectionTrackingIT
         try
         {
             connection.send( util.defaultAcceptedVersions() )
-                    .send( util.chunk( initMessage( "neo4j", NEO4J_USER_PWD ) ) )
-                    .send( util.chunk( new RunMessage( "CALL dbms.killConnection('" + id + "')" ), PullAllMessage.INSTANCE ) );
+                    .send( auth( "neo4j", NEO4J_USER_PWD ) )
+                    .send( util.defaultRunAutoCommitTx( "CALL dbms.killConnection('" + id + "')" ) );
 
             assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
             assertThat( connection, util.eventuallyReceives(
@@ -588,10 +584,10 @@ class ConnectionTrackingIT
         return rawPayload( "{\"statements\":[{\"statement\":\"" + statement + "\"}]}" );
     }
 
-    private static InitMessage initMessage( String username, String password )
+    private byte[] auth( String username, String password ) throws IOException
     {
         Map<String,Object> authToken = map( "scheme", "basic", "principal", username, "credentials", password );
-        return new InitMessage( BOLT.userAgent, authToken );
+        return util.defaultAuth( authToken );
     }
 
     enum TestConnector

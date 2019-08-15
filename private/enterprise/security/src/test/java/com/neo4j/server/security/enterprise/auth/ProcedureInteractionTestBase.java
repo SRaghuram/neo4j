@@ -24,11 +24,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
-import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
-import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
+import org.neo4j.bolt.testing.TransportTestUtil;
+import org.neo4j.bolt.testing.client.SocketConnection;
+import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -86,8 +84,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
-import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
+import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
@@ -143,7 +140,7 @@ public abstract class ProcedureInteractionTestBase<S>
     protected EnterpriseUserManager userManager;
 
     protected NeoInteractionLevel<S> neo;
-    protected final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+    protected final TransportTestUtil util = new TransportTestUtil();
     File securityLog;
 
     Map<Setting<?>,String> defaultConfiguration()
@@ -625,10 +622,10 @@ public abstract class ProcedureInteractionTestBase<S>
         HostnamePort address = neo.lookupConnector( BoltConnector.NAME );
         Map<String,Object> authToken = map( "principal", username, "credentials", password, "scheme", "basic" );
 
-        connection.connect( address ).send( util.acceptedVersions( 1, 0, 0, 0 ) )
-                .send( util.chunk( new InitMessage( "TestClient/1.1", authToken ) ) );
+        connection.connect( address ).send( util.defaultAcceptedVersions() )
+                .send( util.defaultAuth( authToken ) );
 
-        assertThat( connection, eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
+        assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
         return connection;
     }

@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.neo4j.bolt.v1.transport.integration.AuthenticationIT;
+import org.neo4j.bolt.transport.AuthenticationIT;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;

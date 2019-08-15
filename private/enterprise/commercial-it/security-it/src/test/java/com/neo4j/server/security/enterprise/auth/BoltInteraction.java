@@ -18,18 +18,15 @@ import java.util.function.Supplier;
 
 import org.neo4j.bolt.messaging.ResponseMessage;
 import org.neo4j.bolt.security.auth.AuthenticationException;
-import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
-import org.neo4j.bolt.v1.messaging.request.ResetMessage;
-import org.neo4j.bolt.v1.messaging.request.RunMessage;
-import org.neo4j.bolt.v1.messaging.response.FailureMessage;
-import org.neo4j.bolt.v1.messaging.response.RecordMessage;
-import org.neo4j.bolt.v1.messaging.response.SuccessMessage;
-import org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket;
-import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
-import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
-import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
+import org.neo4j.bolt.testing.TransportTestUtil;
+import org.neo4j.bolt.testing.client.SocketConnection;
+import org.neo4j.bolt.testing.client.TransportConnection;
+import org.neo4j.bolt.transport.Neo4jWithSocket;
+import org.neo4j.bolt.v3.messaging.request.ResetMessage;
+import org.neo4j.bolt.v3.messaging.response.FailureMessage;
+import org.neo4j.bolt.v3.messaging.response.RecordMessage;
+import org.neo4j.bolt.v3.messaging.response.SuccessMessage;
+import org.neo4j.bolt.v4.messaging.BoltV4Messages;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.Factory;
@@ -68,7 +65,7 @@ import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject>
 {
-    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+    private final TransportTestUtil util = new TransportTestUtil();
     private final Factory<TransportConnection> connectionFactory = SocketConnection::new;
     private final Neo4jWithSocket server;
     private Map<String,BoltSubject> subjects = new HashMap<>();
@@ -151,7 +148,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
         }
         try
         {
-            subject.client.send( util.chunk( new RunMessage( call, ValueUtils.asMapValue( params ) ), PullAllMessage.INSTANCE ) );
+            subject.client.send( util.chunk( BoltV4Messages.run( call, ValueUtils.asMapValue( params ) ), BoltV4Messages.pullAll() ) );
             resultConsumer.accept( collectResults( subject.client ) );
             return "";
         }
@@ -176,11 +173,11 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
             subject.client = connectionFactory.newInstance();
         }
         subject.client.connect( server.lookupDefaultConnector() )
-                .send( util.acceptedVersions( 1, 0, 0, 0 ) )
-                .send( util.chunk( new InitMessage( "TestClient/1.1",
+                .send( util.defaultAcceptedVersions() )
+                .send( util.chunk( BoltV4Messages.hello(
                         map( REALM_KEY, NATIVE_REALM, PRINCIPAL, username, CREDENTIALS, password,
                                 SCHEME_KEY, BASIC_SCHEME ) ) ) );
-        assertThat( subject.client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
+        assertThat( subject.client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 4} ) );
         subject.setLoginResult( util.receiveOneResponseMessage( subject.client ) );
         return subject;
     }
