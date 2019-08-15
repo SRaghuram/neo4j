@@ -30,6 +30,18 @@ class Buffers(numBuffers: Int,
 
   // Constructor code
 
+  private def findRHSAccumulatingStateBuffers(initialIndex: Int, argumentStateMapIds: IndexedSeq[ArgumentStateMapId]): Array[AccumulatingBuffer] = {
+    var j = 0
+    val reducersBuilder = Array.newBuilder[Buffers.AccumulatingBuffer]
+    while (j < argumentStateMapIds.length) {
+      val asmId = argumentStateMapIds(j)
+      val accumulatingBuffer = findRHSAccumulatingStateBuffer(initialIndex, asmId)
+      reducersBuilder += accumulatingBuffer
+      j += 1
+    }
+    reducersBuilder.result()
+  }
+
   /**
     * This finds the first buffer downstream of the one at `initialIndex`, which accumulates
     * results. This is needed to set the reducer correctly, which in turn manages reference counting
@@ -68,20 +80,15 @@ class Buffers(numBuffers: Int,
     if (buffers(i) != null)
       return
 
-    val reducers = bufferDefinition.reducers.map(asmId => findRHSAccumulatingStateBuffer(i, asmId))
+    val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers)
     val workCancellers = bufferDefinition.workCancellers
     val downstreamStates = bufferDefinition.downstreamStates
 
     buffers(i) =
       bufferDefinition.variant match {
         case x: ApplyBufferVariant =>
-          val reducerOnRHSDefs = x.reducersOnRHS
           val argumentStatesToInitiate = workCancellers ++ downstreamStates
-          // argumentReducersForThis in reverse order, since upstream reducers possibly
-          // need to increment counts on their downstreams, which have to be initialized
-          // first in order to do that
-          val reducersOnRHS = reducerOnRHSDefs.map(argStateDef => findRHSAccumulatingStateBuffer(i,
-                                                                                                 argStateDef.id)).reverse
+          val reducersOnRHS = findRHSAccumulatingStateBuffers(i, x.reducersOnRHSReversed)
           new MorselApplyBuffer(bufferDefinition.id,
                                 argumentStatesToInitiate,
                                 reducersOnRHS,

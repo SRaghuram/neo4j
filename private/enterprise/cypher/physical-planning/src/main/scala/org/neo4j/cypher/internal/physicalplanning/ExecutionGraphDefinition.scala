@@ -83,11 +83,12 @@ case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends
   * Sits between the LHS and RHS of an apply.
   * This acts as a multiplexer. It receives input and copies it into
   *
-  *
-  * @param reducersOnRHS these are ArgumentStates of reducers on the RHS
+  * @param reducersOnRHSReversed ArgumentStates of reducers on the RHS of this Apply, in downstream -> upstream order.
+  *                              This order is convenient since upstream reducers possibly need to increment counts on
+  *                              their downstreams, which have to be initialized first in order to do that.
   */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
-                              reducersOnRHS: IndexedSeq[ArgumentStateDefinition],
+                              reducersOnRHSReversed: IndexedSeq[ArgumentStateMapId],
                               delegates: IndexedSeq[BufferId]) extends BufferVariant
 
 /**

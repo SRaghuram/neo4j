@@ -142,8 +142,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
     def reducerOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHS = variant.reducersOnRHS :+ asd))(SlotConfiguration.empty))
-
+      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHSReversed = variant.reducersOnRHSReversed :+ asd.id))(SlotConfiguration.empty))
       ExecutionGraphDefinitionMatcher.this
     }
   }

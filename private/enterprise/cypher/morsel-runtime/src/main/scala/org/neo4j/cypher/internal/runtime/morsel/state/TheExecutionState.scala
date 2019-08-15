@@ -29,14 +29,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         initializationResources: QueryResources,
                         tracker: QueryCompletionTracker) extends ExecutionState {
 
-
-  // Verify that IDs and offsets match
-
-  for (i <- pipelines.indices)
-    Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
-
-  for (i <- executionGraphDefinition.buffers.indices)
-    Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
+  verifyThatIdsAndOffsetsMatch()
 
   // Add assertion for query completion
   tracker.addCompletionAssertion(() => this.assertEmpty())
@@ -321,6 +314,19 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def toString: String = "TheExecutionState"
 
+  private def verifyThatIdsAndOffsetsMatch(): Unit = {
+    var i = 0
+    while (i < pipelines.length) {
+      Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
+      i += 1
+    }
+
+    i = 0
+    while (i < executionGraphDefinition.buffers.size) {
+      Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
+      i += 1
+    }
+  }
 }
 
 class QueryStatus {

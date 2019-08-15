@@ -47,7 +47,7 @@ object PipelineBuilder {
     val variant = bufferDefinition match {
       case b: ApplyBufferDefinitionBuild =>
         ApplyBufferVariant(b.argumentSlotOffset,
-                           b.reducersOnRHS.map(mapArgumentStateDefinition),
+                           b.reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse,
                            b.delegates)
 
       case b: ArgumentStateBufferDefinitionBuild =>
