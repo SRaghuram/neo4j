@@ -150,7 +150,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocated(entry.getKey.estimatedHeapUsage())
+          memoryTracker.allocated(entry.getKey)
           aggregators.map(_.newStandardReducer(memoryTracker))
         })
 

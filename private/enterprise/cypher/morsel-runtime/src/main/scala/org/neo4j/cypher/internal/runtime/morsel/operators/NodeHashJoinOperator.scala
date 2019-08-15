@@ -136,7 +136,7 @@ object NodeHashJoinOperator {
           val view = morsel.view(morsel.getCurrentRow, morsel.getCurrentRow + 1)
           table.put(Values.longArray(key), view)
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocated(view.estimatedHeapUsage)
+          memoryTracker.allocated(view)
         }
         morsel.moveToNextRow()
       }

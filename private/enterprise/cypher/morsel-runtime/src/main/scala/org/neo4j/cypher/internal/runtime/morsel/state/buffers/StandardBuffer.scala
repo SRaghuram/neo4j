@@ -46,7 +46,7 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
 
 class MemoryTrackingStandardBuffer[T <: WithHeapUsageEstimation](memoryTracker: QueryMemoryTracker) extends StandardBuffer[T] {
   override def put(t: T): Unit = {
-    memoryTracker.allocated(t.estimatedHeapUsage)
+    memoryTracker.allocated(t)
     super.put(t)
   }
 

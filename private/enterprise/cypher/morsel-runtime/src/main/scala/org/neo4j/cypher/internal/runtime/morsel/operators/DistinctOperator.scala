@@ -89,7 +89,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(groupingKey.estimatedHeapUsage())
+        memoryTracker.allocated(groupingKey)
         groupings.project(row, groupingKey)
         true
       } else {

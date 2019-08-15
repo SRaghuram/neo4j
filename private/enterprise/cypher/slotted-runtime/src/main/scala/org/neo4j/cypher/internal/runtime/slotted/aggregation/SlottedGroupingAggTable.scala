@@ -37,7 +37,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
-      state.memoryTracker.allocated(groupingValue.estimatedHeapUsage())
+      state.memoryTracker.allocated(groupingValue)
       val functions = new Array[AggregationFunction](aggregationExpressions.length)
       var i = 0
       while (i < aggregationExpressions.length) {

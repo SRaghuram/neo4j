@@ -69,7 +69,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = computeGroupingKey(row)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
-      state.memoryTracker.allocated(groupingValue.estimatedHeapUsage())
+      state.memoryTracker.allocated(groupingValue)
       val functions = new Array[AggregationFunction](aggregationExpressions.length)
       var i = 0
       while (i < aggregationExpressions.length) {
