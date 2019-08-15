@@ -85,8 +85,7 @@ class HintAcceptanceTest
          |    RETURN r
       """.stripMargin
 
-    // TODO remove 3.4 when depending on 3.4.15
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_4 - Configs.Cost3_1 - Configs.Cost2_3, query,
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_1 - Configs.Cost2_3, query,
       planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin"),
         expectPlansToFail = Configs.RulePlanner))
 
