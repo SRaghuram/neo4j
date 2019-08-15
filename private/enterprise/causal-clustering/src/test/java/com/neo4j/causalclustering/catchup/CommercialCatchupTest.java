@@ -32,6 +32,7 @@ import java.util.function.Function;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -47,6 +48,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith( DefaultFileSystemExtension.class )
 abstract class CommercialCatchupTest
@@ -73,11 +76,15 @@ abstract class CommercialCatchupTest
     @BeforeEach
     void setUp()
     {
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        doReturn( true ).when( availabilityGuard ).isAvailable();
+
         pipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
         databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig()
                 .withDatabaseId( DEFAULT_DB_ID )
                 .withStoreId( StoreId.DEFAULT )
+                .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
         serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fsa, LOG_PROVIDER );
     }
@@ -105,7 +112,7 @@ abstract class CommercialCatchupTest
 
     static Function<DatabaseManager<?>,RequestResponse> storeId()
     {
-        return new Function<DatabaseManager<?>,RequestResponse>()
+        return new Function<>()
         {
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
@@ -135,7 +142,7 @@ abstract class CommercialCatchupTest
 
     static Function<DatabaseManager<?>,RequestResponse> wrongDb()
     {
-        return new Function<DatabaseManager<?>,RequestResponse>()
+        return new Function<>()
         {
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )

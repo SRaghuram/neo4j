@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
@@ -24,21 +25,24 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-class StoppedDatabaseHandlerTest
+class UnavailableDatabaseHandlerTest
 {
     private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "customers" );
     private final CatchupProtocolMessage.WithDatabaseId message = new GetStoreIdRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();
+    private final AvailabilityGuard availabilityGuard = mock( AvailabilityGuard.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     @BeforeEach
     void setUp()
     {
         protocol.expect( CatchupServerProtocol.State.GET_STORE_ID );
-        var handler = new StoppedDatabaseHandler<>( message.getClass(), protocol, logProvider );
+        var handler = new UnavailableDatabaseHandler<>( message.getClass(), protocol, availabilityGuard, logProvider );
         channel.pipeline().addLast( handler );
     }
 
@@ -49,22 +53,29 @@ class StoppedDatabaseHandlerTest
     }
 
     @Test
-    void shouldLogWarning()
+    void shouldLogWarningWhenUnavailable()
     {
-        channel.writeInbound( message );
-        logProvider.assertAtLeastOnce( inLog( StoppedDatabaseHandler.class )
-                .warn( containsString( "database " + databaseId.name() + " is stopped" ) ) );
+        testLogWarning( "database " + databaseId.name() + " is unavailable" );
     }
 
     @Test
-    void shouldWriteErrorResponse()
+    void shouldLogWarningWhenShutdown()
     {
-        channel.writeInbound( message );
+        when( availabilityGuard.isShutdown() ).thenReturn( true );
+        testLogWarning( "database " + databaseId.name() + " is shutdown" );
+    }
 
-        assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
-        CatchupErrorResponse response = channel.readOutbound();
-        assertEquals( CatchupResult.E_STORE_UNAVAILABLE, response.status() );
-        assertThat( response.message(), containsString( "database " + databaseId.name() + " is stopped" ) );
+    @Test
+    void shouldWriteErrorResponseWhenUnavailable()
+    {
+        testErrorResponse( "database " + databaseId.name() + " is unavailable" );
+    }
+
+    @Test
+    void shouldWriteErrorResponseWhenShutdown()
+    {
+        when( availabilityGuard.isShutdown() ).thenReturn( true );
+        testErrorResponse( "database " + databaseId.name() + " is shutdown" );
     }
 
     @Test
@@ -72,5 +83,21 @@ class StoppedDatabaseHandlerTest
     {
         channel.writeInbound( message );
         assertTrue( protocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
+    }
+
+    private void testLogWarning( String expectedMessage )
+    {
+        channel.writeInbound( message );
+        logProvider.assertAtLeastOnce( inLog( UnavailableDatabaseHandler.class ).warn( containsString( expectedMessage ) ) );
+    }
+
+    private void testErrorResponse( String expectedMessage )
+    {
+        channel.writeInbound( message );
+
+        assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
+        CatchupErrorResponse response = channel.readOutbound();
+        assertEquals( CatchupResult.E_STORE_UNAVAILABLE, response.status() );
+        assertThat( response.message(), containsString( expectedMessage ) );
     }
 }

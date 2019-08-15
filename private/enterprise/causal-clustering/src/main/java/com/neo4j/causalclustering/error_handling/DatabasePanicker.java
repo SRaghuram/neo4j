@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-public interface Panicker
+public interface DatabasePanicker
 {
     void panic( Throwable e );
 }

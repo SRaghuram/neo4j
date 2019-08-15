@@ -59,8 +59,8 @@ import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
@@ -276,7 +276,8 @@ class CoreDatabaseFactory
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
-        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, stateMachines, panicService );
+        DatabasePanicker panicker = panicService.panickerFor( databaseId );
+        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, stateMachines, panicker );
 
         AccessCapabilityFactory accessCapabilityFactory = AccessCapabilityFactory.fixed( new LeaderCanWrite( raftGroup.raftMachine() ) );
 
@@ -287,6 +288,7 @@ class CoreDatabaseFactory
             StoreDownloadContext downloadContext, Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext,
             ClusterInternalDbmsOperator internalOperator )
     {
+        DatabasePanicker panicker = panicService.panickerFor( databaseId );
         RaftGroup raftGroup = raftContext.raftGroup();
         DatabaseLogProvider debugLog = kernelDatabase.getInternalLogProvider();
 
@@ -295,13 +297,13 @@ class CoreDatabaseFactory
         StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId.name(), life, debugLog );
         CoreState coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
-        CommandApplicationProcess commandApplicationProcess = createCommandApplicationProcess( raftGroup, panicService, config, life, jobScheduler,
+        CommandApplicationProcess commandApplicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, life, jobScheduler,
                 dependencies, monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
 
         CoreSnapshotService snapshotService = new CoreSnapshotService( commandApplicationProcess, raftGroup.raftLog(), coreState, raftGroup.raftMachine() );
         dependencies.satisfyDependencies( snapshotService );
 
-        CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicService, jobScheduler, monitors, commandApplicationProcess,
+        CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, commandApplicationProcess,
                 snapshotService, downloadContext, debugLog );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
@@ -318,18 +320,13 @@ class CoreDatabaseFactory
         raftGroup.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
 
         RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
-                raftMessageDispatcher, catchupAddressProvider, panicService );
+                raftMessageDispatcher, catchupAddressProvider, panicker );
 
         LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
                 raftGroup, downloadService, commandApplicationProcess );
 
-        CoreDatabaseLife coreDatabaseLife = new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess,
-                messageHandler, snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService );
-
-        coreDatabaseLife.add( panicService.addPanicEventHandler( commandApplicationProcess ) );
-        coreDatabaseLife.add( panicService.addPanicEventHandler( raftGroup.raftMachine() ) );
-
-        return coreDatabaseLife;
+        return new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess,
+                messageHandler, snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService, panicService );
     }
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, CoreStateStorageFactory storageFactory,
@@ -363,7 +360,7 @@ class CoreDatabaseFactory
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    private CommandApplicationProcess createCommandApplicationProcess( RaftGroup raftGroup, Panicker panicker, Config config, LifeSupport life,
+    private CommandApplicationProcess createCommandApplicationProcess( RaftGroup raftGroup, DatabasePanicker panicker, Config config, LifeSupport life,
             JobScheduler jobScheduler, Dependencies dependencies, Monitors monitors, ProgressTracker progressTracker, SessionTracker sessionTracker,
             CoreState coreState, DatabaseLogProvider debugLog )
     {
@@ -403,7 +400,7 @@ class CoreDatabaseFactory
                 availabilityTimeoutMillis, debugLog, databaseManager, monitors, leaderAwaitDuration );
     }
 
-    private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicService, JobScheduler jobScheduler,
+    private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, DatabasePanicker panicker, JobScheduler jobScheduler,
             Monitors monitors, CommandApplicationProcess commandApplicationProcess, CoreSnapshotService snapshotService, StoreDownloadContext downloadContext,
             DatabaseLogProvider debugLog )
     {
@@ -413,7 +410,7 @@ class CoreDatabaseFactory
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
         return new CoreDownloaderService( jobScheduler, downloader, downloadContext, snapshotService, commandApplicationProcess, debugLog, backoffStrategy,
-                panicService, monitors );
+                panicker, monitors );
     }
 
     private DatabaseIdContext createIdContext( DatabaseId databaseId, RaftMachine raftMachine, CommandIndexTracker commandIndexTracker,

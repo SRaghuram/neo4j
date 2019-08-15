@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.error_handling;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -21,11 +22,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @Disabled
@@ -63,14 +66,17 @@ class PanicIT
         void shouldShutdownOnPanic( Context context ) throws InterruptedException
         {
             // given
-            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic(), context );
-            PanicService panicService = context.panicService();
+            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic(), DEFAULT_DATABASE_NAME, context );
+            var panicService = context.panicService();
 
             // when
-            panicService.panic( null );
+            panicService.panickerFor( context.defaultDbId() ).panic( new Exception() );
 
             // then
-            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic() - 1, context );
+            // default db shutdown because of the panic
+            assertNumberOfMembersInTopology( context.expectedMembersBeforePanic() - 1, DEFAULT_DATABASE_NAME, context );
+            // system db remains running and is unaffected by the panic of the default db
+            assertNumberOfMembersInTopology( context.initialInstanceCount, SYSTEM_DATABASE_NAME, context );
         }
     }
 
@@ -89,85 +95,90 @@ class PanicIT
         return IntStream.range( 0, INITIAL_READ_REPLICAS ).mapToObj( i -> new ReadReplicaContext( i, cluster ) );
     }
 
-    private static void assertNumberOfMembersInTopology( int expected, Context context ) throws InterruptedException
+    private static void assertNumberOfMembersInTopology( int expected, String databaseName, Context context ) throws InterruptedException
     {
-        assertEventually( context::membersInTopology, equalTo( expected ), 3, MINUTES );
+        assertEventually( () -> context.membersInTopology( databaseName ), equalTo( expected ), 3, MINUTES );
     }
 
     private static class CoreContext extends Context
     {
-
         CoreContext( int instanceNr, Cluster cluster )
         {
-            super( instanceNr, cluster );
+            super( instanceNr, cluster.coreMembers().size(), cluster );
         }
 
         @Override
-        int membersInTopology()
+        int membersInTopology( String databaseName )
         {
-            return cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME );
+            return cluster.numberOfCoreMembersReportedByTopology( databaseName );
         }
 
         @Override
         int expectedMembersBeforePanic()
         {
-            return INITIAL_CORE_MEMBERS - instnaceNr();
+            return INITIAL_CORE_MEMBERS - instanceNr;
         }
 
         @Override
-        PanicService panicService()
+        ClusterMember member()
         {
-            return cluster.getCoreMemberById( instnaceNr() ).defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
+            return cluster.getCoreMemberById( instanceNr );
         }
     }
 
     private static class ReadReplicaContext extends Context
     {
-
         ReadReplicaContext( int instanceNr, Cluster cluster )
         {
-            super( instanceNr, cluster );
+            super( instanceNr, cluster.readReplicas().size(), cluster );
         }
 
         @Override
-        int membersInTopology()
+        int membersInTopology( String databaseName )
         {
-            return cluster.numberOfReadReplicaMembersReportedByTopology( DEFAULT_DATABASE_NAME );
+            return cluster.numberOfReadReplicaMembersReportedByTopology( databaseName );
         }
 
         @Override
         int expectedMembersBeforePanic()
         {
-            return INITIAL_READ_REPLICAS - instnaceNr();
+            return INITIAL_READ_REPLICAS - instanceNr;
         }
 
         @Override
-        PanicService panicService()
+        ClusterMember member()
         {
-            return cluster.getReadReplicaById( instnaceNr() ).defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
+            return cluster.getReadReplicaById( instanceNr );
         }
     }
 
     private abstract static class Context
     {
-        private final int instanceNr;
-        protected final Cluster cluster;
+        final int instanceNr;
+        final int initialInstanceCount;
+        final Cluster cluster;
 
-        Context( int instanceNr, Cluster cluster )
+        Context( int instanceNr, int initialInstanceCount, Cluster cluster )
         {
             this.instanceNr = instanceNr;
+            this.initialInstanceCount = initialInstanceCount;
             this.cluster = cluster;
         }
 
-        abstract int membersInTopology();
+        abstract int membersInTopology( String databaseName );
 
         abstract int expectedMembersBeforePanic();
 
-        abstract PanicService panicService();
+        abstract ClusterMember member();
 
-        int instnaceNr()
+        final PanicService panicService()
         {
-            return instanceNr;
+            return member().defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
+        }
+
+        final DatabaseId defaultDbId()
+        {
+            return member().defaultDatabase().databaseId();
         }
     }
 }

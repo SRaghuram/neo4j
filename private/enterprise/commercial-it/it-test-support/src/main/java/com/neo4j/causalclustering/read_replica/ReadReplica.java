@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
@@ -37,7 +36,6 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
@@ -72,7 +70,6 @@ public class ReadReplica implements ClusterMember
     private final ThreadGroup threadGroup;
     private final File databasesDirectory;
     private final ReadReplicaGraphDatabaseFactory dbFactory;
-    private volatile boolean hasPanicked;
 
     public ReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
             int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
@@ -147,8 +144,6 @@ public class ReadReplica implements ClusterMember
         defaultDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( DEFAULT_DATABASE_NAME );
         systemDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( SYSTEM_DATABASE_NAME );
         DependencyResolver dependencyResolver = systemDatabase.getDependencyResolver();
-        PanicService panicService = dependencyResolver.resolveDependency( PanicService.class );
-        panicService.addPanicEventHandler( () -> hasPanicked = true );
 
         //noinspection unchecked
         databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
@@ -181,12 +176,6 @@ public class ReadReplica implements ClusterMember
     public DatabaseManagementService managementService()
     {
         return readReplicaGraphDatabase.getManagementService();
-    }
-
-    @Override
-    public boolean hasPanicked()
-    {
-        return hasPanicked;
     }
 
     public CatchupPollingProcess txPollingClient()

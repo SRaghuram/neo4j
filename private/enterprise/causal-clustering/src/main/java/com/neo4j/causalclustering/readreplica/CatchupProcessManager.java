@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 
@@ -32,7 +33,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -71,17 +71,17 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Log log;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
-    private final Health databaseHealth;
+    private final DatabasePanicker panicker;
     private final TransactionCommitNotifier txCommitNotifier;
 
     private CatchupPollingProcess catchupProcess;
     private volatile boolean isPanicked;
     private Timer timer;
 
-    CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext, Health databaseHealth,
-            TopologyService topologyService, CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategyPipeline,
-            TimerService timerService, CommandIndexTracker commandIndexTracker, LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier,
-            Config config, TransactionCommitNotifier txCommitNotifier )
+    CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
+            DatabasePanicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
+            UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
+            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config, TransactionCommitNotifier txCommitNotifier )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
@@ -92,7 +92,7 @@ public class CatchupProcessManager extends SafeLifecycle
         this.executor = executor;
         this.catchupComponents = catchupComponents;
         this.databaseContext = databaseContext;
-        this.databaseHealth = databaseHealth;
+        this.panicker = panicker;
         this.topologyService = topologyService;
         this.catchupClient = catchUpClient;
         this.selectionStrategyPipeline = selectionStrategyPipeline;
@@ -142,7 +142,7 @@ public class CatchupProcessManager extends SafeLifecycle
     public synchronized void panic( Throwable e )
     {
         log.error( "Unexpected issue in catchup process. No more catchup requests will be scheduled.", e );
-        databaseHealth.panic( e );
+        panicker.panic( e );
         isPanicked = true;
     }
 

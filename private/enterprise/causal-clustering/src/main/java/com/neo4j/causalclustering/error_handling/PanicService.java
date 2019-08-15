@@ -6,116 +6,89 @@
 package com.neo4j.causalclustering.error_handling;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.util.VisibleForTesting;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
-public class PanicService implements Panicker
+import static org.neo4j.util.Preconditions.checkState;
+
+public class PanicService
 {
-    static final String PANIC_MESSAGE = "System has panicked.";
-    private final List<PanicEventHandler> eventHandlers = new CopyOnWriteArrayList<>();
-    private final PanicEventExecutor panicEventExecutor = new PanicEventExecutor();
-    private final Thread thread = new Thread( panicEventExecutor, "panic-thread" );
+    private final Map<DatabaseId,DatabasePanicEventHandlers> handlersByDatabase = new ConcurrentHashMap<>();
+    private final Executor executor;
     private final Log log;
-    private final boolean blocking;
-    private final AtomicBoolean hasPanicked = new AtomicBoolean();
 
-    public PanicService( LogProvider logProvider )
+    public PanicService( JobScheduler jobScheduler, LogService logService )
     {
-        this( logProvider, false );
+        executor = jobScheduler.executor( Group.PANIC_SERVICE );
+        log = logService.getUserLog( getClass() );
     }
 
-    @VisibleForTesting
-    PanicService( LogProvider logProvider, boolean blocking )
+    public void addPanicEventHandlers( DatabaseId databaseId, List<? extends DatabasePanicEventHandler> handlers )
     {
-        thread.setDaemon( true );
-        this.log = logProvider.getLog( getClass() );
-        this.blocking = blocking;
+        var newHandlers = new DatabasePanicEventHandlers( handlers );
+        var oldHandlers = handlersByDatabase.putIfAbsent( databaseId, newHandlers );
+        checkState( oldHandlers == null, "Panic handlers for database %s are already installed", databaseId.name() );
     }
 
-    public PanicEventHandlerLifecycle addPanicEventHandler( PanicEventHandler panicEventHandler )
+    public void removePanicEventHandlers( DatabaseId databaseId )
     {
-        return new PanicEventHandlerLifecycle( this, panicEventHandler );
+        handlersByDatabase.remove( databaseId );
     }
 
-    @Override
-    public void panic( Throwable e )
+    public DatabasePanicker panickerFor( DatabaseId databaseId )
     {
-        if ( hasPanicked.compareAndSet( false, true ) )
+        return error -> panicAsync( databaseId, error );
+    }
+
+    private void panicAsync( DatabaseId databaseId, Throwable error )
+    {
+        executor.execute( () -> panic( databaseId, error ) );
+    }
+
+    private void panic( DatabaseId databaseId, Throwable error )
+    {
+        log.error( "Clustering components for database '" + databaseId.name() + "' have encountered a critical error", error );
+
+        var handlers = handlersByDatabase.get( databaseId );
+        if ( handlers != null )
         {
-            tryLog( PANIC_MESSAGE, e );
-            thread.start();
-            possiblyBlock();
+            handlers.handlePanic();
         }
     }
 
-    private void tryLog( String message, Throwable e )
+    private class DatabasePanicEventHandlers
     {
-        try
+        final List<? extends DatabasePanicEventHandler> handlers;
+        final AtomicBoolean panicked;
+
+        DatabasePanicEventHandlers( List<? extends DatabasePanicEventHandler> handlers )
         {
-            if ( e == null )
-            {
-                log.error( message );
-            }
-            else
-            {
-                log.error( message, e );
-            }
+            this.handlers = handlers;
+            this.panicked = new AtomicBoolean();
         }
-        catch ( Throwable t )
+
+        void handlePanic()
         {
-            System.err.println( message );
-            if ( e != null )
+            if ( panicked.compareAndSet( false, true ) )
             {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void possiblyBlock()
-    {
-        if ( blocking )
-        {
-            try
-            {
-                thread.join();
-            }
-            catch ( InterruptedException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-    }
-
-    void add( PanicEventHandler eventHandler )
-    {
-        this.eventHandlers.add( eventHandler );
-    }
-
-    void remove( PanicEventHandler eventHandler )
-    {
-        this.eventHandlers.remove( eventHandler );
-    }
-
-    private class PanicEventExecutor implements Runnable
-    {
-        private static final String FAIL_MESSAGE = "Failed to handle panic event";
-
-        @Override
-        public void run()
-        {
-            for ( PanicEventHandler eventHandler : eventHandlers )
-            {
-                try
+                for ( var handler : handlers )
                 {
-                    eventHandler.onPanic();
-                }
-                catch ( Throwable t )
-                {
-                    tryLog( FAIL_MESSAGE, t );
+                    try
+                    {
+                        handler.onPanic();
+                    }
+                    catch ( Throwable t )
+                    {
+                        log.error( "Failed to handle a panic event", t );
+                    }
                 }
             }
         }

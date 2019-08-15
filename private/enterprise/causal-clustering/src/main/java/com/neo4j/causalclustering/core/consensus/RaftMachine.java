@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.error_handling.PanicEventHandler;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
@@ -32,7 +32,7 @@ import static java.lang.String.format;
  * <p>
  * The algorithm is driven by incoming messages provided to {@link #handle}.
  */
-public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandler, RoleProvider
+public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEventHandler, RoleProvider
 {
     private final InFlightCache inFlightCache;
     private final RaftOutcomeApplier outcomeApplier;

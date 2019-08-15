@@ -14,24 +14,29 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.markUnhealthy;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.raiseAvailabilityGuard;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.stopDatabase;
 import static java.lang.String.format;
 
 class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
@@ -43,19 +48,20 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final TopologyService topologyService;
-
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
     private final LifeSupport clusterComponentsLife;
+    private final PanicService panicService;
 
     ReadReplicaDatabaseLife( ReadReplicaDatabaseContext databaseContext, Lifecycle catchupProcess, UpstreamDatabaseStrategySelector selectionStrategy,
             LogProvider debugLogProvider, LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
-            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator )
+            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator, PanicService panicService )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
         this.catchupProcess = catchupProcess;
         this.selectionStrategy = selectionStrategy;
+        this.panicService = panicService;
         this.syncRetryStrategy = new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS );
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
@@ -67,6 +73,7 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     @Override
     public void init() throws Exception
     {
+        addPanicEventHandlers();
         var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
         clusterComponentsLife.init();
         databaseContext.database().init();
@@ -212,11 +219,29 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
         catchupProcess.shutdown();
         databaseContext.database().shutdown();
         clusterComponentsLife.stop();
+        removePanicEventHandlers();
     }
 
     @Override
     public void add( Lifecycle lifecycledComponent )
     {
         clusterComponentsLife.add( lifecycledComponent );
+    }
+
+    private void addPanicEventHandlers()
+    {
+        var db = databaseContext.database();
+
+        var panicEventHandlers = List.of(
+                raiseAvailabilityGuard( db ),
+                markUnhealthy( db ),
+                stopDatabase( db, clusterInternalOperator ) );
+
+        panicService.addPanicEventHandlers( db.getDatabaseId(), panicEventHandlers );
+    }
+
+    private void removePanicEventHandlers()
+    {
+        panicService.removePanicEventHandlers( databaseContext.databaseId() );
     }
 }

@@ -8,8 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
-import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +17,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageEngine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,7 +29,7 @@ class CoreCommitProcessFactoryTest
     private final DatabaseId databaseId = new TestDatabaseIdRepository().get( "orders" );
     private final Replicator replicator = mock( Replicator.class );
     private final CoreStateMachines coreStateMachines = mock( CoreStateMachines.class );
-    private final Panicker panicker = new PanicService( NullLogProvider.getInstance() );
+    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
 
     private final TransactionAppender appender = mock( TransactionAppender.class );
     private final StorageEngine storageEngine = mock( StorageEngine.class );

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import com.neo4j.causalclustering.core.replication.Replicator;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.database.DatabaseId;
@@ -22,9 +22,9 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
 {
     private final Replicator replicator;
     private final DatabaseId databaseId;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
 
-    public ReplicatedTransactionCommitProcess( Replicator replicator, DatabaseId databaseId, Panicker panicker )
+    public ReplicatedTransactionCommitProcess( Replicator replicator, DatabaseId databaseId, DatabasePanicker panicker )
     {
         this.replicator = replicator;
         this.databaseId = databaseId;

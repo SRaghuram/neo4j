@@ -5,12 +5,14 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-public class PanicException extends IllegalStateException
+class PanicException extends IllegalStateException
 {
-    public static final PanicException EXCEPTION = new PanicException();
+    static final String MESSAGE = "Clustering components have encountered a critical error";
+
+    static final PanicException EXCEPTION = new PanicException();
 
     private PanicException()
     {
-        super( "Cluster has panicked" );
+        super( MESSAGE );
     }
 }

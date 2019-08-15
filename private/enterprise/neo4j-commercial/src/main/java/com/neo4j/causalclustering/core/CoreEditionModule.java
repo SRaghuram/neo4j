@@ -26,7 +26,6 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
-import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
@@ -163,7 +162,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory( globalModule.getPageCache() );
 
-        panicService = new PanicService( logService.getUserLogProvider() );
+        panicService = new PanicService( globalModule.getJobScheduler(), logService );
         globalDependencies.satisfyDependencies( panicService ); // used by test
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
@@ -203,14 +202,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         // used by ReadReplicaHierarchicalCatchupIT
         globalModule.getGlobalDependencies().satisfyDependencies( (CatchupServerProvider) () -> catchupServer );
 
-        panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( catchupServer ) );
-
         Optional<Server> optionalBackupServer = catchupComponentsProvider.createBackupServer( serverInstalledProtocolHandler, catchupServerHandler );
         if ( optionalBackupServer.isPresent() )
         {
             Server backupServer = optionalBackupServer.get();
             life.add( backupServer );
-            panicService.addPanicEventHandler( PanicEventHandlers.stopServerEventHandler( backupServer ) );
         }
     }
 
@@ -253,15 +249,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
         return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseManager, config, logProvider );
-    }
-
-    private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
-    {
-        // order matters
-        // TODO: Make Panic Service multi-db aware and bring back raft machine, catchup server, backup server and command application process handlers
-        panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
-        panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( globalHealth ) );
-        panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
     }
 
     /* Component Factories */
@@ -315,8 +302,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         // must start last and stop first, since it handles external requests
         createCoreServers( globalLife, databaseManager, fileSystem );
-
-        addPanicEventHandlers( globalLife, panicService );
     }
 
     // TODO extract common

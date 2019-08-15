@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ class ReplicatedTransactionCommitProcessTest
         long resultTxId = 5L;
 
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultTxId ) );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, mock( Panicker.class ) );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, mock( DatabasePanicker.class ) );
 
         // when
         long txId = commitProcess.commit( new TransactionToApply( tx ), CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
@@ -60,7 +60,7 @@ class ReplicatedTransactionCommitProcessTest
     {
         // given
         IllegalArgumentException resultError = new IllegalArgumentException( "Result error" );
-        Panicker panicker = mock( Panicker.class );
+        DatabasePanicker panicker = mock( DatabasePanicker.class );
 
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultError ) );
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, panicker );

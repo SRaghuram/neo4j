@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.outcome.SnapshotRequirement;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -30,12 +30,12 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     private final CoreDownloaderService downloadService;
     private final CommandApplicationProcess applicationProcess;
     private CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
     private boolean stopped;
 
     public RaftMessageApplier( LogProvider logProvider, RaftMachine raftMachine, CoreDownloaderService downloadService,
             CommandApplicationProcess applicationProcess, CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider,
-            Panicker panicker )
+            DatabasePanicker panicker )
     {
         this.log = logProvider.getLog( getClass() );
         this.raftMachine = raftMachine;

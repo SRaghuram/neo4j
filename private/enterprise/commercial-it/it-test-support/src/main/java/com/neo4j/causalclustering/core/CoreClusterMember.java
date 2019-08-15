@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -25,7 +24,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -73,7 +71,6 @@ public class CoreClusterMember implements ClusterMember
     private final Monitors monitors = new Monitors();
     private final File databasesDirectory;
     private final CoreGraphDatabaseFactory dbFactory;
-    private volatile boolean hasPanicked;
     private DatabaseIdRepository databaseIdRepository;
 
     public CoreClusterMember( int serverId,
@@ -184,10 +181,6 @@ public class CoreClusterMember implements ClusterMember
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
         defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         systemDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-
-        DependencyResolver deps = systemDatabase.getDependencyResolver();
-        PanicService panicService = deps.resolveDependency( PanicService.class );
-        panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
     @Override
@@ -212,12 +205,6 @@ public class CoreClusterMember implements ClusterMember
     public boolean isShutdown()
     {
         return coreGraphDatabase == null;
-    }
-
-    @Override
-    public boolean hasPanicked()
-    {
-        return hasPanicked;
     }
 
     @Override

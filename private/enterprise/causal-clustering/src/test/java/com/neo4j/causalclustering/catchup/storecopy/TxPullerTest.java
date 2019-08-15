@@ -163,7 +163,7 @@ class TxPullerTest
     }
 
     @ParameterizedTest
-    @EnumSource( value = CatchupResult.class, mode = EnumSource.Mode.EXCLUDE, names = {"SUCCESS_END_OF_STREAM", "SUCCESS_END_OF_BATCH"} )
+    @EnumSource( value = CatchupResult.class, mode = EnumSource.Mode.EXCLUDE, names = {"SUCCESS_END_OF_STREAM"} )
     void shouldImmediatelyMoveToLastAttemptIfNoProgressAndErrorResponse( CatchupResult result ) throws Exception
     {
         // All error responses are considered non transient

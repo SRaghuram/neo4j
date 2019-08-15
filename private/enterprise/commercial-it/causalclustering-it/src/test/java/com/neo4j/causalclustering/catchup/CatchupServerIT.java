@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
@@ -35,6 +33,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -95,7 +94,7 @@ class CatchupServerIT
     private DatabaseIdRepository databaseIdRepository;
 
     @BeforeEach
-    void startDb() throws Throwable
+    void startDb()
     {
         temporaryDirectory = testDirectory.directory( "temp" );
         managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
@@ -248,15 +247,30 @@ class CatchupServerIT
     @Test
     void shouldFailWhenRequestedDatabaseIsShutdown() throws Exception
     {
-        String testDatabase = new NormalizedDatabaseName( "testDatabase" ).name();
-        managementService.createDatabase( testDatabase );
+        var databaseName = "foo";
+        managementService.createDatabase( databaseName );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( testDatabase ) ) )
+        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( databaseName ) ) )
         {
-            managementService.shutdownDatabase( testDatabase );
+            managementService.shutdownDatabase( databaseName );
 
             var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( "database " + testDatabase + " is stopped" ) );
+            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseName + " is shutdown" ) );
+        }
+    }
+
+    @Test
+    void shouldFailWhenRequestedDatabaseIsUnavailable() throws Exception
+    {
+        var databaseName = "bar";
+        managementService.createDatabase( databaseName );
+
+        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( databaseName ) ) )
+        {
+            makeDatabaseUnavailable( databaseName, managementService );
+
+            var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
+            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseName + " is unavailable" ) );
         }
     }
 
@@ -291,11 +305,6 @@ class CatchupServerIT
         List<String> expectedStoreFiles = getExpectedStoreFiles( database );
         List<String> givenFile = Arrays.stream( files ).map( File::getName ).collect( toList() );
         assertThat( givenFile, containsInAnyOrder( expectedStoreFiles.toArray( new String[givenFile.size()] ) ) );
-    }
-
-    private static LongSet getExpectedIndexIds( Database database )
-    {
-        return database.getDatabaseFileListing().getIndexFileListing().getIndexIds();
     }
 
     private static List<File> listServerExpectedNonReplayableFiles( Database database ) throws IOException
@@ -366,5 +375,12 @@ class CatchupServerIT
     private static Database getDatabase( GraphDatabaseAPI graphDb )
     {
         return graphDb.getDependencyResolver().resolveDependency( Database.class );
+    }
+
+    private static void makeDatabaseUnavailable( String databaseName, DatabaseManagementService managementService )
+    {
+        var db = (GraphDatabaseAPI) managementService.database( databaseName );
+        var availabilityGuard = db.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
+        availabilityGuard.require( () -> "Unavailable for testing" );
     }
 }

@@ -13,6 +13,7 @@ import java.util.Collections;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
+import static com.neo4j.dbms.OperatorState.STOPPED;
 import static com.neo4j.dbms.OperatorState.STORE_COPYING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -160,5 +161,48 @@ class ClusterInternalDbmsOperatorTest
 
         // then
         assertNull( operator.desired().get( someDb ) );
+    }
+
+    @Test
+    void shouldDesireStopForPanickedDatabase()
+    {
+        // given
+        var someDb = databaseIdRepository.get( "some" );
+
+        // when
+        operator.stopOnPanic( someDb );
+
+        // then
+        assertEquals( operator.desired().get( someDb ), STOPPED );
+        verify( connector ).trigger( false );
+    }
+
+    @Test
+    void shouldDesireStopForPanickedDatabaseWhileStoreCoping()
+    {
+        // given
+        var someDb = databaseIdRepository.get( "some" );
+
+        // when
+        operator.stopForStoreCopy( someDb );
+        operator.stopOnPanic( someDb );
+
+        // then
+        assertEquals( operator.desired().get( someDb ), STOPPED );
+    }
+
+    @Test
+    void shouldNotTriggerRestartAfterStoreCopyWhenPanicked()
+    {
+        // given
+        var someDb = databaseIdRepository.get( "some" );
+
+        // when
+        operator.stopOnPanic( someDb );
+        var storeCopyHandle = operator.stopForStoreCopy( someDb );
+        storeCopyHandle.restart();
+
+        // then
+        verify( connector ).trigger( false );
     }
 }

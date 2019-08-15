@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.error.StoppedDatabaseHandler;
+import com.neo4j.causalclustering.catchup.error.UnavailableDatabaseHandler;
 import com.neo4j.causalclustering.catchup.error.UnknownDatabaseHandler;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,10 +57,13 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage.WithDat
         {
             return new UnknownDatabaseHandler<>( messageType, protocol, logProvider );
         }
-        if ( databaseContext.database().getDatabaseAvailabilityGuard().isShutdown() )
+
+        var availabilityGuard = databaseContext.database().getDatabaseAvailabilityGuard();
+        if ( !availabilityGuard.isAvailable() )
         {
-            return new StoppedDatabaseHandler<>( messageType, protocol, logProvider );
+            return new UnavailableDatabaseHandler<>( messageType, protocol, availabilityGuard, logProvider );
         }
+
         return handlerFactory.apply( databaseContext.database() );
     }
 }

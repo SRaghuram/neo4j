@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
@@ -45,7 +46,6 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -92,7 +92,7 @@ class ReadReplicaDatabaseLifeTest
             ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
     {
         return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(), nullLogProvider(),
-                topologyService, () -> catchupComponents, mock( LifeSupport.class ), new ClusterInternalDbmsOperator() );
+                topologyService, () -> catchupComponents, mock( LifeSupport.class ), new ClusterInternalDbmsOperator(), mock( PanicService.class ) );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException

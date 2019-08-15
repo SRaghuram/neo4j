@@ -14,7 +14,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.Monitors;
 
@@ -25,8 +24,6 @@ public interface ClusterMember
     void start();
 
     void shutdown();
-
-    boolean hasPanicked();
 
     boolean isShutdown();
 

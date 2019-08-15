@@ -57,19 +57,23 @@ class MultiplexingCatchupRequestHandlerTest
     }
 
     @Test
+    void shouldReportErrorWhenDatabaseIsUnavailable()
+    {
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        doReturn( false ).when( availabilityGuard ).isAvailable();
+        doReturn( false ).when( availabilityGuard ).isShutdown();
+
+        testReportErrorWhenUnavailable( availabilityGuard );
+    }
+
+    @Test
     void shouldReportErrorWhenDatabaseIsShutdown()
     {
         var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        doReturn( false ).when( availabilityGuard ).isAvailable();
         doReturn( true ).when( availabilityGuard ).isShutdown();
-        var databaseManager = newDbManager( availabilityGuard );
-        var handler = newMultiplexingHandler( databaseManager );
-        channel.pipeline().addLast( handler );
-        var request = newCatchupRequest( EXISTING_DB_ID );
 
-        channel.writeInbound( request );
-
-        assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
-        assertThat( channel.readOutbound(), instanceOf( CatchupErrorResponse.class ) );
+        testReportErrorWhenUnavailable( availabilityGuard );
     }
 
     @Test
@@ -83,10 +87,23 @@ class MultiplexingCatchupRequestHandlerTest
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
+    private void testReportErrorWhenUnavailable( DatabaseAvailabilityGuard availabilityGuard )
+    {
+        var databaseManager = newDbManager( availabilityGuard );
+        var handler = newMultiplexingHandler( databaseManager );
+        channel.pipeline().addLast( handler );
+        var request = newCatchupRequest( EXISTING_DB_ID );
+
+        channel.writeInbound( request );
+
+        assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
+        assertThat( channel.readOutbound(), instanceOf( CatchupErrorResponse.class ) );
+    }
+
     private static DatabaseManager<?> newDbManager()
     {
         var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
-        doReturn( false ).when( availabilityGuard ).isShutdown();
+        doReturn( true ).when( availabilityGuard ).isAvailable();
         return newDbManager( availabilityGuard );
     }
 

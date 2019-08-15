@@ -9,12 +9,12 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.Panicker;
-import org.neo4j.internal.helpers.TimeoutStrategy;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 
 import java.io.IOException;
 import java.util.Optional;
 
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
@@ -37,14 +37,14 @@ public class PersistentSnapshotDownloader implements Runnable
     private final CoreSnapshotService snapshotService;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
     private final Monitor monitor;
     private volatile State state;
     private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess,
             CoreDownloader downloader, CoreSnapshotService snapshotService, StoreDownloadContext context,
-            Log log, TimeoutStrategy backoffStrategy, Panicker panicker, Monitors monitors )
+            Log log, TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;

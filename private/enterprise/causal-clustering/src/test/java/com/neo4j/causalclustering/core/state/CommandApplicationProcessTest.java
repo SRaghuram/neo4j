@@ -22,13 +22,12 @@ import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.junit.Test;
 import org.mockito.InOrder;
 
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -118,9 +117,9 @@ public class CommandApplicationProcessTest
 
         // then
         inOrder.verify( coreState ).commandDispatcher();
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 0L ), anyCallback() );
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 2L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 0L ), any() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), any() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 2L ), any() );
         inOrder.verify( commandDispatcher ).close();
 
         verify( listener ).commitIndex( 2 );
@@ -155,7 +154,7 @@ public class CommandApplicationProcessTest
         // then
         InOrder inOrder = inOrder( coreState, commandDispatcher );
         inOrder.verify( coreState ).commandDispatcher();
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), any() );
         inOrder.verify( commandDispatcher ).close();
     }
 
@@ -176,9 +175,9 @@ public class CommandApplicationProcessTest
         // then
         InOrder inOrder = inOrder( coreState, commandDispatcher );
         inOrder.verify( coreState ).commandDispatcher();
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 1L ), any() );
         // duplicate not dispatched
-        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 3L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( nullTx ), eq( 3L ), any() );
         inOrder.verify( commandDispatcher ).close();
         verifyNoMoreInteractions( commandDispatcher );
     }
@@ -204,13 +203,13 @@ public class CommandApplicationProcessTest
         // then
         InOrder inOrder = inOrder( coreState, commandDispatcher );
         inOrder.verify( coreState ).commandDispatcher();
-        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 100 ) ), eq( 0L ), anyCallback() );
-        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 101 ) ), eq( 1L ), anyCallback() );
-        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 102 ) ), eq( 2L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 100 ) ), eq( 0L ), any() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 101 ) ), eq( 1L ), any() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 102 ) ), eq( 2L ), any() );
         // duplicate of tx 101 not dispatched, at index 3
         // duplicate of tx 100 not dispatched, at index 4
-        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 103 ) ), eq( 5L ), anyCallback() );
-        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 104 ) ), eq( 6L ), anyCallback() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 103 ) ), eq( 5L ), any() );
+        inOrder.verify( commandDispatcher ).dispatch( eq( tx( (byte) 104 ) ), eq( 6L ), any() );
         inOrder.verify( commandDispatcher ).close();
         verifyNoMoreInteractions( commandDispatcher );
     }
@@ -242,7 +241,7 @@ public class CommandApplicationProcessTest
     {
         // given
         doThrow( RuntimeException.class ).when( commandDispatcher )
-                .dispatch( any( ReplicatedTransaction.class ), anyLong(), anyCallback() );
+                .dispatch( any( ReplicatedTransaction.class ), anyLong(), any() );
         applicationProcess.start();
 
         // when
@@ -338,16 +337,9 @@ public class CommandApplicationProcessTest
         assertEquals( 2, applicationProcess.lastApplied() );
     }
 
-    private Consumer<Result> anyCallback()
+    private class SinglePanic implements DatabasePanicker
     {
-        @SuppressWarnings( "unchecked" )
-        Consumer<Result> anyCallback = any( Consumer.class );
-        return anyCallback;
-    }
-
-    private class SinglePanic implements Panicker
-    {
-        boolean hasPanicked;
+        volatile boolean hasPanicked;
 
         @Override
         public void panic( Throwable e )

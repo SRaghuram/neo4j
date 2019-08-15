@@ -5,177 +5,143 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Arrays;
-import java.util.LinkedList;
+import java.io.IOException;
 import java.util.List;
-import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.util.concurrent.BinaryLatch;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@Disabled
-@ExtendWith( SuppressOutputExtension.class )
 class PanicServiceTest
 {
+    private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
+    private final LogService logService = new SimpleLogService( assertableLogProvider );
 
-    @Test
-    void shouldPanicOnlyOnce() throws Exception
+    private final SingleThreadExecutor panicExecutor = new SingleThreadExecutor();
+    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( panicExecutor );
+
+    private final PanicService panicService = new PanicService( jobScheduler, logService );
+
+    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId1 = databaseIdRepository.get( "foo" );
+    private final DatabaseId databaseId2 = databaseIdRepository.get( "bar" );
+
+    @AfterEach
+    void afterEach() throws Exception
     {
-        // given
-        PanicService panicService = new PanicService( NullLogProvider.getInstance() );
-        LockedEventHandler lockedEventHandler = new LockedEventHandler();
-        panicService.addPanicEventHandler( lockedEventHandler );
-
-        // when
-        panicService.panic( null );
-
-        // and
-        panicService.panic( null );
-        panicService.panic( null );
-        panicService.panic( null );
-
-        // when
-        assertFalse( lockedEventHandler.isComplete );
-        lockedEventHandler.unlock();
-
-        // then
-        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler.isComplete, equalTo( true ), 1, TimeUnit.SECONDS );
-        assertEquals( 1, lockedEventHandler.atomicInteger.get() );
+        panicExecutor.shutdownNow();
+        assertTrue( panicExecutor.awaitTermination( 30, SECONDS ) );
     }
 
     @Test
-    void shouldCleanupPanicHandlersOnShutdown() throws InterruptedException
+    void shouldPanicDatabaseOnce() throws Exception
     {
-        // given
-        LifeSupport life = new LifeSupport();
-        life.start();
-        var panicService = new PanicService( NullLogProvider.getInstance() );
-        ReportingEventHandler lifecycled = new ReportingEventHandler( new AtomicInteger() );
-        ReportingEventHandler notLifecycled = new ReportingEventHandler( new AtomicInteger() );
-        life.add( panicService.addPanicEventHandler( lifecycled ) );
-        panicService.addPanicEventHandler( notLifecycled );
+        var lockedEventHandler1 = new LockedEventHandler();
+        var lockedEventHandler2 = new LockedEventHandler();
 
-        // when
-        life.stop();
-        panicService.panic( new Throwable( "cause" ) );
+        panicService.addPanicEventHandlers( databaseId1, List.of( lockedEventHandler1 ) );
+        panicService.addPanicEventHandlers( databaseId2, List.of( lockedEventHandler2 ) );
 
-        // then
-        assertEventually( notLifecycled.atomicInteger::get, equalTo( 1 ), 10, TimeUnit.SECONDS );
-        assertEquals( 0, lifecycled.atomicInteger.get() );
+        var panicker1 = panicService.panickerFor( databaseId1 );
+
+        panicker1.panic( new Exception() );
+        panicker1.panic( new IOException() );
+        panicker1.panic( new RuntimeException() );
+
+        assertFalse( lockedEventHandler1.isComplete );
+        lockedEventHandler1.unlock();
+
+        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, equalTo( true ), 1, TimeUnit.SECONDS );
+        assertEquals( 1, lockedEventHandler1.numberOfPanicEvents.get() );
+
+        assertEquals( 0, lockedEventHandler2.numberOfPanicEvents.get() );
     }
 
     @Test
-    void shouldOnlyAddPanicHandlersToServiceOnStart()
+    void shouldLogPanicInformation() throws Exception
     {
-        var panicService = mock( PanicService.class );
-        PanicEventHandler eventHandler = () -> {};
+        var error = new Exception();
+        var panicker = panicService.panickerFor( databaseId2 );
 
-        var panicServiceLifecycle = new PanicEventHandlerLifecycle( panicService, eventHandler );
+        panicker.panic( error );
 
-        verify( panicService, never() ).add( eventHandler );
-        verify( panicService, never() ).remove( eventHandler );
-        panicServiceLifecycle.start();
-        verify( panicService, times( 1 ) ).add( eventHandler );
-        panicServiceLifecycle.stop();
-        verify( panicService, times( 1 ) ).remove( eventHandler );
+        panicExecutor.awaitBackgroundTaskCompletion();
+        assertableLogProvider.assertExactly( inLog( panicService.getClass() )
+                .error( equalTo( "Clustering components for database 'bar' have encountered a critical error" ), equalTo( error ) ) );
     }
 
     @Test
-    void shouldLogPanicInformation()
+    void shouldIgnoreExceptionsInHandlers() throws Exception
     {
-        // given
-        AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        PanicService panicService = new PanicService( assertableLogProvider, true );
+        var numberOfInvokedHandlers = new AtomicInteger();
 
-        // when
-        panicService.panic( null );
+        var handlers = List.of(
+                new ReportingEventHandler( numberOfInvokedHandlers ),
+                new ReportingEventHandler( numberOfInvokedHandlers ),
+                new ReportingEventHandler( numberOfInvokedHandlers ),
+                new FailingReportingEventHandler( numberOfInvokedHandlers ),
+                new FailingReportingEventHandler( numberOfInvokedHandlers ),
+                new ReportingEventHandler( numberOfInvokedHandlers ) );
 
-        // then
-        assertableLogProvider.assertExactly( inLog( panicService.getClass() ).error( PanicService.PANIC_MESSAGE ) );
+        panicService.addPanicEventHandlers( databaseId1, handlers );
+
+        var panicker = panicService.panickerFor( databaseId1 );
+        panicker.panic( new Exception() );
+
+        assertEventually( numberOfInvokedHandlers::get, equalTo( handlers.size() ), 30, SECONDS );
     }
 
     @Test
-    void shouldLogPanicInformationWithException()
+    void shouldExecuteHandlersInOrder() throws Exception
     {
-        // given
-        AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        PanicService panicService = new PanicService( assertableLogProvider, true );
-        Exception cause = new IllegalStateException();
+        var handlerIds = new LinkedBlockingQueue<Integer>();
 
-        // when
-        panicService.panic( cause );
+        var handlers = List.<DatabasePanicEventHandler>of(
+                () -> handlerIds.add( 1 ),
+                () -> handlerIds.add( 2 ),
+                () -> handlerIds.add( 3 ) );
 
-        // then
-        assertableLogProvider.assertExactly( inLog( panicService.getClass() ).error( equalTo( PanicService.PANIC_MESSAGE ), equalTo( cause ) ) );
+        panicService.addPanicEventHandlers( databaseId2, handlers );
+
+        var panicker = panicService.panickerFor( databaseId2 );
+        panicker.panic( new Exception() );
+
+        panicExecutor.awaitBackgroundTaskCompletion();
+
+        assertEquals( 1, handlerIds.poll() );
+        assertEquals( 2, handlerIds.poll() );
+        assertEquals( 3, handlerIds.poll() );
+        assertNull( handlerIds.poll() );
     }
 
-    @Test
-    void shouldIgnoreExceptionsInEvents()
+    private static class FailingReportingEventHandler extends ReportingEventHandler
     {
-        // given
-        PanicService panicService = new PanicService( NullLogProvider.getInstance(), true );
-        AtomicInteger counter = new AtomicInteger();
-        List<ReportingEventHandler> events =
-                Arrays.asList( new ReportingEventHandler( counter ), new ReportingEventHandler( counter ), new ReportingEventHandler( counter ),
-                        new FailingReportingEventHandler( counter ), new FailingReportingEventHandler( counter ), new ReportingEventHandler( counter ) );
-
-        for ( ReportingEventHandler event : events )
+        FailingReportingEventHandler( AtomicInteger invocationCounter )
         {
-            panicService.addPanicEventHandler( event );
-        }
-
-        // when
-        panicService.panic( null );
-
-        // then
-        assertEquals( events.size(), counter.get() );
-    }
-
-    @Test
-    void shouldExecuteEventsInOrder()
-    {
-        // given
-        PanicService panicService = new PanicService( NullLogProvider.getInstance(), true );
-        Queue<Integer> eventIds = new LinkedList<>();
-        panicService.addPanicEventHandler( () -> eventIds.add( 1 ) );
-        panicService.addPanicEventHandler( () -> eventIds.add( 2 ) );
-        panicService.addPanicEventHandler( () -> eventIds.add( 3 ) );
-
-        // when
-        panicService.panic( null );
-
-        // then
-        assertEquals( new Integer( 1 ), eventIds.poll() );
-        assertEquals( new Integer( 2 ), eventIds.poll() );
-        assertEquals( new Integer( 3 ), eventIds.poll() );
-        assertNull( eventIds.poll() );
-    }
-
-    class FailingReportingEventHandler extends ReportingEventHandler
-    {
-        FailingReportingEventHandler( AtomicInteger atomicInteger )
-        {
-            super( atomicInteger );
+            super( invocationCounter );
         }
 
         @Override
@@ -186,32 +152,32 @@ class PanicServiceTest
         }
     }
 
-    class ReportingEventHandler implements PanicEventHandler
+    private static class ReportingEventHandler implements DatabasePanicEventHandler
     {
-        private final AtomicInteger atomicInteger;
+        final AtomicInteger invocationCounter;
 
-        ReportingEventHandler( AtomicInteger atomicInteger )
+        ReportingEventHandler( AtomicInteger invocationCounter )
         {
-            this.atomicInteger = atomicInteger;
+            this.invocationCounter = invocationCounter;
         }
 
         @Override
         public void onPanic()
         {
-            atomicInteger.getAndIncrement();
+            invocationCounter.getAndIncrement();
         }
     }
 
-    class LockedEventHandler implements PanicEventHandler
+    private static class LockedEventHandler implements DatabasePanicEventHandler
     {
         BinaryLatch latch = new BinaryLatch();
-        AtomicInteger atomicInteger = new AtomicInteger( 0 );
+        AtomicInteger numberOfPanicEvents = new AtomicInteger();
         volatile boolean isComplete;
 
         @Override
         public void onPanic()
         {
-            atomicInteger.getAndIncrement();
+            numberOfPanicEvents.getAndIncrement();
             latch.await();
             isComplete = true;
         }
@@ -219,6 +185,19 @@ class PanicServiceTest
         void unlock()
         {
             latch.release();
+        }
+    }
+
+    private static class SingleThreadExecutor extends ThreadPoolExecutor
+    {
+        SingleThreadExecutor()
+        {
+            super( 1, 1, 0L, SECONDS, new LinkedBlockingQueue<>(), daemon( PanicServiceTest.class.getSimpleName() ) );
+        }
+
+        void awaitBackgroundTaskCompletion() throws Exception
+        {
+            assertEventually( this::getCompletedTaskCount, equalTo( 1L ), 30, SECONDS );
         }
     }
 }

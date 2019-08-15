@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHel
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -45,7 +45,7 @@ class CommitProcessStateMachineCollaborationTest
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId, mock( Panicker.class ) );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId, mock( DatabasePanicker.class ) );
 
         // when
         assertThrows( TransactionFailureException.class, () -> commitProcess.commit( transactionToApply, NULL, EXTERNAL ) );

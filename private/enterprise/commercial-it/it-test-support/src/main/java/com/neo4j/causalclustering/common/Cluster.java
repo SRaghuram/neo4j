@@ -474,7 +474,6 @@ public class Cluster
                 .values()
                 .stream()
                 .filter( member -> member.defaultDatabase() != null )
-                .filter( member -> !member.hasPanicked() )
                 .findAny()
                 .map( coreClusterMember ->
                 {

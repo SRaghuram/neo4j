@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,7 +73,7 @@ class CatchupPollingProcessTest
 
     private final MockClientResponses clientResponses = responses();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
-    private final Panicker panicker = mock( Panicker.class );
+    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
     private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 
     private ReadReplicaDatabaseContext databaseContext;

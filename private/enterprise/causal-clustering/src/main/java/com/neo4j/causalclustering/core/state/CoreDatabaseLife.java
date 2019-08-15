@@ -9,11 +9,13 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.kernel.database.Database;
@@ -22,6 +24,9 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.scheduler.JobHandle;
 
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.markUnhealthy;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.raiseAvailabilityGuard;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.stopDatabase;
 
 public class CoreDatabaseLife implements ClusteredDatabaseLife
 {
@@ -37,11 +42,12 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
     private final CoreTopologyService topologyService;
     private final LifeSupport clusterComponentsLife;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
+    private final PanicService panicService;
 
     public CoreDatabaseLife( RaftMachine raftMachine, Database kernelDatabase, RaftBinder raftBinder, CommandApplicationProcess commandApplicationProcess,
             LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService, CoreDownloaderService downloadService,
             RecoveryFacade recoveryFacade, LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator,
-            CoreTopologyService topologyService )
+            CoreTopologyService topologyService, PanicService panicService )
     {
         this.raftMachine = raftMachine;
         this.kernelDatabase = kernelDatabase;
@@ -54,11 +60,13 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
         this.clusterComponentsLife = clusterComponentsLife;
         this.clusterInternalOperator = clusterInternalOperator;
         this.topologyService = topologyService;
+        this.panicService = panicService;
     }
 
     @Override
     public void init() throws Exception
     {
+        addPanicEventHandlers();
         var signal = clusterInternalOperator.bootstrap( kernelDatabase.getDatabaseId() );
         clusterComponentsLife.init();
         kernelDatabase.init();
@@ -121,11 +129,29 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
     {
         kernelDatabase.shutdown();
         clusterComponentsLife.shutdown();
+        removePanicEventHandlers();
     }
 
     @Override
     public void add( Lifecycle lifecycledComponent )
     {
         clusterComponentsLife.add( lifecycledComponent );
+    }
+
+    private void addPanicEventHandlers()
+    {
+        var panicEventHandlers = List.of(
+                raiseAvailabilityGuard( kernelDatabase ),
+                markUnhealthy( kernelDatabase ),
+                applicationProcess,
+                raftMachine,
+                stopDatabase( kernelDatabase, clusterInternalOperator ) );
+
+        panicService.addPanicEventHandlers( kernelDatabase.getDatabaseId(), panicEventHandlers );
+    }
+
+    private void removePanicEventHandlers()
+    {
+        panicService.removePanicEventHandlers( kernelDatabase.getDatabaseId() );
     }
 }

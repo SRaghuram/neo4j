@@ -7,16 +7,17 @@ package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static com.neo4j.dbms.OperatorState.STOPPED;
 import static com.neo4j.dbms.OperatorState.STORE_COPYING;
 
 /**
@@ -46,13 +47,26 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
 {
     private final List<StoreCopyHandle> storeCopying = new CopyOnWriteArrayList<>();
     private final Set<DatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
+    private final Set<DatabaseId> panicked = ConcurrentHashMap.newKeySet();
 
     protected Map<DatabaseId,OperatorState> desired0()
     {
-        return storeCopying.stream()
-                .filter( handle -> !bootstrapping.contains( handle.databaseId ) )
-                .distinct()
-                .collect( Collectors.toMap( StoreCopyHandle::databaseId, ignored -> STORE_COPYING ) );
+        var result = new HashMap<DatabaseId,OperatorState>();
+
+        for ( var storeCopyHandle : storeCopying )
+        {
+            if ( !bootstrapping.contains( storeCopyHandle.databaseId ) )
+            {
+                result.put( storeCopyHandle.databaseId, STORE_COPYING );
+            }
+        }
+
+        for ( var databaseId : panicked )
+        {
+            result.put( databaseId, STOPPED );
+        }
+
+        return result;
     }
 
     /**
@@ -70,12 +84,24 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     {
         StoreCopyHandle storeCopyHandle = new StoreCopyHandle( this, databaseId );
         storeCopying.add( storeCopyHandle );
+        triggerReconcilerOnStoreCopy( databaseId );
+        return storeCopyHandle;
+    }
 
-        if ( !bootstrapping.contains( databaseId ) )
+    public synchronized void stopOnPanic( DatabaseId databaseId )
+    {
+        if ( panicked.add( databaseId ) )
+        {
+            trigger( false );
+        }
+    }
+
+    private synchronized void triggerReconcilerOnStoreCopy( DatabaseId databaseId )
+    {
+        if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
         {
             trigger( false ).await( databaseId );
         }
-        return storeCopyHandle;
     }
 
     /**
@@ -111,10 +137,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
                 throw new IllegalStateException( "Restart was already called for " + databaseId );
             }
 
-            if ( !operator.bootstrapping.contains( databaseId ) )
-            {
-                operator.trigger( false ).await( databaseId );
-            }
+            operator.triggerReconcilerOnStoreCopy( databaseId );
         }
 
         public DatabaseId databaseId()

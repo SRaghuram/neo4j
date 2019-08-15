@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
@@ -55,7 +55,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final Log log;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
     private final BatchingTxApplier applier;
     private final PullRequestMonitor pullRequestMonitor;
     private final Executor executor;
@@ -66,7 +66,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext,
             CatchupClientFactory catchUpClient, BatchingTxApplier applier, StoreCopyProcess storeCopyProcess,
-            LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
+            LogProvider logProvider, DatabasePanicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
         this.databaseContext = databaseContext;

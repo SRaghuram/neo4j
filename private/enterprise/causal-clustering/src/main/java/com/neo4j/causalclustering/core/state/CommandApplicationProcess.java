@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.error_handling.PanicEventHandler;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.helper.StatUtil;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ import org.neo4j.monitoring.Monitors;
 import static java.lang.Math.max;
 import static java.lang.String.format;
 
-public class CommandApplicationProcess implements PanicEventHandler
+public class CommandApplicationProcess implements DatabasePanicEventHandler
 {
     private static final long NOTHING = -1;
     private final RaftLog raftLog;
@@ -42,7 +42,7 @@ public class CommandApplicationProcess implements PanicEventHandler
     private final Log log;
     private final RaftLogCommitIndexMonitor commitIndexMonitor;
     private final CommandBatcher batcher;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
@@ -51,7 +51,7 @@ public class CommandApplicationProcess implements PanicEventHandler
     private final ApplierState applierState = new ApplierState();
 
     public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
-            SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors, Panicker panicker )
+            SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors, DatabasePanicker panicker )
     {
         this.raftLog = raftLog;
         this.flushEvery = flushEvery;

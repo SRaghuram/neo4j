@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.test.CallingThreadExecutor;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,8 +31,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.Health;
+import org.neo4j.test.CallingThreadExecutor;
 import org.neo4j.test.FakeClockJobScheduler;
 
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
@@ -50,7 +49,7 @@ class CatchupProcessManagerTest
     private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
     private final TopologyService topologyService = mock( TopologyService.class );
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
-    private final Health databaseHealth = mock( DatabaseHealth.class );
+    private final DatabasePanicker databasePanicker = mock( DatabasePanicker.class );
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
@@ -74,7 +73,7 @@ class CatchupProcessManagerTest
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
-                databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
+                databasePanicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults(), mock( TransactionCommitNotifier.class ) ) );
     }
 

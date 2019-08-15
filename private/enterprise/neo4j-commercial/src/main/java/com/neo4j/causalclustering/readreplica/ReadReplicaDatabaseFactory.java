@@ -12,6 +12,8 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
@@ -29,11 +31,11 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
-import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
@@ -50,13 +52,13 @@ class ReadReplicaDatabaseFactory
     private final MemberId myIdentity;
     private final CatchupComponentsRepository catchupComponentsRepository;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
-    private final Health health;
     private final CatchupClientFactory catchupClientFactory;
     private final ReplicatedTransactionEventListeners txEventService;
+    private final PanicService panicService;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
-            MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier, Health health,
-            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService )
+            MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier,
+            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService, PanicService panicService )
     {
         this.config = config;
         this.clock = clock;
@@ -65,13 +67,14 @@ class ReadReplicaDatabaseFactory
         this.myIdentity = myIdentity;
         this.catchupComponentsRepository = catchupComponentsRepository;
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
-        this.health = health;
         this.catchupClientFactory = catchupClientFactory;
         this.txEventService = txEventService;
+        this.panicService = panicService;
     }
 
     ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
     {
+        DatabaseId databaseId = databaseContext.databaseId();
         DatabaseLogService databaseLogService = databaseContext.database().getLogService();
         DatabaseLogProvider internalLogProvider = databaseLogService.getInternalLogProvider();
         DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();
@@ -87,17 +90,18 @@ class ReadReplicaDatabaseFactory
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
                 myIdentity, config, internalLogProvider, topologyService, defaultStrategy );
 
-        TransactionCommitNotifier txCommitNotifier = txEventService.getCommitNotifier( databaseContext.databaseId() );
-        CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, health,
+        DatabasePanicker panicker = panicService.panickerFor( databaseId );
+        TransactionCommitNotifier txCommitNotifier = txEventService.getCommitNotifier( databaseId );
+        CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
                 pageCursorTracerSupplier, config, txCommitNotifier );
 
         // TODO: Fix lifecycle issue.
-        Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseContext.databaseId() ).orElseThrow(
-                () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseContext.databaseId().name() ) ) );
+        Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseId ).orElseThrow(
+                () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseId.name() ) ) );
 
         return new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
-                        topologyService, catchupComponentsSupplier, life, clusterInternalOperator );
+                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, panicService );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

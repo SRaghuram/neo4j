@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaf
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.RaftMessageApplier;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
-import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -35,7 +35,7 @@ class RaftMessageHandlerChainFactory
 {
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
-    private final Panicker panicker;
+    private final DatabasePanicker panicker;
     private final JobScheduler jobScheduler;
     private final Clock clock;
     private final LogProvider logProvider;
@@ -43,7 +43,7 @@ class RaftMessageHandlerChainFactory
     private final Config config;
 
     RaftMessageHandlerChainFactory( JobScheduler jobScheduler, Clock clock, LogProvider logProvider, Monitors monitors, Config config,
-            RaftMessageDispatcher raftMessageDispatcher, LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider, Panicker panicker )
+            RaftMessageDispatcher raftMessageDispatcher, LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider, DatabasePanicker panicker )
     {
         this.jobScheduler = jobScheduler;
         this.clock = clock;
