@@ -43,6 +43,7 @@ import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -1437,6 +1438,145 @@ public class ProcedureIT
         result.next();
     }
 
+    @Test
+    public void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContext() throws Throwable
+    {
+        // Given
+        try ( Transaction ignore = db.beginTx() )
+        {
+            // When
+            Result res = db.execute( "CALL org.neo4j.procedure.outputDependsOnYield()" );
+
+            // Then
+            assertTrue(res.hasNext());
+            Map<String,Object> results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( "Yay" ) );
+            assertThat( results.get( "integer" ), equalTo( 1L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+
+            // When
+            res = db.execute( "CALL org.neo4j.procedure.outputDependsOnYield() yield string, integer, aFloat, aBoolean RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( "Yay" ) );
+            assertThat( results.get( "integer" ), equalTo( 1L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+
+            // Not request "string" now should change result of other values:
+            // When
+            res = db.execute( "CALL org.neo4j.procedure.outputDependsOnYield() yield integer, aFloat, aBoolean RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "integer" ), equalTo( 0L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 0.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( false ) );
+
+            // Renaming should not interfere with this
+            // When
+            res = db.execute( "CALL org.neo4j.procedure.outputDependsOnYield() yield string as s, integer as i, aFloat as f, aBoolean as b RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "s" ), equalTo( "Yay" ) );
+            assertThat( results.get( "i" ), equalTo( 1L ) );
+            assertThat( results.get( "f" ), equalTo( 1.0 ) );
+            assertThat( results.get( "b" ), equalTo( true ) );
+
+            // When
+            res = db.execute( "CALL org.neo4j.procedure.outputDependsOnYield() yield integer as i, aFloat as f, aBoolean as b RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "i" ), equalTo( 0L ) );
+            assertThat( results.get( "f" ), equalTo( 0.0 ) );
+            assertThat( results.get( "b" ), equalTo( false ) );
+
+        }
+    }
+
+    @Test
+    public void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContextEvenIn34() throws Throwable
+    {
+        // Given
+        try ( Transaction ignore = db.beginTx() )
+        {
+            // When
+            Result res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield()" );
+
+            // Then
+            assertTrue(res.hasNext());
+            Map<String,Object> results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( "Yay" ) );
+            assertThat( results.get( "integer" ), equalTo( 1L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+
+            // When
+            res = db.execute( "CYPHER 3.4  CALL org.neo4j.procedure.outputDependsOnYield() yield string, integer, aFloat, aBoolean RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( "Yay" ) );
+            assertThat( results.get( "integer" ), equalTo( 1L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+
+            // Not request "string" now should change result of other values:
+            // When
+            res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield() yield integer, aFloat, aBoolean RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "integer" ), equalTo( 0L ) );
+            assertThat( results.get( "aFloat" ), equalTo( 0.0 ) );
+            assertThat( results.get( "aBoolean" ), equalTo( false ) );
+
+            // Renaming should not interfere with this
+            // When
+            res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield() yield string as s, integer as i, aFloat as f, aBoolean as b " +
+                    "RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "s" ), equalTo( "Yay" ) );
+            assertThat( results.get( "i" ), equalTo( 1L ) );
+            assertThat( results.get( "f" ), equalTo( 1.0 ) );
+            assertThat( results.get( "b" ), equalTo( true ) );
+
+            // When
+            res = db.execute( "CYPHER 3.4 CALL org.neo4j.procedure.outputDependsOnYield() yield integer as i, aFloat as f, aBoolean as b RETURN *" );
+
+            // Then
+            assertTrue(res.hasNext());
+            results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "i" ), equalTo( 0L ) );
+            assertThat( results.get( "f" ), equalTo( 0.0 ) );
+            assertThat( results.get( "b" ), equalTo( false ) );
+
+        }
+    }
+
     public static class Output
     {
         public long someVal = 1337;
@@ -1576,6 +1716,9 @@ public class ProcedureIT
         @Context
         public ProcedureTransaction procedureTransaction;
 
+        @Context
+        public ProcedureCallContext callContext;
+
         @Procedure
         public Stream<Output> guardMe()
         {
@@ -1619,6 +1762,17 @@ public class ProcedureIT
                 )
         {
             return Stream.of( new PrimitiveOutput( string, integer, aFloat, aBoolean ) );
+        }
+
+        @Procedure
+        public Stream<PrimitiveOutput> outputDependsOnYield()
+        {
+            boolean requestedString = callContext.outputFields().anyMatch( name -> name.equals( "string" ) );
+            if ( requestedString )
+            {
+                return Stream.of( new PrimitiveOutput( "Yay", 1, 1.0, true ) );
+            }
+            return Stream.of( new PrimitiveOutput( "Ney", 0, 0.0, false ) );
         }
 
         @Procedure
