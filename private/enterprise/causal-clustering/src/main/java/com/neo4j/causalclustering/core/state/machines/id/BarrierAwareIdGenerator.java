@@ -51,27 +51,6 @@ public class BarrierAwareIdGenerator implements IdGenerator
     }
 
     @Override
-    public void freeId( long id )
-    {
-        ensureCanManageIds();
-        delegate.freeId( id );
-    }
-
-    @Override
-    public void deleteId( long id )
-    {
-        ensureCanManageIds();
-        delegate.deleteId( id );
-    }
-
-    @Override
-    public void markIdAsUsed( long id )
-    {
-        ensureCanManageIds();
-        delegate.markIdAsUsed( id );
-    }
-
-    @Override
     public ReuseMarker reuseMarker()
     {
         return delegate.reuseMarker();
