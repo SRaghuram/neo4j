@@ -176,7 +176,7 @@ public class ListQueriesProcedureTest
     public void shouldProvideAllocatedBytes() throws Exception
     {
         // given
-        String query = "MATCH (n) SET n.v = n.v + 1";
+        String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
         final Node node;
         Object allocatedBytes;
         try ( Resource<Node> test = test( db::createNode, query ) )
@@ -188,7 +188,7 @@ public class ListQueriesProcedureTest
             // then
             assertThat( data, hasKey( "allocatedBytes" ) );
             allocatedBytes = data.get( "allocatedBytes" );
-            assertThat( allocatedBytes, (Matcher) allOf( instanceOf( Long.class ), greaterThanOrEqualTo( 0L ) ) );
+            assertThat( allocatedBytes, (Matcher) allOf( instanceOf( Long.class ), greaterThan( 0L ) ) );
         }
 
         try ( Resource<Node> test = test( () -> node, query ) )
@@ -465,7 +465,7 @@ public class ListQueriesProcedureTest
     public void shouldDisableHeapAllocationTracking() throws Exception
     {
         // given
-        String query = "MATCH (n) SET n.v = n.v + 1";
+        String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
         db.withSetting( track_query_allocation, false );
         Map<String,Object> data;
 
@@ -479,12 +479,12 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
     }
 
-    // TODO: make this setting dynamic again
+    @SuppressWarnings( "unchecked" )
     @Test
     public void heapAllocationTrackingShouldBeADynamicSetting() throws Exception
     {
         // given
-        String query = "MATCH (n) SET n.v = n.v + 1";
+        String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
         Map<String,Object> data;
 
         // when
@@ -493,8 +493,8 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), anyOf( nullValue(), (Matcher) allOf(
-                instanceOf( Long.class ), greaterThan( 0L ) ) ) ) );
+        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), (Matcher) allOf(
+                instanceOf( Long.class ), greaterThan( 0L ) ) ) );
 
         // when
         executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
@@ -512,8 +512,8 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), anyOf( nullValue(), (Matcher) allOf(
-                instanceOf( Long.class ), greaterThan( 0L ) ) ) ) );
+        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), (Matcher) allOf(
+                instanceOf( Long.class ), greaterThan( 0L ) ) ) );
     }
 
     private void shouldListUsedIndexes( String label, String property ) throws Exception

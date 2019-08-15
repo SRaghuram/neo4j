@@ -78,7 +78,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
                                                  physicalPlan.slotConfigurations,
                                                  physicalPlan.parameterMapping,
                                                  context.config.lenientCreateRelationship,
-                                                 context.config.memoryTracking,
+                                                 context.config.memoryTrackingController,
                                                  query.hasLoadCSV)
 
       if (ENABLE_DEBUG_PRINTS) {

@@ -23,7 +23,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            pipelines: SlotConfigurations,
                                            parameterMapping: ParameterMapping,
                                            lenientCreateRelationship: Boolean,
-                                           memoryTracking: MemoryTracking,
+                                           memoryTrackingController: MemoryTrackingController,
                                            hasLoadCSV: Boolean = false)
   extends BaseExecutionResultBuilderFactory(pipe, readOnly, columns, logicalPlan, hasLoadCSV) {
 
@@ -44,7 +44,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                             queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
                             new Array[AnyValue](nExpressionSlots),
                             subscriber,
-                            QueryMemoryTracker(memoryTracking),
+                            QueryMemoryTracker(memoryTrackingController.memoryTracking),
                             pipeDecorator,
                             lenientCreateRelationship = lenientCreateRelationship,
                             prePopulateResults = prePopulateResults,

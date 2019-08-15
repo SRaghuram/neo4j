@@ -93,7 +93,7 @@ class MorselRuntime(parallelExecution: Boolean,
                         executor,
                         context.runtimeEnvironment.tracer,
                         morselSize,
-                        context.config.memoryTracking)
+                        context.config.memoryTrackingController)
   }
 
   private def selectMorselSize(query: LogicalQuery,
@@ -113,7 +113,7 @@ class MorselRuntime(parallelExecution: Boolean,
                                  queryExecutor: QueryExecutor,
                                  schedulerTracer: SchedulerTracer,
                                  morselSize: Int,
-                                 memoryTracking: MemoryTracking) extends ExecutionPlan {
+                                 memoryTrackingController: MemoryTrackingController) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -137,7 +137,7 @@ class MorselRuntime(parallelExecution: Boolean,
                               subscriber,
                               doProfile,
                               morselSize,
-                              memoryTracking)
+                              memoryTrackingController.memoryTracking)
     }
 
     override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName

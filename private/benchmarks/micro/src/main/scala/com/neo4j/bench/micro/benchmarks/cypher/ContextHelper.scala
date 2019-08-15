@@ -12,7 +12,7 @@ import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.runtime.NO_TRACKING
+import org.neo4j.cypher.internal.runtime.NO_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
@@ -38,7 +38,7 @@ object ContextHelper extends MockitoSugar {
     scheduler = CypherMorselRuntimeSchedulerOption.default,
     lenientCreateRelationship = false,
     fuseOperators = true,
-    memoryTracking = NO_TRACKING
+    memoryTrackingController = NO_TRACKING_CONTROLLER
   )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,
