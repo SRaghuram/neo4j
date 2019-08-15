@@ -146,7 +146,7 @@ class GraphDbStructureGuideTest
 
         // THEN
         verify( visitor ).visitIndex( descriptor, ":Person(name)", 1.0d, 0L );
-        verify( visitor ).visitUniqueConstraint( constraint.asUniquenessConstraint(), "CONSTRAINT ON ( person:Person ) ASSERT person.name IS UNIQUE" );
+        verify( visitor ).visitUniqueConstraint( constraint.asUniquenessConstraint(), "CONSTRAINT ON ( person:Person ) ASSERT (person.name) IS UNIQUE" );
     }
 
     @Test

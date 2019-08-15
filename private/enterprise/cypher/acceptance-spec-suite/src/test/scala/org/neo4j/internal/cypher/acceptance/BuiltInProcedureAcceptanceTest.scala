@@ -494,7 +494,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // then
     mapResult should have size 10
     mapResult("description") should equal("INDEX ON :Person(name)")
-    mapResult("indexName").asInstanceOf[String] should startWith("index_")
+    mapResult("indexName").asInstanceOf[String] should equal("Uniqueness constraint on :Person (name)")
     mapResult("id").asInstanceOf[Long].intValue() should be >= 1
     mapResult("tokenNames") should equal(List("Person"))
     mapResult("properties") should equal(List("name"))
@@ -527,7 +527,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // then
     mapResult should have size 10
     mapResult("description") should equal("INDEX ON :Person(name)")
-    mapResult("indexName").asInstanceOf[String] should startWith("index_")
+    mapResult("indexName").asInstanceOf[String] should equal("Node key constraint on :Person (name)")
     mapResult("id").asInstanceOf[Long].intValue() should be >= 1
     mapResult("tokenNames") should equal(List("Person"))
     mapResult("properties") should equal(List("name"))

@@ -86,7 +86,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     // Constraints
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT user.email IS UNIQUE")
+        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.email) IS UNIQUE")
       )
     )
 

@@ -20,7 +20,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT user.name IS UNIQUE")
+        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS UNIQUE")
       )
     )
 

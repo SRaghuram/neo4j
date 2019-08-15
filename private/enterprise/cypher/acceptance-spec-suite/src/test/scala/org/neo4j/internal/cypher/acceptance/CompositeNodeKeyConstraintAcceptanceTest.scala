@@ -226,7 +226,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // Expect
     failWithError(Configs.InterpretedAndSlotted,
       "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.surname",
-      List(s"Node($id) with label `Person` must have the properties `firstname, surname`"))
+      List(s"Node($id) with label `Person` must have the properties (firstname, surname)"))
 
   }
 
