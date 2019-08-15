@@ -11,6 +11,7 @@ Feature "CaseExpression": Scenario "Using a CASE expression in a WHERE, with lab
 Feature "CaseExpression": Scenario "Using a CASE expression in a WITH, negative case"
 Feature "CaseExpression": Scenario "Using a CASE expression in a WITH, positive case"
 Feature "CaseExpression": Scenario "Using a CASE expression with label predicates in a WITH"
+Feature "CaseExpression": Scenario "Shorthand case with filtering pattern comprehension should work as expected"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index when no match"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index"
