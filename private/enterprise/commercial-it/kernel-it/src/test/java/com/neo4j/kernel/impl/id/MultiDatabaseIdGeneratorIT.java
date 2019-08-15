@@ -93,11 +93,15 @@ class MultiDatabaseIdGeneratorIT
 
         IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize );
         assertThat( firstNodeIdGenerator.getNumberOfIdsInUse(), greaterThanOrEqualTo( requestedSize ) );
-        try ( IdGenerator.ReuseMarker marker = firstNodeIdGenerator.reuseMarker() )
+        for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
         {
-            for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
+            try ( IdGenerator.ReuseMarker marker = firstNodeIdGenerator.reuseMarker() )
             {
                 marker.markFree( idToReuse );
+            }
+            try ( IdGenerator.CommitMarker marker = firstNodeIdGenerator.commitMarker() )
+            {
+                marker.markDeleted( idToReuse );
             }
         }
 

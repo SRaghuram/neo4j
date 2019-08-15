@@ -39,26 +39,33 @@ class IdReuseTest
     void shouldReuseNodeIdsFromRolledBackTransaction()
     {
         // Given
+        long rolledBackNodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            rolledBackNodeId = db.createNode().getId();
+
+            tx.rollback();
+        }
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode();
 
-            tx.rollback();
+            tx.commit();
         }
 
         restartDatabase();
 
         // When
-        Node node;
+        long reusedNodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            node = db.createNode();
+            reusedNodeId = db.createNode().getId();
 
             tx.commit();
         }
 
         // Then
-        assertThat( node.getId(), equalTo( 0L ) );
+        assertThat( reusedNodeId, equalTo( rolledBackNodeId ) );
     }
 
     @Test
@@ -75,28 +82,36 @@ class IdReuseTest
             tx.commit();
         }
 
+        long rolledBackRelationshipId;
         try ( Transaction tx = db.beginTx() )
         {
-            node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) );
+            rolledBackRelationshipId = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.rollback();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
+
+            tx.commit();
         }
 
         restartDatabase();
 
         // When
-        Relationship relationship;
+        long reusedRelationshipId;
         try ( Transaction tx = db.beginTx() )
         {
             node1 = db.getNodeById( node1.getId() );
             node2 = db.getNodeById( node2.getId() );
-            relationship = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) );
+            reusedRelationshipId = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.commit();
         }
 
         // Then
-        assertThat( relationship.getId(), equalTo( 0L ) );
+        assertThat( reusedRelationshipId, equalTo( rolledBackRelationshipId ) );
     }
 
     @Test
