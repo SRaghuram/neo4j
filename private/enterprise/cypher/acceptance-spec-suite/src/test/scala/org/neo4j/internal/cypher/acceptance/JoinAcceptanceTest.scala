@@ -228,8 +228,7 @@ test("larger optional match join should not crash") {
       """.stripMargin
 
     // WHEN
-    // Morsel currently gives 0 results due to not handling such big MATCH cases properly
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, expectedDifferentResults = Configs.Morsel)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     // THEN
     result.toComparableResult should be(Seq(Map(
