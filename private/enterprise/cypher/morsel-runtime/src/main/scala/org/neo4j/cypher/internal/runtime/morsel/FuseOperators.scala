@@ -102,8 +102,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
           innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
           innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
           innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
-          val argumentDepth = physicalPlan.applyPlans(id)
-          val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+          val applyPlanId = physicalPlan.applyPlans(id)
+          val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
 
           // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
           val outputSlots = physicalPlan.slotConfigurations(p.id)
@@ -455,7 +455,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       try {
-        val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate)
+        val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity)
         (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
       } catch {
         case _: CantCompileQueryException =>

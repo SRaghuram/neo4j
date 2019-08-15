@@ -198,7 +198,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, namer: VariableNamer
       assert(projections.nonEmpty)
       val singleValue = projections.size == 1
 
-      val computeKeyOps = projections.map(p => nullCheckIfRequired(p)).toArray
+      val computeKeyOps = projections.map(p => nullCheckIfRequired(p))
       val computeKey =
         if (singleValue) computeKeyOps.head
         else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps: _*))

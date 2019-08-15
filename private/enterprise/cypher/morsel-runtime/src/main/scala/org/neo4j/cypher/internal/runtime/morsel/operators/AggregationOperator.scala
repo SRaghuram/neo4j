@@ -402,8 +402,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        * }
        */
       declareAndAssign(typeRefOf[AnyValue],
-        groupingValue,
-        compiledGroupingExpression.ir),
+                       groupingValue,
+                       compiledGroupingExpression.ir),
       declareAndAssign(typeRefOf[Array[Any]],
                        updaters,
                        invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),

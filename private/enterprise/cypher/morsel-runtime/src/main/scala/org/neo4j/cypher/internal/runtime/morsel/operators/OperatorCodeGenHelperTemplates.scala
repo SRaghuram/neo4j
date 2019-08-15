@@ -52,6 +52,7 @@ object OperatorCodeGenHelperTemplates {
   val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")
 
   // Fields
+  val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
   val INPUT_MORSEL: InstanceField = field[MorselExecutionContext]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
   val INNER_LOOP: InstanceField = field[Boolean]("innerLoop", constant(false))

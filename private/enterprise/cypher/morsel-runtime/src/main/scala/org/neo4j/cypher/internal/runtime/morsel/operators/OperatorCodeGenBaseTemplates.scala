@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -53,8 +53,9 @@ object ContinuableOperatorTaskWithMorselGenerator {
   /**
     * Responsible for generating a tailored class and creates a factory for creating new instances of the class
     */
-  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate): CompiledTaskFactory = {
-    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className()))
+  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate, workIdentity: WorkIdentity): CompiledTaskFactory = {
+    val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
+    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className(), Seq(staticWorkIdentity)))
     val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
 
     (dataRead, inputMorsel) => {
@@ -174,10 +175,6 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
-
-  // TODO find a better solution for this
-  override def workIdentity: WorkIdentity =  WorkIdentityImpl(Id(1), "")//throw new IllegalStateException("Fused operators do not have a single WorkIdentity.")
-
 }
 
 trait OperatorTaskTemplate {
@@ -205,7 +202,7 @@ trait OperatorTaskTemplate {
     */
   def id: Id
 
-  def genClassDeclaration(packageName: String, className: String): ClassDeclaration[CompiledTask] = {
+  def genClassDeclaration(packageName: String, className: String, staticFields: Seq[StaticField]): ClassDeclaration[CompiledTask] = {
     throw new InternalException("Illegal start operator template")
   }
 
@@ -354,8 +351,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 
   // TODO: Use methods of actual interface to generate declaration?
-  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration[CompiledTask] = {
-
+  override def genClassDeclaration(packageName: String, className: String, staticFields: Seq[StaticField]): ClassDeclaration[CompiledTask] = {
     ClassDeclaration[CompiledTask](
       packageName,
       className,
@@ -440,6 +436,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           body = genCloseCursors,
                           genLocalVariables = () => Seq(CURSOR_POOL_V)
         ),
+        MethodDeclaration("workIdentity",
+          owner = typeRefOf[CompiledTask],
+          returnType = typeRefOf[WorkIdentity],
+          parameters = Seq.empty,
+          body = getStatic[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME)
+        ),
         // This is only needed because we extend an abstract scala class containing `val dataRead`
         MethodDeclaration("dataRead",
                           owner = typeRefOf[CompiledTask],
@@ -456,9 +458,9 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         )
       ),
       // NOTE: This has to be called after genOperate!
-      genFields = () => Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
-                                                                             op.genProfileEventField ++
-                                                                             op.genExpressions.flatMap(_.fields)))
+      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
+                                                                                             op.genProfileEventField ++
+                                                                                             op.genExpressions.flatMap(_.fields)))
   }
 }
 

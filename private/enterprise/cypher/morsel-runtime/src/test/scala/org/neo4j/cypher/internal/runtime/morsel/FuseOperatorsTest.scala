@@ -66,7 +66,6 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     // when
     val compiled = fuse(pipeline)
 
-    println(compiled)
     // then
     compiled.start shouldBe fused
     compiled.middleOperators shouldBe empty
