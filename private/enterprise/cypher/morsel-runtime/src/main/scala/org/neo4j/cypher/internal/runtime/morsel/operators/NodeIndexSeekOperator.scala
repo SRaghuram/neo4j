@@ -181,9 +181,36 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
 
   import OperatorCodeGenHelperTemplates._
   protected val nodeIndexCursorField: InstanceField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
-  protected def getValue: IntermediateRepresentation
+
+  /**
+    * Return the value of the property if we need to cache it.
+    *
+    * This value is either provided by the index in the case of a range seek,
+    * or we already have the value in the case of an exact seek.
+    */
+  protected def getPropertyValue: IntermediateRepresentation
+
+  /**
+    * Extension point called at the start of inner-loop initializaton
+    */
   protected def beginInnerLoop: IntermediateRepresentation
-  protected def possiblePredicate: IntermediateRepresentation
+
+  /**
+    * Checks whether the predicate is possible.
+    *
+    * Examples of impossible predicates is doing an exact seek for NO_VALUE
+    * or a range seek for some types where range seeks are not supported. In
+    * these cases we don't set up cursors etc but we'll just return no results
+    * @return `true` if the predicate is possible otherwise `false`
+    */
+  protected def isPredicatePossible: IntermediateRepresentation
+
+  /**
+    * Returns the predicate used in `Read::nodeIndexSeek`
+    *
+    * The predicate is for example an exact seek or a range seek
+    * @return The predicate used in the seek query
+    */
   protected def predicate: IntermediateRepresentation
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
@@ -192,13 +219,13 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
     /**
       * {{{
-      *   val query = asStorable([query predicate])
-      *   val hasInnerLoop = query != NO_VALUE
+      *   [extension point]
+      *   val hasInnerLoop = [isPredicatePossible]
       *   if (hasInnerLoop) {
       *     nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       *     context.transactionalContext.dataRead.nodeIndexSeek(indexReadSession(queryIndexId),
       *                                                         nodeIndexCursor,
-      *                                                         IndexQuery.exact(prop, query))
+      *                                                         [predicate])
       *     this.canContinue = nodeLabelCursor.next()
       *    }
       *    hasInnerLoop
@@ -206,7 +233,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
       */
     block(
       beginInnerLoop,
-      declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, possiblePredicate),
+      declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, isPredicatePossible),
       condition(load(hasInnerLoopVar))(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
@@ -223,7 +250,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
       *   while (hasDemand && this.canContinue) {
       *     ...
       *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(offset, value)
+      *     setCachedPropertyAt(offset, [getPropertyValue])
       *     << inner.genOperate >>
       *     this.canContinue = this.nodeIndexCursor.next()
       *   }
@@ -238,7 +265,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getValue)).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
@@ -290,7 +317,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(seekValue)
 
-  override protected def getValue: IntermediateRepresentation = load(seekValueVariable)
+  override protected def getPropertyValue: IntermediateRepresentation = load(seekValueVariable)
 
   override protected def beginInnerLoop: IntermediateRepresentation = {
     val value = generateSeekValue()
@@ -298,7 +325,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
     assign(seekValueVariable, seekValue.ir)
   }
 
-  override protected def possiblePredicate: IntermediateRepresentation = notEqual(load(seekValueVariable), noValue)
+  override protected def isPredicatePossible: IntermediateRepresentation = notEqual(load(seekValueVariable), noValue)
 
   override protected def predicate: IntermediateRepresentation = exactSeek(property.propertyKeyId, load(seekValueVariable))
 }
@@ -325,13 +352,13 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, predicateVar)
   override def genExpressions: Seq[IntermediateExpression] = seekValues
-  override protected def getValue: IntermediateRepresentation =
+  override protected def getPropertyValue: IntermediateRepresentation =
     invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(0))
   override protected def beginInnerLoop: IntermediateRepresentation = {
     seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = asStorableValue(nullCheckIfRequired(v))))
     assign(predicateVar, generatePredicate(seekValues.map(_.ir)))
   }
-  override protected def possiblePredicate: IntermediateRepresentation =
+  override protected def isPredicatePossible: IntermediateRepresentation =
     invokeStatic(method[CompiledHelpers, Boolean, IndexQuery]("possibleRangePredicate"), predicate)
   override protected def predicate: IntermediateRepresentation = load(predicateVar)
 }
