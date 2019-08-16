@@ -10,7 +10,7 @@ COPY bootstrap-worker.sh /work/bootstrap-worker.sh
 RUN chmod +x /work/bootstrap-worker.sh && \
 	echo 'tzdata tzdata/Areas select Europe' | debconf-set-selections && \
   	echo 'tzdata tzdata/Zones/Europe select Berlin' | debconf-set-selections && \
-		add-apt-repository --remove ppa:webupd8team/java && \
+    add-apt-repository --remove ppa:webupd8team/java && \
   	apt-get --quiet --quiet update && \
 	apt-get --quiet --quiet install awscli uuid-runtime && \
 	rm -rf /var/cache/oracle-jdk8-installer/
