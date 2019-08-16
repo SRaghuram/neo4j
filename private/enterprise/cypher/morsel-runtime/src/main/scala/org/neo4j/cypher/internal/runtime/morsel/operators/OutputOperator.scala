@@ -109,7 +109,7 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 
 case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
-  override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel grouped by argumentRowId $argumentSlotOffset to $bufferId")
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
                                          executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),

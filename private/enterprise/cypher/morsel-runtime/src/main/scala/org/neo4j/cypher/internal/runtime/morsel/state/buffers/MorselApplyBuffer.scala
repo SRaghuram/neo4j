@@ -48,7 +48,7 @@ class MorselApplyBuffer(id: BufferId,
 
       morsel.resetToFirstRow()
       while (morsel.isValidRow) {
-        morsel.setLongAt(argumentSlotOffset, argumentRowId)
+        morsel.setArgumentAt(argumentSlotOffset, argumentRowId)
 
         // We can initiate the reducers/limits on the RHS inside of this loop, since they use the argumentRowIds we are generating here.
         // This does not hold for reducers on top of this apply.

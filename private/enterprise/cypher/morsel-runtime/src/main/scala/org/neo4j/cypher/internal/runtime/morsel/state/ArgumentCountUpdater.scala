@@ -37,7 +37,7 @@ abstract class ArgumentCountUpdater {
       i = 0
       while (i < downstreamAccumulatingBuffers.length) {
         val buffer = downstreamAccumulatingBuffers(i)
-        val currentRowId = morsel.getLongAt(buffer.argumentSlotOffset)
+        val currentRowId = morsel.getArgumentAt(buffer.argumentSlotOffset)
         if (currentRowId != lastSeenRowIds(i)) {
           operation(buffer, currentRowId)
           lastSeenRowIds(i) = currentRowId
@@ -119,7 +119,7 @@ abstract class ArgumentCountUpdater {
     while (i < accumulatingBuffers.length) {
       val reducer = accumulatingBuffers(i)
       val offset = reducer.argumentSlotOffset
-      val argumentRowIdForReducer = morsel.getLongAt(offset)
+      val argumentRowIdForReducer = morsel.getArgumentAt(offset)
       argumentRowIdsForReducers(i) = argumentRowIdForReducer
       fun(reducer, argumentRowIdForReducer)
       i += 1

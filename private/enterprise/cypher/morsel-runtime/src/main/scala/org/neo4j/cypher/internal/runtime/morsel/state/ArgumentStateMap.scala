@@ -257,9 +257,9 @@ object ArgumentStateMap {
     var newCurrentRow = -1
 
     while (readingRow.isValidRow) {
-      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val arg = readingRow.getArgumentAt(argumentSlotOffset)
       val start: Int = readingRow.getCurrentRow
-      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+      while (readingRow.isValidRow && readingRow.getArgumentAt(argumentSlotOffset) == arg) {
         readingRow.moveToNextRow()
       }
       val end: Int = readingRow.getCurrentRow
@@ -297,12 +297,12 @@ object ArgumentStateMap {
     var newCurrentRow = -1
 
     while (readingRow.isValidRow) {
-      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val arg = readingRow.getArgumentAt(argumentSlotOffset)
       val isCancelled = isCancelledCheck(arg)
       if (isCancelled)
         cancelled += arg
 
-      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+      while (readingRow.isValidRow && readingRow.getArgumentAt(argumentSlotOffset) == arg) {
         if (readingRow.getCurrentRow == morsel.getCurrentRow)
           newCurrentRow = writingRow.getCurrentRow
 
@@ -334,9 +334,9 @@ object ArgumentStateMap {
     val result = new ArrayBuffer[PerArgument[T]]()
 
     while (readingRow.isValidRow) {
-      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val arg = readingRow.getArgumentAt(argumentSlotOffset)
       val start: Int = readingRow.getCurrentRow
-      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+      while (readingRow.isValidRow && readingRow.getArgumentAt(argumentSlotOffset) == arg) {
         readingRow.moveToNextRow()
       }
       val end: Int = readingRow.getCurrentRow

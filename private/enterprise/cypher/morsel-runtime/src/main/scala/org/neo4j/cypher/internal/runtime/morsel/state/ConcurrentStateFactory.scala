@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
@@ -32,7 +33,7 @@ class ConcurrentStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    if (argumentSlotOffset == 0) {
+    if (argumentSlotOffset == TOP_LEVEL_ARGUMENT_SLOT) {
       new ConcurrentSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else {
       new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)

@@ -381,7 +381,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        *   perArgs.add(new PerArgument<AggPreMap>(arg, aggPreMap))
        * }
        */
-      declareAndAssign(typeRefOf[Long], currentArg, codeGen.getLongAt(argumentSlotOffset)),
+      declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
       condition(notEqual(load(currentArg), load(argVar)))(
         block(
           assign(argVar, load(currentArg)),

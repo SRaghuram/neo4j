@@ -2082,6 +2082,13 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
   //Extension points
   protected def getLongAt(offset: Int): IntermediateRepresentation
 
+  def getArgumentAt(offset: Int): IntermediateRepresentation =
+    if (offset == SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT) {
+      constant(0L)
+    } else {
+      getLongAt(offset)
+    }
+
   protected def getRefAt(offset: Int): IntermediateRepresentation
 
   protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation

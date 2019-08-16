@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
@@ -16,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
   extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
 
-  override def argumentSlotOffset: Int = 0
+  override def argumentSlotOffset: Int = TOP_LEVEL_ARGUMENT_SLOT
 
   // ABSTRACT STUFF
 

@@ -228,10 +228,10 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   def viewOfArgumentRow(argumentSlotOffset: Int): MorselExecutionContext = {
     val view = argumentMorsel.shallowCopy()
     view.resetToFirstRow()
-    var arg = view.getLongAt(argumentSlotOffset)
+    var arg = view.getArgumentAt(argumentSlotOffset)
     while (arg < argumentRowId && view.isValidRow) {
       view.moveToNextRow()
-      arg = view.getLongAt(argumentSlotOffset)
+      arg = view.getArgumentAt(argumentSlotOffset)
     }
     if (arg == argumentRowId) {
       view

@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.exceptions.InternalException
@@ -31,6 +33,8 @@ object SlotConfiguration {
   object Size {
     val zero = Size(nLongs = 0, nReferences = 0)
   }
+
+  val TOP_LEVEL_ARGUMENT_SLOT: Int = -1
 }
 
 /**
@@ -163,8 +167,10 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     if (applyPlans.contains(applyPlanId)) {
       throw new IllegalStateException(s"Should only add argument once per plan, got plan with $applyPlanId twice")
     }
-    applyPlans.put(applyPlanId, numberOfLongs)
-    numberOfLongs = numberOfLongs + 1
+    if (applyPlanId != Id.INVALID_ID) { // Top level argument is not allocated
+      applyPlans.put(applyPlanId, numberOfLongs)
+      numberOfLongs = numberOfLongs + 1
+    }
     this
   }
 
@@ -217,8 +223,12 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   }
 
   def getArgumentLongOffsetFor(applyPlanId: Id): Int = {
-    applyPlans.getOrElse(applyPlanId,
-                         throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
+    if (applyPlanId == Id.INVALID_ID) {
+      TOP_LEVEL_ARGUMENT_SLOT
+    } else {
+      applyPlans.getOrElse(applyPlanId,
+                           throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
+    }
   }
 
   def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = cachedProperties(key).offset

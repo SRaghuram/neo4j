@@ -6,10 +6,11 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{BoundedStandardBuffer, Buffer, SingletonBuffer, StandardBuffer, StandardSingletonBuffer}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext, StandardMemoryTracker, WithHeapUsageEstimation}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
@@ -32,7 +33,7 @@ class StandardStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    if (argumentSlotOffset == 0) {
+    if (argumentSlotOffset == TOP_LEVEL_ARGUMENT_SLOT) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else {
       new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)

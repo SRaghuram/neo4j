@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
@@ -225,6 +226,13 @@ class MorselExecutionContext(private val morsel: Morsel,
   override def getLongAt(offset: Int): Long = getLongAt(currentRow, offset)
 
   def getLongAt(row: Int, offset: Int): Long = morsel.longs(row * longsPerRow + offset)
+
+  def getArgumentAt(offset: Int): Long =
+    if (offset == TOP_LEVEL_ARGUMENT_SLOT) 0L
+    else getLongAt(currentRow, offset)
+
+  def setArgumentAt(offset: Int, argument: Long): Unit =
+    if (offset != TOP_LEVEL_ARGUMENT_SLOT) setLongAt(offset, argument)
 
   override def setRefAt(offset: Int, value: AnyValue): Unit = morsel.refs(currentRow * refsPerRow + offset) = value
 

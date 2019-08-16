@@ -93,7 +93,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   class StartSequence {
 
-    def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
+    def applyBuffer(id: Int, argumentSlotOffset: Int = -2): ApplyBufferSequence = {
       val bd = buffers.getOrElseUpdate(id,
                                        BufferDefinition(BufferId(id),
                                                         IndexedSeq.empty,
@@ -142,7 +142,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
     def reducerOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHSReversed = variant.reducersOnRHSReversed :+ asd.id))(SlotConfiguration.empty))
+      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHSReversed = asd.id +: variant.reducersOnRHSReversed))(SlotConfiguration.empty))
       ExecutionGraphDefinitionMatcher.this
     }
   }
