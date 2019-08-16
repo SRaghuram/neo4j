@@ -3,12 +3,18 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.causalclustering.core;
+package com.neo4j.causalclustering.core;
 
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+
+import java.io.File;
 import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.DiscoveryType;
 import org.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.kernel.configuration.Config;
@@ -17,6 +23,8 @@ import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 import org.neo4j.logging.Log;
 
+import static java.lang.String.format;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 
@@ -33,9 +41,30 @@ public class CausalClusterConfigurationValidator implements ConfigurationValidat
             validateBoltConnector( config );
             validateLoadBalancing( config, log );
             validateDeclaredClusterSizes( config );
+            validateMiddleware( config );
         }
 
         return Collections.emptyMap();
+    }
+
+    private void validateMiddleware( Config config )
+    {
+        File akkaConfig = config.get( middleware_akka_external_config );
+        if ( akkaConfig != null )
+        {
+            if ( !akkaConfig.exists() || !akkaConfig.isFile() )
+            {
+                throw new InvalidSettingException( format( "'%s' must be a file or empty", middleware_akka_external_config.name() ) );
+            }
+            try
+            {
+                ConfigFactory.parseFileAnySyntax( akkaConfig );
+            }
+            catch ( ConfigException e )
+            {
+              throw new InvalidSettingException( format( "'%s' could not be parsed", akkaConfig ), e );
+            }
+        }
     }
 
     private void validateDeclaredClusterSizes( Config config )
@@ -45,7 +74,7 @@ public class CausalClusterConfigurationValidator implements ConfigurationValidat
 
         if ( runtime > startup )
         {
-            throw new InvalidSettingException( String.format( "'%s' must be set greater than or equal to '%s'",
+            throw new InvalidSettingException( format( "'%s' must be set greater than or equal to '%s'",
                     minimum_core_cluster_size_at_formation.name(), minimum_core_cluster_size_at_runtime.name() ) );
         }
     }
@@ -69,7 +98,7 @@ public class CausalClusterConfigurationValidator implements ConfigurationValidat
         discoveryType.requiredSettings().forEach( setting -> {
             if ( !config.isConfigured( setting ) )
             {
-                throw new InvalidSettingException( String.format( "Missing value for '%s', which is mandatory with '%s=%s'",
+                throw new InvalidSettingException( format( "Missing value for '%s', which is mandatory with '%s=%s'",
                         setting.name(), CausalClusteringSettings.discovery_type.name(), discoveryType ) );
             }
         } );

@@ -6,6 +6,7 @@
 package org.neo4j.causalclustering.scenarios;
 
 import org.hamcrest.Matcher;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;

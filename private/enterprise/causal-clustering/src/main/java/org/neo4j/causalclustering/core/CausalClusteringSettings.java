@@ -49,6 +49,7 @@ import static org.neo4j.kernel.configuration.Settings.list;
 import static org.neo4j.kernel.configuration.Settings.listenAddress;
 import static org.neo4j.kernel.configuration.Settings.min;
 import static org.neo4j.kernel.configuration.Settings.optionsIgnoreCase;
+import static org.neo4j.kernel.configuration.Settings.pathSetting;
 import static org.neo4j.kernel.configuration.Settings.prefixSetting;
 import static org.neo4j.kernel.configuration.Settings.setting;
 
@@ -250,6 +251,11 @@ public class CausalClusteringSettings implements LoadableConfig
     @Description( "Hazelcast license key" )
     public static final Setting<String> hazelcast_license_key =
             setting( "hazelcast.license_key", STRING, NO_DEFAULT );
+
+    @Internal
+    @Description( "External config file for Akka" )
+    public static final Setting<File> middleware_akka_external_config =
+            pathSetting( "causal_clustering.middleware.akka.external_config", NO_DEFAULT );
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
