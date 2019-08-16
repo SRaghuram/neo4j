@@ -133,7 +133,8 @@ public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectio
         @Override
         public void close()
         {
-            if (!knowsIsClosed) {
+            if ( !knowsIsClosed )
+            {
                 knowsIsClosed = true;
                 knows.close();
             }
