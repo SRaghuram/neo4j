@@ -35,7 +35,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final int maxBatchSize;
     private final Supplier<TransactionIdStore> txIdStoreSupplier;
     private final Supplier<TransactionCommitProcess> commitProcessSupplier;
-    private final Supplier<VersionContextSupplier> versionContextSupplier;
+    private final VersionContextSupplier versionContextSupplier;
 
     private final PullRequestMonitor monitor;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
@@ -50,7 +50,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     private volatile boolean stopped;
 
     BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
-            Monitors monitors, PageCursorTracerSupplier pageCursorTracerSupplier, Supplier<VersionContextSupplier> versionContextSupplier,
+            Monitors monitors, PageCursorTracerSupplier pageCursorTracerSupplier, VersionContextSupplier versionContextSupplier,
             CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.maxBatchSize = maxBatchSize;
@@ -59,7 +59,6 @@ public class BatchingTxApplier extends LifecycleAdapter
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.log = logProvider.getLog( getClass() );
         this.monitor = monitors.newMonitor( PullRequestMonitor.class );
-        //TODO: Does this have to be a supplier supplier?
         this.versionContextSupplier = versionContextSupplier;
         this.commandIndexTracker = commandIndexTracker;
         this.databaseEventDispatch = databaseEventDispatch;
@@ -109,7 +108,7 @@ public class BatchingTxApplier extends LifecycleAdapter
             return;
         }
 
-        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() );
+        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext() );
         toApply.onClose( databaseEventDispatch::fireTransactionCommitted );
         txQueue.queue( toApply );
 

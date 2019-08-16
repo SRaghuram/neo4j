@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.common;
+package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +26,7 @@ import org.neo4j.storageengine.api.StoreId;
  * Instances are responsible for the lifecycle management of per-database components, as well as exposing
  * per database dependency management, monitoring and io operations.
  *
- * Collections of these instances should be managed by a {@link DatabaseManager<ClusteredDatabaseContext>}
+ * Collections of these instances should be managed by a {@link DatabaseManager}
  */
 public interface ClusteredDatabaseContext extends DatabaseContext
 {

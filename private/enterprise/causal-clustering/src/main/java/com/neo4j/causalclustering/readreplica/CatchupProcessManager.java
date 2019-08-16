@@ -159,7 +159,7 @@ public class CatchupProcessManager extends SafeLifecycle
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
-                databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
+                databaseContext.monitors(), pageCursorTracerSupplier, databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
                 logProvider, databaseEventDispatch );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,

@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 

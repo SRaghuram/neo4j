@@ -9,15 +9,35 @@ import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static com.neo4j.dbms.OperatorState.INITIAL;
+import static com.neo4j.dbms.OperatorState.UNKNOWN;
+
 class DatabaseState
 {
     private final DatabaseId databaseId;
     private final OperatorState operationalState;
+    private final boolean failed;
+
+    public static DatabaseState initial( DatabaseId id )
+    {
+        return new DatabaseState( id, INITIAL, false );
+    }
+
+    public static DatabaseState unknown( DatabaseId id )
+    {
+        return new DatabaseState( id, UNKNOWN, false );
+    }
 
     DatabaseState( DatabaseId databaseId, OperatorState operationalState )
     {
+        this( databaseId, operationalState, false );
+    }
+
+    private DatabaseState( DatabaseId databaseId, OperatorState operationalState, boolean failed )
+    {
         this.databaseId = databaseId;
         this.operationalState = operationalState;
+        this.failed = failed;
     }
 
     public DatabaseId databaseId()
@@ -28,6 +48,27 @@ class DatabaseState
     OperatorState operationalState()
     {
         return operationalState;
+    }
+
+    public DatabaseState passed()
+    {
+        return new DatabaseState( databaseId, operationalState, false );
+    }
+
+    public DatabaseState failed()
+    {
+        return new DatabaseState( databaseId, operationalState, true );
+    }
+
+    public boolean hasFailed()
+    {
+        return failed;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "DatabaseState{" + "databaseId=" + databaseId + ", operationalState=" + operationalState + ", failed=" + failed + '}';
     }
 
     @Override
@@ -42,18 +83,12 @@ class DatabaseState
             return false;
         }
         DatabaseState that = (DatabaseState) o;
-        return Objects.equals( databaseId, that.databaseId ) && operationalState == that.operationalState;
+        return failed == that.failed && Objects.equals( databaseId, that.databaseId ) && operationalState == that.operationalState;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, operationalState );
-    }
-
-    @Override
-    public String toString()
-    {
-        return "DatabaseState{" + "databaseId=" + databaseId + ", operationalState=" + operationalState + '}';
+        return Objects.hash( databaseId, operationalState, failed );
     }
 }

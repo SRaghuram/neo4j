@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.io.IOException;
 

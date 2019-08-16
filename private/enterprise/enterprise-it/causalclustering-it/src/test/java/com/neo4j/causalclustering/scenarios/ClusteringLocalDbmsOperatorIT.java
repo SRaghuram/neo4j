@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.dbms.LocalDbmsOperator;
 import com.neo4j.test.causalclustering.ClusterConfig;

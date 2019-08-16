@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.EnterpriseTemporaryDatabaseFactory;

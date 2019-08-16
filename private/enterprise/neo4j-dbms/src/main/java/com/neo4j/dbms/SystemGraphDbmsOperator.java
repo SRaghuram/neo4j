@@ -65,8 +65,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
         ReconcilerResult reconcilerResult = trigger( ReconcilerRequest.simple() );
         reconcilerResult.whenComplete( () -> updateLastReconciledTransactionId( txId, asPartOfStoreCopy ) );
 
-        // TODO: Remove below when Standalone tests( e.g.SystemDatabaseDatabaseManagementIT ) no longer depend on blocking behaviour of create.
-        // Clustered version of this listener does *not * block
+        // Note: only blocks for completed reconciliation on this machine. Global reconciliation (e.g. including other cluster members) is still asynchronous
         reconcilerResult.await( databasesToAwait );
     }
 

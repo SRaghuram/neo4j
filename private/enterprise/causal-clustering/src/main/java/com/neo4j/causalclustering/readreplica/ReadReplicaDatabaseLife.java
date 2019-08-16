@@ -42,7 +42,7 @@ import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandle
 import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.stopDatabase;
 import static java.lang.String.format;
 
-class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
+class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
 {
     private final Lifecycle catchupProcess;
     private final Log debugLog;
@@ -77,7 +77,17 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     }
 
     @Override
-    public void init() throws Exception
+    protected void start0() throws Exception
+    {
+        checkOrCreateRaftId();
+        bootstrap();
+
+        databaseContext.database().start();
+        catchupProcess.start();
+        topologyService.onDatabaseStart( databaseContext.databaseId() );
+    }
+
+    private void checkOrCreateRaftId() throws IOException
     {
         if ( raftIdStorage.exists() )
         {
@@ -97,16 +107,15 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
             raftIdStorage.writeState( raftId );
         }
         addPanicEventHandlers();
+    }
+
+    private void bootstrap() throws Exception
+    {
         var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
         clusterComponentsLife.init();
         databaseContext.database().init();
         catchupProcess.init();
-        bootstrap();
-        signal.bootstrapped();
-    }
 
-    private void bootstrap()
-    {
         clusterComponentsLife.start();
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         boolean synced = false;
@@ -138,14 +147,8 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
                 throw new RuntimeException( e );
             }
         }
-    }
 
-    @Override
-    public void start() throws Exception
-    {
-        databaseContext.database().start();
-        catchupProcess.start();
-        topologyService.onDatabaseStart( databaseContext.databaseId() );
+        signal.bootstrapped();
     }
 
     private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext )
@@ -228,17 +231,13 @@ class ReadReplicaDatabaseLife implements ClusteredDatabaseLife
     }
 
     @Override
-    public void stop() throws Exception
+    public void stop0() throws Exception
     {
         topologyService.onDatabaseStop( databaseContext.databaseId() );
         catchupProcess.stop();
         databaseContext.database().stop();
         clusterComponentsLife.stop();
-    }
 
-    @Override
-    public void shutdown() throws Exception
-    {
         catchupProcess.shutdown();
         databaseContext.database().shutdown();
         clusterComponentsLife.stop();

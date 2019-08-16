@@ -41,7 +41,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     @Override
     public DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
     {
-        return createDatabase( databaseId, true );
+        return createDatabase( databaseId, false );
     }
 
     public DB createDatabase( DatabaseId databaseId, boolean autoStart )
@@ -67,18 +67,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             {
                 throw new DatabaseManagementException(
                         format( "An error occured! Fail to create new database `%s`.", databaseId.name() ), e );
-            }
-            // TODO: Autostart only used in tests, update tests to create -> start
-            if ( autoStart && databaseManagerStarted )
-            {
-                try
-                {
-                    startDatabase( databaseId, databaseContext );
-                }
-                catch ( Throwable t )
-                {
-                    databaseContext.fail( t );
-                }
             }
 
             databaseIdRepository().cache( databaseId );
@@ -116,7 +104,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         forSingleDatabase( databaseId, this::startDatabase );
     }
 
-    protected void forSingleDatabase( DatabaseId databaseId, BiFunction<DatabaseId,DB,DB> operation )
+    protected final void forSingleDatabase( DatabaseId databaseId, BiFunction<DatabaseId,DB,DB> operation )
     {
         requireStarted( databaseId );
         databaseMap.compute( databaseId, ( key, currentContext ) ->

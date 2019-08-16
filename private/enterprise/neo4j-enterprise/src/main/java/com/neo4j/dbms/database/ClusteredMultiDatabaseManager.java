@@ -3,16 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.common;
+package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContextFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
@@ -40,7 +38,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final StoreFiles storeFiles;
     protected final CatchupComponentsFactory catchupComponentsFactory;
     protected final ClusterStateLayout clusterStateLayout;
-    private final Set<DatabaseId> shouldRecreateContext;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
@@ -53,7 +50,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.config = config;
         this.pageCache = pageCache;
         this.catchupComponentsFactory = catchupComponentsFactory;
-        this.shouldRecreateContext = new HashSet<>();
         this.storeFiles = new StoreFiles( fs, pageCache );
         this.clusterStateLayout = clusterStateLayout;
     }
@@ -63,14 +59,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     {
         try
         {
-            log.info( "Bootstrapping '%s' database.", databaseId.name() );
-            if ( shouldRecreateContext.contains( databaseId ) )
-            {
-                // Clustering components cannot be reused, so we have to create a new context on each cycle.
-                context = createDatabaseContext( databaseId );
-            }
-            shouldRecreateContext.add( databaseId );
-            context.clusteredDatabaseLife().init();
+            context = recreateContextIfNeeded( databaseId, context );
             log.info( "Starting '%s' database.", databaseId.name() );
             context.clusteredDatabaseLife().start();
             return context;
@@ -81,6 +70,17 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
     }
 
+    private ClusteredDatabaseContext recreateContextIfNeeded( DatabaseId databaseId, ClusteredDatabaseContext context ) throws Exception
+    {
+        if ( context.clusteredDatabaseLife().initialized() )
+        {
+            context.clusteredDatabaseLife().stop();
+            // Clustering components cannot be reused, so we have to create a new context on each start->stop-start cycle.
+            return createDatabaseContext( databaseId );
+        }
+        return context;
+    }
+
     @Override
     protected final ClusteredDatabaseContext stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
@@ -88,7 +88,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             log.info( "Stopping '%s' database.", databaseId.name() );
             context.clusteredDatabaseLife().stop();
-            context.clusteredDatabaseLife().shutdown();
             return context;
         }
         catch ( Throwable t )

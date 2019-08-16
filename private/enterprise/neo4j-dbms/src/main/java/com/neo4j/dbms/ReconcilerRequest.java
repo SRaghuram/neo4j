@@ -67,7 +67,7 @@ public class ReconcilerRequest
     }
 
     /**
-     * Whether or not the given database panicked and should be marked as failed in {@link DatabaseReconcilerEntry} after the reconciliation attempt.
+     * Whether or not the given database panicked and should be marked as failed in {@link DatabaseState} after the reconciliation attempt.
      *
      * @return {@code true} if the state should be failed, {@code false} otherwise.
      */

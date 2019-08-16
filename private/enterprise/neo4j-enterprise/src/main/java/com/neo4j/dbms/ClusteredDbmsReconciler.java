@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -48,12 +48,12 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     }
 
     @Override
-    protected DatabaseReconcilerEntry getReconcilerEntryFor( DatabaseId databaseId )
+    protected DatabaseState getReconcilerEntryFor( DatabaseId databaseId )
     {
         return currentStates.getOrDefault( databaseId.name(), initial( databaseId ) );
     }
 
-    private DatabaseReconcilerEntry initial( DatabaseId databaseId )
+    private DatabaseState initial( DatabaseId databaseId )
     {
         var raftIdOpt = readRaftIdForDatabase( databaseId, databaseLogProvider( databaseId ) );
         if ( raftIdOpt.isPresent() )
@@ -62,10 +62,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
             var previousDatabaseId = DatabaseIdFactory.from( databaseId.name(), raftId.uuid() );
             if ( !Objects.equals( databaseId, previousDatabaseId ) )
             {
-                return DatabaseReconcilerEntry.unknown( previousDatabaseId );
+                return DatabaseState.unknown( previousDatabaseId );
             }
         }
-        return DatabaseReconcilerEntry.initial( databaseId );
+        return DatabaseState.initial( databaseId );
     }
 
     private Optional<RaftId> readRaftIdForDatabase( DatabaseId databaseId, DatabaseLogProvider logProvider )

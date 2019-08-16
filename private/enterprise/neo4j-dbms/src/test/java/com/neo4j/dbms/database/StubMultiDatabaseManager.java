@@ -36,7 +36,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         return spy( new StandaloneDatabaseContext( db ) );
     }
 
-    private static GlobalModule mockGlobalModule()
+    static GlobalModule mockGlobalModule()
     {
         Dependencies dependencies = new Dependencies();
         GlobalModule module = mock( GlobalModule.class );

@@ -40,9 +40,9 @@ class MultiDatabaseManagerTest
     private void initDatabaseManager() throws Exception
     {
         databaseManager = new StubMultiDatabaseManager();
-        sys = databaseManager.createDatabase( sysId, true );
-        neo = databaseManager.createDatabase( neoId, true );
-        custom = databaseManager.createDatabase( customId, true );
+        sys = databaseManager.createDatabase( sysId );
+        neo = databaseManager.createDatabase( neoId );
+        custom = databaseManager.createDatabase( customId );
         databaseManager.start();
     }
 

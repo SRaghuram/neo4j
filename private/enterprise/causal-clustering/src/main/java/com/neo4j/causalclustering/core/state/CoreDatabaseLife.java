@@ -28,7 +28,7 @@ import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandle
 import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.raiseAvailabilityGuard;
 import static com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler.stopDatabase;
 
-public class CoreDatabaseLife implements ClusteredDatabaseLife
+public class CoreDatabaseLife extends ClusteredDatabaseLife
 {
     private final RaftMachine raftMachine;
     private final Database kernelDatabase;
@@ -64,18 +64,21 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
     }
 
     @Override
-    public void init() throws Exception
+    protected void start0() throws Exception
+    {
+        bootstrap();
+
+        kernelDatabase.start();
+        applicationProcess.start();
+        raftMachine.postRecoveryActions();
+    }
+
+    private void bootstrap() throws Exception
     {
         addPanicEventHandlers();
         var signal = clusterInternalOperator.bootstrap( kernelDatabase.getDatabaseId() );
         clusterComponentsLife.init();
         kernelDatabase.init();
-        bootstrap();
-        signal.bootstrapped();
-    }
-
-    private void bootstrap() throws Exception
-    {
         clusterComponentsLife.start();
         ensureRecovered();
 
@@ -97,14 +100,8 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
                 downloadJob.get().waitTermination();
             }
         }
-    }
 
-    @Override
-    public void start() throws Exception
-    {
-        kernelDatabase.start();
-        applicationProcess.start();
-        raftMachine.postRecoveryActions();
+        signal.bootstrapped();
     }
 
     private void ensureRecovered() throws Exception
@@ -113,7 +110,7 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
     }
 
     @Override
-    public void stop() throws Exception
+    protected void stop0() throws Exception
     {
         topologyService.onDatabaseStop( kernelDatabase.getDatabaseId() );
         downloadService.stop();
@@ -122,11 +119,7 @@ public class CoreDatabaseLife implements ClusteredDatabaseLife
         applicationProcess.stop();
         kernelDatabase.stop();
         clusterComponentsLife.stop();
-    }
 
-    @Override
-    public void shutdown() throws Exception
-    {
         kernelDatabase.shutdown();
         clusterComponentsLife.shutdown();
         removePanicEventHandlers();

@@ -9,6 +9,7 @@ import com.neo4j.dbms.Transitions.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +83,7 @@ public class DbmsReconciler
     private final BinaryOperator<DatabaseState> precedence;
     private final Log log;
     private final boolean canRetry;
-    protected final Map<String,DatabaseReconcilerEntry> currentStates;
+    protected final Map<String,DatabaseState> currentStates;
     private final Transitions transitions;
 
     DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
@@ -91,8 +92,13 @@ public class DbmsReconciler
         this.backoffStrategy = new ExponentialBackoffStrategy(
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
+
+        int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+        parallelism = parallelism == 0 ? Runtime.getRuntime().availableProcessors() : parallelism;
+        scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
         this.executor = scheduler.executor( Group.DATABASE_RECONCILER );
-        this.reconciling = ConcurrentHashMap.newKeySet();
+
+        this.reconciling = new HashSet<>();
         this.currentStates = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
         this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
@@ -127,7 +133,7 @@ public class DbmsReconciler
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    private ReconcilerStepResult reconcileSteps( DatabaseState currentState, Stream<Transition> steps, DatabaseState desiredState )
+    private static ReconcilerStepResult reconcileSteps( DatabaseState currentState, Stream<Transition> steps, DatabaseState desiredState )
     {
         String oldThreadName = currentThread().getName();
         try
@@ -141,7 +147,7 @@ public class DbmsReconciler
         }
     }
 
-    private ReconcilerStepResult reconcileSteps0( Iterator<Transition> steps, ReconcilerStepResult result )
+    private static ReconcilerStepResult reconcileSteps0( Iterator<Transition> steps, ReconcilerStepResult result )
     {
         if ( !steps.hasNext() )
         {
@@ -157,15 +163,11 @@ public class DbmsReconciler
         {
             return result.withError( e );
         }
-        catch ( Exception e )
-        {
-            return null;
-        }
     }
 
-    protected DatabaseReconcilerEntry getReconcilerEntryFor( DatabaseId databaseId )
+    protected DatabaseState getReconcilerEntryFor( DatabaseId databaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), DatabaseReconcilerEntry.initial( databaseId ) );
+        return currentStates.getOrDefault( databaseId.name(), DatabaseState.initial( databaseId ) );
     }
 
     private CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
@@ -173,9 +175,8 @@ public class DbmsReconciler
         var work = preReconcile( databaseName, operators )
                 .thenCompose( desiredState ->
                 {
-                    var reconcilerEntry = getReconcilerEntryFor( desiredState.databaseId() );
+                    var currentState = getReconcilerEntryFor( desiredState.databaseId() );
 
-                    DatabaseState currentState = reconcilerEntry.state();
                     var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
 
                     if ( currentState.equals( desiredState ) )
@@ -183,7 +184,7 @@ public class DbmsReconciler
                         return CompletableFuture.completedFuture( initialResult );
                     }
 
-                    if ( reconcilerEntry.hasFailed() && !request.forceReconciliation() )
+                    if ( currentState.hasFailed() && !request.forceReconciliation() )
                     {
                         var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
                                 databaseName, desiredState.operationalState().description() );
@@ -255,38 +256,44 @@ public class DbmsReconciler
     {
         return work.whenComplete( ( result, throwable ) ->
         {
-            currentStates.compute( databaseName, ( name, entry ) ->
+            try
             {
-                if ( throwable != null )
+                currentStates.compute( databaseName, ( name, entry ) ->
                 {
-                    var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
-                    if ( entry == null )
+                    if ( throwable != null )
                     {
-                        log.error( message, throwable );
-                        return DatabaseReconcilerEntry.initial( null ).failed();
+                        var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
+                        if ( entry == null )
+                        {
+                            log.error( message, throwable );
+                            return DatabaseState.initial( null ).failed();
+                        }
+                        else
+                        {
+                            reportErrorAndPanicDatabase( entry.databaseId(), message, throwable );
+                            return entry.failed();
+                        }
                     }
-                    else
+                    else if ( result.error() != null )
                     {
-                        reportErrorAndPanicDatabase( entry.state().databaseId(), message, throwable );
-                        return entry.failed();
+                        var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
+                                databaseName, result.state(), result.desiredState().operationalState().description() );
+                        reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
+                        return result.state().failed();
                     }
-                }
-                else if ( result.error() != null )
-                {
-                    var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                            databaseName, result.state(), result.desiredState().operationalState().description() );
-                    reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
-                    return new DatabaseReconcilerEntry( result.state() ).failed();
-                }
 
-                var reconcilerState = new DatabaseReconcilerEntry( result.state() );
-                if ( shouldFailDatabaseStateAfterSuccessfulReconcile( result.state().databaseId(), entry, request ) )
-                {
-                    return reconcilerState.failed();
-                }
-                return reconcilerState;
-            } );
-            releaseLockOn( databaseName );
+                    var reconcilerState = result.state();
+                    if ( shouldFailDatabaseStateAfterSuccessfulReconcile( result.state().databaseId(), entry, request ) )
+                    {
+                        return reconcilerState.failed();
+                    }
+                    return reconcilerState;
+                } );
+            }
+            finally
+            {
+                releaseLockOn( databaseName );
+            }
         } );
     }
 
@@ -297,7 +304,7 @@ public class DbmsReconciler
         panicDatabase( databaseId, panicCause );
     }
 
-    private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerEntry currentState,
+    private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseState currentState,
             ReconcilerRequest request )
     {
         if ( request.forceReconciliation() )
@@ -393,8 +400,9 @@ public class DbmsReconciler
 
     protected final DatabaseState create( DatabaseId databaseId )
     {
-        databaseManager.createDatabase( databaseId, false );
+        databaseManager.createDatabase( databaseId );
         return new DatabaseState( databaseId, STOPPED );
     }
+
 
 }

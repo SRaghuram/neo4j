@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;

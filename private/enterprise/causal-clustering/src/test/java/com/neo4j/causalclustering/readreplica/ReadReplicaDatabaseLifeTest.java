@@ -150,7 +150,7 @@ class ReadReplicaDatabaseLifeTest
         var exception = IllegalStateException.class;
 
         // when / then
-        assertThrows( exception, readReplicaDatabaseLife::init );
+        assertThrows( exception, readReplicaDatabaseLife::start );
         assertNeverStarted( databaseContext.database(), catchupProcess );
     }
 
@@ -168,7 +168,7 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
 
         // when / then
-        assertThrows( exception, readReplicaDatabaseLife::init );
+        assertThrows( exception, readReplicaDatabaseLife::start );
         assertNeverStarted( databaseContext.database(), catchupProcess );
     }
 
@@ -188,7 +188,6 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when
         readReplicaDatabaseLife.start();
@@ -208,7 +207,6 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when
         readReplicaDatabaseLife.start();
@@ -229,7 +227,6 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when
         readReplicaDatabaseLife.start();
@@ -252,7 +249,7 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
 
         // when / then
-        RuntimeException ex = assertThrows( RuntimeException.class, readReplicaDatabaseLife::init );
+        RuntimeException ex = assertThrows( RuntimeException.class, readReplicaDatabaseLife::start );
         assertThat( ex.getMessage(),
                 allOf( containsString( "This read replica cannot join the cluster." ), containsString( "is not empty and has a mismatching storeId" ) ) );
 
@@ -270,7 +267,6 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
 
         // when
         readReplicaDatabaseLife.start();
@@ -290,7 +286,6 @@ class ReadReplicaDatabaseLifeTest
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
         ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
         readReplicaDatabaseLife.start();
 
         // when
@@ -310,7 +305,6 @@ class ReadReplicaDatabaseLifeTest
         var databaseContext = normalDatabase( databaseA, storeA, false );
         var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
 
-        readReplicaDatabaseLife.init();
         readReplicaDatabaseLife.start();
 
         verify( topologyService ).onDatabaseStart( databaseA );
@@ -325,7 +319,6 @@ class ReadReplicaDatabaseLifeTest
 
         var databaseContext = normalDatabase( databaseA, storeA, false );
         var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
-        readReplicaDatabaseLife.init();
         readReplicaDatabaseLife.start();
 
         readReplicaDatabaseLife.stop();

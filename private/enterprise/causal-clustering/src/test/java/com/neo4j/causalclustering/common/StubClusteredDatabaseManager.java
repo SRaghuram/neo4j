@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.util.Collections;
 import java.util.Optional;

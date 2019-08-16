@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;

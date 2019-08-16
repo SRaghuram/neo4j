@@ -47,7 +47,7 @@ public class BatchingTxApplierTest
 
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final BatchingTxApplier txApplier = new BatchingTxApplier( maxBatchSize, () -> idStore, () -> commitProcess,
-            new Monitors(), PageCursorTracerSupplier.NULL, () -> EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
+            new Monitors(), PageCursorTracerSupplier.NULL, EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
             nullLogProvider(), databaseEventDispatch );
 
     @Before

@@ -45,7 +45,6 @@ class CoreDatabaseLifeTest
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
-        coreDatabaseLife.init();
         coreDatabaseLife.start();
 
         verify( topologyService ).onDatabaseStart( databaseId );
@@ -58,7 +57,6 @@ class CoreDatabaseLifeTest
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
-        coreDatabaseLife.init();
         coreDatabaseLife.start();
         coreDatabaseLife.stop();
 
