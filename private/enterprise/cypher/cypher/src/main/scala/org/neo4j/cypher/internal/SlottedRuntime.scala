@@ -53,7 +53,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val converters =
         if (context.compileExpressions) {
           new ExpressionConverters(
-            new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
+            new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
             SlottedExpressionConverters(physicalPlan),
             CommunityExpressionConverter(context.tokenContext))
         } else {

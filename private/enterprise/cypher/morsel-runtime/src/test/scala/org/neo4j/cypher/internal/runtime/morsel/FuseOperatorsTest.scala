@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
-import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, LogicalPlan, ProduceResult, Selection}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
@@ -204,7 +204,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     physicalPlan.slotConfigurations.set(theId, pipelineBuilder.slotConfiguration)
     physicalPlan.argumentSizes.set(theId, Size.zero)
     val converter = new CompiledExpressionConverter(NullLog.getInstance(), physicalPlan,
-                                                    TokenContext.EMPTY, neverFail = false)
+                                                    TokenContext.EMPTY, readOnly = false, neverFail = false)
 
     val expressionConverters = new ExpressionConverters(converter)
 

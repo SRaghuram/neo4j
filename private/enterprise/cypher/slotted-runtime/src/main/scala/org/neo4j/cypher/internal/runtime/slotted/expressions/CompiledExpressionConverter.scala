@@ -26,7 +26,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 
-class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenContext: TokenContext, neverFail: Boolean = false) extends ExpressionConverter {
+class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenContext: TokenContext, readOnly: Boolean, neverFail: Boolean = false) extends ExpressionConverter {
 
   //uses an inner converter to simplify compliance with Expression trait
   private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
@@ -39,7 +39,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 
     case e => try {
       log.debug(s"Compiling expression: $expression")
-      defaultGenerator(physicalPlan.slotConfigurations(id))
+      defaultGenerator(physicalPlan.slotConfigurations(id), readOnly)
         .compileExpression(e)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
@@ -57,7 +57,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
       log.debug(s" Compiling projection: $projections")
-      defaultGenerator(physicalPlan.slotConfigurations(id))
+      defaultGenerator(physicalPlan.slotConfigurations(id), readOnly)
         .compileProjection(projections)
         .map(CompileWrappingProjection(_, projections.isEmpty))
     }
@@ -83,7 +83,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         None
       } else {
         log.debug(s" Compiling grouping expression: $projections")
-        defaultGenerator(physicalPlan.slotConfigurations(id))
+        defaultGenerator(physicalPlan.slotConfigurations(id), readOnly)
           .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
           .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
       }

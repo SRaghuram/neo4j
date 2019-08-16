@@ -67,8 +67,8 @@ object OperatorExpressionCompiler {
   }
 }
 
-class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguration: SlotConfiguration, namer: VariableNamer)
-  extends ExpressionCompiler(slots, namer) {
+class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguration: SlotConfiguration, readOnly: Boolean, namer: VariableNamer)
+  extends ExpressionCompiler(slots, readOnly, namer) {
 
   import org.neo4j.codegen.api.IntermediateRepresentation._
 

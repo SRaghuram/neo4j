@@ -57,7 +57,7 @@ class VariableNamer {
 /**
   * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableNamer = new VariableNamer) {
+abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, val namer: VariableNamer = new VariableNamer) {
 
   import ExpressionCompiler._
   import IntermediateRepresentation._
@@ -1275,7 +1275,14 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
         val variableName = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
         val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
-
+        def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
+          if (readOnly) continuation
+          else {
+            block(
+              assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, constant(token))),
+              condition(isNull(load(variableName)))(continuation))
+          }
+        }
         /**
           * {{{
           *   var property = NO_VALUE
@@ -1295,9 +1302,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
           block(
             declareAndAssign(typeRefOf[Value], variableName, noValue),
             condition(notEqual(entityId, constant(-1L)))(
-              block(
-                assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, constant(token))),
-                condition(isNull(load(variableName)))(
+              checkPropertyTxState(
                   block(
                     assign(variableName,
                            getCachedPropertyAt(property,
@@ -1306,7 +1311,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
                   )
                 )
               )
-            )
         val ops = block(getAndCacheProperty, load(variableName))
         val nullChecks = block(getAndCacheProperty, equal(load(variableName), noValue))
         Some(IntermediateExpression(ops, Seq.empty, Seq(cursorVar, vPROPERTY_CURSOR), Set(nullChecks),
@@ -1331,6 +1335,14 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
       val variableName = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
       val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
+      def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
+        if (readOnly) continuation
+        else {
+          block(
+            assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, loadField(f))),
+            condition(isNull(load(variableName)))(continuation))
+        }
+      }
 
       /**
         * {{{
@@ -1351,9 +1363,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
         block(
           declareAndAssign(typeRefOf[Value], variableName, noValue),
           condition(and(notEqual(entityId, constant(NO_SUCH_NODE)), notEqual(loadField(f), constant(-1))))(
-            block(
-              assign(variableName, invoke(DB_ACCESS, txStatePropertyGet, entityId, loadField(f))),
-              condition(isNull(load(variableName)))(
+            checkPropertyTxState(
                 block(
                   assign(variableName,
                          getCachedPropertyAt(property,
@@ -1362,7 +1372,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
                 )
               )
             )
-          )
+
 
       val lazySet =
         oneTime(
@@ -2733,8 +2743,20 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
         val propertyVariable = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
         val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
-
-        val hasChanges = namer.nextVariableName()
+        def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
+          val hasChanges = namer.nextVariableName()
+          if (readOnly) onNoChanges
+          else {
+            block(
+              declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
+                               invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
+              ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
+                assign(existsVariable,
+                       ternary(unbox(cast[java.lang.Boolean](
+                         invoke(load(hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
+              )
+          }
+        }
 
         /**
           * {{{
@@ -2758,19 +2780,14 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
           block(
             declareAndAssign(typeRefOf[Value], existsVariable, noValue),
             condition(notEqual(entityId, constant(-1L)))(
-              block(
-                declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
-                                 invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
-                ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
-                  block(
-                    declareAndAssign(typeRefOf[Value], propertyVariable,
-                                     getCachedPropertyAt(property,
-                                                         invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor, PROPERTY_CURSOR, constant(true)))),
-                    assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
-                    )
-                  )(assign(existsVariable,
-                         ternary(unbox(cast[java.lang.Boolean](invoke(load(hasChanges),
-                                              method[Optional[_], Object]("get")))), trueValue, falseValue)))
+              checkPropertyTxState(
+                block(
+                  declareAndAssign(typeRefOf[Value], propertyVariable,
+                                   getCachedPropertyAt(property,
+                                                       invoke(DB_ACCESS, propertyGet, entityId, constant(prop), cursor,
+                                                              PROPERTY_CURSOR, constant(true)))),
+                  assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
+                  )
                 )
               )
             )
@@ -2787,8 +2804,20 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
       val propertyVariable = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
       val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
-
-      val hasChanges = namer.nextVariableName()
+      def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
+        val hasChanges = namer.nextVariableName()
+        if (readOnly) onNoChanges
+        else {
+          block(
+            declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
+                             invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
+            ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
+              assign(existsVariable,
+                     ternary(unbox(cast[java.lang.Boolean](
+                       invoke(load(hasChanges), method[Optional[_], Object]("get")))), trueValue, falseValue)))
+            )
+        }
+      }
 
       /**
         * {{{
@@ -2812,23 +2841,17 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
         block(
           declareAndAssign(typeRefOf[Value], existsVariable, noValue),
           condition(notEqual(entityId, constant(-1L)))(
-            block(
-              declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
-                               invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
-              ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(
+            checkPropertyTxState(
                 block(
                   declareAndAssign(typeRefOf[Value], propertyVariable,
                                    getCachedPropertyAt(property,
                                                        invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true)))),
                   assign(existsVariable, ternary(equal(load(propertyVariable), noValue), falseValue, trueValue))
                   )
-                )(assign(existsVariable,
-                         ternary(unbox(cast[java.lang.Boolean](invoke(load(hasChanges),
-                                                                      method[Optional[_], Object]("get")))), trueValue, falseValue)))
+                )
               )
             )
           )
-        )
 
       val lazySet = oneTime(block(
         condition(equal(loadField(f), constant(-1)))(
@@ -2883,7 +2906,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, val namer: VariableN
 }
 
 object ExpressionCompiler {
-  def defaultGenerator(slots: SlotConfiguration): ExpressionCompiler = new DefaultExpressionCompiler(slots)
+  def defaultGenerator(slots: SlotConfiguration, readOnly: Boolean): ExpressionCompiler = new DefaultExpressionCompiler(slots, readOnly)
 
   private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
@@ -2928,7 +2951,7 @@ object ExpressionCompiler {
     if (expression.requireNullCheck) nullCheck(expression)(expression.ir) else expression.ir
 }
 
-private class DefaultExpressionCompiler(slots: SlotConfiguration) extends ExpressionCompiler(slots) {
+private class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean) extends ExpressionCompiler(slots, readOnly) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

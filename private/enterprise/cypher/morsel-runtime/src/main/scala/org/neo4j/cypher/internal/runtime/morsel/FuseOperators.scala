@@ -63,7 +63,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
     val namer = new VariableNamer
-    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, namer) // NOTE: We assume slots is the same within an entire pipeline
+    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
 
     def compileExpression(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression)

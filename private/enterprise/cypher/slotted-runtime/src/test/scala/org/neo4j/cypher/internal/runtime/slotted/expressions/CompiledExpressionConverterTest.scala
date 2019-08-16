@@ -31,7 +31,7 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
                                     ParameterMapping.empty,
                                     0)
 
-    val converter = new CompiledExpressionConverter(log, physicalPlan, TokenContext.EMPTY, neverFail = true)
+    val converter = new CompiledExpressionConverter(log, physicalPlan, TokenContext.EMPTY, readOnly = false, neverFail = true)
 
     // When
     //There is a limit of 65535 on the length of a String literal, so by exceeding that limit

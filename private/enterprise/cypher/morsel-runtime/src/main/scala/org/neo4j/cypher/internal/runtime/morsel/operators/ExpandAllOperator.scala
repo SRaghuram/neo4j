@@ -198,7 +198,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, codeGen.getLongFromExecutionContext(fromOffset)),
+      declareAndAssign(typeRefOf[Long], fromNode, codeGen.getLongFromExecutionContext(fromOffset, loadField(INPUT_MORSEL))),
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
          loadTypes,
