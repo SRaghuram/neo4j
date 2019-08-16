@@ -114,7 +114,6 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
-import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -263,7 +262,7 @@ class CoreDatabaseFactory
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedBarrierTokenStateMachine,
                 config.get( state_machine_apply_max_batch_size ), debugLog );
 
-        Locks lockManager = createLockManager( config, clock, logService,barrierState );
+        Locks lockManager = createLockManager( config, clock, barrierState );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
@@ -411,7 +410,7 @@ class CoreDatabaseFactory
 
     private DatabaseIdContext createIdContext( DatabaseId databaseId, BarrierState barrierTokenState )
     {
-        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( databaseId, barrierTokenState );
+        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( barrierTokenState );
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
                 .withFactoryWrapper( generator -> generator )
@@ -427,13 +426,13 @@ class CoreDatabaseFactory
         return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage );
     }
 
-    private IdGeneratorFactory createIdGeneratorFactory( DatabaseId databaseId, BarrierState barrierTokenState )
+    private IdGeneratorFactory createIdGeneratorFactory( BarrierState barrierTokenState )
     {
         DefaultIdGeneratorFactory real = new DefaultIdGeneratorFactory( fileSystem, RecoveryCleanupWorkCollector.immediate() );
-        return new BarrierAwareIdGeneratorFactory( real, databaseId, barrierTokenState );
+        return new BarrierAwareIdGeneratorFactory( real, barrierTokenState );
     }
 
-    private Locks createLockManager( final Config config, Clock clock, final LogService logging, BarrierState barrierTokenState )
+    private Locks createLockManager( final Config config, Clock clock, BarrierState barrierTokenState )
     {
         LocksFactory lockFactory = createLockFactory( config );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );

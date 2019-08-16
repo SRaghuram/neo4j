@@ -5,56 +5,54 @@
  */
 package com.neo4j.causalclustering.core.state.machines.id;
 
+import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
+
 import java.io.File;
 import java.nio.file.OpenOption;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.LongSupplier;
 
-import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
-
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseId;
 
 public class BarrierAwareIdGeneratorFactory implements IdGeneratorFactory
 {
     private final IdGeneratorFactory delegate;
-    private final DatabaseId databaseId;
     private final BarrierState barrierState;
 
-    private final Map<Pair<DatabaseId,IdType>,BarrierAwareIdGenerator> generators = new HashMap<>();
+    private final Map<IdType,BarrierAwareIdGenerator> generators = new EnumMap<>( IdType.class );
 
-    public BarrierAwareIdGeneratorFactory( IdGeneratorFactory delegate, DatabaseId databaseId, BarrierState barrierState )
+    public BarrierAwareIdGeneratorFactory( IdGeneratorFactory delegate, BarrierState barrierState )
     {
         this.delegate = delegate;
-        this.databaseId = databaseId;
         this.barrierState = barrierState;
     }
 
     @Override
-    public IdGenerator open( PageCache pageCache, File fileName, IdType idType, LongSupplier highIdScanner, long maxId,
-                             OpenOption... openOptions )
+    public IdGenerator open( PageCache pageCache, File fileName, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
     {
-        return generators.computeIfAbsent( Pair.of( databaseId, idType ), theIdType ->
-                new BarrierAwareIdGenerator( delegate.open( pageCache, fileName, idType, highIdScanner, maxId, openOptions ), barrierState ) );
+        BarrierAwareIdGenerator idGenerator = new BarrierAwareIdGenerator(
+                delegate.open( pageCache, fileName, idType, highIdScanner, maxId, openOptions ), barrierState );
+        generators.put( idType, idGenerator );
+        return idGenerator;
     }
 
     @Override
     public IdGenerator get( IdType idType )
     {
-        return delegate.get( idType );
+        return generators.get( idType );
     }
 
     @Override
-    public IdGenerator create( PageCache pageCache, File fileName, IdType idType, long highId, boolean throwIfFileExists,
-                               long maxId, OpenOption... openOptions )
+    public IdGenerator create( PageCache pageCache, File fileName, IdType idType, long highId, boolean throwIfFileExists, long maxId,
+            OpenOption... openOptions )
     {
-        return generators.computeIfAbsent( Pair.of( databaseId, idType ), theIdType ->
-                new BarrierAwareIdGenerator( delegate.create( pageCache, fileName, idType, highId, throwIfFileExists,
-                        maxId, openOptions ), barrierState ) );
+        BarrierAwareIdGenerator idGenerator = new BarrierAwareIdGenerator(
+                delegate.create( pageCache, fileName, idType, highId, throwIfFileExists, maxId, openOptions ), barrierState );
+        generators.put( idType, idGenerator );
+        return idGenerator;
     }
 }
