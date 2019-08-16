@@ -7,6 +7,7 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
@@ -89,7 +90,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
 
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
                                                                           jvm,
-                                                                          clientJvmArgs,
+                                                                          JvmArgs.from( clientJvmArgs ).set( "-Xmx2g" ).set( "-Xms2g").toArgs(),
                                                                           commandArgs,
                                                                           Main.class );
 
