@@ -27,7 +27,6 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.ResourceIterator;
 
 import static java.lang.String.format;
 
@@ -113,17 +112,14 @@ public class Update6EmbeddedCore_1 extends Neo4jUpdate6<Neo4jConnectionState>
 
     private boolean isMemberWithPosts( Node desiredForum, Node desiredPerson )
     {
-        try ( ResourceIterator<Relationship> hasMemberWithPostsIter =
-                      (ResourceIterator<Relationship>) desiredForum.getRelationships( Direction.OUTGOING, Rels.HAS_MEMBER_WITH_POSTS ).iterator() )
+        for ( Relationship hasMemberWithPosts : desiredForum.getRelationships(
+                Direction.OUTGOING,
+                Rels.HAS_MEMBER_WITH_POSTS ) )
         {
-            while ( hasMemberWithPostsIter.hasNext() )
+            Node person = hasMemberWithPosts.getEndNode();
+            if ( person.equals( desiredPerson ) )
             {
-                Relationship hasMemberWithPosts = hasMemberWithPostsIter.next();
-                Node person = hasMemberWithPosts.getEndNode();
-                if ( person.equals( desiredPerson ) )
-                {
-                    return true;
-                }
+                return true;
             }
         }
         return false;
@@ -134,17 +130,12 @@ public class Update6EmbeddedCore_1 extends Neo4jUpdate6<Neo4jConnectionState>
             Node desiredPerson,
             RelationshipType[] hasMemberRelationshipTypes )
     {
-        try ( ResourceIterator<Relationship> hasMembers =
-                      (ResourceIterator<Relationship>) desiredForum.getRelationships( Direction.OUTGOING, hasMemberRelationshipTypes ).iterator() )
+        for ( Relationship hasMember : desiredForum.getRelationships( Direction.OUTGOING, hasMemberRelationshipTypes ) )
         {
-            while ( hasMembers.hasNext() )
+            Node person = hasMember.getEndNode();
+            if ( person.equals( desiredPerson ) )
             {
-                Relationship hasMember = hasMembers.next();
-                Node person = hasMember.getEndNode();
-                if ( person.equals( desiredPerson ) )
-                {
-                    return hasMember;
-                }
+                return hasMember;
             }
         }
         return null;
