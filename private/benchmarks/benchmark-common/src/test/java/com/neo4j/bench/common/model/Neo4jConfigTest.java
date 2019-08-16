@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
@@ -143,6 +144,15 @@ public class Neo4jConfigTest
         Neo4jConfig config2 = config1.setJvmArgs( Lists.newArrayList( "-Xmx1g" ) );
         assertThat( config2.getJvmArgs(), equalTo( Lists.newArrayList( "-Xmx1g" ) ) );
         assertThat( config2.toMap(), equalTo( config1.toMap() ) );
+    }
+
+    @Test
+    public void shouldOverwriteJvmArgs()
+    {
+        Neo4jConfig config0 = Neo4jConfig.empty().setJvmArgs( Lists.newArrayList( "-Xms1g" ) );
+
+        Neo4jConfig config1 = config0.addJvmArg( "-Xms2g" );
+        assertThat( config1.getJvmArgs(), contains( "-Xms2g" ) );
     }
 
     private void assertSerialization( Neo4jConfig config0 )
