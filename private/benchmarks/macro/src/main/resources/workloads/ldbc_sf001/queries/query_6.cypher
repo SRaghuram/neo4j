@@ -1,5 +1,5 @@
-MATCH (knownTag:Tag {name:{Tag}})
-MATCH (person:Person {id:{Person}})-[:KNOWS*1..2]-(friend)
+MATCH (knownTag:Tag {name:$Tag})
+MATCH (person:Person {id:$Person})-[:KNOWS*1..2]-(friend)
 WHERE NOT person=friend
 WITH DISTINCT friend, knownTag
 MATCH (friend)<-[:POST_HAS_CREATOR]-(post)

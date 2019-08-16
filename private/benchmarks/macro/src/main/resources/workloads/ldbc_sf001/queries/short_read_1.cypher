@@ -1,4 +1,4 @@
-MATCH (person:Person {id:{Person}})-[:PERSON_IS_LOCATED_IN]->(city)
+MATCH (person:Person {id:$Person})-[:PERSON_IS_LOCATED_IN]->(city)
 RETURN
  person.firstName AS firstName,
  person.lastName AS lastName,

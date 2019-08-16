@@ -1,4 +1,4 @@
-MATCH (:Person {id:{Person}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
+MATCH (:Person {id:$Person})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
 WITH
  message,
  message.id AS messageId,

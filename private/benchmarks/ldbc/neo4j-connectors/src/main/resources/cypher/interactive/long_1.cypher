@@ -1,8 +1,8 @@
-MATCH path=(person:Person {id:{1}})-[:KNOWS*1..3]-(friend)
-WHERE friend.firstName={2} AND NOT person=friend
+MATCH path=(person:Person {id:$1})-[:KNOWS*1..3]-(friend)
+WHERE friend.firstName=$2 AND NOT person=friend
 WITH friend, min(length(path)) AS distance
 ORDER BY distance ASC, friend.lastName ASC, friend.id ASC
-LIMIT {3}
+LIMIT $3
 MATCH (friend)-[:PERSON_IS_LOCATED_IN]->(friendCity:City)
 OPTIONAL MATCH (friend)-[studyAt:STUDY_AT]->(uni:University)-[:ORGANISATION_IS_LOCATED_IN]->(uniCity:City)
 WITH friend,

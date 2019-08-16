@@ -1,5 +1,5 @@
-MATCH path=(:Person {id:{Person}})-[:KNOWS*1..3]-(friend)
-WHERE friend.firstName={Name}
+MATCH path=(:Person {id:$Person})-[:KNOWS*1..3]-(friend)
+WHERE friend.firstName=$Name
 WITH friend, min(length(path)) AS distance
 ORDER BY distance ASC, friend.lastName ASC, friend.id ASC
 LIMIT 20
