@@ -1,4 +1,4 @@
-MATCH (person:Person {id:{1}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message),
+MATCH (person:Person {id:$1})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message),
       (message)<-[like:LIKES_POST|LIKES_COMMENT]-(liker)
 WITH liker, message, like.creationDate AS likeTime, person
 ORDER BY likeTime DESC, message.id ASC
@@ -16,4 +16,4 @@ RETURN
  coalesce(message.content,message.imageFile) AS messageContent,
  message.creationDate AS messageCreationDate
 ORDER BY likeTime DESC, personId ASC
-LIMIT {2}
+LIMIT $2

@@ -1,4 +1,4 @@
-MATCH (:Person {id:{Person}})-[knows:KNOWS]-(friend)
+MATCH (:Person {id:$Person})-[knows:KNOWS]-(friend)
 RETURN
  friend.id AS friendId,
  friend.firstName AS friendFirstName,

@@ -43,38 +43,38 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (f1:" + Nodes.Person + " {f1}),\n"
-                   + " (f2:" + Nodes.Person + " {f2}),\n"
-                   + " (f3:" + Nodes.Person + " {f3}),\n"
-                   + " (ff11:" + Nodes.Person + " {ff11}),\n"
-                   + " (fff111:" + Nodes.Person + " {fff111}),\n"
-                   + " (ffff1111:" + Nodes.Person + " {ffff1111}),\n"
-                   + " (fffff11111:" + Nodes.Person + " {fffff11111}),\n"
-                   + " (ff21:" + Nodes.Person + " {ff21}),\n"
-                   + " (fff211:" + Nodes.Person + " {fff211}),\n"
-                   + " (ff31:" + Nodes.Person + " {ff31}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (f1:" + Nodes.Person + " $f1),\n"
+                   + " (f2:" + Nodes.Person + " $f2),\n"
+                   + " (f3:" + Nodes.Person + " $f3),\n"
+                   + " (ff11:" + Nodes.Person + " $ff11),\n"
+                   + " (fff111:" + Nodes.Person + " $fff111),\n"
+                   + " (ffff1111:" + Nodes.Person + " $ffff1111),\n"
+                   + " (fffff11111:" + Nodes.Person + " $fffff11111),\n"
+                   + " (ff21:" + Nodes.Person + " $ff21),\n"
+                   + " (fff211:" + Nodes.Person + " $fff211),\n"
+                   + " (ff31:" + Nodes.Person + " $ff31),\n"
                    /*
                    * Universities
                    */
-                   + " (uni0:" + Organisation.Type.University + " {uni0}),\n"
-                   + " (uni1:" + Organisation.Type.University + " {uni1}),\n"
-                   + " (uni2:" + Organisation.Type.University + " {uni2}),\n"
+                   + " (uni0:" + Organisation.Type.University + " $uni0),\n"
+                   + " (uni1:" + Organisation.Type.University + " $uni1),\n"
+                   + " (uni2:" + Organisation.Type.University + " $uni2),\n"
                    /*
                    * Companies
                    */
-                   + " (company0:" + Organisation.Type.Company + " {company0}),\n"
-                   + " (company1:" + Organisation.Type.Company + " {company1}),\n"
+                   + " (company0:" + Organisation.Type.Company + " $company0),\n"
+                   + " (company1:" + Organisation.Type.Company + " $company1),\n"
                    /*
                    * Cities
                    */
-                   + " (city0:" + Place.Type.City + " {city0}),\n"
-                   + " (city1:" + Place.Type.City + " {city1}),\n"
+                   + " (city0:" + Place.Type.City + " $city0),\n"
+                   + " (city1:" + Place.Type.City + " $city1),\n"
                    /*
                    * Countries
                    */
-                   + " (country0:" + Place.Type.Country + " {country0}),\n"
-                   + " (country1:" + Place.Type.Country + " {country1}),\n"
+                   + " (country0:" + Place.Type.Country + " $country0),\n"
+                   + " (country1:" + Place.Type.Country + " $country1),\n"
                    /*
                    * RELATIONSHIP
                    */
@@ -127,16 +127,16 @@ public class SnbInteractiveTestGraph
                    /*
                     * Person-University
                     */
-                   + " (f1)-[:" + Rels.STUDY_AT + " {f1StudyAtUni0}]->(uni0),\n"
-                   + " (ff11)-[:" + Rels.STUDY_AT + " {ff11StudyAtUni1}]->(uni1),\n"
-                   + " (ff11)-[:" + Rels.STUDY_AT + " {ff11StudyAtUni2}]->(uni2),\n"
-                   + " (f2)-[:" + Rels.STUDY_AT + " {f2StudyAtUni2}]->(uni2),\n"
+                   + " (f1)-[:" + Rels.STUDY_AT + " $f1StudyAtUni0]->(uni0),\n"
+                   + " (ff11)-[:" + Rels.STUDY_AT + " $ff11StudyAtUni1]->(uni1),\n"
+                   + " (ff11)-[:" + Rels.STUDY_AT + " $ff11StudyAtUni2]->(uni2),\n"
+                   + " (f2)-[:" + Rels.STUDY_AT + " $f2StudyAtUni2]->(uni2),\n"
                    /*
                     * Person-Company
                     */
-                   + " (f1)-[:" + Rels.WORKS_AT + " {f1WorkAtCompany0}]->(company0),\n"
-                   + " (f3)-[:" + Rels.WORKS_AT + " {f3WorkAtCompany0}]->(company0),\n"
-                   + " (ff21)-[:" + Rels.WORKS_AT + " {ff21WorkAtCompany1}]->(company1)\n";
+                   + " (f1)-[:" + Rels.WORKS_AT + " $f1WorkAtCompany0]->(company0),\n"
+                   + " (f3)-[:" + Rels.WORKS_AT + " $f3WorkAtCompany0]->(company0),\n"
+                   + " (ff21)-[:" + Rels.WORKS_AT + " $ff21WorkAtCompany1]->(company1)\n";
         }
 
         @Override
@@ -512,45 +512,45 @@ public class SnbInteractiveTestGraph
                    /*
                     * Countries
                     */
-                   + " (country0:" + Place.Type.Country + " {country0}),\n"
+                   + " (country0:" + Place.Type.Country + " $country0),\n"
                     /*
                      * Forums
                     */
-                   + " (forum1:" + Nodes.Forum + " {forum1}),"
+                   + " (forum1:" + Nodes.Forum + " $forum1),"
                    /*
                     * Persons
                     */
-                   + " (p1:" + Nodes.Person + " {p1}), "
-                   + "(f2:" + Nodes.Person + " {f2}), "
-                   + "(f3:" + Nodes.Person + " {f3}), "
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + " (s5:" + Nodes.Person + " {s5}), "
-                   + "(ff6:" + Nodes.Person + " {ff6}),"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
+                   + " (p1:" + Nodes.Person + " $p1), "
+                   + "(f2:" + Nodes.Person + " $f2), "
+                   + "(f3:" + Nodes.Person + " $f3), "
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + " (s5:" + Nodes.Person + " $s5), "
+                   + "(ff6:" + Nodes.Person + " $ff6),"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
                    + " (s8:" + Nodes.Person + "),\n"
                    /*
                    * Posts
                    */
-                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " {f3Post1}),"
-                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " {f3Post2}),"
-                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " {f3Post3}),\n"
-                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " {f4Post1}),"
-                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " {f2Post1}),"
-                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " {f2Post2}),"
-                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " {f2Post3}),\n"
-                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " {s5Post1}),"
-                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " {s5Post2}),"
-                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " {ff6Post1}),\n"
-                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),"
-                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " {s7Post2}),\n"
+                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " $f3Post1),"
+                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " $f3Post2),"
+                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " $f3Post3),\n"
+                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " $f4Post1),"
+                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " $f2Post1),"
+                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " $f2Post2),"
+                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " $f2Post3),\n"
+                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " $s5Post1),"
+                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " $s5Post2),"
+                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " $ff6Post1),\n"
+                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),"
+                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " $s7Post2),\n"
                    /*
                    * Comments
                    */
-                   + " (f2Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f2Comment1}),"
-                   + " (f2Comment2:" + Nodes.Comment + ":" + Nodes.Message + " {f2Comment2}),\n"
-                   + " (s5Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {s5Comment1}),"
-                   + " (f3Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f3Comment1}),"
-                   + " (p1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {p1Comment1})\n"
+                   + " (f2Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f2Comment1),"
+                   + " (f2Comment2:" + Nodes.Comment + ":" + Nodes.Message + " $f2Comment2),\n"
+                   + " (s5Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $s5Comment1),"
+                   + " (f3Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f3Comment1),"
+                   + " (p1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $p1Comment1)\n"
                    /*
                    * RELATIONSHIP
                    */
@@ -1002,53 +1002,53 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person1:" + Nodes.Person + " {person1}), "
-                   + "(f2:" + Nodes.Person + " {f2}), "
-                   + "(f3:" + Nodes.Person + " {f3}), "
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + " (s5:" + Nodes.Person + " {s5}), "
-                   + "(ff6:" + Nodes.Person + " {ff6}),"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
+                   + " (person1:" + Nodes.Person + " $person1), "
+                   + "(f2:" + Nodes.Person + " $f2), "
+                   + "(f3:" + Nodes.Person + " $f3), "
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + " (s5:" + Nodes.Person + " $s5), "
+                   + "(ff6:" + Nodes.Person + " $ff6),"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
                    /*
                    * Cities
                    */
-                   + " (city1:" + Place.Type.City + " {city1}), "
-                   + " (city2:" + Place.Type.City + " {city2}),"
-                   + " (city3:" + Place.Type.City + " {city3}),\n"
-                   + " (city4:" + Place.Type.City + " {city4}),"
-                   + " (city5:" + Place.Type.City + " {city5}),\n"
+                   + " (city1:" + Place.Type.City + " $city1), "
+                   + " (city2:" + Place.Type.City + " $city2),"
+                   + " (city3:" + Place.Type.City + " $city3),\n"
+                   + " (city4:" + Place.Type.City + " $city4),"
+                   + " (city5:" + Place.Type.City + " $city5),\n"
                    /*
                    * Countries
                    */
-                   + " (country1:" + Place.Type.Country + " {country1}),"
-                   + " (country2:" + Place.Type.Country + " {country2}),\n"
-                   + " (country3:" + Place.Type.Country + " {country3}),"
-                   + " (country4:" + Place.Type.Country + " {country4}),\n"
-                   + " (country5:" + Place.Type.Country + " {country5}),\n"
+                   + " (country1:" + Place.Type.Country + " $country1),"
+                   + " (country2:" + Place.Type.Country + " $country2),\n"
+                   + " (country3:" + Place.Type.Country + " $country3),"
+                   + " (country4:" + Place.Type.Country + " $country4),\n"
+                   + " (country5:" + Place.Type.Country + " $country5),\n"
                    /*
                    * Posts
                    */
-                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " {f3Post1}),\n"
-                   + "(f3Post2:" + Nodes.Post + ":" + Nodes.Message + " {f3Post2}),\n"
-                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " {f3Post3}),\n"
-                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " {f4Post1}),\n"
-                   + "(f2Post1:" + Nodes.Post + ":" + Nodes.Message + " {f2Post1}),\n"
-                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " {f2Post2}),\n"
-                   + "(f2Post3:" + Nodes.Post + ":" + Nodes.Message + " {f2Post3}),\n"
-                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " {s5Post1}),\n"
-                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " {s5Post2}),\n"
-                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " {ff6Post1}),\n"
-                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),\n"
-                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " {s7Post2}),\n"
+                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " $f3Post1),\n"
+                   + "(f3Post2:" + Nodes.Post + ":" + Nodes.Message + " $f3Post2),\n"
+                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " $f3Post3),\n"
+                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " $f4Post1),\n"
+                   + "(f2Post1:" + Nodes.Post + ":" + Nodes.Message + " $f2Post1),\n"
+                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " $f2Post2),\n"
+                   + "(f2Post3:" + Nodes.Post + ":" + Nodes.Message + " $f2Post3),\n"
+                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " $s5Post1),\n"
+                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " $s5Post2),\n"
+                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " $ff6Post1),\n"
+                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),\n"
+                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " $s7Post2),\n"
                    /*
                    * Comments
                    */
-                   + " (f2Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f2Comment1}),"
-                   + " (f2Comment2:" + Nodes.Comment + ":" + Nodes.Message + " {f2Comment2}),\n"
-                   + " (s5Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {s5Comment1}),"
-                   + " (f3Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f3Comment1}),"
-                   + " (person1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {person1Comment1}),\n"
-                   + " (ff6Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {ff6Comment1}),\n"
+                   + " (f2Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f2Comment1),"
+                   + " (f2Comment2:" + Nodes.Comment + ":" + Nodes.Message + " $f2Comment2),\n"
+                   + " (s5Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $s5Comment1),"
+                   + " (f3Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f3Comment1),"
+                   + " (person1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $person1Comment1),\n"
+                   + " (ff6Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $ff6Comment1),\n"
                    /*
                    * RELATIONSHIP
                    */
@@ -1605,40 +1605,40 @@ public class SnbInteractiveTestGraph
                    /*
                     * Tags
                     */
-                   + " (tag1:" + Nodes.Tag + " {tag1}), "
-                   + "(tag2:" + Nodes.Tag + " {tag2}), "
-                   + "(tag3:" + Nodes.Tag + " {tag3}), "
-                   + "(tag4:" + Nodes.Tag + " {tag4}), "
-                   + "(tag5:" + Nodes.Tag + " {tag5}),\n"
+                   + " (tag1:" + Nodes.Tag + " $tag1), "
+                   + "(tag2:" + Nodes.Tag + " $tag2), "
+                   + "(tag3:" + Nodes.Tag + " $tag3), "
+                   + "(tag4:" + Nodes.Tag + " $tag4), "
+                   + "(tag5:" + Nodes.Tag + " $tag5),\n"
                    /*
                     * Persons
                     */
-                   + " (person1:" + Nodes.Person + " {person1}), "
-                   + "(f2:" + Nodes.Person + " {f2}), "
-                   + "(f3:" + Nodes.Person + " {f3}), "
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + "(s5:" + Nodes.Person + " {s5}), "
-                   + "(ff6:" + Nodes.Person + " {ff6}),"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
+                   + " (person1:" + Nodes.Person + " $person1), "
+                   + "(f2:" + Nodes.Person + " $f2), "
+                   + "(f3:" + Nodes.Person + " $f3), "
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + "(s5:" + Nodes.Person + " $s5), "
+                   + "(ff6:" + Nodes.Person + " $ff6),"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
                    /*
                    * Posts
                    */
-                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " {f3Post1}),"
-                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " {f3Post2}),"
-                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " {f3Post3}),\n"
-                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " {f4Post1}),"
-                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " {f2Post1}),"
-                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " {f2Post2}),"
-                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " {f2Post3}),\n"
-                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " {s5Post1}),"
-                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " {s5Post2}),"
-                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " {ff6Post1}),\n"
-                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),"
-                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " {s7Post2}),\n"
+                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " $f3Post1),"
+                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " $f3Post2),"
+                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " $f3Post3),\n"
+                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " $f4Post1),"
+                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " $f2Post1),"
+                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " $f2Post2),"
+                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " $f2Post3),\n"
+                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " $s5Post1),"
+                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " $s5Post2),"
+                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " $ff6Post1),\n"
+                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),"
+                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " $s7Post2),\n"
                    /*
                    * Comments
                    */
-                   + " (f4Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f4Comment1})\n"
+                   + " (f4Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f4Comment1)\n"
                    /*
                    * RELATIONSHIP
                    */
@@ -2054,39 +2054,39 @@ public class SnbInteractiveTestGraph
                     /*
                      * Forums
                     */
-                   + " (forum1:" + Nodes.Forum + " {forum1}),"
-                   + " (forum2:" + Nodes.Forum + " {forum2}),\n"
-                   + " (forum3:" + Nodes.Forum + " {forum3}),"
-                   + " (forum4:" + Nodes.Forum + " {forum4}),\n"
+                   + " (forum1:" + Nodes.Forum + " $forum1),"
+                   + " (forum2:" + Nodes.Forum + " $forum2),\n"
+                   + " (forum3:" + Nodes.Forum + " $forum3),"
+                   + " (forum4:" + Nodes.Forum + " $forum4),\n"
                    /*
                     * Persons
                     */
-                   + " (person1:" + Nodes.Person + " {person1}), "
-                   + "(f2:" + Nodes.Person + " {f2}), "
-                   + "(f3:" + Nodes.Person + " {f3}), "
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + " (s5:" + Nodes.Person + " {s5}), "
-                   + "(ff6:" + Nodes.Person + " {ff6}),"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
+                   + " (person1:" + Nodes.Person + " $person1), "
+                   + "(f2:" + Nodes.Person + " $f2), "
+                   + "(f3:" + Nodes.Person + " $f3), "
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + " (s5:" + Nodes.Person + " $s5), "
+                   + "(ff6:" + Nodes.Person + " $ff6),"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
                    /*
                    * Countries
                    */
-                   + " (country0:" + Place.Type.Country + " {country0}),\n"
-                   + " (country1:" + Place.Type.Country + " {country1}),\n"
+                   + " (country0:" + Place.Type.Country + " $country0),\n"
+                   + " (country1:" + Place.Type.Country + " $country1),\n"
                    /*
                    * Posts
                    */
-                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " {f3Post1}),"
-                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " {f3Post2}),"
-                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " {f3Post3}),\n"
-                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " {f2Post1}),"
-                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " {f2Post2}),"
-                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " {f2Post3}),\n"
-                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " {s5Post1}),"
-                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " {s5Post2}),"
-                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " {ff6Post1}),\n"
-                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),"
-                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " {s7Post2}),\n"
+                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " $f3Post1),"
+                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " $f3Post2),"
+                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " $f3Post3),\n"
+                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " $f2Post1),"
+                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " $f2Post2),"
+                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " $f2Post3),\n"
+                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " $s5Post1),"
+                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " $s5Post2),"
+                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " $ff6Post1),\n"
+                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),"
+                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " $s7Post2),\n"
                    /*
                    * RELATIONSHIP
                    */
@@ -2094,17 +2094,17 @@ public class SnbInteractiveTestGraph
                    /*
                     * Forum-Person (member)
                     */
-                   + " (forum1)-[:" + Rels.HAS_MEMBER + " {forum1HasMemberPerson1}]->(person1),"
-                   + " (forum1)-[:" + Rels.HAS_MEMBER + " {forum1HasMemberF2}]->(f2),\n"
-                   + " (forum1)-[:" + Rels.HAS_MEMBER + " {forum1HasMemberS5}]->(s5),"
-                   + " (forum1)-[:" + Rels.HAS_MEMBER + " {forum1HasMemberF3}]->(f3),\n"
-                   + " (forum1)-[:" + Rels.HAS_MEMBER + " {forum1HasMemberFF6}]->(ff6),\n"
-                   + " (forum2)-[:" + Rels.HAS_MEMBER + " {forum2HasMemberF3}]->(f3),"
-                   + " (forum3)-[:" + Rels.HAS_MEMBER + " {forum3HasMemberPerson1}]->(person1),\n"
-                   + " (forum3)-[:" + Rels.HAS_MEMBER + " {forum3HasMemberF3}]->(f3),"
-                   + " (forum3)-[:" + Rels.HAS_MEMBER + " {forum3HasMemberF4}]->(f4),\n"
-                   + " (forum4)-[:" + Rels.HAS_MEMBER + " {forum4HasMemberF2}]->(f2),\n"
-                   + " (forum4)-[:" + Rels.HAS_MEMBER + " {forum4HasMemberPerson1}]->(person1),\n"
+                   + " (forum1)-[:" + Rels.HAS_MEMBER + " $forum1HasMemberPerson1]->(person1),"
+                   + " (forum1)-[:" + Rels.HAS_MEMBER + " $forum1HasMemberF2]->(f2),\n"
+                   + " (forum1)-[:" + Rels.HAS_MEMBER + " $forum1HasMemberS5]->(s5),"
+                   + " (forum1)-[:" + Rels.HAS_MEMBER + " $forum1HasMemberF3]->(f3),\n"
+                   + " (forum1)-[:" + Rels.HAS_MEMBER + " $forum1HasMemberFF6]->(ff6),\n"
+                   + " (forum2)-[:" + Rels.HAS_MEMBER + " $forum2HasMemberF3]->(f3),"
+                   + " (forum3)-[:" + Rels.HAS_MEMBER + " $forum3HasMemberPerson1]->(person1),\n"
+                   + " (forum3)-[:" + Rels.HAS_MEMBER + " $forum3HasMemberF3]->(f3),"
+                   + " (forum3)-[:" + Rels.HAS_MEMBER + " $forum3HasMemberF4]->(f4),\n"
+                   + " (forum4)-[:" + Rels.HAS_MEMBER + " $forum4HasMemberF2]->(f2),\n"
+                   + " (forum4)-[:" + Rels.HAS_MEMBER + " $forum4HasMemberPerson1]->(person1),\n"
                    /*
                    * Person-Person
                    */
@@ -2570,36 +2570,36 @@ public class SnbInteractiveTestGraph
                    /*
                     * Tags
                     */
-                   + " (tag1:" + Nodes.Tag + " {tag1}), "
-                   + "(tag2:" + Nodes.Tag + " {tag2}), "
-                   + "(tag3:" + Nodes.Tag + " {tag3}), "
-                   + "(tag4:" + Nodes.Tag + " {tag4}), "
-                   + "(tag5:" + Nodes.Tag + " {tag5}),\n"
+                   + " (tag1:" + Nodes.Tag + " $tag1), "
+                   + "(tag2:" + Nodes.Tag + " $tag2), "
+                   + "(tag3:" + Nodes.Tag + " $tag3), "
+                   + "(tag4:" + Nodes.Tag + " $tag4), "
+                   + "(tag5:" + Nodes.Tag + " $tag5),\n"
                    /*
                     * Persons
                     */
-                   + " (person1:" + Nodes.Person + " {person1}), "
-                   + "(f2:" + Nodes.Person + " {f2}), "
-                   + "(f3:" + Nodes.Person + " {f3}), "
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + " (s5:" + Nodes.Person + " {s5}), "
-                   + "(ff6:" + Nodes.Person + " {ff6}),"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
+                   + " (person1:" + Nodes.Person + " $person1), "
+                   + "(f2:" + Nodes.Person + " $f2), "
+                   + "(f3:" + Nodes.Person + " $f3), "
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + " (s5:" + Nodes.Person + " $s5), "
+                   + "(ff6:" + Nodes.Person + " $ff6),"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
                    /*
                    * Posts
                    */
-                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " {f3Post1}),"
-                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " {f3Post2}),"
-                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " {f3Post3}),\n"
-                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " {f4Post1}),"
-                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " {f2Post1}),"
-                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " {f2Post2}),"
-                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " {f2Post3}),\n"
-                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " {s5Post1}),"
-                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " {s5Post2}),"
-                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " {ff6Post1}),\n"
-                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),"
-                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " {s7Post2})\n"
+                   + " (f3Post1:" + Nodes.Post + ":" + Nodes.Message + " $f3Post1),"
+                   + " (f3Post2:" + Nodes.Post + ":" + Nodes.Message + " $f3Post2),"
+                   + " (f3Post3:" + Nodes.Post + ":" + Nodes.Message + " $f3Post3),\n"
+                   + " (f4Post1:" + Nodes.Post + ":" + Nodes.Message + " $f4Post1),"
+                   + " (f2Post1:" + Nodes.Post + ":" + Nodes.Message + " $f2Post1),"
+                   + " (f2Post2:" + Nodes.Post + ":" + Nodes.Message + " $f2Post2),"
+                   + " (f2Post3:" + Nodes.Post + ":" + Nodes.Message + " $f2Post3),\n"
+                   + " (s5Post1:" + Nodes.Post + ":" + Nodes.Message + " $s5Post1),"
+                   + " (s5Post2:" + Nodes.Post + ":" + Nodes.Message + " $s5Post2),"
+                   + " (ff6Post1:" + Nodes.Post + ":" + Nodes.Message + " $ff6Post1),\n"
+                   + " (s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),"
+                   + " (s7Post2:" + Nodes.Post + ":" + Nodes.Message + " $s7Post2)\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
 
@@ -2983,30 +2983,30 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + "(person1:" + Nodes.Person + " {person1}),\n"
-                   + "(f2:" + Nodes.Person + " {f2}),\n"
-                   + "(f3:" + Nodes.Person + " {f3}),\n"
-                   + "(f4:" + Nodes.Person + " {f4}),\n"
-                   + "(ff5:" + Nodes.Person + " {ff5}),\n"
-                   + "(ff6:" + Nodes.Person + " {ff6}),\n"
-                   + "(s7:" + Nodes.Person + " {s7}),\n"
-                   + "(s8:" + Nodes.Person + " {s8}),\n"
+                   + "(person1:" + Nodes.Person + " $person1),\n"
+                   + "(f2:" + Nodes.Person + " $f2),\n"
+                   + "(f3:" + Nodes.Person + " $f3),\n"
+                   + "(f4:" + Nodes.Person + " $f4),\n"
+                   + "(ff5:" + Nodes.Person + " $ff5),\n"
+                   + "(ff6:" + Nodes.Person + " $ff6),\n"
+                   + "(s7:" + Nodes.Person + " $s7),\n"
+                   + "(s8:" + Nodes.Person + " $s8),\n"
                    /*
                     * Posts
                     */
-                   + "(person1Post1:" + Nodes.Post + ":" + Nodes.Message + " {person1Post1}),\n"
-                   + "(person1Post2:" + Nodes.Post + ":" + Nodes.Message + " {person1Post2}),\n"
-                   + "(person1Post3:" + Nodes.Post + ":" + Nodes.Message + " {person1Post3}),\n"
-                   + "(s7Post1:" + Nodes.Post + ":" + Nodes.Message + " {s7Post1}),\n"
+                   + "(person1Post1:" + Nodes.Post + ":" + Nodes.Message + " $person1Post1),\n"
+                   + "(person1Post2:" + Nodes.Post + ":" + Nodes.Message + " $person1Post2),\n"
+                   + "(person1Post3:" + Nodes.Post + ":" + Nodes.Message + " $person1Post3),\n"
+                   + "(s7Post1:" + Nodes.Post + ":" + Nodes.Message + " $s7Post1),\n"
                    /*
                    * Cities
                    */
-                   + " (city0:" + Place.Type.City + " {city0}),\n"
+                   + " (city0:" + Place.Type.City + " $city0),\n"
                    /*
                     * Comments
                     */
-                   + "(person1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {person1Comment1}),\n"
-                   + "(f4Comment1:" + Nodes.Comment + ":" + Nodes.Message + " {f4Comment1}),\n"
+                   + "(person1Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $person1Comment1),\n"
+                   + "(f4Comment1:" + Nodes.Comment + ":" + Nodes.Message + " $f4Comment1),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -3036,23 +3036,23 @@ public class SnbInteractiveTestGraph
                    /*
                     * Person-Like->Post
                     */
-                   + "(person1)-[:" + Rels.LIKES_POST + " {person1LikesPerson1Post1}]->(person1Post1),\n"
-                   + "(person1)-[:" + Rels.LIKES_POST + " {person1LikesS7Post1}]->(s7Post1),\n"
-                   + "(f2)-[:" + Rels.LIKES_POST + " {f2LikesPerson1Post1}]->(person1Post1),\n"
-                   + "(f4)-[:" + Rels.LIKES_POST + " {f4LikesPerson1Post1}]->(person1Post1),\n"
-                   + "(f4)-[:" + Rels.LIKES_POST + " {f4LikesPerson1Post2}]->(person1Post2),\n"
-                   + "(f4)-[:" + Rels.LIKES_POST + " {f4LikesPerson1Post3}]->(person1Post3),\n"
-                   + "(ff6)-[:" + Rels.LIKES_POST + " {ff6OldLikesPerson1Post1}]->(person1Post1),\n"
-                   + "(ff6)-[:" + Rels.LIKES_POST + " {ff6NewLikesPerson1Post1}]->(person1Post1),\n"
-                   + "(ff6)-[:" + Rels.LIKES_POST + " {ff6LikesPerson1Post2}]->(person1Post2),\n"
-                   + "(s7)-[:" + Rels.LIKES_POST + " {s7LikesPerson1Post1}]->(person1Post1),\n"
-                   + "(s8)-[:" + Rels.LIKES_POST + " {s8LikesPerson1Post2}]->(person1Post2),\n"
+                   + "(person1)-[:" + Rels.LIKES_POST + " $person1LikesPerson1Post1]->(person1Post1),\n"
+                   + "(person1)-[:" + Rels.LIKES_POST + " $person1LikesS7Post1]->(s7Post1),\n"
+                   + "(f2)-[:" + Rels.LIKES_POST + " $f2LikesPerson1Post1]->(person1Post1),\n"
+                   + "(f4)-[:" + Rels.LIKES_POST + " $f4LikesPerson1Post1]->(person1Post1),\n"
+                   + "(f4)-[:" + Rels.LIKES_POST + " $f4LikesPerson1Post2]->(person1Post2),\n"
+                   + "(f4)-[:" + Rels.LIKES_POST + " $f4LikesPerson1Post3]->(person1Post3),\n"
+                   + "(ff6)-[:" + Rels.LIKES_POST + " $ff6OldLikesPerson1Post1]->(person1Post1),\n"
+                   + "(ff6)-[:" + Rels.LIKES_POST + " $ff6NewLikesPerson1Post1]->(person1Post1),\n"
+                   + "(ff6)-[:" + Rels.LIKES_POST + " $ff6LikesPerson1Post2]->(person1Post2),\n"
+                   + "(s7)-[:" + Rels.LIKES_POST + " $s7LikesPerson1Post1]->(person1Post1),\n"
+                   + "(s8)-[:" + Rels.LIKES_POST + " $s8LikesPerson1Post2]->(person1Post2),\n"
                    /*
                     * Person-Like->Comment
                     */
-                   + "(person1)-[:" + Rels.LIKES_COMMENT + " {person1LikesF4Comment1}]->(f4Comment1),\n"
-                   + "(s7)-[:" + Rels.LIKES_COMMENT + " {s7LikesPerson1Comment1}]->(person1Comment1),\n"
-                   + "(s8)-[:" + Rels.LIKES_COMMENT + " {s8LikesF4Comment1}]->(f4Comment1),\n"
+                   + "(person1)-[:" + Rels.LIKES_COMMENT + " $person1LikesF4Comment1]->(f4Comment1),\n"
+                   + "(s7)-[:" + Rels.LIKES_COMMENT + " $s7LikesPerson1Comment1]->(person1Comment1),\n"
+                   + "(s8)-[:" + Rels.LIKES_COMMENT + " $s8LikesF4Comment1]->(f4Comment1),\n"
                    /*
                     * Post-Create->Person
                     */
@@ -3419,32 +3419,32 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person:" + Nodes.Person + " {person}),\n"
-                   + " (friend1:" + Nodes.Person + " {friend1}),\n"
-                   + " (friend2:" + Nodes.Person + " {friend2}),\n"
-                   + " (friend3:" + Nodes.Person + " {friend3}),\n"
+                   + " (person:" + Nodes.Person + " $person),\n"
+                   + " (friend1:" + Nodes.Person + " $friend1),\n"
+                   + " (friend2:" + Nodes.Person + " $friend2),\n"
+                   + " (friend3:" + Nodes.Person + " $friend3),\n"
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
-                   + " (post2:" + Nodes.Post + ":" + Nodes.Message + " {post2}),\n"
-                   + " (post3:" + Nodes.Post + ":" + Nodes.Message + " {post3}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
+                   + " (post2:" + Nodes.Post + ":" + Nodes.Message + " $post2),\n"
+                   + " (post3:" + Nodes.Post + ":" + Nodes.Message + " $post3),\n"
                    /*
                     * Comments
                     */
-                   + " (comment01:" + Nodes.Comment + ":" + Nodes.Message + " {comment01}),\n"
-                   + " (comment11:" + Nodes.Comment + ":" + Nodes.Message + " {comment11}),\n"
-                   + " (comment12:" + Nodes.Comment + ":" + Nodes.Message + " {comment12}),\n"
-                   + " (comment13:" + Nodes.Comment + ":" + Nodes.Message + " {comment13}),\n"
-                   + " (comment131:" + Nodes.Comment + ":" + Nodes.Message + " {comment131}),\n"
-                   + " (comment111:" + Nodes.Comment + ":" + Nodes.Message + " {comment111}),\n"
-                   + " (comment112:" + Nodes.Comment + ":" + Nodes.Message + " {comment112}),\n"
-                   + " (comment21:" + Nodes.Comment + ":" + Nodes.Message + " {comment21}),\n"
-                   + " (comment211:" + Nodes.Comment + ":" + Nodes.Message + " {comment211}),\n"
-                   + " (comment2111:" + Nodes.Comment + ":" + Nodes.Message + " {comment2111}),\n"
-                   + " (comment31:" + Nodes.Comment + ":" + Nodes.Message + " {comment31}),\n"
-                   + " (comment32:" + Nodes.Comment + ":" + Nodes.Message + " {comment32}),\n"
+                   + " (comment01:" + Nodes.Comment + ":" + Nodes.Message + " $comment01),\n"
+                   + " (comment11:" + Nodes.Comment + ":" + Nodes.Message + " $comment11),\n"
+                   + " (comment12:" + Nodes.Comment + ":" + Nodes.Message + " $comment12),\n"
+                   + " (comment13:" + Nodes.Comment + ":" + Nodes.Message + " $comment13),\n"
+                   + " (comment131:" + Nodes.Comment + ":" + Nodes.Message + " $comment131),\n"
+                   + " (comment111:" + Nodes.Comment + ":" + Nodes.Message + " $comment111),\n"
+                   + " (comment112:" + Nodes.Comment + ":" + Nodes.Message + " $comment112),\n"
+                   + " (comment21:" + Nodes.Comment + ":" + Nodes.Message + " $comment21),\n"
+                   + " (comment211:" + Nodes.Comment + ":" + Nodes.Message + " $comment211),\n"
+                   + " (comment2111:" + Nodes.Comment + ":" + Nodes.Message + " $comment2111),\n"
+                   + " (comment31:" + Nodes.Comment + ":" + Nodes.Message + " $comment31),\n"
+                   + " (comment32:" + Nodes.Comment + ":" + Nodes.Message + " $comment32),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -3714,29 +3714,29 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (friend1:" + Nodes.Person + " {friend1}),\n"
-                   + " (friend2:" + Nodes.Person + " {friend2}),\n"
-                   + " (stranger3:" + Nodes.Person + " {stranger3}),\n"
-                   + " (friendfriend4:" + Nodes.Person + " {friendfriend4}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (friend1:" + Nodes.Person + " $friend1),\n"
+                   + " (friend2:" + Nodes.Person + " $friend2),\n"
+                   + " (stranger3:" + Nodes.Person + " $stranger3),\n"
+                   + " (friendfriend4:" + Nodes.Person + " $friendfriend4),\n"
                    /*
                     * Posts
                     */
-                   + " (post01:" + Nodes.Post + ":" + Nodes.Message + " {post01}),\n"
-                   + " (post11:" + Nodes.Post + ":" + Nodes.Message + " {post11}),\n"
-                   + " (post12:" + Nodes.Post + ":" + Nodes.Message + " {post12}),\n"
-                   + " (post21:" + Nodes.Post + ":" + Nodes.Message + " {post21}),\n"
-                   + " (post31:" + Nodes.Post + ":" + Nodes.Message + " {post31}),\n"
+                   + " (post01:" + Nodes.Post + ":" + Nodes.Message + " $post01),\n"
+                   + " (post11:" + Nodes.Post + ":" + Nodes.Message + " $post11),\n"
+                   + " (post12:" + Nodes.Post + ":" + Nodes.Message + " $post12),\n"
+                   + " (post21:" + Nodes.Post + ":" + Nodes.Message + " $post21),\n"
+                   + " (post31:" + Nodes.Post + ":" + Nodes.Message + " $post31),\n"
                    /*
                     * Comments
                     */
-                   + " (comment111:" + Nodes.Comment + ":" + Nodes.Message + " {comment111}),\n"
-                   + " (comment121:" + Nodes.Comment + ":" + Nodes.Message + " {comment121}),\n"
-                   + " (comment1211:" + Nodes.Comment + ":" + Nodes.Message + " {comment1211}),\n"
-                   + " (comment211:" + Nodes.Comment + ":" + Nodes.Message + " {comment211}),\n"
-                   + " (comment2111:" + Nodes.Comment + ":" + Nodes.Message + " {comment2111}),\n"
-                   + " (comment21111:" + Nodes.Comment + ":" + Nodes.Message + " {comment21111}),\n"
-                   + " (comment311:" + Nodes.Comment + ":" + Nodes.Message + " {comment311}),\n"
+                   + " (comment111:" + Nodes.Comment + ":" + Nodes.Message + " $comment111),\n"
+                   + " (comment121:" + Nodes.Comment + ":" + Nodes.Message + " $comment121),\n"
+                   + " (comment1211:" + Nodes.Comment + ":" + Nodes.Message + " $comment1211),\n"
+                   + " (comment211:" + Nodes.Comment + ":" + Nodes.Message + " $comment211),\n"
+                   + " (comment2111:" + Nodes.Comment + ":" + Nodes.Message + " $comment2111),\n"
+                   + " (comment21111:" + Nodes.Comment + ":" + Nodes.Message + " $comment21111),\n"
+                   + " (comment311:" + Nodes.Comment + ":" + Nodes.Message + " $comment311),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -3978,39 +3978,39 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (f1:" + Nodes.Person + " {f1}),\n"
-                   + " (f2:" + Nodes.Person + " {f2}),\n"
-                   + " (ff11:" + Nodes.Person + " {ff11}),\n"
-                   + " (ff12:" + Nodes.Person + " {ff12}),\n"
-                   + " (ff21:" + Nodes.Person + " {ff21}),\n"
-                   + " (ff22:" + Nodes.Person + " {ff22}),\n"
-                   + " (ff23:" + Nodes.Person + " {ff23}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (f1:" + Nodes.Person + " $f1),\n"
+                   + " (f2:" + Nodes.Person + " $f2),\n"
+                   + " (ff11:" + Nodes.Person + " $ff11),\n"
+                   + " (ff12:" + Nodes.Person + " $ff12),\n"
+                   + " (ff21:" + Nodes.Person + " $ff21),\n"
+                   + " (ff22:" + Nodes.Person + " $ff22),\n"
+                   + " (ff23:" + Nodes.Person + " $ff23),\n"
                    /*
                     * Posts
                     */
-                   + " (post21:" + Nodes.Post + ":" + Nodes.Message + " {post21}),\n"
-                   + " (post111:" + Nodes.Post + ":" + Nodes.Message + " {post111}),\n"
-                   + " (post112:" + Nodes.Post + ":" + Nodes.Message + " {post112}),\n"
-                   + " (post113:" + Nodes.Post + ":" + Nodes.Message + " {post113}),\n"
-                   + " (post121:" + Nodes.Post + ":" + Nodes.Message + " {post121}),\n"
-                   + " (post211:" + Nodes.Post + ":" + Nodes.Message + " {post211}),\n"
-                   + " (post212:" + Nodes.Post + ":" + Nodes.Message + " {post212}),\n"
-                   + " (post213:" + Nodes.Post + ":" + Nodes.Message + " {post213}),\n"
+                   + " (post21:" + Nodes.Post + ":" + Nodes.Message + " $post21),\n"
+                   + " (post111:" + Nodes.Post + ":" + Nodes.Message + " $post111),\n"
+                   + " (post112:" + Nodes.Post + ":" + Nodes.Message + " $post112),\n"
+                   + " (post113:" + Nodes.Post + ":" + Nodes.Message + " $post113),\n"
+                   + " (post121:" + Nodes.Post + ":" + Nodes.Message + " $post121),\n"
+                   + " (post211:" + Nodes.Post + ":" + Nodes.Message + " $post211),\n"
+                   + " (post212:" + Nodes.Post + ":" + Nodes.Message + " $post212),\n"
+                   + " (post213:" + Nodes.Post + ":" + Nodes.Message + " $post213),\n"
                    /*
                     * Cities
                     */
-                   + " (city0:" + Place.Type.City + " {city0}),\n"
-                   + " (city1:" + Place.Type.City + " {city1}),\n"
+                   + " (city0:" + Place.Type.City + " $city0),\n"
+                   + " (city1:" + Place.Type.City + " $city1),\n"
                    /*
                     * Tags
                     */
-                   + " (uncommonTag1:" + Nodes.Tag + " {uncommonTag1}),\n"
-                   + " (uncommonTag2:" + Nodes.Tag + " {uncommonTag2}),\n"
-                   + " (uncommonTag3:" + Nodes.Tag + " {uncommonTag3}),\n"
-                   + " (commonTag4:" + Nodes.Tag + " {commonTag4}),\n"
-                   + " (commonTag5:" + Nodes.Tag + " {commonTag5}),\n"
-                   + " (commonTag6:" + Nodes.Tag + " {commonTag6}),\n"
+                   + " (uncommonTag1:" + Nodes.Tag + " $uncommonTag1),\n"
+                   + " (uncommonTag2:" + Nodes.Tag + " $uncommonTag2),\n"
+                   + " (uncommonTag3:" + Nodes.Tag + " $uncommonTag3),\n"
+                   + " (commonTag4:" + Nodes.Tag + " $commonTag4),\n"
+                   + " (commonTag5:" + Nodes.Tag + " $commonTag5),\n"
+                   + " (commonTag6:" + Nodes.Tag + " $commonTag6),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -4386,22 +4386,22 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (f1:" + Nodes.Person + " {f1}),\n"
-                   + " (f2:" + Nodes.Person + " {f2}),\n"
-                   + " (stranger3:" + Nodes.Person + " {stranger3}),\n"
-                   + " (ff11:" + Nodes.Person + " {ff11}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (f1:" + Nodes.Person + " $f1),\n"
+                   + " (f2:" + Nodes.Person + " $f2),\n"
+                   + " (stranger3:" + Nodes.Person + " $stranger3),\n"
+                   + " (ff11:" + Nodes.Person + " $ff11),\n"
                    /*
                     * Companies
                     */
-                   + " (company0:" + Organisation.Type.Company + " {company0}),\n"
-                   + " (company1:" + Organisation.Type.Company + " {company1}),\n"
-                   + " (company2:" + Organisation.Type.Company + " {company2}),\n"
+                   + " (company0:" + Organisation.Type.Company + " $company0),\n"
+                   + " (company1:" + Organisation.Type.Company + " $company1),\n"
+                   + " (company2:" + Organisation.Type.Company + " $company2),\n"
                    /*
                     * Countries
                     */
-                   + " (country0:" + Place.Type.Country + " {country0}),\n"
-                   + " (country1:" + Place.Type.Country + " {country1}),\n"
+                   + " (country0:" + Place.Type.Country + " $country0),\n"
+                   + " (country1:" + Place.Type.Country + " $country1),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -4413,11 +4413,11 @@ public class SnbInteractiveTestGraph
                    /*
                     * Person-Company
                     */
-                   + "(f1)-[:" + Rels.WORKS_AT + " {f1WorkedAtCompany0}]->(company0),\n"
-                   + "(f1)-[:" + Rels.WORKS_AT + " {f1WorkedAtCompany1}]->(company1),\n"
-                   + "(f2)-[:" + Rels.WORKS_AT + " {f2WorkedAtCompany2}]->(company2),\n"
-                   + "(ff11)-[:" + Rels.WORKS_AT + " {ff11WorkedAtCompany0}]->(company0),\n"
-                   + "(stranger3)-[:" + Rels.WORKS_AT + " {stranger3WorkedAtCompany2}]->(company2),\n"
+                   + "(f1)-[:" + Rels.WORKS_AT + " $f1WorkedAtCompany0]->(company0),\n"
+                   + "(f1)-[:" + Rels.WORKS_AT + " $f1WorkedAtCompany1]->(company1),\n"
+                   + "(f2)-[:" + Rels.WORKS_AT + " $f2WorkedAtCompany2]->(company2),\n"
+                   + "(ff11)-[:" + Rels.WORKS_AT + " $ff11WorkedAtCompany0]->(company0),\n"
+                   + "(stranger3)-[:" + Rels.WORKS_AT + " $stranger3WorkedAtCompany2]->(company2),\n"
                    /*
                     * Company-Country
                     */
@@ -4591,31 +4591,31 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (f1:" + Nodes.Person + " {f1}),\n"
-                   + " (f2:" + Nodes.Person + " {f2}),\n"
-                   + " (f3:" + Nodes.Person + " {f3}),\n"
-                   + " (f4:" + Nodes.Person + " {f4}),\n"
-                   + " (ff11:" + Nodes.Person + " {ff11}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (f1:" + Nodes.Person + " $f1),\n"
+                   + " (f2:" + Nodes.Person + " $f2),\n"
+                   + " (f3:" + Nodes.Person + " $f3),\n"
+                   + " (f4:" + Nodes.Person + " $f4),\n"
+                   + " (ff11:" + Nodes.Person + " $ff11),\n"
                    /*
                     * TagClass
                     */
-                   + " (tc1:" + Nodes.TagClass + " {tc1}),\n"
-                   + " (tc11:" + Nodes.TagClass + " {tc11}),\n"
-                   + " (tc12:" + Nodes.TagClass + " {tc12}),\n"
-                   + " (tc121:" + Nodes.TagClass + " {tc121}),\n"
-                   + " (tc1211:" + Nodes.TagClass + " {tc1211}),\n"
-                   + " (tc2:" + Nodes.TagClass + " {tc2}),\n"
-                   + " (tc21:" + Nodes.TagClass + " {tc21}),\n"
+                   + " (tc1:" + Nodes.TagClass + " $tc1),\n"
+                   + " (tc11:" + Nodes.TagClass + " $tc11),\n"
+                   + " (tc12:" + Nodes.TagClass + " $tc12),\n"
+                   + " (tc121:" + Nodes.TagClass + " $tc121),\n"
+                   + " (tc1211:" + Nodes.TagClass + " $tc1211),\n"
+                   + " (tc2:" + Nodes.TagClass + " $tc2),\n"
+                   + " (tc21:" + Nodes.TagClass + " $tc21),\n"
                    /*
                     * Tag
                     */
-                   + " (t11:" + Nodes.Tag + " {t11}),\n"
-                   + " (t111:" + Nodes.Tag + " {t111}),\n"
-                   + " (t112:" + Nodes.Tag + " {t112}),\n"
-                   + " (t12111:" + Nodes.Tag + " {t12111}),\n"
-                   + " (t21:" + Nodes.Tag + " {t21}),\n"
-                   + " (t211:" + Nodes.Tag + " {t211}),\n"
+                   + " (t11:" + Nodes.Tag + " $t11),\n"
+                   + " (t111:" + Nodes.Tag + " $t111),\n"
+                   + " (t112:" + Nodes.Tag + " $t112),\n"
+                   + " (t12111:" + Nodes.Tag + " $t12111),\n"
+                   + " (t21:" + Nodes.Tag + " $t21),\n"
+                   + " (t211:" + Nodes.Tag + " $t211),\n"
                    /*
                     * Post
                     */
@@ -5141,14 +5141,14 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
-                   + " (person2:" + Nodes.Person + " {person2}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
+                   + " (person2:" + Nodes.Person + " $person2),\n"
                    /*
                     * Cities
                     */
-                   + " (city0:" + Place.Type.City + " {city0}),\n"
-                   + " (city1:" + Place.Type.City + " {city1}),\n"
+                   + " (city0:" + Place.Type.City + " $city0),\n"
+                   + " (city1:" + Place.Type.City + " $city1),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -5249,20 +5249,20 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
-                   + " (post2:" + Nodes.Post + ":" + Nodes.Message + " {post2}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
+                   + " (post2:" + Nodes.Post + ":" + Nodes.Message + " $post2),\n"
                    /*
                     * Comments
                     */
-                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " {comment3}),\n"
-                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " {comment4}),\n"
-                   + " (comment5:" + Nodes.Comment + ":" + Nodes.Message + " {comment5}),\n"
+                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " $comment3),\n"
+                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " $comment4),\n"
+                   + " (comment5:" + Nodes.Comment + ":" + Nodes.Message + " $comment5),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -5405,11 +5405,11 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
-                   + " (person2:" + Nodes.Person + " {person2}),\n"
-                   + " (person3:" + Nodes.Person + " {person3}),\n"
-                   + " (person4:" + Nodes.Person + " {person4}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
+                   + " (person2:" + Nodes.Person + " $person2),\n"
+                   + " (person3:" + Nodes.Person + " $person3),\n"
+                   + " (person4:" + Nodes.Person + " $person4),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -5522,13 +5522,13 @@ public class SnbInteractiveTestGraph
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
                    /*
                     * Comments
                     */
-                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " {comment0}),\n"
-                   + " (comment1:" + Nodes.Comment + ":" + Nodes.Message + " {comment1})"
+                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " $comment0),\n"
+                   + " (comment1:" + Nodes.Comment + ":" + Nodes.Message + " $comment1)"
                     ;
         }
 
@@ -5597,17 +5597,17 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
                    /*
                     * Comments
                     */
-                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " {comment0}),\n"
+                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " $comment0),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -5716,29 +5716,29 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
                    /*
                     * Forums
                     */
-                   + " (forum0:" + Nodes.Forum + " {forum0}),\n"
+                   + " (forum0:" + Nodes.Forum + " $forum0),\n"
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
                    /*
                     * Comments
                     */
-                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " {comment0}),\n"
-                   + " (comment1:" + Nodes.Comment + ":" + Nodes.Message + " {comment1}),\n"
-                   + " (comment2:" + Nodes.Comment + ":" + Nodes.Message + " {comment2}),\n"
-                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " {comment3}),\n"
-                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " {comment4}),\n"
+                   + " (comment0:" + Nodes.Comment + ":" + Nodes.Message + " $comment0),\n"
+                   + " (comment1:" + Nodes.Comment + ":" + Nodes.Message + " $comment1),\n"
+                   + " (comment2:" + Nodes.Comment + ":" + Nodes.Message + " $comment2),\n"
+                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " $comment3),\n"
+                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " $comment4),\n"
                    /*
                     * Countries
                     */
-                   + " (country0:" + Place.Type.Country + " {country0}),\n"
+                   + " (country0:" + Place.Type.Country + " $country0),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
@@ -5932,21 +5932,21 @@ public class SnbInteractiveTestGraph
                    /*
                     * Persons
                     */
-                   + " (person0:" + Nodes.Person + " {person0}),\n"
-                   + " (person1:" + Nodes.Person + " {person1}),\n"
-                   + " (person2:" + Nodes.Person + " {person2}),\n"
+                   + " (person0:" + Nodes.Person + " $person0),\n"
+                   + " (person1:" + Nodes.Person + " $person1),\n"
+                   + " (person2:" + Nodes.Person + " $person2),\n"
                    /*
                     * Posts
                     */
-                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " {post0}),\n"
-                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " {post1}),\n"
+                   + " (post0:" + Nodes.Post + ":" + Nodes.Message + " $post0),\n"
+                   + " (post1:" + Nodes.Post + ":" + Nodes.Message + " $post1),\n"
                    /*
                     * Comments
                     */
-                   + " (comment2:" + Nodes.Comment + ":" + Nodes.Message + " {comment2}),\n"
-                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " {comment3}),\n"
-                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " {comment4}),\n"
-                   + " (comment5:" + Nodes.Comment + ":" + Nodes.Message + " {comment5}),\n"
+                   + " (comment2:" + Nodes.Comment + ":" + Nodes.Message + " $comment2),\n"
+                   + " (comment3:" + Nodes.Comment + ":" + Nodes.Message + " $comment3),\n"
+                   + " (comment4:" + Nodes.Comment + ":" + Nodes.Message + " $comment4),\n"
+                   + " (comment5:" + Nodes.Comment + ":" + Nodes.Message + " $comment5),\n"
 
                    + "\n// --- RELATIONSHIPS ---\n\n"
                    /*
