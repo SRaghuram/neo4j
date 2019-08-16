@@ -16,7 +16,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class TestOperatorConnector extends OperatorConnector
 {
-    private List<Pair<Map<DatabaseId,OperatorState>,Boolean>> triggerCalls;
+    private List<Pair<Map<DatabaseId,OperatorState>,ReconcilerRequest>> triggerCalls;
     private DbmsOperator operator;
     private DbmsReconciler reconciler;
 
@@ -34,14 +34,14 @@ public class TestOperatorConnector extends OperatorConnector
     }
 
     @Override
-    public Reconciliation trigger( boolean force )
+    public Reconciliation trigger( ReconcilerRequest request )
     {
         var desired = new HashMap<>( operator.desired() );
-        triggerCalls.add( Pair.of( desired, force )  );
-        return reconciler.reconcile( Collections.singletonList( operator ), force );
+        triggerCalls.add( Pair.of( desired, request ) );
+        return reconciler.reconcile( Collections.singletonList( operator ), request );
     }
 
-    List<Pair<Map<DatabaseId,OperatorState>,Boolean>> triggerCalls()
+    List<Pair<Map<DatabaseId,OperatorState>,ReconcilerRequest>> triggerCalls()
     {
         return triggerCalls;
     }

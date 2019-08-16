@@ -33,9 +33,9 @@ class ShutdownOperator extends DbmsOperator
                 .filter( e -> !e.getKey().equals( SYSTEM_DATABASE_ID ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, ignored -> STOPPED ) );
         desired.putAll( desireAllStopped );
-        trigger( true ).awaitAll();
+        trigger( ReconcilerRequest.force() ).awaitAll();
 
         desired.put( SYSTEM_DATABASE_ID, STOPPED );
-        trigger( true ).await( SYSTEM_DATABASE_ID );
+        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID );
     }
 }

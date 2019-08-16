@@ -96,14 +96,14 @@ public class DbmsReconciler
         this.precedence = OperatorState::minByPrecedence;
     }
 
-    Reconciliation reconcile( List<DbmsOperator> operators, boolean force )
+    Reconciliation reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
     {
         var dbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
                 .distinct();
 
         var reconciliation = dbsToReconcile
-                .map( dbId -> Pair.of( dbId, reconcile( dbId, force, operators ) ) )
+                .map( dbId -> Pair.of( dbId, reconcile( dbId, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new Reconciliation( reconciliation );
@@ -123,7 +123,7 @@ public class DbmsReconciler
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    private CompletableFuture<ReconcilerStepResult> reconcile( DatabaseId databaseId, boolean force, List<DbmsOperator> operators )
+    private CompletableFuture<ReconcilerStepResult> reconcile( DatabaseId databaseId, ReconcilerRequest request, List<DbmsOperator> operators )
     {
         var work = preReconcile( databaseId, operators )
                 .thenCompose( desiredState ->
@@ -136,7 +136,7 @@ public class DbmsReconciler
                         return CompletableFuture.completedFuture( initialResult );
                     }
 
-                    if ( reconcilerEntry.hasFailed() && !force )
+                    if ( reconcilerEntry.hasFailed() && !request.forceReconciliation() )
                     {
                         var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
                                 databaseId.name(), desiredState.description() );
@@ -150,7 +150,7 @@ public class DbmsReconciler
                             .thenCompose( result -> retry( databaseId, desiredState, result, executor, backoff, 0 ) );
                 } );
 
-        return postReconcile( work, databaseId );
+        return postReconcile( work, databaseId, request );
     }
 
     private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, OperatorState desiredState, ReconcilerStepResult result, Executor executor,
@@ -198,7 +198,8 @@ public class DbmsReconciler
         }, executor );
     }
 
-    private CompletableFuture<ReconcilerStepResult> postReconcile( CompletableFuture<ReconcilerStepResult> work, DatabaseId databaseId )
+    private CompletableFuture<ReconcilerStepResult> postReconcile( CompletableFuture<ReconcilerStepResult> work, DatabaseId databaseId,
+            ReconcilerRequest request )
     {
         return work.whenComplete( ( result, throwable ) ->
         {
@@ -216,10 +217,32 @@ public class DbmsReconciler
                     return new DatabaseReconcilerState( result.state() ).failed();
                 }
                 //TODO: Should we panic the database in both failure cases above? In the case of certain errors (OOM) should we panic the whole DBMS?
-                return new DatabaseReconcilerState( result.state() );
+
+                var reconcilerState = new DatabaseReconcilerState( result.state() );
+                if ( shouldFailDatabaseStateAfterSuccessfulReconcile( databaseId, entry, request ) )
+                {
+                    return reconcilerState.failed();
+                }
+                return reconcilerState;
             } );
             releaseLockOn( databaseId );
         } );
+    }
+
+    private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerState currentState,
+            ReconcilerRequest request )
+    {
+        if ( request.forceReconciliation() )
+        {
+            // a successful reconcile operation was forced, no need to keep the failed state
+            return false;
+        }
+        if ( currentState != null && currentState.hasFailed() )
+        {
+            // preserve the current failed state
+            return true;
+        }
+        return request.shouldFailAfterReconciliation( databaseId );
     }
 
     private void releaseLockOn( DatabaseId databaseId )

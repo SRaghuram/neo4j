@@ -9,7 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -33,7 +36,7 @@ class ClusterInternalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( false ) ).thenReturn( Reconciliation.EMPTY );
+        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( Reconciliation.EMPTY );
         operator.connect( connector );
     }
 
@@ -53,13 +56,13 @@ class ClusterInternalDbmsOperatorTest
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
 
         // then
-        verify( connector, times( 1 ) ).trigger( false );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.simple() );
 
         // when
         stoppedDatabase.restart();
 
         // then
-        verify( connector, times( 2 ) ).trigger( false );
+        verify( connector, times( 2 ) ).trigger( ReconcilerRequest.simple() );
     }
 
     @Test
@@ -168,13 +171,15 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = databaseIdRepository.get( "some" );
+        var desiredStateOnTrigger = new AtomicReference<OperatorState>();
+        captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
         // when
         operator.stopOnPanic( someDb );
 
         // then
-        assertEquals( operator.desired().get( someDb ), STOPPED );
-        verify( connector ).trigger( false );
+        assertEquals( STOPPED, desiredStateOnTrigger.get() );
+        verify( connector ).trigger( ReconcilerRequest.reconcileAndFail( someDb ) );
     }
 
     @Test
@@ -182,13 +187,15 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = databaseIdRepository.get( "some" );
+        var desiredStateOnTrigger = new AtomicReference<OperatorState>();
+        captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
         // when
         operator.stopForStoreCopy( someDb );
         operator.stopOnPanic( someDb );
 
         // then
-        assertEquals( operator.desired().get( someDb ), STOPPED );
+        assertEquals( STOPPED, desiredStateOnTrigger.get() );
     }
 
     @Test
@@ -203,6 +210,16 @@ class ClusterInternalDbmsOperatorTest
         storeCopyHandle.restart();
 
         // then
-        verify( connector ).trigger( false );
+        verify( connector ).trigger( ReconcilerRequest.reconcileAndFail( someDb ) );
+    }
+
+    private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<OperatorState> stateRef )
+    {
+        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenAnswer( invocation ->
+        {
+            var desiredState = operator.desired().get( databaseId );
+            stateRef.set( desiredState );
+            return Reconciliation.EMPTY;
+        } );
     }
 }

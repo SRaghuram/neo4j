@@ -473,11 +473,12 @@ public class Cluster
         return coreMembers
                 .values()
                 .stream()
-                .filter( member -> member.defaultDatabase() != null )
+                .filter( member -> member.database( databaseName ) != null )
                 .findAny()
                 .map( coreClusterMember ->
                 {
-                    var coreTopologyService = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                    var db = coreClusterMember.database( databaseName );
+                    var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
                     var databaseId = coreClusterMember.databaseId( databaseName );
                     return topologySelector.apply( coreTopologyService, databaseId ).members().size();
                 } )

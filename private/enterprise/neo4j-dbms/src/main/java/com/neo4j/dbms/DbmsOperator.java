@@ -33,12 +33,12 @@ public abstract class DbmsOperator
         return Map.copyOf( desired0() );
     }
 
-    final Reconciliation trigger( boolean force )
+    final Reconciliation trigger( ReconcilerRequest request )
     {
         if ( connector == null )
         {
             return Reconciliation.EMPTY;
         }
-        return connector.trigger( force );
+        return connector.trigger( request );
     }
 }

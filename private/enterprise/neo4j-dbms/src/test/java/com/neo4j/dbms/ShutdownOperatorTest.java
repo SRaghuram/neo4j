@@ -21,7 +21,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -42,7 +42,7 @@ class ShutdownOperatorTest
     @BeforeEach
     void setup()
     {
-        when( dbmsReconciler.reconcile( anyList(), anyBoolean() ) ).thenReturn( Reconciliation.EMPTY );
+        when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( Reconciliation.EMPTY );
         operator.connect( connector );
         databases.forEach( databaseManager::createDatabase );
     }

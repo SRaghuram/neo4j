@@ -31,7 +31,7 @@ class LocalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( true ) ).thenReturn( Reconciliation.EMPTY );
+        when( connector.trigger( ReconcilerRequest.force() ) ).thenReturn( Reconciliation.EMPTY );
         operator.connect( connector );
     }
 
@@ -39,7 +39,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToDropDatabase()
     {
         operator.dropDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( true );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
         assertEquals( DROPPED, operator.desired().get( databaseIdRepository.get( databaseName ) ) );
     }
@@ -48,7 +48,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStartDatabase()
     {
         operator.startDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( true );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
         assertEquals( STARTED, operator.desired().get( databaseIdRepository.get( databaseName ) ) );
     }
@@ -57,7 +57,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStopDatabase()
     {
         operator.stopDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( true );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
         assertEquals( STOPPED, operator.desired().get( databaseIdRepository.get( databaseName ) ) );
     }

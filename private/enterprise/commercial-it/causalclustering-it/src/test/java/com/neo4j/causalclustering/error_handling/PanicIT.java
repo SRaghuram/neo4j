@@ -11,10 +11,10 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.TestInstance;
 
@@ -22,16 +22,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.driver.AuthTokens;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.driver.internal.SessionConfig.forDatabase;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@Disabled
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class PanicIT
@@ -49,7 +52,27 @@ class PanicIT
     {
         cluster = clusterFactory.createCluster(
                 ClusterConfig.clusterConfig().withNumberOfReadReplicas( INITIAL_READ_REPLICAS ).withNumberOfCoreMembers( INITIAL_CORE_MEMBERS ) );
-        this.cluster.start();
+        cluster.start();
+    }
+
+    @Test
+    void shouldNotBePossibleToStartDatabaseAfterPanic() throws Exception
+    {
+        // given: system and default database members are started and visible in topology service
+        assertEventuallyNumberOfMembersInTopologies( INITIAL_CORE_MEMBERS, INITIAL_READ_REPLICAS, SYSTEM_DATABASE_NAME );
+        assertEventuallyNumberOfMembersInTopologies( INITIAL_CORE_MEMBERS, INITIAL_READ_REPLICAS, DEFAULT_DATABASE_NAME );
+
+        // when: default database panicked on all cores and read replicas
+        panicDefaultDatabaseOnAllMembers();
+        // then: no members of the default database are in topology service
+        assertEventuallyNumberOfMembersInTopologies( 0, 0, DEFAULT_DATABASE_NAME );
+
+        // when: try to stop and start the default database
+        attemptToRestartDefaultDatabase();
+        // then: no members of the default database are in topology service
+        assertNoMembersInDefaultDatabaseTopologies();
+        // and: all members of the system database are available in topology service and unaffected by the default database panics
+        assertEventuallyNumberOfMembersInTopologies( INITIAL_CORE_MEMBERS, INITIAL_READ_REPLICAS, SYSTEM_DATABASE_NAME );
     }
 
     @Nested
@@ -78,6 +101,48 @@ class PanicIT
             // system db remains running and is unaffected by the panic of the default db
             assertNumberOfMembersInTopology( context.initialInstanceCount, SYSTEM_DATABASE_NAME, context );
         }
+    }
+
+    private void panicDefaultDatabaseOnAllMembers()
+    {
+        for ( var member : cluster.allMembers() )
+        {
+            var defaultDb = member.defaultDatabase();
+            var panicService = defaultDb.getDependencyResolver().resolveDependency( PanicService.class );
+            var databasePanicker = panicService.panickerFor( defaultDb.databaseId() );
+            databasePanicker.panic( new Exception() );
+        }
+    }
+
+    private void attemptToRestartDefaultDatabase() throws Exception
+    {
+        var uri = cluster.awaitLeader( SYSTEM_DATABASE_NAME ).routingURI();
+
+        // use a routing driver and a single session so that system database bookmarks are passed between transactions
+        try ( var driver = graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
+              var session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            session.writeTransaction( tx -> tx.run( "STOP DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();
+            session.writeTransaction( tx -> tx.run( "START DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();
+            session.writeTransaction( tx -> tx.run( "SHOW DATABASES" ) ).consume();
+
+            for ( var i = 0; i < INITIAL_CORE_MEMBERS + INITIAL_READ_REPLICAS - 1; i++ )
+            {
+                session.readTransaction( tx -> tx.run( "SHOW DATABASES" ) ).consume();
+            }
+        }
+    }
+
+    private void assertNoMembersInDefaultDatabaseTopologies()
+    {
+        assertEquals( 0, cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+        assertEquals( 0, cluster.numberOfReadReplicaMembersReportedByTopology( DEFAULT_DATABASE_NAME ) );
+    }
+
+    private void assertEventuallyNumberOfMembersInTopologies( int expectedCores, int expectedReadReplicas, String databaseName ) throws Exception
+    {
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( databaseName ), equalTo( expectedCores ), 3, MINUTES );
+        assertEventually( () -> cluster.numberOfReadReplicaMembersReportedByTopology( databaseName ), equalTo( expectedReadReplicas ), 3, MINUTES );
     }
 
     static Stream<Context> contexts( Cluster cluster )

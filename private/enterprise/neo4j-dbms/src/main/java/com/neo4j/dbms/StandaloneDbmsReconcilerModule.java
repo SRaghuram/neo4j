@@ -66,14 +66,14 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private void startInitialDatabases()
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger( false ).await( SYSTEM_DATABASE_ID );
+        systemOperator.trigger( ReconcilerRequest.simple() ).await( SYSTEM_DATABASE_ID );
 
         var systemDatabase = getSystemDatabase( databaseManager );
         dbmsModel.setSystemDatabase( systemDatabase );
 
         //Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
-        systemOperator.trigger( false ).awaitAll();
+        systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
 
         initializeReconciledTxTracker( systemDatabase );
     }

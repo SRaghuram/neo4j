@@ -28,10 +28,10 @@ class OperatorConnectorTest
         connector.register( operatorB );
 
         // when
-        connector.trigger( false );
+        connector.trigger( ReconcilerRequest.simple() );
 
         // then
         List<DbmsOperator> operatorList = List.of( operatorA, operatorB );
-        verify( reconciler ).reconcile( operatorList, false );
+        verify( reconciler ).reconcile( operatorList, ReconcilerRequest.simple() );
     }
 }

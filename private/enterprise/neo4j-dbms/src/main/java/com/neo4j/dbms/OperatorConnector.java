@@ -33,11 +33,11 @@ public class OperatorConnector
      * it will not try *any* future transitions unless the force parameter is set to true. By
      * default, only the {@link LocalDbmsOperator} sets force to true when calling {@code trigger()}.
      *
-     * @param force Whether or not to force the reconciler to try transitions for databases which previously failed
+     * @param request a request that contains information about the requested reconciliation attempt.
      * @return the collection of database reconciliation operations caused by this trigger call
      */
-    public Reconciliation trigger( boolean force )
+    public Reconciliation trigger( ReconcilerRequest request )
     {
-        return reconciler.reconcile( new ArrayList<>( operators ), force );
+        return reconciler.reconcile( new ArrayList<>( operators ), request );
     }
 }

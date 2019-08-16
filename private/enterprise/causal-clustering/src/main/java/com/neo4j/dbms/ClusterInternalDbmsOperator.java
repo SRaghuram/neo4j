@@ -90,17 +90,16 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
 
     public synchronized void stopOnPanic( DatabaseId databaseId )
     {
-        if ( panicked.add( databaseId ) )
-        {
-            trigger( false );
-        }
+        panicked.add( databaseId );
+        var reconciliation = trigger( ReconcilerRequest.reconcileAndFail( databaseId ) );
+        reconciliation.whenComplete( () -> panicked.remove( databaseId ) );
     }
 
     private synchronized void triggerReconcilerOnStoreCopy( DatabaseId databaseId )
     {
         if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
         {
-            trigger( false ).await( databaseId );
+            trigger( ReconcilerRequest.simple() ).await( databaseId );
         }
     }
 

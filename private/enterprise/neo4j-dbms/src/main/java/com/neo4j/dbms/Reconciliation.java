@@ -16,7 +16,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 /**
  * Simple holder for a Collection of concurrently executing {@link CompletableFuture}s
- * returned from {@link DbmsReconciler#reconcile(List, boolean)}. Provides the ability
+ * returned from {@link DbmsReconciler#reconcile(List, ReconcilerRequest)}. Provides the ability
  * for calling methods to selectively block on reconciler completion.
  *
  * Note: awaiting on the reconciliation of particular databases is relaxed. If you await
