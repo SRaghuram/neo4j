@@ -35,7 +35,6 @@ import java.util.Set;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
 
 public class LongQuery1EmbeddedCore_0 extends Neo4jQuery1<Neo4jConnectionState>
 {
@@ -116,18 +115,13 @@ public class LongQuery1EmbeddedCore_0 extends Neo4jQuery1<Neo4jConnectionState>
                     // Start traversal from side of persons given first name
                     for ( Node personWithFirstName : personsWithFirstName )
                     {
-                        try ( ResourceIterator<Relationship> rels =
-                                      (ResourceIterator<Relationship>) personWithFirstName.getRelationships( Rels.KNOWS ).iterator() )
+                        for ( Relationship rel : personWithFirstName.getRelationships( Rels.KNOWS ) )
                         {
-                            while ( rels.hasNext() )
+                            Node potentialFriendOfFriend = rel.getOtherNode( personWithFirstName );
+                            if ( personsAtDistance2.contains( potentialFriendOfFriend ) )
                             {
-                                Relationship rel = rels.next();
-                                Node potentialFriendOfFriend = rel.getOtherNode( personWithFirstName );
-                                if ( personsAtDistance2.contains( potentialFriendOfFriend ) )
-                                {
-                                    friendsOfFriendsOfFriends.add( new PersonAndDistance( personWithFirstName, 3 ) );
-                                    break;
-                                }
+                                friendsOfFriendsOfFriends.add( new PersonAndDistance( personWithFirstName, 3 ) );
+                                break;
                             }
                         }
                     }
