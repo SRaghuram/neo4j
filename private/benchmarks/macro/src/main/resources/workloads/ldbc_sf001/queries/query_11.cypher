@@ -1,9 +1,9 @@
-MATCH (country:Country {name:{Country}})
-MATCH (person:Person {id:{Person}})-[:KNOWS*1..2]-(friend)
+MATCH (country:Country {name:$Country})
+MATCH (person:Person {id:$Person})-[:KNOWS*1..2]-(friend)
 WHERE NOT person=friend
 WITH DISTINCT friend, country
 MATCH (friend)-[worksAt:WORKS_AT]->(company)-[:ORGANISATION_IS_LOCATED_IN]->(country)
-WHERE worksAt.workFrom<{Year}
+WHERE worksAt.workFrom<$Year
 RETURN
  friend.id AS friendId,
  friend.firstName AS friendFirstName,

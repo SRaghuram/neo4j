@@ -1,4 +1,4 @@
-MATCH (post:Post)<-[:REPLY_OF_POST|REPLY_OF_COMMENT*0..]-(:Message {id:{Message}}),
+MATCH (post:Post)<-[:REPLY_OF_POST|REPLY_OF_COMMENT*0..]-(:Message {id:$Message}),
       (moderator)<-[:HAS_MODERATOR]-(forum)-[:CONTAINER_OF]->(post)
 RETURN
  forum.id AS forumId,
