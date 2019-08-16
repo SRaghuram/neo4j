@@ -209,7 +209,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
       declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, possiblePredicate),
       condition(load(hasInnerLoopVar))(
         block(
-          setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
+          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
           nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
           setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
           )),
