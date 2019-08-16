@@ -100,6 +100,20 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("bar", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should create user using if not exists") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    // WHEN
+    execute("CREATE USER IF NOT EXISTS bar SET PASSWORD 'password'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   test("should create user with mixed password") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -249,6 +263,18 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("CREATE USER neo4j SET PASSWORD 'password'")
       // THEN
     } should have message "Failed to create the specified user 'neo4j': User already exists."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
+  test("should do nothing when creating already existing user using if not exists") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // WHEN
+    execute("CREATE USER IF NOT EXISTS neo4j SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)

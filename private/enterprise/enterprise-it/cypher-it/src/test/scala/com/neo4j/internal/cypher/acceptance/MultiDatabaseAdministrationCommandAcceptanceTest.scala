@@ -360,6 +360,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db("f.o-o123")))
   }
 
+  test("should create database using if not exists") {
+    setup(defaultConfig)
+
+    // WHEN
+    execute("CREATE DATABASE IF NOT EXISTS `f.o-o123`")
+
+    // THEN
+    val result = execute("SHOW DATABASE `f.o-o123`")
+    result.toList should be(List(db("f.o-o123")))
+  }
+
   test("should create database in systemdb when max number of databases is not reached") {
 
     val config = Config.defaults()
@@ -564,6 +575,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       execute("CREATE DATABASE foo")
       // THEN
     } should have message "Failed to create the specified database 'foo': Database already exists."
+  }
+
+  test("should do nothing when creating an already existing database using if not exists") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
+
+    // WHEN
+    execute("CREATE DATABASE IF NOT EXISTS foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
   }
 
   test("should fail when creating a database with invalid name") {

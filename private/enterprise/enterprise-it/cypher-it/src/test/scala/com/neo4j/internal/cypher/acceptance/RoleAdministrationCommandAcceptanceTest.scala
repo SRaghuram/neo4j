@@ -168,6 +168,16 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
+  test("should create role using if not exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("CREATE ROLE IF NOT EXISTS foo")
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+  }
+
   test("should fail when creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -180,6 +190,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified role 'foo': Role already exists."
 
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+  }
+
+  test("should do nothing when creating already existing role using if not exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+
+    // WHEN
+    execute("CREATE ROLE IF NOT EXISTS foo")
+
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
@@ -212,6 +235,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     execute("CREATE ROLE bar AS COPY OF foo")
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should create role from existing role using if not exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+
+    // WHEN
+    execute("CREATE ROLE IF NOT EXISTS bar AS COPY OF foo")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
@@ -298,6 +334,25 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create the specified role 'bar': Role already exists."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+  }
+
+  test("should do nothing when creating already existing role from other role using if not exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO foo")
+    execute("CREATE ROLE bar")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
+
+    // WHEN
+    execute("CREATE ROLE IF NOT EXISTS bar AS COPY OF foo")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should fail when creating existing role from non-existing role") {
