@@ -5,13 +5,12 @@
  */
 package com.neo4j.bench.common.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,10 +34,9 @@ public class Neo4jConfig
         return new Neo4jConfig( config, jvmArgs );
     }
 
-    @JsonCreator
     public static Neo4jConfig from(
-            @JsonProperty( "config" ) Map<String,String> config,
-            @JsonProperty( "jvmArgs" ) JvmArgs jvmArgs )
+            Map<String,String> config,
+            JvmArgs jvmArgs )
     {
         return new Neo4jConfig( config, jvmArgs );
     }
@@ -50,6 +48,15 @@ public class Neo4jConfig
 
     private final Map<String,String> config;
     private final JvmArgs jvmArgs;
+
+    /**
+     * WARNING: Never call this explicitly.
+     * No-params constructor is only used for JSON (de)serialization.
+     */
+    public Neo4jConfig()
+    {
+        this( Collections.emptyMap() );
+    }
 
     public Neo4jConfig( Map<String,String> config )
     {

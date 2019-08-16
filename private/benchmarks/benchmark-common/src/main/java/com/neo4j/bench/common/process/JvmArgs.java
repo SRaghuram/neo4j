@@ -5,13 +5,10 @@
  */
 package com.neo4j.bench.common.process;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +23,6 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-@JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY )
 public class JvmArgs
 {
 
@@ -74,13 +70,21 @@ public class JvmArgs
         return new JvmArgs( jvmArgs );
     }
 
-    @JsonCreator
     public static JvmArgs from( String[] jvmArgs )
     {
         return new JvmArgs( Arrays.asList( jvmArgs ) );
     }
 
     private final List<String> jvmArgs;
+
+    /**
+     * WARNING: Never call this explicitly.
+     * No-params constructor is only used for JSON (de)serialization.
+     */
+    public JvmArgs()
+    {
+        this( new ArrayList<String>() );
+    }
 
     private JvmArgs( List<String> jvmArgs )
     {
@@ -107,10 +111,9 @@ public class JvmArgs
 
     public List<String> toArgs()
     {
-        return ImmutableList.copyOf( jvmArgs );
+        return new ArrayList<String>( jvmArgs );
     }
 
-    @JsonValue
     public String[] asArray()
     {
         return toArgs().toArray( new String[] {} );
@@ -135,6 +138,12 @@ public class JvmArgs
         }
         JvmArgs other = (JvmArgs) obj;
         return Objects.equals( jvmArgs, other.jvmArgs );
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.valueOf( jvmArgs );
     }
 
     /**
