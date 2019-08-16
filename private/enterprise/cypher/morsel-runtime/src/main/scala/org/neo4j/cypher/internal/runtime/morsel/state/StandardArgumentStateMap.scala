@@ -33,7 +33,7 @@ object StandardArgumentStateMap {
  /**
   * Controller which knows when an [[ArgumentState]] is complete.
   */
-  private[StandardArgumentStateMap] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
+  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
    extends AbstractArgumentStateMap.StateController[STATE] {
 
     private var _count: Long = 1

@@ -41,7 +41,7 @@ object ConcurrentArgumentStateMap {
     * Controller which knows when an [[ArgumentState]] is complete,
     * and protects it from concurrent access.
     */
-  private[ConcurrentArgumentStateMap] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
+  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
     private val count = new AtomicLong(1)

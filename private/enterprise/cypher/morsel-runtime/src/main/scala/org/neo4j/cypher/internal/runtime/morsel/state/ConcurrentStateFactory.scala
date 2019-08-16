@@ -32,7 +32,11 @@ class ConcurrentStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
+    if (argumentSlotOffset == 0) {
+      new ConcurrentSingletonArgumentStateMap[S](argumentStateMapId, factory)
+    } else {
+      new ConcurrentArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
+    }
   }
 
   override val memoryTracker: MemoryTracker = NoMemoryTracker

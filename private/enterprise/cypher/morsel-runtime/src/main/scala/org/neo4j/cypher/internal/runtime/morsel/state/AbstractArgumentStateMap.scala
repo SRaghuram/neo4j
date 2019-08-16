@@ -118,7 +118,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     val iterator = controllers.values().iterator()
 
     while(iterator.hasNext) {
-      val controller= iterator.next()
+      val controller = iterator.next()
       if (controller.isZero) {
         return true
       }

@@ -32,7 +32,11 @@ class StandardStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
+    if (argumentSlotOffset == 0) {
+      new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
+    } else {
+      new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
+    }
   }
 
   override val memoryTracker: MemoryTracker = NoMemoryTracker

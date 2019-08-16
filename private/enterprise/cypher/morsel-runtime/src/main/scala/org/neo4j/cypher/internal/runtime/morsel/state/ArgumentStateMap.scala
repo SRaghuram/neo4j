@@ -207,6 +207,34 @@ object ArgumentStateMap {
     */
   case class ArgumentStateWithCompleted[S <: ArgumentState](argumentState: S, isCompleted: Boolean)
 
+  def filter1[FILTER_STATE](morsel: MorselExecutionContext,
+                            predicate: MorselExecutionContext => Boolean): Unit = {
+
+    val readingRow = morsel.shallowCopy()
+    readingRow.resetToFirstRow()
+
+    val writingRow = readingRow.shallowCopy()
+    var newCurrentRow = -1
+
+    while (readingRow.isValidRow) {
+      if (readingRow.getCurrentRow == morsel.getCurrentRow)
+        newCurrentRow = writingRow.getCurrentRow
+
+      if (predicate(readingRow)) {
+        writingRow.copyFrom(readingRow)
+        writingRow.moveToNextRow()
+      }
+      readingRow.moveToNextRow()
+    }
+
+    if (newCurrentRow == -1 && morsel.getCurrentRow > morsel.getLastRow) {
+      newCurrentRow = writingRow.getCurrentRow
+    }
+
+    morsel.moveToRow(newCurrentRow)
+    morsel.finishedWritingUsing(writingRow)
+  }
+
   /**
     * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`). This
     * filter state is then used to call `onRow` on each row with the argument row id. If `onRow`
