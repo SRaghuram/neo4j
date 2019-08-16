@@ -9,7 +9,9 @@ import java.util.Optional;
 
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
+import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
+import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
@@ -17,6 +19,7 @@ import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.VirtualNodeValue;
 import org.neo4j.values.virtual.VirtualRelationshipValue;
@@ -33,6 +36,7 @@ public final class CompiledHelpers
     {
         throw new UnsupportedOperationException( "do not instantiate" );
     }
+    private static ValueGroup[] RANGE_SEEKABLE_VALUE_GROUPS = KernelAPISupport$.MODULE$.RANGE_SEEKABLE_VALUE_GROUPS();
 
     public static Value assertBooleanOrNoValue( AnyValue value )
     {
@@ -301,4 +305,18 @@ public final class CompiledHelpers
         long relId = ((VirtualRelationshipValue) ctx.getRefAt( relOffset )).id();
         return cachedRelationshipPropertyExists(relId, ctx, dbAccess, propertyKey, propertyOffset, relCursor, propertyCursor);
     }
+
+   public static boolean possibleRangePredicate( IndexQuery query )
+   {
+       ValueGroup valueGroup = query.valueGroup();
+
+       for ( ValueGroup rangeSeekableValueGroup : RANGE_SEEKABLE_VALUE_GROUPS )
+       {
+           if ( valueGroup == rangeSeekableValueGroup )
+           {
+               return true;
+           }
+       }
+       return false;
+   }
 }

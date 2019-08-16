@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
+import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -163,14 +163,15 @@ object OperatorCodeGenHelperTemplates {
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     query: IntermediateRepresentation,
-                    order: IndexOrder = IndexOrder.NONE): IntermediateRepresentation = {
+                    order: IndexOrder,
+                    needsValues: Boolean): IntermediateRepresentation = {
     invokeSideEffect(loadField(DATA_READ),
                      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
                        "nodeIndexSeek"),
                      indexReadSession,
                      cursor,
                      indexOrder(order),
-                     constant(false),
+                     constant(needsValues),
                      arrayOf[IndexQuery](query))
   }
 
@@ -182,6 +183,15 @@ object OperatorCodeGenHelperTemplates {
 
   def exactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(prop), expression)
+
+  def lessThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), constant(null), constant(false), expression, constant(inclusive))
+
+  def greaterThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), expression, constant(inclusive), constant(null), constant(false))
+
+  def rangeBetweenSeek(prop: Int, fromInclusive: Boolean, fromExpression: IntermediateRepresentation, toInclusive: Boolean, toExpression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), fromExpression, constant(fromInclusive), toExpression, constant(toInclusive))
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)

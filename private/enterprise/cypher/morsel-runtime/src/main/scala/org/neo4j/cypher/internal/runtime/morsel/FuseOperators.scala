@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
@@ -15,12 +16,14 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{greaterThanSeek, lessThanSeek, rangeBetweenSeek}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.internal.schema.IndexOrder
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -154,25 +157,23 @@ class FuseOperators(operatorFactory: OperatorFactory,
                   label: LabelToken,
                   properties: Seq[IndexedProperty],
                   valueExpr: QueryExpression[Expression],
+                  order: IndexOrder,
                   unique: Boolean,
                   plan: LogicalPlan,
                   acc: FusionPlan): Option[InputLoopTaskTemplate] = {
       val needsLockingUnique = !operatorFactory.readOnly && unique
+      val property = SlottedIndexedProperty(node, properties.head, slots)
       valueExpr match {
         case SingleQueryExpression(expr) if !needsLockingUnique =>
           assert(properties.length == 1)
-          Some(new SingleQueryExactNodeIndexSeekTaskTemplate(acc.template,
-                                                             plan.id,
-                                                             innermostTemplate,
-                                                             node,
-                                                             slots.getLongOffsetFor(node),
-                                                             SlottedIndexedProperty(node,
-                                                                                    properties.head,
-                                                                                    slots),
-                                                             compileExpression(expr),
-                                                             operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
-                                                             physicalPlan.argumentSizes(id))(expressionCompiler))
-
+          Some(new SingleExactSeekQueryNodeIndexSeekTaskTemplate(acc.template,
+                                                        plan.id,
+                                                        innermostTemplate,
+                                                        slots.getLongOffsetFor(node),
+                                                        property,
+                                                        compileExpression(expr),
+                                                        operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
+                                                        physicalPlan.argumentSizes(id))(expressionCompiler))
 
         //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
         case ManyQueryExpression(expr) if !needsLockingUnique =>
@@ -182,12 +183,45 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                              innermostTemplate,
                                                              node,
                                                              slots.getLongOffsetFor(node),
-                                                             SlottedIndexedProperty(node,
-                                                                                    properties.head,
-                                                                                    slots),
+                                                             property,
                                                              compileExpression(expr),
                                                              operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                              physicalPlan.argumentSizes(id))(expressionCompiler))
+
+        case RangeQueryExpression(rangeWrapper) if !needsLockingUnique=>
+          assert(properties.length == 1)
+          //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
+          //multiple bounds
+          (rangeWrapper match {
+            case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
+              Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => lessThanSeek(
+                property.propertyKeyId, bound.isInclusive, in.head)))
+
+            case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
+              Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => greaterThanSeek(
+                property.propertyKeyId, bound.isInclusive, in.head)))
+
+            case InequalitySeekRangeWrapper(
+            RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
+              Some((Seq(compileExpression(greaterThan.endPoint), compileExpression(lessThan.endPoint)),
+                     (in: Seq[IntermediateRepresentation]) =>
+                       rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive,
+                                        in.tail.head)))
+            case _ => None
+
+          }).map {
+            case (generateSeekValues, generatePredicate) =>
+              new SingleRangeSeekQueryNodeIndexSeekTaskTemplate(acc.template,
+                                                                plan.id,
+                                                                innermostTemplate,
+                                                                slots.getLongOffsetFor(node),
+                                                                property,
+                                                                generateSeekValues,
+                                                                generatePredicate,
+                                                                operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
+                                                                order,
+                                                                physicalPlan.argumentSizes(id))(expressionCompiler)
+          }
 
         case _ => None
 
@@ -241,21 +275,21 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, _) if operatorFactory.readOnly =>
-            indexSeek(node, label, properties, valueExpr, unique = true, plan, acc) match {
+          case plan@plans.NodeUniqueIndexSeek(node, label, properties, valueExpr, _, order) if operatorFactory.readOnly =>
+            indexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = true, plan, acc) match {
               case Some(seek) =>
                 acc.copy(template = seek, fusedPlans = nextPlan :: acc.fusedPlans)
               case None => cantHandle(acc, nextPlan)
             }
 
-          case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _, _) =>
-            indexSeek(node, label, properties, valueExpr, unique = false, plan, acc) match {
+          case plan@plans.NodeIndexSeek(node, label, properties, valueExpr, _, order) =>
+            indexSeek(node, label, properties, valueExpr, asKernelIndexOrder(order), unique = false, plan, acc) match {
               case Some(seek) =>
                 acc.copy(template = seek, fusedPlans = nextPlan :: acc.fusedPlans)
               case None => cantHandle(acc, nextPlan)
             }
 
-          case plan@plans.NodeByIdSeek(node, nodeIds, _) => {
+          case plan@plans.NodeByIdSeek(node, nodeIds, _) =>
             val newTemplate = nodeIds match {
               case SingleSeekableArg(expr) =>
                 new SingleNodeByIdSeekTaskTemplate(acc.template,
@@ -298,9 +332,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
-          }
 
-          case plan@plans.DirectedRelationshipByIdSeek(relationship, relIds, from, to, _) => {
+          case plan@plans.DirectedRelationshipByIdSeek(relationship, relIds, from, to, _) =>
             val newTemplate = RelationshipByIdSeekOperator.taskTemplate(isDirected = true,
                                                                         acc.template,
                                                                         plan.id,
@@ -314,9 +347,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
-          }
 
-          case plan@plans.UndirectedRelationshipByIdSeek(relationship, relIds, from, to, _) => {
+          case plan@plans.UndirectedRelationshipByIdSeek(relationship, relIds, from, to, _) =>
             val newTemplate = RelationshipByIdSeekOperator.taskTemplate(isDirected = false,
                                                                         acc.template,
                                                                         plan.id,
@@ -330,7 +362,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
-          }
 
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
             val fromOffset = slots.getLongOffsetFor(fromName)

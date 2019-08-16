@@ -8,24 +8,23 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
-import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ManyQueriesExactNodeIndexSeekTaskTemplate.{nextMethod, queryIteratorMethod}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext, makeValueNeoSafe}
-import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
@@ -167,38 +166,30 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
 class NodeWithValues(val nodeId: Long, val values: Array[Value])
 
-/**
-  * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 42`
-  */
-class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
-                                                id: Id,
-                                                innermost: DelegateOperatorTaskTemplate,
-                                                nodeVarName: String,
-                                                offset: Int,
-                                                property: SlottedIndexedProperty,
-                                                generatePredicate: () => IntermediateExpression,
-                                                queryIndexId: Int,
-                                                argumentSize: SlotConfiguration.Size)
-                                               (codeGen: OperatorExpressionCompiler)
+abstract class SingleQueryNodeIndexSeekTaskTemplate(
+                                                     override val inner: OperatorTaskTemplate,
+                                                     id: Id,
+                                                     innermost: DelegateOperatorTaskTemplate,
+                                                     offset: Int,
+                                                     property: SlottedIndexedProperty,
+                                                     order: IndexOrder,
+                                                     needsValues: Boolean,
+                                                     queryIndexId: Int,
+                                                     argumentSize: SlotConfiguration.Size,
+                                                     codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
   import OperatorCodeGenHelperTemplates._
-  private var query: IntermediateExpression = _
-  private val queryVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
-
-  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
+  protected val nodeIndexCursorField: InstanceField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
+  protected def getValue: IntermediateRepresentation
+  protected def beginInnerLoop: IntermediateRepresentation
+  protected def possiblePredicate: IntermediateRepresentation
+  protected def predicate: IntermediateRepresentation
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
 
-  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, queryVariable)
-
-  override def genExpressions: Seq[IntermediateExpression] = Seq(query)
-
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    val compiled = generatePredicate()
-    query = compiled.copy(ir = asStorableValue(nullCheckIfRequired(compiled)))
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
-
     /**
       * {{{
       *   val query = asStorable([query predicate])
@@ -214,13 +205,12 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * }}}
       */
     block(
-      assign(queryVariable, query.ir),
-      declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, notEqual(load(queryVariable), noValue)),
+      beginInnerLoop,
+      declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, possiblePredicate),
       condition(load(hasInnerLoopVar))(
         block(
           setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
-          nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField),
-                        exactSeek(property.propertyKeyId, load(queryVariable))),
+          nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
           setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
           )),
       load(hasInnerLoopVar)
@@ -248,7 +238,7 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, load(queryVariable))).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getValue)).getOrElse(noop()),
         profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
@@ -277,6 +267,75 @@ class SingleQueryExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       inner.genSetExecutionEvent(event)
     )
 }
+
+/**
+  * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 42`
+  */
+class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
+                                                    id: Id,
+                                                    innermost: DelegateOperatorTaskTemplate,
+                                                    offset: Int,
+                                                    property: SlottedIndexedProperty,
+                                                    generateSeekValue: () => IntermediateExpression,
+                                                    queryIndexId: Int,
+                                                    argumentSize: SlotConfiguration.Size)
+                                                   (codeGen: OperatorExpressionCompiler) extends
+  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, offset, property, IndexOrder.NONE, false, queryIndexId,
+                                       argumentSize, codeGen) {
+
+  private var seekValue: IntermediateExpression = _
+  private val seekValueVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, seekValueVariable)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(seekValue)
+
+  override protected def getValue: IntermediateRepresentation = load(seekValueVariable)
+
+  override protected def beginInnerLoop: IntermediateRepresentation = {
+    val value = generateSeekValue()
+    seekValue = value.copy(ir = asStorableValue(nullCheckIfRequired(value)))
+    assign(seekValueVariable, seekValue.ir)
+  }
+
+  override protected def possiblePredicate: IntermediateRepresentation = notEqual(load(seekValueVariable), noValue)
+
+  override protected def predicate: IntermediateRepresentation = exactSeek(property.propertyKeyId, load(seekValueVariable))
+}
+
+
+/**
+  * Code generation template for range seeks, e.g. `n.prop < 42`, `n.prop >= 42`, and `42 < n.prop <= 43`
+  */
+class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
+                                                    id: Id,
+                                                    innermost: DelegateOperatorTaskTemplate,
+                                                    offset: Int,
+                                                    property: SlottedIndexedProperty,
+                                                    generateSeekValues: Seq[() => IntermediateExpression],
+                                                    generatePredicate: Seq[IntermediateRepresentation] => IntermediateRepresentation,
+                                                    queryIndexId: Int,
+                                                    order: IndexOrder,
+                                                    argumentSize: SlotConfiguration.Size)
+                                                   (codeGen: OperatorExpressionCompiler) extends
+  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, offset, property, order, property.getValueFromIndex, queryIndexId,
+                                       argumentSize, codeGen) {
+  private var seekValues: Seq[IntermediateExpression] = _
+  private val predicateVar = variable[IndexQuery](codeGen.namer.nextVariableName(), constant(null))
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, predicateVar)
+  override def genExpressions: Seq[IntermediateExpression] = seekValues
+  override protected def getValue: IntermediateRepresentation =
+    invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(0))
+  override protected def beginInnerLoop: IntermediateRepresentation = {
+    seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = asStorableValue(nullCheckIfRequired(v))))
+    assign(predicateVar, generatePredicate(seekValues.map(_.ir)))
+  }
+  override protected def possiblePredicate: IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, Boolean, IndexQuery]("possibleRangePredicate"), predicate)
+  override protected def predicate: IntermediateRepresentation = load(predicateVar)
+}
+
 
 /**
   * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
