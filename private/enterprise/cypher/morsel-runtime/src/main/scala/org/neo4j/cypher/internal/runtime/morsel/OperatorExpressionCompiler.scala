@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
@@ -17,9 +18,9 @@ import scala.collection.mutable.ArrayBuffer
 object OperatorExpressionCompiler {
 
   class LocalVariableSlotMapper(slots: SlotConfiguration) {
-    val longSlotToLocal = new Array[String](slots.numberOfLongs)
-    val refSlotToLocal = new Array[String](slots.numberOfReferences)
-    val cachedProperties = ArrayBuffer.empty[(Int, String)]
+    val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
+    val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
+    val cachedProperties: ArrayBuffer[(Int, String)] = ArrayBuffer.empty[(Int, String)]
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -115,9 +116,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
     assign(local, value)
   }
 
-  override def getCachedPropertyAt(offset: Int, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
+  override def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
+    val offset = property.cachedPropertyOffset
     var local = locals.getLocalForRefSlot(offset)
-    val hasCachedProperty = inputSlotConfiguration.hasCachedPropertyForOffset(offset)
+    val hasCachedProperty = inputSlotConfiguration.hasCachedPropertySlot(property)
     val prepareOps =
       if (local == null && hasCachedProperty) {
         local = locals.addCachedProperty(offset)

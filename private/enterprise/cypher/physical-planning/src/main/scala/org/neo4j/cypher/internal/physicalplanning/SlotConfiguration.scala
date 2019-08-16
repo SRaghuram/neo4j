@@ -349,11 +349,6 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = cachedProperties.contains(key)
 
-  def hasCachedPropertyForOffset(offset: Int): Boolean = cachedProperties.values.exists {
-    case r if r.offset == offset => true
-    case _ => false
-  }
-
   def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = cachedProperties.get(key)
 
   object SlotWithAliasesOrdering extends Ordering[SlotWithAliases] {

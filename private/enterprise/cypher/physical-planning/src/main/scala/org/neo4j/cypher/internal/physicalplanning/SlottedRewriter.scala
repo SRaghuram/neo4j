@@ -142,8 +142,8 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case LongSlot(offset, _, cypherType) if
           (cypherType == CTNode && entityType == NODE_TYPE) || (cypherType == CTRelationship && entityType == RELATIONSHIP_TYPE) =>
             tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.SlottedCachedProperty(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
-              case None => ast.SlottedCachedPropertyLate(originalEntityName, pkn,  offset, offsetIsForLongSlot = true, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
           case slot@LongSlot(_, _, _) =>
             throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
@@ -153,8 +153,8 @@ class SlottedRewriter(tokenContext: TokenContext) {
           // in the first place.
           case RefSlot(offset, _, _) =>
             tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.SlottedCachedProperty(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
-              case None => ast.SlottedCachedPropertyLate(originalEntityName, pkn,  offset, offsetIsForLongSlot = false, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
           case slot@RefSlot(_, _, _) =>
             throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")

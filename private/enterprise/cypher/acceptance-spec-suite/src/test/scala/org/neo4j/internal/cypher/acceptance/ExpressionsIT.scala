@@ -49,7 +49,7 @@ import org.neo4j.values.storable.LocalTimeValue.localTime
 import org.neo4j.values.storable.Values._
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues.{EMPTY_LIST, EMPTY_MAP, list}
-import org.neo4j.values.virtual.{ListValue, MapValue, NodeValue, RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual._
 import org.neo4j.values.{AnyValue, AnyValues, VirtualValue}
 import org.scalatest.matchers.{MatchResult, Matcher}
 
@@ -3126,25 +3126,25 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       PropertyTest("node",
         prop => createNode("prop" -> prop),
         () => createNode(),
-        symbols.CTNode,
-        NODE_TYPE,
-        VirtualValues.node,
+                   symbols.CTNode,
+                   NODE_TYPE,
+                   VirtualValues.node,
         token => NodeProperty(0, token, "prop")(null),
         _ => NodePropertyLate(0, "prop", "prop")(null),
-        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedProperty("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE),
-        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyLate("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, NODE_TYPE),
-        _.invalidateCachedNodeProperties(_)),
+        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE),
+        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, NODE_TYPE),
+                   _.invalidateCachedNodeProperties(_)),
       PropertyTest("relationship",
         prop => relate(createNode(), createNode(), "prop" -> prop),
         () => relate(createNode(), createNode()),
-        symbols.CTRelationship,
-        RELATIONSHIP_TYPE,
-        VirtualValues.relationship,
+                   symbols.CTRelationship,
+                   RELATIONSHIP_TYPE,
+                   VirtualValues.relationship,
         token => RelationshipProperty(0, token, "prop")(null),
         _ => RelationshipPropertyLate(0, "prop", "prop")(null),
-        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedProperty("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE),
-        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyLate("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, RELATIONSHIP_TYPE),
-        _.invalidateCachedRelationshipProperties(_))
+        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE),
+        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, RELATIONSHIP_TYPE),
+                   _.invalidateCachedRelationshipProperties(_))
     )
     RuntimeAccess(time, expression, cachedExpression) <- Seq(
       RuntimeAccess("early", earlyExpression, earlyCachedExpression),
@@ -3407,13 +3407,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //  read
     val propToken = tokenReader(_.propertyKey("prop"))
-    val getN = compile(ast.SlottedCachedProperty("n", pkn, 0, offsetIsForLongSlot = true, propToken, cachedNPropertyOffset, NODE_TYPE), slots)
+    val getN = compile(ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot = true, propToken, cachedNPropertyOffset, NODE_TYPE), slots)
     evaluate(getN, context) should equal(stringValue("hello from node disk"))
-    val getR = compile(ast.SlottedCachedProperty("r", pkn, 1, offsetIsForLongSlot = true, propToken, cachedRPropertyOffset, RELATIONSHIP_TYPE), slots)
+    val getR = compile(ast.SlottedCachedPropertyWithPropertyToken("r", pkn, 1, offsetIsForLongSlot = true, propToken, cachedRPropertyOffset, RELATIONSHIP_TYPE), slots)
     evaluate(getR, context) should equal(stringValue("hello from rel cache: 1"))
-    val getN2 = compile(ast.SlottedCachedProperty("n2", pkn, 0, offsetIsForLongSlot = false, propToken, cachedN2PropertyOffset, NODE_TYPE), slots)
+    val getN2 = compile(ast.SlottedCachedPropertyWithPropertyToken("n2", pkn, 0, offsetIsForLongSlot = false, propToken, cachedN2PropertyOffset, NODE_TYPE), slots)
     evaluate(getN2, context) should equal(stringValue("hello from node disk"))
-    val getR2 = compile(ast.SlottedCachedProperty("r2", pkn, 1, offsetIsForLongSlot = false, propToken, cachedR2PropertyOffset, RELATIONSHIP_TYPE), slots)
+    val getR2 = compile(ast.SlottedCachedPropertyWithPropertyToken("r2", pkn, 1, offsetIsForLongSlot = false, propToken, cachedR2PropertyOffset, RELATIONSHIP_TYPE), slots)
     evaluate(getR2, context) should equal(stringValue("hello from rel cache: 2"))
 
 

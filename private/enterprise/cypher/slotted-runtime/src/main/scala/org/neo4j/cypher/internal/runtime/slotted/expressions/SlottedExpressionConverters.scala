@@ -67,9 +67,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.ReferenceFromSlot(offset))
       case runtimeAst.NodeProperty(offset, token, _) =>
         Some(runtimeExpression.NodeProperty(offset, token))
-      case runtimeAst.SlottedCachedProperty(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE) =>
+      case runtimeAst.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE) =>
         Some(runtimeExpression.SlottedCachedNodeProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedProperty(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+      case runtimeAst.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
         Some(runtimeExpression.SlottedCachedRelationshipProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
       case runtimeAst.RelationshipProperty(offset, token, _) =>
         Some(runtimeExpression.RelationshipProperty(offset, token))
@@ -81,9 +81,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.RelationshipTypeFromSlot(offset))
       case runtimeAst.NodePropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.NodePropertyLate(offset, propKey))
-      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
+      case runtimeAst.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
         Some(runtimeExpression.SlottedCachedNodePropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedPropertyLate(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+      case runtimeAst.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
         Some(runtimeExpression.SlottedCachedRelationshipPropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
       case runtimeAst.RelationshipPropertyLate(offset, propKey, _) =>
         Some(runtimeExpression.RelationshipPropertyLate(offset, propKey))
