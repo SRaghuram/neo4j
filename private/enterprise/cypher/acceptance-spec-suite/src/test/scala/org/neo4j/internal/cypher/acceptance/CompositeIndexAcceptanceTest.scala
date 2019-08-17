@@ -1538,7 +1538,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN n",
+      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -1548,7 +1548,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
 
-    result.toSet should equal(nodes.map(node => Map("n" -> node)))
+    result.toSet should equal(Set(Map("c" -> nodes.size)))
   }
 
   test("should use composite index and get correct answers when not returning values for equality") {
@@ -1566,7 +1566,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN n",
+      "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -1576,7 +1576,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
 
-    result.toComparableResult should equal(Seq(Map("n" -> nodes.head)))
+    result.toSet should equal(Set(Map("c" -> 1)))
   }
 
   case class haveIndexes(expectedIndexes: String*) extends Matcher[GraphDatabaseQueryService] {
