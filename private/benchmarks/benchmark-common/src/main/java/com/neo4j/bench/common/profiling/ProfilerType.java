@@ -149,7 +149,7 @@ public enum ProfilerType
                                   "Sorry, I ('" + name() + "' profiler) am unable to generate " + secondaryRecordings + " from my profiler recordings\n" +
                                   "You are missing some environment variables that I need: " + missingSecondaryEnvironmentVariables + "\n" +
                                   "-----------------------------------------------------------------------------------------------------------\n";
-            System.out.println( sorryMessage );
+            System.err.println( sorryMessage );
         }
     }
 
