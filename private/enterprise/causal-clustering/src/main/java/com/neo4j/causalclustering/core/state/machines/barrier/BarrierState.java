@@ -20,6 +20,7 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 
 public class BarrierState
 {
+    private static final Runnable NO_ACTION = () -> {};
     public static final String TOKEN_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take token when leader.";
 
     private volatile int barrierTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
@@ -46,9 +47,20 @@ public class BarrierState
      */
     public void ensureHoldingToken() throws BarrierException
     {
+        ensureHoldingToken( NO_ACTION );
+    }
+
+    /**
+     * This ensures that a valid token was held at some point in time. It throws an
+     * exception if it was held but was later lost or never could be taken to
+     * begin with.
+     * @param actionOnTokenAcquisition {@link Runnable} to run inside the critical section if a new token is acquired.
+     */
+    public void ensureHoldingToken( Runnable actionOnTokenAcquisition ) throws BarrierException
+    {
         if ( barrierTokenId == BarrierToken.INVALID_BARRIER_TOKEN_ID )
         {
-            barrierTokenId = acquireTokenOrThrow();
+            barrierTokenId = acquireTokenOrThrow( actionOnTokenAcquisition );
         }
         else if ( barrierTokenId != currentToken().id() )
         {
@@ -69,8 +81,9 @@ public class BarrierState
 
     /**
      * Acquires a valid token id owned by us or throws.
+     * @param actionOnTokenAcquisition {@link Runnable} to run inside the critical section if a new token is acquired.
      */
-    private synchronized int acquireTokenOrThrow() throws BarrierException
+    private synchronized int acquireTokenOrThrow( Runnable actionOnTokenAcquisition ) throws BarrierException
     {
         BarrierToken currentToken = currentToken();
         if ( myself.equals( currentToken.owner() ) )
@@ -99,6 +112,7 @@ public class BarrierState
             boolean success = (boolean) result.consume();
             if ( success )
             {
+                actionOnTokenAcquisition.run();
                 return barrierTokenRequest.id();
             }
         }

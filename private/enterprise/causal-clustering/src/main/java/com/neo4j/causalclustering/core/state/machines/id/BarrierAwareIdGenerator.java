@@ -116,7 +116,7 @@ public class BarrierAwareIdGenerator implements IdGenerator
     {
         try
         {
-            barrierState.ensureHoldingToken();
+            barrierState.ensureHoldingToken( this::clearCache );
         }
         catch ( BarrierException e )
         {
