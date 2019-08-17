@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.common.profiling.jfr;
 
+import com.neo4j.bench.common.profiling.StackCollapse;
 import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCStackTrace;
 import org.openjdk.jmc.common.item.IItem;
@@ -19,16 +20,13 @@ import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
 /**
@@ -36,55 +34,44 @@ import static java.util.stream.Collectors.joining;
  * which can be later read by <code>flamegraph.pl</code>
  * from <a href="https://github.com/brendangregg/FlameGraph">Brenand's Gregg Flamegraph</a>.
  */
-public class StackCollapse implements AutoCloseable
+public class JfrMemoryStackCollapse implements StackCollapse
 {
-    private final PrintWriter printWriter;
-    private final Map<List<? extends IMCFrame>,Long> stackTraceAggregates = new HashMap<>();
-
     /**
      * Collapse stacks for memory allocation.
      *
      * @param jfrRecording input JFR recording
-     * @param stackCollapsedFile output location for generated collapsed stacks file
      * @throws Exception
      */
-    public static void forMemoryAllocation( Path jfrRecording, Path stackCollapsedFile ) throws Exception
+    public static JfrMemoryStackCollapse forMemoryAllocation( Path jfrRecording ) throws Exception
     {
         IItemCollection allocationEvents = JfrLoaderToolkit.loadEvents( jfrRecording.toFile() ).apply( JdkFilters.ALLOC_ALL );
-        try ( StackCollapse stackCollapse = new StackCollapse( stackCollapsedFile.toFile() ) )
+        JfrMemoryStackCollapse stackCollapse = new JfrMemoryStackCollapse();
+        for ( IItemIterable event : allocationEvents )
         {
-            for ( IItemIterable event : allocationEvents )
+            for ( IItem item : event )
             {
-                for ( IItem item : event )
+                IType<?> type = item.getType();
+                @SuppressWarnings( "unchecked" )
+                IMemberAccessor<IQuantity,Object> allocationSize =
+                        (IMemberAccessor<IQuantity,Object>) JdkAttributes.ALLOCATION_SIZE.getAccessor( type );
+                @SuppressWarnings( "unchecked" )
+                IMemberAccessor<IMCStackTrace,Object> stackTrace =
+                        (IMemberAccessor<IMCStackTrace,Object>) JfrAttributes.EVENT_STACKTRACE.getAccessor( type );
+                IMCStackTrace mcStackTrace = stackTrace.getMember( item );
+                if ( mcStackTrace != null /*native stack*/ )
                 {
-                    IType<?> type = item.getType();
-                    @SuppressWarnings( "unchecked" )
-                    IMemberAccessor<IQuantity,Object> allocationSize =
-                            (IMemberAccessor<IQuantity,Object>) JdkAttributes.ALLOCATION_SIZE.getAccessor( type );
-                    @SuppressWarnings( "unchecked" )
-                    IMemberAccessor<IMCStackTrace,Object> stackTrace =
-                            (IMemberAccessor<IMCStackTrace,Object>) JfrAttributes.EVENT_STACKTRACE.getAccessor( type );
-                    IMCStackTrace mcStackTrace = stackTrace.getMember( item );
-                    if ( mcStackTrace != null /*native stack*/ )
-                    {
-                        stackCollapse.addStackTrace( mcStackTrace.getFrames(),
-                                                     allocationSize.getMember( item ).longValue() );
-                    }
+                    stackCollapse.addStackTrace( mcStackTrace.getFrames(),
+                                                 allocationSize.getMember( item ).longValue() );
                 }
             }
         }
+        return stackCollapse;
     }
 
-    private StackCollapse( File file ) throws FileNotFoundException
-    {
-        this.printWriter = new PrintWriter( file );
-    }
+    private final Map<List<? extends IMCFrame>,Long> stackTraceAggregates = new HashMap<>();
 
     /**
      * Add next stack trace and value associated with stack trace.
-     *
-     * @param stackTrace
-     * @param value
      */
     private void addStackTrace( List<? extends IMCFrame> stackTrace, Long value )
     {
@@ -92,25 +79,13 @@ public class StackCollapse implements AutoCloseable
     }
 
     @Override
-    public void close()
-    {
-        try
-        {
-            writeToFile();
-        }
-        finally
-        {
-            printWriter.close();
-        }
-    }
-
-    private void writeToFile()
+    public void forEachStackTrace( BiConsumer<String,Long> fun )
     {
         stackTraceAggregates.forEach( ( stackTrace, sum ) ->
                                       {
                                           Collections.reverse( stackTrace );
-                                          String stackTraceString = stackTrace.stream().map( StackCollapse::frameToString ).collect( joining( ";" ) );
-                                          printWriter.println( format( "%s %d", stackTraceString, sum ) );
+                                          String stackTraceString = stackTrace.stream().map( JfrMemoryStackCollapse::frameToString ).collect( joining( ";" ) );
+                                          fun.accept( stackTraceString, sum );
                                       } );
     }
 

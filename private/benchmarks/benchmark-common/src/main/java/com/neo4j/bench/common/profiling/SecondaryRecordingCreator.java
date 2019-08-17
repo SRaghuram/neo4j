@@ -8,7 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.process.ProcessWrapper;
-import com.neo4j.bench.common.profiling.jfr.StackCollapse;
+import com.neo4j.bench.common.profiling.jfr.JfrMemoryStackCollapse;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
@@ -122,7 +122,8 @@ abstract class SecondaryRecordingCreator
             {
                 // generate collapsed stack frames, into temporary location
                 Path collapsedStackFrames = Files.createTempFile( Paths.get( forkDirectory.toAbsolutePath() ), "", ".jfr.collapsed.stack" );
-                StackCollapse.forMemoryAllocation( jfrRecording, collapsedStackFrames );
+                StackCollapse stackCollapse = JfrMemoryStackCollapse.forMemoryAllocation( jfrRecording );
+                StackCollapseWriter.write( stackCollapse, collapsedStackFrames );
                 // generate flamegraphs
                 Path flameGraphSvg = getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
                 Path flameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
