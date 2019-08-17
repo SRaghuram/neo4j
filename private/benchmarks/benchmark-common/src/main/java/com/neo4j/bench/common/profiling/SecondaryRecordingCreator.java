@@ -37,6 +37,11 @@ abstract class SecondaryRecordingCreator
 
     abstract void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory );
 
+    static SecondaryRecordingCreator allOf( SecondaryRecordingCreator... creators )
+    {
+        return new AllOf( Arrays.asList( creators ) );
+    }
+
     private static class None extends SecondaryRecordingCreator
     {
 
@@ -64,7 +69,7 @@ abstract class SecondaryRecordingCreator
 
         private final List<SecondaryRecordingCreator> secondaryRecordingCreators;
 
-        AllOf( List<SecondaryRecordingCreator> secondaryRecordingCreators )
+        private AllOf( List<SecondaryRecordingCreator> secondaryRecordingCreators )
         {
             this.secondaryRecordingCreators = secondaryRecordingCreators;
         }
@@ -92,12 +97,7 @@ abstract class SecondaryRecordingCreator
         }
     }
 
-    public static SecondaryRecordingCreator allOf( SecondaryRecordingCreator ...creators )
-    {
-        return new AllOf( Arrays.asList( creators ) );
-    }
-
-    static class MemoryAllocationFlamegrapCreator extends SecondaryRecordingCreator
+    static class MemoryAllocationFlamegraphCreator extends SecondaryRecordingCreator
     {
 
         @Override

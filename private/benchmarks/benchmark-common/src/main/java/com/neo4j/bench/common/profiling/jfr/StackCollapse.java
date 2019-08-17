@@ -13,23 +13,19 @@ import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.common.item.IItemIterable;
 import org.openjdk.jmc.common.item.IMemberAccessor;
 import org.openjdk.jmc.common.item.IType;
-import org.openjdk.jmc.common.item.ItemFilters;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.common.util.FormatToolkit;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAttributes;
-import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
+import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -37,13 +33,12 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.summingLong;
-import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Transforms stack traces into collapsed stacks,
  * which can be later read by <code>flamegraph.pl</code>
  * from <a href="https://github.com/brendangregg/FlameGraph">Brenand's Gregg Flamegraph</a>.
- *
  */
 public class StackCollapse implements AutoCloseable
 {
@@ -51,26 +46,21 @@ public class StackCollapse implements AutoCloseable
     private final Stream.Builder<Pair<String,Long>> streamBuilder;
 
     /**
-     * Collapse stacks for memoary allocation.
+     * Collapse stacks for memory allocation.
      *
-     * @param jfrRecording
-     * @param stackCollapsedFile
+     * @param jfrRecording input JFR recording
+     * @param stackCollapsedFile output location for generated collapsed stacks file
      * @throws Exception
      */
     public static void forMemoryAllocation( Path jfrRecording, Path stackCollapsedFile ) throws Exception
     {
-        IItemCollection loadEvents = JfrLoaderToolkit.loadEvents( jfrRecording.toFile() );
-        Iterator<IItemIterable> itemIterables = loadEvents
-                .apply( ItemFilters.type( JdkTypeIDs.ALLOC_INSIDE_TLAB, JdkTypeIDs.ALLOC_OUTSIDE_TLAB ) ).iterator();
+        IItemCollection allocationEvents = JfrLoaderToolkit.loadEvents( jfrRecording.toFile() ).apply( JdkFilters.ALLOC_ALL );
         try ( StackCollapse stackCollapse = new StackCollapse( stackCollapsedFile.toFile() ) )
         {
-            while ( itemIterables.hasNext() )
+            for ( IItemIterable event : allocationEvents )
             {
-                IItemIterable itermIterable = itemIterables.next();
-                Iterator<IItem> items = itermIterable.iterator();
-                while ( items.hasNext() )
+                for ( IItem item : event )
                 {
-                    IItem item = items.next();
                     IType<?> type = item.getType();
                     @SuppressWarnings( "unchecked" )
                     IMemberAccessor<IQuantity,Object> allocationSize =
@@ -81,51 +71,45 @@ public class StackCollapse implements AutoCloseable
                     IMCStackTrace mcStackTrace = stackTrace.getMember( item );
                     if ( mcStackTrace != null /*native stack*/ )
                     {
-
-                        stackCollapse.addStackTrace( stackTrace.getMember( item ).getFrames(), allocationSize.getMember( item )::longValue);
-
+                        stackCollapse.addStackTrace( mcStackTrace.getFrames(),
+                                                     allocationSize.getMember( item ).longValue() );
                     }
                 }
             }
         }
     }
 
-    public StackCollapse( File file ) throws FileNotFoundException
+    private StackCollapse( File file ) throws FileNotFoundException
     {
-        this( new PrintWriter( file ) );
-    }
-
-    public StackCollapse( PrintWriter printWriter )
-    {
-        this.printWriter = printWriter;
+        this.printWriter = new PrintWriter( file );
         streamBuilder = Stream.builder();
     }
 
     /**
      * Add next stack trace and value associated with stack trace.
      *
-     * @param frames
+     * @param stackTrace
      * @param value
      */
-    public void addStackTrace( List<? extends IMCFrame> frames, LongSupplier value )
+    private void addStackTrace( List<? extends IMCFrame> stackTrace, Long value )
     {
         streamBuilder.add(
                 Pair.of(
-                        frames.stream()
-                            .map( StackCollapse::toString )
-                            .collect( collectingAndThen( toCollection( ArrayList::new ), StackCollapse::reverse ) )
-                            .collect( joining( ";" ) ),
-                        value.getAsLong() ) );
+                        stackTrace.stream()
+                                  .map( StackCollapse::toString )
+                                  .collect( collectingAndThen( toList(), StackCollapse::reverse ) )
+                                  .collect( joining( ";" ) ),
+                        value ) );
     }
 
     @Override
-    public void close() throws Exception
+    public void close()
     {
         try
         {
             streamBuilder.build()
-            .collect( groupingBy( Pair::getLeft, summingLong( Pair::getRight ) ) )
-            .forEach( ( k, v ) -> printWriter.println( format( "%s %d", k, v ) ) );
+                         .collect( groupingBy( Pair::getLeft, summingLong( Pair::getRight ) ) )
+                         .forEach( ( stack, sum ) -> printWriter.println( format( "%s %d", stack, sum ) ) );
         }
         finally
         {
@@ -135,7 +119,13 @@ public class StackCollapse implements AutoCloseable
 
     private static String toString( IMCFrame frame )
     {
-        return FormatToolkit.getHumanReadable( frame.getMethod(), false, false, true, true, true, true );
+        return FormatToolkit.getHumanReadable( frame.getMethod(),
+                                               false,       // show return value
+                                               false, // show return value package
+                                               true,         // show class name
+                                               true,   // show class package name
+                                               true,         // show arguments
+                                               true ); // show arguments package
     }
 
     private static <T> Stream<T> reverse( List<T> lst )
@@ -143,5 +133,4 @@ public class StackCollapse implements AutoCloseable
         Collections.reverse( lst );
         return lst.stream();
     }
-
 }

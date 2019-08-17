@@ -39,7 +39,7 @@ public enum ProfilerType
             Sets.newHashSet(),
             SecondaryRecordingCreator.allOf(
                     new SecondaryRecordingCreator.JfrFlameGraphCreator(),
-                    new SecondaryRecordingCreator.MemoryAllocationFlamegrapCreator() ) ),
+                    new SecondaryRecordingCreator.MemoryAllocationFlamegraphCreator() ) ),
     STRACE(
             StraceTracer.class,
             RecordingType.TRACE_STRACE,
