@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.profiling.jfr;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCStackTrace;
 import org.openjdk.jmc.common.item.IItem;
@@ -25,15 +24,12 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Map;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.summingLong;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Transforms stack traces into collapsed stacks,
@@ -43,7 +39,7 @@ import static java.util.stream.Collectors.toList;
 public class StackCollapse implements AutoCloseable
 {
     private final PrintWriter printWriter;
-    private final Stream.Builder<Pair<String,Long>> streamBuilder;
+    private final Map<List<? extends IMCFrame>,Long> stackTraceAggregates = new HashMap<>();
 
     /**
      * Collapse stacks for memory allocation.
@@ -82,7 +78,6 @@ public class StackCollapse implements AutoCloseable
     private StackCollapse( File file ) throws FileNotFoundException
     {
         this.printWriter = new PrintWriter( file );
-        streamBuilder = Stream.builder();
     }
 
     /**
@@ -93,13 +88,7 @@ public class StackCollapse implements AutoCloseable
      */
     private void addStackTrace( List<? extends IMCFrame> stackTrace, Long value )
     {
-        streamBuilder.add(
-                Pair.of(
-                        stackTrace.stream()
-                                  .map( StackCollapse::toString )
-                                  .collect( collectingAndThen( toList(), StackCollapse::reverse ) )
-                                  .collect( joining( ";" ) ),
-                        value ) );
+        stackTraceAggregates.compute( stackTrace, ( st, sum ) -> (null == sum) ? value : sum + value );
     }
 
     @Override
@@ -107,9 +96,7 @@ public class StackCollapse implements AutoCloseable
     {
         try
         {
-            streamBuilder.build()
-                         .collect( groupingBy( Pair::getLeft, summingLong( Pair::getRight ) ) )
-                         .forEach( ( stack, sum ) -> printWriter.println( format( "%s %d", stack, sum ) ) );
+            writeToFile();
         }
         finally
         {
@@ -117,7 +104,17 @@ public class StackCollapse implements AutoCloseable
         }
     }
 
-    private static String toString( IMCFrame frame )
+    private void writeToFile()
+    {
+        stackTraceAggregates.forEach( ( stackTrace, sum ) ->
+                                      {
+                                          Collections.reverse( stackTrace );
+                                          String stackTraceString = stackTrace.stream().map( StackCollapse::frameToString ).collect( joining( ";" ) );
+                                          printWriter.println( format( "%s %d", stackTraceString, sum ) );
+                                      } );
+    }
+
+    private static String frameToString( IMCFrame frame )
     {
         return FormatToolkit.getHumanReadable( frame.getMethod(),
                                                false,       // show return value
@@ -126,11 +123,5 @@ public class StackCollapse implements AutoCloseable
                                                true,   // show class package name
                                                true,         // show arguments
                                                true ); // show arguments package
-    }
-
-    private static <T> Stream<T> reverse( List<T> lst )
-    {
-        Collections.reverse( lst );
-        return lst.stream();
     }
 }
