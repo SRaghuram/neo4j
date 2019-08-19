@@ -40,7 +40,7 @@ public enum ProfilerType
             SecondaryRecordingCreator.allOf(
                     // TODO uncomment
                     // new SecondaryRecordingCreator.JfrFlameGraphCreator(),
-                    new SecondaryRecordingCreator.MemoryAllocationFlamegrapCreator() ) ),
+                    new SecondaryRecordingCreator.MemoryAllocationFlamegraphCreator() ) ),
     STRACE(
             StraceTracer.class,
             RecordingType.TRACE_STRACE,
