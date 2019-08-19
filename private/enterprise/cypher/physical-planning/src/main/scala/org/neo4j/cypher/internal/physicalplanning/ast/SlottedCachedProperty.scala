@@ -9,11 +9,14 @@ import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, EntityType, PropertyKeyName}
 
 trait SlottedCachedProperty extends ASTCachedProperty with RuntimeExpression {
-  def entityName: String
-  def propertyKey: PropertyKeyName
   def offset: Int
   def offsetIsForLongSlot: Boolean
   def cachedPropertyOffset: Int
+
+  /**
+    * For slotted we don't need to distinct between the original and rewritten name
+    */
+  override def originalEntityName: String = entityName
 }
 
 /**
