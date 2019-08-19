@@ -9,8 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -35,7 +35,7 @@ class ClusterInternalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( Reconciliation.EMPTY );
+        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( ReconcilerResponse.EMPTY );
         operator.connect( connector );
     }
 
@@ -225,7 +225,7 @@ class ClusterInternalDbmsOperatorTest
         {
             var desiredState = operator.desired().get( databaseId.name() );
             stateRef.set( desiredState.operationalState() );
-            return Reconciliation.EMPTY;
+            return ReconcilerResponse.EMPTY;
         } );
     }
 }

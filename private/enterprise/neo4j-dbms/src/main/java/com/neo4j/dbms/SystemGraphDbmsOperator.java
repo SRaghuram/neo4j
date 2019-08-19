@@ -51,12 +51,12 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
         var databasesToAwait = extractUpdatedDatabases( transactionData );
 
         updateDesiredStates(); // TODO: Handle exceptions from this!
-        Reconciliation reconciliation = trigger( ReconcilerRequest.simple() );
-        reconciliation.whenComplete( () -> updateLastReconciledTransactionId( txId ) );
+        ReconcilerResponse reconcilerResponse = trigger( ReconcilerRequest.simple() );
+        reconcilerResponse.whenComplete( () -> updateLastReconciledTransactionId( txId ) );
 
         // TODO: Remove below when Standalone tests( e.g.SystemDatabaseDatabaseManagementIT ) no longer depend on blocking behaviour of create.
         // Clustered version of this listener does *not * block
-        reconciliation.await( databasesToAwait );
+        reconcilerResponse.await( databasesToAwait );
     }
 
     /**

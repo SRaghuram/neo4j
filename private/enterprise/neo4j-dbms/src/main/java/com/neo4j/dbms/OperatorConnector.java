@@ -27,7 +27,7 @@ public class OperatorConnector
     /**
      * Trigger forces the {@link DbmsReconciler} to transition each database from its current state
      * to its state as desired by the various {@code operators}. This operation is asynchronous by
-     * default, though you may optionally block using the returned {@link Reconciliation} instance.
+     * default, though you may optionally block using the returned {@link ReconcilerResponse} instance.
      *
      * If the {@link DbmsReconciler} has previously failed to transition a database to a desired state,
      * it will not try *any* future transitions unless the force parameter is set to true. By
@@ -36,7 +36,7 @@ public class OperatorConnector
      * @param request a request that contains information about the requested reconciliation attempt.
      * @return the collection of database reconciliation operations caused by this trigger call
      */
-    public Reconciliation trigger( ReconcilerRequest request )
+    public ReconcilerResponse trigger( ReconcilerRequest request )
     {
         return reconciler.reconcile( new ArrayList<>( operators ), request );
     }

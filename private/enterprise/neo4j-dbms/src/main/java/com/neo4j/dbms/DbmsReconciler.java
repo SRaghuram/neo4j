@@ -99,7 +99,7 @@ public class DbmsReconciler
         this.transitions = prepareLifecycleTransitionSteps();
     }
 
-    Reconciliation reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
+    ReconcilerResponse reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
     {
         var namesOfDbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
@@ -109,7 +109,7 @@ public class DbmsReconciler
                 .map( dbName -> Pair.of( dbName, reconcile( dbName, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        return new Reconciliation( reconciliation );
+        return new ReconcilerResponse( reconciliation );
     }
 
     private static Map<String,DatabaseState> combineDesiredStates( Map<String,DatabaseState> combined, Map<String,DatabaseState> operator,
@@ -250,17 +250,24 @@ public class DbmsReconciler
                 if ( throwable != null )
                 {
                     var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
-                    reportErrorAndPanicDatabase( databaseName, message, throwable );
-                    return entry == null ? DatabaseReconcilerEntry.initial( null ).failed() : entry.failed();
+                    if ( entry == null )
+                    {
+                        log.error( message, throwable );
+                        return DatabaseReconcilerEntry.initial( null ).failed();
+                    }
+                    else
+                    {
+                        reportErrorAndPanicDatabase( entry.state().databaseId(), message, throwable );
+                        return entry.failed();
+                    }
                 }
                 else if ( result.error() != null )
                 {
                     var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
                             databaseName, result.state(), result.desiredState().operationalState().description() );
-                    reportErrorAndPanicDatabase( databaseName, message, result.error() );
+                    reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
                     return new DatabaseReconcilerEntry( result.state() ).failed();
                 }
-                //TODO: Should we panic the database in both failure cases above? In the case of certain errors (OOM) should we panic the whole DBMS?
 
                 var reconcilerState = new DatabaseReconcilerEntry( result.state() );
                 if ( shouldFailDatabaseStateAfterSuccessfulReconcile( result.state().databaseId(), entry, request ) )
@@ -273,11 +280,11 @@ public class DbmsReconciler
         } );
     }
 
-    private void reportErrorAndPanicDatabase( String databaseName, String message, Throwable error )
+    private void reportErrorAndPanicDatabase( DatabaseId databaseId, String message, Throwable error )
     {
         log.error( message, error );
         var panicCause = new IllegalStateException( message, error );
-        panicDatabase( databaseName, panicCause );
+        panicDatabase( databaseId, panicCause );
     }
 
     private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerEntry currentState,
@@ -340,9 +347,9 @@ public class DbmsReconciler
         return transitions.fromCurrent( currentState ).toDesired( desiredState );
     }
 
-    protected void panicDatabase( String databaseName, Throwable error )
+    protected void panicDatabase( DatabaseId databaseId, Throwable error )
     {
-        databaseManager.getDatabaseContext( databaseName )
+        databaseManager.getDatabaseContext( databaseId )
                 .map( ctx -> ctx.database().getDatabaseHealth() )
                 .ifPresent( health -> health.panic( error ) );
     }
