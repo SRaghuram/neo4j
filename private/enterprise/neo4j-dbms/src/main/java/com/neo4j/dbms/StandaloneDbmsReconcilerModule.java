@@ -55,6 +55,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     {
         registerWithListenerService( globalModule, systemOperator );
         DbmsReconciler reconciler = createReconciler( globalModule, databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( reconciler );
 
         var connector = new OperatorConnector( reconciler );
         operators().forEach( op -> op.connect( connector ) );
