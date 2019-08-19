@@ -36,6 +36,12 @@ case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart
 sealed trait QueryPart extends ASTNode with SemanticCheckable {
   def containsUpdates: Boolean
   def returnColumns: List[String]
+
+  /**
+   * Given the root scope for this query part,
+   * looks up the final scope after the last clause
+   */
+  def finalScope(scope: Scope): Scope
 }
 
 case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
@@ -103,12 +109,11 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
         (pair, optError.fold(semanticErrors)(semanticErrors :+ _))
     }
 
-    val lastError = lastPair.last match {
-      case _: UpdateClause => None
-      case _: Return => None
-      case _: ReturnGraph => None
-      case _: CallClause if clauses.size == 1 => None
-      case clause =>
+    val lastError = {
+      val clause = lastPair.last
+      if (SingleQuery.canConcludeWith(clause, clauses.size))
+        None
+      else
         Some(SemanticError(s"Query cannot conclude with ${clause.name} (must be RETURN or an update clause)", clause.position))
     }
 
@@ -136,6 +141,17 @@ case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extend
     val continuationResult = clause.semanticCheckContinuation(closingResult.state.currentScope.scope)(nextState)
     semantics.SemanticCheckResult(continuationResult.state, prevErrors ++ closingResult.errors ++ continuationResult.errors)
   }
+
+  def finalScope(scope: Scope): Scope =
+    scope.children.last
+}
+
+object SingleQuery {
+  def canConcludeWith(clause: Clause, numClauses: Int): Boolean = clause match {
+    case _: UpdateClause | _: Return | _: ReturnGraph => true
+    case _: CallClause if numClauses == 1             => true
+    case _                                            => false
+  }
 }
 
 sealed trait Union extends QueryPart with SemanticAnalysisTooling {
@@ -152,20 +168,15 @@ sealed trait Union extends QueryPart with SemanticAnalysisTooling {
     withScopedState(query.semanticCheck) chain
     checkColumnNamesAgree
 
-  private def checkColumnNamesAgree: SemanticCheck = (state: SemanticState) => {
-    val rootScope: Scope = state.currentScope.scope
+  def finalScope(scope: Scope): Scope =
+    query.finalScope(scope.children.last)
 
-    // UNION queries form a chain in the shape of a reversed linked list.
-    // Therefore, the second scope is always a shallow scope, where the last one corresponds to the RETURN clause.
-    // The first one may either be another UNION query part or a single query.
-    val first :: second :: Nil = rootScope.children
-    val newFirst = part match {
-      case _: Union => // Union query parts always have two child scopes.
-        val _ :: newFirst :: Nil = first.children
-        newFirst
-      case _ => first
-    }
-    val errors = if (newFirst.children.last.symbolNames == second.children.last.symbolNames) {
+  private def checkColumnNamesAgree: SemanticCheck = (state: SemanticState) => {
+    val myScope: Scope = state.currentScope.scope
+
+    val partScope = part.finalScope(myScope.children.head)
+    val queryScope = query.finalScope(myScope.children.last)
+    val errors = if (partScope.symbolNames == queryScope.symbolNames) {
       Seq.empty
     } else {
       Seq(SemanticError("All sub queries in an UNION must have the same column names", position))

@@ -61,7 +61,8 @@ trait Query extends Parser
       | With
       | Call
       | Return
-    )
+      | SubQuery
+  )
 
   def Union: ReductionRule1[ast.QueryPart, ast.QueryPart] = rule("UNION")(
     keyword("UNION ALL") ~>> position ~~ SingleQuery ~~> ((q: ast.QueryPart, p, sq) => ast.UnionAll(q, sq)(p))
