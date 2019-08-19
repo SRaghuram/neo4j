@@ -119,8 +119,7 @@ class LoadCsvAcceptanceTest
          |    RETURN r.prop
       """.stripMargin
 
-    // TODO remove 3.4 when depending on 3.4.15
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_4 - Configs.Cost3_1 - Configs.Version2_3, query,
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_1 - Configs.Version2_3, query,
       planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.atLeastNTimes(2, aPlan("NodeIndexSeek")),
         expectPlansToFail = Configs.RulePlanner))
 
