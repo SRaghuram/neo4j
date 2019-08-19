@@ -57,7 +57,7 @@ object Configs {
   // fail for lack of some other operator or construct.
   val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime
