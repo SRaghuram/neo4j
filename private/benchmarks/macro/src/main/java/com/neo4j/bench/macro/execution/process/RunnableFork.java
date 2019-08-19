@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.neo4j.bench.common.util.Args.concatArgs;
+import static java.lang.String.format;
 
 public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable>
 {
@@ -57,6 +58,19 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         this.jvmArgs = concatArgs( JvmArgs.standardArgs( forkDirectory ), jvmArgs );
         this.launcher = launcher;
         this.resources = resources;
+    }
+
+    @Override
+    public String toString()
+    {
+        return format( "Fork (%s)\n" +
+                       "  Directory: %s\n" +
+                       "  Query:     %s\n" +
+                       "  Profilers: %s",
+                       getClass().getSimpleName(),
+                       forkDirectory.toAbsolutePath(),
+                       query.name(),
+                       profilerTypes.isEmpty() ? "-" : ProfilerType.serializeProfilers( profilerTypes ) );
     }
 
     public final Results run()
