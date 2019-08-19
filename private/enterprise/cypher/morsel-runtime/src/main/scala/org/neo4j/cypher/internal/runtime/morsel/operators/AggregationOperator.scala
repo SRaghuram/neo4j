@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.{MemoryTracker, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, Aggregators, MaxAggregator, MinAggregator, Reducer, SumAggregator, Updater}
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, Aggregators, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, MaxAggregator, MinAggregator, Reducer, SumAggregator, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
@@ -22,12 +22,13 @@ import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.v4_0.util.SyntaxException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
+
 import scala.collection.JavaConverters._
 import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
+import org.neo4j.exceptions.SyntaxException
 
 import scala.collection.mutable.ArrayBuffer
 
