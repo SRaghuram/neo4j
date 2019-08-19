@@ -73,6 +73,10 @@ class ParallelRuntimeNodeIndexContainsScanTest extends NodeIndexContainsScanTest
 class ParallelRuntimeNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeIndexContainsScanStressTest extends IndexContainsScanStressTestBase(PARALLEL)
 
+// INDEX ENDS WITH SCAN
+class ParallelRuntimeNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+
 // ARGUMENT
 class ParallelRuntimeArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeArgumentNoFusingTest extends ArgumentTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)

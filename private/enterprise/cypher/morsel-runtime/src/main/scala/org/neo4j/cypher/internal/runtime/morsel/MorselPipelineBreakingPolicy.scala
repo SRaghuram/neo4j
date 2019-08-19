@@ -20,6 +20,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: NodeIndexSeek |
            _: NodeUniqueIndexSeek |
            _: NodeIndexContainsScan |
+           _: NodeIndexEndsWithScan |
            _: NodeIndexScan |
            _: NodeByIdSeek |
            _: DirectedRelationshipByIdSeek |

@@ -65,6 +65,10 @@ class MorselNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(SINGLE_THREA
 class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
+// INDEX ENDS WITH SCAN
+class MorselNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // ARGUMENT
 class MorselArgumentTest extends ArgumentTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselArgumentNoFusingTest extends ArgumentTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)

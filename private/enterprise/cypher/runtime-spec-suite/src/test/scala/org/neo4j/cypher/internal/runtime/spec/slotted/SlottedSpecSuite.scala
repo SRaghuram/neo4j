@@ -29,6 +29,7 @@ class SlottedVarExpandAllTest extends VarLengthExpandTestBase(ENTERPRISE.SINGLE_
 class SlottedLabelScanTest extends LabelScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
                                with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]

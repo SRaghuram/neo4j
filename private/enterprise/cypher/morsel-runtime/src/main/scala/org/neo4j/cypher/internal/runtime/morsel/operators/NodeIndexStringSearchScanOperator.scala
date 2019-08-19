@@ -18,13 +18,13 @@ import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.TextValue
 
-class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
-                                    nodeOffset: Int,
-                                    property: SlottedIndexedProperty,
-                                    queryIndexId: Int,
-                                    indexOrder: IndexOrder,
-                                    valueExpr: Expression,
-                                    argumentSize: SlotConfiguration.Size)
+abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
+                                        nodeOffset: Int,
+                                        property: SlottedIndexedProperty,
+                                        queryIndexId: Int,
+                                        indexOrder: IndexOrder,
+                                        valueExpr: Expression,
+                                        argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, Array(property)) {
 
   override def nextTasks(queryContext: QueryContext,
@@ -37,9 +37,11 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
+  def computeIndexQuery(property: Int, value: TextValue): IndexQuery
+
   class OTask(val inputMorsel: MorselExecutionContext, index: IndexReadSession) extends InputLoopTask {
 
-    override def workIdentity: WorkIdentity = NodeIndexContainsScanOperator.this.workIdentity
+    override def workIdentity: WorkIdentity = NodeIndexStringSearchScanOperator.this.workIdentity
 
     private var cursor: NodeValueIndexCursor = _
 
@@ -63,13 +65,13 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
       value match {
         case value: TextValue =>
-          val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
+          val indexQuery = computeIndexQuery(property.propertyKeyId, value)
           cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
         case IsNoValue() =>
-          false // CONTAINS null does not produce any rows
+          false // searching for null does not produce any rows
 
         case x => throw new CypherTypeException(s"Expected a string value, but got $x")
       }
@@ -90,4 +92,41 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       cursor = null
     }
   }
+}
+class NodeIndexContainsScanOperator(workIdentity: WorkIdentity,
+                                    nodeOffset: Int,
+                                    property: SlottedIndexedProperty,
+                                    queryIndexId: Int,
+                                    indexOrder: IndexOrder,
+                                    valueExpr: Expression,
+                                    argumentSize: SlotConfiguration.Size)
+  extends NodeIndexStringSearchScanOperator(workIdentity,
+                                            nodeOffset,
+                                            property,
+                                            queryIndexId,
+                                            indexOrder,
+                                            valueExpr,
+                                            argumentSize) {
+
+  override def computeIndexQuery(property: Int,
+                                 value: TextValue): IndexQuery = IndexQuery.stringContains(property, value)
+}
+
+class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
+                                    nodeOffset: Int,
+                                    property: SlottedIndexedProperty,
+                                    queryIndexId: Int,
+                                    indexOrder: IndexOrder,
+                                    valueExpr: Expression,
+                                    argumentSize: SlotConfiguration.Size)
+  extends NodeIndexStringSearchScanOperator(workIdentity,
+                                            nodeOffset,
+                                            property,
+                                            queryIndexId,
+                                            indexOrder,
+                                            valueExpr,
+                                            argumentSize) {
+
+  override def computeIndexQuery(property: Int,
+                                 value: TextValue): IndexQuery = IndexQuery.stringSuffix(property, value)
 }

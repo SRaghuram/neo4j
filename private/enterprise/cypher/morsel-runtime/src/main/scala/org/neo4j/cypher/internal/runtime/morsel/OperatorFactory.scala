@@ -99,6 +99,16 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new NodeIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
+                                              slots.getLongOffsetFor(column),
+                                              SlottedIndexedProperty(column, property, slots),
+                                              indexRegistrator.registerQueryIndex(labelToken, property),
+                                              asKernelIndexOrder(indexOrder),
+                                              converters.toCommandExpression(id, valueExpr),
+                                              argumentSize)
+
+      case plans.NodeIndexEndsWithScan(column, labelToken, property, valueExpr, _, indexOrder) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        new NodeIndexEndsWithScanOperator(WorkIdentity.fromPlan(plan),
                                           slots.getLongOffsetFor(column),
                                           SlottedIndexedProperty(column, property, slots),
                                           indexRegistrator.registerQueryIndex(labelToken, property),
