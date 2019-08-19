@@ -46,7 +46,7 @@ class RelationshipPropertyExistenceConstraintCreationIT
     @Override
     RelExistenceConstraintDescriptor newConstraintObject( RelationTypeSchemaDescriptor descriptor )
     {
-        return ConstraintDescriptorFactory.existsForSchema( descriptor );
+        return ConstraintDescriptorFactory.existsForSchema( descriptor ).withName( "constraint" );
     }
 
     @Override

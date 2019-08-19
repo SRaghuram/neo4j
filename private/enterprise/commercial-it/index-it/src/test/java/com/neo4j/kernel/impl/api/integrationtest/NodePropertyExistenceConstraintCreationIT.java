@@ -56,7 +56,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
     @Override
     NodeExistenceConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
     {
-        return ConstraintDescriptorFactory.existsForSchema( descriptor );
+        return ConstraintDescriptorFactory.existsForSchema( descriptor ).withName( "constraint" );
     }
 
     @Override
@@ -108,7 +108,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
             try
             {
                 SchemaWrite statement = schemaWriteInNewTransaction();
-                statement.constraintDrop( ConstraintDescriptorFactory.existsForSchema( constraint.schema() ) );
+                statement.constraintDrop( ConstraintDescriptorFactory.existsForSchema( constraint.schema() ).withName( "other constraint" ) );
             }
             finally
             {

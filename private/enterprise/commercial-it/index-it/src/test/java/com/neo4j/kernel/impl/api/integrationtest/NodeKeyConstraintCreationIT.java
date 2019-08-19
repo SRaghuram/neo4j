@@ -44,7 +44,7 @@ class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Constrain
     @Override
     IndexBackedConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
     {
-        return ConstraintDescriptorFactory.nodeKeyForSchema( descriptor );
+        return ConstraintDescriptorFactory.nodeKeyForSchema( descriptor ).withName( "constraint" );
     }
 
     @Override

@@ -55,8 +55,8 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 transaction.commit();
             }
         }, ConstraintViolationException.class,
-                anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties `(property2, property3)`" ),
-                        containsString( "with label `multiNodeKeyLabel` must have the properties `(property3, property4)`" ) ) );
+                anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties (property2, property3)" ),
+                        containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) ) );
 
         assertException( () ->
         {
@@ -68,6 +68,6 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 node.setProperty( "property3", "3" );
                 transaction.commit();
             }
-        }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties `(property3, property4)`" ) );
+        }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) );
     }
 }

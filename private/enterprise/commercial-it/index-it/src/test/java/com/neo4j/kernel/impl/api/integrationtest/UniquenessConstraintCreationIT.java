@@ -93,7 +93,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     @Override
     UniquenessConstraintDescriptor newConstraintObject( LabelSchemaDescriptor descriptor )
     {
-        return ConstraintDescriptorFactory.uniqueForSchema( descriptor );
+        return ConstraintDescriptorFactory.uniqueForSchema( descriptor ).withName( "constraint" );
     }
 
     @Override
@@ -212,7 +212,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
             try
             {
                 SchemaWrite statement = schemaWriteInNewTransaction();
-                statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( descriptor ) );
+                statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( descriptor ).withName( "other constraint" ) );
             }
             finally
             {
