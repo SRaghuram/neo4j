@@ -8,7 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.process.ProcessWrapper;
-import com.neo4j.bench.common.profiling.jfr.StackCollapse;
+import com.neo4j.bench.common.profiling.jfr.JfrMemoryStackCollapse;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
@@ -37,6 +37,11 @@ abstract class SecondaryRecordingCreator
 
     abstract void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory );
 
+    static SecondaryRecordingCreator allOf( SecondaryRecordingCreator... creators )
+    {
+        return new AllOf( Arrays.asList( creators ) );
+    }
+
     private static class None extends SecondaryRecordingCreator
     {
 
@@ -64,7 +69,7 @@ abstract class SecondaryRecordingCreator
 
         private final List<SecondaryRecordingCreator> secondaryRecordingCreators;
 
-        AllOf( List<SecondaryRecordingCreator> secondaryRecordingCreators )
+        private AllOf( List<SecondaryRecordingCreator> secondaryRecordingCreators )
         {
             this.secondaryRecordingCreators = secondaryRecordingCreators;
         }
@@ -92,12 +97,7 @@ abstract class SecondaryRecordingCreator
         }
     }
 
-    public static SecondaryRecordingCreator allOf( SecondaryRecordingCreator ...creators )
-    {
-        return new AllOf( Arrays.asList( creators ) );
-    }
-
-    static class MemoryAllocationFlamegrapCreator extends SecondaryRecordingCreator
+    static class MemoryAllocationFlamegraphCreator extends SecondaryRecordingCreator
     {
 
         @Override
@@ -122,7 +122,8 @@ abstract class SecondaryRecordingCreator
             {
                 // generate collapsed stack frames, into temporary location
                 Path collapsedStackFrames = Files.createTempFile( Paths.get( forkDirectory.toAbsolutePath() ), "", ".jfr.collapsed.stack" );
-                StackCollapse.forMemoryAllocation( jfrRecording, collapsedStackFrames );
+                StackCollapse stackCollapse = JfrMemoryStackCollapse.forMemoryAllocation( jfrRecording );
+                StackCollapseWriter.write( stackCollapse, collapsedStackFrames );
                 // generate flamegraphs
                 Path flameGraphSvg = getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
                 Path flameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );

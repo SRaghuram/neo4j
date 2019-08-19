@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
@@ -73,7 +72,7 @@ public class ForkRunner
                                                   doFork,
                                                   jvmArgs,
                                                   resources );
-                printForkInfo( forkName, query, profilerFork );
+                System.out.println( profilerFork );
                 runFork( query, unit, metricsPrinter, profilerFork );
             }
 
@@ -108,7 +107,7 @@ public class ForkRunner
                                        jvmArgs,
                                        doFork );
                 }
-                printForkInfo( forkName, query, measurementFork );
+                System.out.println( measurementFork );
                 runFork( query, unit, metricsPrinter, measurementFork );
             }
 
@@ -118,11 +117,6 @@ public class ForkRunner
         {
             throw new ForkFailureException( query, benchmarkDir, exception );
         }
-    }
-
-    private static void printForkInfo( String forkName, Query query, RunnableFork fork )
-    {
-        System.out.println( format( "Fork (%s): %s, Query: %s", fork.getClass().getSimpleName(), forkName, query.name() ) );
     }
 
     private static void runFork( Query query,
