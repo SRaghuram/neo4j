@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
+import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty, EntityType, PropertyKeyName}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.exceptions.InternalException
@@ -348,6 +348,11 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     }.sorted(SlotWithAliasesOrdering)
 
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = cachedProperties.contains(key)
+
+  def hasCachedPropertyAt(offset: Int, entityName: String, propertyKey: PropertyKeyName, entityType: EntityType): Boolean = cachedProperties.exists {
+    case (prop, slot) if prop.entityName == entityName && prop.propertyKey == propertyKey && prop.entityType == entityType && slot.offset == offset => true
+    case _ => false
+  }
 
   def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = cachedProperties.get(key)
 

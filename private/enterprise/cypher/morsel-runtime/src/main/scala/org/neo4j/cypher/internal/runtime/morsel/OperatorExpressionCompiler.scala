@@ -119,7 +119,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
   override def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
     val offset = property.cachedPropertyOffset
     var local = locals.getLocalForRefSlot(offset)
-    val hasCachedProperty = inputSlotConfiguration.hasCachedPropertySlot(property)
+    val hasCachedProperty = inputSlotConfiguration.hasCachedPropertyAt(offset, property.entityName, property.propertyKey, property.entityType)
     val prepareOps =
       if (local == null && hasCachedProperty) {
         local = locals.addCachedProperty(offset)
