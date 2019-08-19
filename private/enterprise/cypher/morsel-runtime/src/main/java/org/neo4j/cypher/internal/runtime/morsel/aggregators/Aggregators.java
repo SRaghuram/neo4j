@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.aggregators;
 /**
  * This class is a necessary indirection for referencing the Aggregation case objects from generated code
  */
+@SuppressWarnings( "unused" )
 public class Aggregators
 {
     public static final Aggregator COUNT_STAR = CountStarAggregator$.MODULE$;
@@ -15,6 +16,6 @@ public class Aggregators
     public static final Aggregator SUM = SumAggregator$.MODULE$;
     public static final Aggregator AVG = AvgAggregator$.MODULE$;
     public static final Aggregator MAX = MaxAggregator$.MODULE$;
-    public static final Aggregator MIN = MaxAggregator$.MODULE$;
+    public static final Aggregator MIN = MinAggregator$.MODULE$;
     public static final Aggregator COLLECT = CollectAggregator$.MODULE$;
 }
