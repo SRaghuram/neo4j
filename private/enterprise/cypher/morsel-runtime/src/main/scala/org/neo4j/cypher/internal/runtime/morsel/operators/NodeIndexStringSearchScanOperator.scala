@@ -5,18 +5,26 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.operators.NodeIndexStringSearchScanOperator.failOrFalseMethod
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
 import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
-import org.neo4j.values.storable.TextValue
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.{TextValue, Value}
 
 abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
                                         nodeOffset: Int,
@@ -70,10 +78,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
-        case IsNoValue() =>
-          false // searching for null does not produce any rows
-
-        case x => throw new CypherTypeException(s"Expected a string value, but got $x")
+        case x => NodeIndexStringSearchScanOperator.failOrFalse(x)
       }
     }
 
@@ -93,6 +98,16 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
     }
   }
 }
+
+object NodeIndexStringSearchScanOperator {
+  def failOrFalse(value: AnyValue): Boolean = value match {
+    case IsNoValue() => false
+    case x => throw new CypherTypeException(s"Expected a string value, but got $x")
+  }
+
+  val failOrFalseMethod: Method = method[NodeIndexStringSearchScanOperator, Boolean, AnyValue]("failOrFalse")
+}
+
 class NodeIndexContainsScanOperator(workIdentity: WorkIdentity,
                                     nodeOffset: Int,
                                     property: SlottedIndexedProperty,
@@ -130,3 +145,107 @@ class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
   override def computeIndexQuery(property: Int,
                                  value: TextValue): IndexQuery = IndexQuery.stringSuffix(property, value)
 }
+
+class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
+                                            id: Id,
+                                            innermost: DelegateOperatorTaskTemplate,
+                                            offset: Int,
+                                            property: SlottedIndexedProperty,
+                                            queryIndexId: Int,
+                                            indexOrder: IndexOrder,
+                                            generateExpression: () => IntermediateExpression,
+                                            searchPredicate: (Int, IntermediateRepresentation) => IntermediateRepresentation,
+                                            argumentSize: SlotConfiguration.Size)
+                                           (codeGen: OperatorExpressionCompiler)
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
+  private val needsValues = property.getValueFromIndex
+  private var seekExpression: IntermediateExpression = _
+  private val seekVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
+
+  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, seekVariable)
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
+    block(
+      condition(isNotNull(loadField(nodeIndexCursorField)))(
+        invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
+        ),
+      inner.genSetExecutionEvent(event)
+      )
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(seekExpression)
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    seekExpression = generateExpression()
+    val hasInnerLoop = codeGen.namer.nextVariableName()
+    /**
+      * {{{
+      *   this.nodeIndexCursor = resources.cursorPools.nodeValuIndexCursorPool.allocate()
+      *   context.transactionalContext.dataRead.nodeIndexScan(session, cursor, indexOrder, needsValues)
+      *   this.canContinue = nodeIndexCursor.next()
+      *   true
+      * }}}
+      */
+    block(
+      assign(seekVariable, nullCheckIfRequired(seekExpression)),
+      declareAndAssign(typeRefOf[Boolean], hasInnerLoop, constant(false)),
+      condition(or(instanceOf[TextValue](load(seekVariable)), invokeStatic(failOrFalseMethod, load(seekVariable))))(
+        block(
+          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
+          nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), searchPredicate(property.propertyKeyId, cast[TextValue](load(seekVariable))), indexOrder, needsValues),
+          setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+          assign(hasInnerLoop, loadField(canContinue))
+        )
+       ),
+      load(hasInnerLoop))
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   while (hasDemand && this.canContinue) {
+      *     setLongAt(offset, nodeIndexCursor.nodeReference())
+      *     setCachedPropertyAt(cacheOffset1, nodeIndexCursor.propertyValue(0))
+      *     setCachedPropertyAt(cacheOffset2, nodeIndexCursor.propertyValue(1))
+      *     ...
+      *     << inner.genOperate >>
+      *     this.canContinue = this.nodeIndexCursor.next()
+      *   }
+      * }}}
+      */
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
+          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+        } else {
+          noop()
+        },
+        codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, load(seekVariable))).getOrElse(noop()),
+        profileRow(id),
+        inner.genOperateWithExpressions,
+        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+        )
+      )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    /**
+      * {{{
+      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+      *   nodeIndexCursor = null
+      * }}}
+      */
+    block(
+      freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
+      setField(nodeIndexCursorField, constant(null))
+      )
+  }
+}
+

@@ -85,14 +85,14 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
 }
 
-class SingleThreadedLabelScanTaskTemplate(override val inner: OperatorTaskTemplate,
+class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
                                           id: Id,
-                                          val innermost: DelegateOperatorTaskTemplate,
-                                          val nodeVarName: String,
-                                          val offset: Int,
-                                          val labelName: String,
-                                          val maybeLabelId: Option[Int],
-                                          val argumentSize: SlotConfiguration.Size)
+                                          innermost: DelegateOperatorTaskTemplate,
+                                          nodeVarName: String,
+                                          offset: Int,
+                                          labelName: String,
+                                          maybeLabelId: Option[Int],
+                                          argumentSize: SlotConfiguration.Size)
                                          (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
   import OperatorCodeGenHelperTemplates._

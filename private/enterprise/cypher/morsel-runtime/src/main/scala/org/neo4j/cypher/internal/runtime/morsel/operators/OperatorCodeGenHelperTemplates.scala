@@ -12,13 +12,13 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
-import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate}
+import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.{TextValue, Value}
 import org.neo4j.values.virtual.ListValue
 
 object OperatorCodeGenHelperTemplates {
@@ -192,6 +192,12 @@ object OperatorCodeGenHelperTemplates {
 
   def rangeBetweenSeek(prop: Int, fromInclusive: Boolean, fromExpression: IntermediateRepresentation, toInclusive: Boolean, toExpression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), fromExpression, constant(fromInclusive), toExpression, constant(toInclusive))
+
+  def stringContainsScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"), constant(prop), expression)
+
+  def stringEndsWithScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"), constant(prop), expression)
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)

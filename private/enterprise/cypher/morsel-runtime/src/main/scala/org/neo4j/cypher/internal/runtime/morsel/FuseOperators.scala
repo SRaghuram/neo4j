@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{greaterThanSeek, lessThanSeek, rangeBetweenSeek}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -267,6 +267,38 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                             operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                             asKernelIndexOrder(indexOrder),
                                                             physicalPlan.argumentSizes(id))(expressionCompiler)
+
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
+          case plan@plans.NodeIndexContainsScan(node, label, property, seekExpression, _, indexOrder) =>
+            val newTemplate = new NodeIndexStringSearchScanTaskTemplate(acc.template,
+                                                                        plan.id,
+                                                                        innermostTemplate,
+                                                                        slots.getLongOffsetFor(node),
+                                                                        SlottedIndexedProperty(node, property, slots),
+                                                                        operatorFactory.indexRegistrator.registerQueryIndex(label, property),
+                                                                        asKernelIndexOrder(indexOrder),
+                                                                        compileExpression(seekExpression),
+                                                                        stringContainsScan,
+                                                                        physicalPlan.argumentSizes(id))(expressionCompiler)
+
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
+          case plan@plans.NodeIndexEndsWithScan(node, label, property, seekExpression, _, indexOrder) =>
+            val newTemplate = new NodeIndexStringSearchScanTaskTemplate(acc.template,
+                                                                        plan.id,
+                                                                        innermostTemplate,
+                                                                        slots.getLongOffsetFor(node),
+                                                                        SlottedIndexedProperty(node, property, slots),
+                                                                        operatorFactory.indexRegistrator.registerQueryIndex(label, property),
+                                                                        asKernelIndexOrder(indexOrder),
+                                                                        compileExpression(seekExpression),
+                                                                        stringEndsWithScan,
+                                                                        physicalPlan.argumentSizes(id))(expressionCompiler)
 
             acc.copy(
               template = newTemplate,
