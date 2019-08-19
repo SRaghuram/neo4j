@@ -39,9 +39,9 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.dbms.OperatorState.DROPPED;
+import static com.neo4j.dbms.OperatorState.INITIAL;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.INITIAL;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
 
@@ -221,15 +221,13 @@ public class DbmsReconciler
                 var desiredState = desiredStates( operators, precedence ).get( databaseName );
                 if ( desiredState == null )
                 {
-                    var cause = new NullPointerException( format( "No operator desires a state for database %s any more. " +
-                            "This is likely an error!", databaseName ) );
-                    throw new CompletionException( cause );
+                    throw new IllegalStateException( format( "No operator desires a state for database %s any more. " +
+                                                             "This is likely an error!", databaseName ) );
                 }
                 else if ( !Objects.equals( databaseName, desiredState.databaseId().name() ) )
                 {
-                    var cause = new IllegalStateException( format( "The supplied database name %s does not match that stored " +
-                            "in its desired state %s!", databaseName, desiredState.databaseId().name() ) );
-                    throw new CompletionException( cause );
+                    throw new IllegalStateException( format( "The supplied database name %s does not match that stored " +
+                                                             "in its desired state %s!", databaseName, desiredState.databaseId().name() ) );
                 }
                 return desiredState;
             }
@@ -251,13 +249,15 @@ public class DbmsReconciler
             {
                 if ( throwable != null )
                 {
-                    log.error( format( "Encountered unexpected error when attempting to reconcile database %s", databaseName ), throwable );
+                    var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
+                    reportErrorAndPanicDatabase( databaseName, message, throwable );
                     return entry == null ? DatabaseReconcilerEntry.initial( null ).failed() : entry.failed();
                 }
                 else if ( result.error() != null )
                 {
-                    log.error( format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                            databaseName, result.state(), result.desiredState().operationalState().description() ), result.error() );
+                    var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
+                            databaseName, result.state(), result.desiredState().operationalState().description() );
+                    reportErrorAndPanicDatabase( databaseName, message, result.error() );
                     return new DatabaseReconcilerEntry( result.state() ).failed();
                 }
                 //TODO: Should we panic the database in both failure cases above? In the case of certain errors (OOM) should we panic the whole DBMS?
@@ -271,6 +271,13 @@ public class DbmsReconciler
             } );
             releaseLockOn( databaseName );
         } );
+    }
+
+    private void reportErrorAndPanicDatabase( String databaseName, String message, Throwable error )
+    {
+        log.error( message, error );
+        var panicCause = new IllegalStateException( message, error );
+        panicDatabase( databaseName, panicCause );
     }
 
     private static boolean shouldFailDatabaseStateAfterSuccessfulReconcile( DatabaseId databaseId, DatabaseReconcilerEntry currentState,
@@ -331,6 +338,13 @@ public class DbmsReconciler
     private Stream<Transition> getLifecycleTransitionSteps( DatabaseState currentState, DatabaseState desiredState )
     {
         return transitions.fromCurrent( currentState ).toDesired( desiredState );
+    }
+
+    protected void panicDatabase( String databaseName, Throwable error )
+    {
+        databaseManager.getDatabaseContext( databaseName )
+                .map( ctx -> ctx.database().getDatabaseHealth() )
+                .ifPresent( health -> health.panic( error ) );
     }
 
     /* Operator Steps */

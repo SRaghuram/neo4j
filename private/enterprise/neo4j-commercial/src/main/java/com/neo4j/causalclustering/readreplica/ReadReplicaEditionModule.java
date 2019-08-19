@@ -27,8 +27,8 @@ import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
 import com.neo4j.dbms.ReplicatedTransactionEventListeners;
+import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -36,7 +36,6 @@ import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.io.File;
-import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -183,7 +182,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         dependencies.satisfyDependency( databaseManager );
 
         var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
-                storageFactory, reconciledTxTracker );
+                storageFactory, reconciledTxTracker, panicService );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );
 

@@ -7,6 +7,7 @@ package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.error_handling.PanicService;
 
 import java.util.stream.Stream;
 
@@ -20,15 +21,17 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     private final ReplicatedTransactionEventListeners txEventService;
     private final ClusterInternalDbmsOperator internalOperator;
     private final ClusterStateStorageFactory stateStorageFactory;
+    private final PanicService panicService;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
             ReplicatedTransactionEventListeners txEventService, ClusterInternalDbmsOperator internalOperator,
-            ClusterStateStorageFactory stateStorageFactory, ReconciledTransactionTracker reconciledTxTracker )
+            ClusterStateStorageFactory stateStorageFactory, ReconciledTransactionTracker reconciledTxTracker, PanicService panicService )
     {
         super( globalModule, databaseManager, reconciledTxTracker );
         this.txEventService = txEventService;
         this.internalOperator = internalOperator;
         this.stateStorageFactory = stateStorageFactory;
+        this.panicService = panicService;
         //TODO: don't need if we do end up injecting
         globalModule.getGlobalDependencies().satisfyDependencies( internalOperator );
     }
@@ -49,6 +52,6 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     protected ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager )
     {
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
-                globalModule.getJobScheduler(), stateStorageFactory );
+                globalModule.getJobScheduler(), stateStorageFactory, panicService );
     }
 }

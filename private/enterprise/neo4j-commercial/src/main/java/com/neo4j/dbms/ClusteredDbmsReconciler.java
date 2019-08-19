@@ -7,6 +7,7 @@ package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.io.IOException;
@@ -34,14 +35,16 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     private final ClusteredMultiDatabaseManager databaseManager;
     private final LogProvider logProvider;
     private final ClusterStateStorageFactory stateStorageFactory;
+    private final PanicService panicService;
 
     ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
-            ClusterStateStorageFactory stateStorageFactory )
+            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
     {
         super( databaseManager, config, logProvider, scheduler );
         this.databaseManager = databaseManager;
         this.logProvider = logProvider;
         this.stateStorageFactory = stateStorageFactory;
+        this.panicService = panicService;
     }
 
     @Override
@@ -103,6 +106,13 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
                 .build();
 
         return standaloneTransitions.extendWith( clusteredTransitions );
+    }
+
+    @Override
+    protected void panicDatabase( DatabaseId databaseId, Throwable error )
+    {
+        var databasePanicker = panicService.panickerFor( databaseId );
+        databasePanicker.panic( error );
     }
 
     /* Operator Steps */

@@ -11,12 +11,12 @@ import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
-import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -53,8 +53,8 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
 import com.neo4j.dbms.ReplicatedTransactionEventListeners;
+import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
@@ -324,7 +324,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( databaseManager );
 
         var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
-                storageFactory, reconciledTxTracker );
+                storageFactory, reconciledTxTracker, panicService );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );
 
