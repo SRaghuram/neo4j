@@ -6,7 +6,6 @@
 package com.neo4j.dbms;
 
 import java.util.Objects;
-import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -15,16 +14,16 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public class ReconcilerRequest
 {
-    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( false, Set.of() );
-    private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, Set.of() );
+    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( false, null );
+    private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, null );
 
     private final boolean forceReconciliation;
-    private final Set<DatabaseId> databasesToFailAfterReconciliation;
+    private final DatabaseId panickedDatabaseId;
 
-    private ReconcilerRequest( boolean forceReconciliation, Set<DatabaseId> databasesToFailAfterReconciliation )
+    private ReconcilerRequest( boolean forceReconciliation, DatabaseId panickedDatabaseId )
     {
         this.forceReconciliation = forceReconciliation;
-        this.databasesToFailAfterReconciliation = databasesToFailAfterReconciliation;
+        this.panickedDatabaseId = panickedDatabaseId;
     }
 
     /**
@@ -52,9 +51,9 @@ public class ReconcilerRequest
      *
      * @return a reconciler request.
      */
-    public static ReconcilerRequest reconcileAndFail( DatabaseId databaseId )
+    public static ReconcilerRequest forPanickedDatabase( DatabaseId databaseId )
     {
-        return new ReconcilerRequest( false, Set.of( databaseId ) );
+        return new ReconcilerRequest( false, databaseId );
     }
 
     /**
@@ -68,13 +67,13 @@ public class ReconcilerRequest
     }
 
     /**
-     * Whether or not the given database should be marked as failed in {@link DatabaseReconcilerState} after the reconciliation attempt.
+     * Whether or not the given database panicked and should be marked as failed in {@link DatabaseReconcilerState} after the reconciliation attempt.
      *
      * @return {@code true} if the state should be failed, {@code false} otherwise.
      */
-    boolean shouldFailAfterReconciliation( DatabaseId databaseId )
+    boolean databasePanicked( DatabaseId databaseId )
     {
-        return databasesToFailAfterReconciliation.contains( databaseId );
+        return panickedDatabaseId != null && panickedDatabaseId.equals( databaseId );
     }
 
     @Override
@@ -90,13 +89,13 @@ public class ReconcilerRequest
         }
         var that = (ReconcilerRequest) o;
         return forceReconciliation == that.forceReconciliation &&
-               Objects.equals( databasesToFailAfterReconciliation, that.databasesToFailAfterReconciliation );
+               Objects.equals( panickedDatabaseId, that.panickedDatabaseId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( forceReconciliation, databasesToFailAfterReconciliation );
+        return Objects.hash( forceReconciliation, panickedDatabaseId );
     }
 
     @Override
@@ -104,7 +103,7 @@ public class ReconcilerRequest
     {
         return "ReconcilerRequest{" +
                "forceReconciliation=" + forceReconciliation +
-               ", databasesToFailAfterReconciliation=" + databasesToFailAfterReconciliation +
+               ", panickedDatabaseId=" + panickedDatabaseId +
                '}';
     }
 }

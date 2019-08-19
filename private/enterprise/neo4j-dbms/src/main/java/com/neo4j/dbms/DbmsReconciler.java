@@ -293,7 +293,7 @@ public class DbmsReconciler
             // preserve the current failed state
             return true;
         }
-        return request.shouldFailAfterReconciliation( databaseId );
+        return request.databasePanicked( databaseId );
     }
 
     private void releaseLockOn( String databaseName )

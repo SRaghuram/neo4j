@@ -185,7 +185,7 @@ class ClusterInternalDbmsOperatorTest
 
         // then
         assertEquals( STOPPED, desiredStateOnTrigger.get() );
-        verify( connector ).trigger( ReconcilerRequest.reconcileAndFail( someDb ) );
+        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb ) );
     }
 
     @Test
@@ -216,7 +216,7 @@ class ClusterInternalDbmsOperatorTest
         storeCopyHandle.restart();
 
         // then
-        verify( connector ).trigger( ReconcilerRequest.reconcileAndFail( someDb ) );
+        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb ) );
     }
 
     private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<OperatorState> stateRef )

@@ -92,7 +92,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     public synchronized void stopOnPanic( DatabaseId databaseId )
     {
         panicked.add( databaseId );
-        var reconciliation = trigger( ReconcilerRequest.reconcileAndFail( databaseId ) );
+        var reconciliation = trigger( ReconcilerRequest.forPanickedDatabase( databaseId ) );
         reconciliation.whenComplete( () -> panicked.remove( databaseId ) );
     }
 
