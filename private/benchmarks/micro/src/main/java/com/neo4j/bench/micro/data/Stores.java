@@ -174,7 +174,7 @@ public class Stores
 
         try
         {
-            new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfig );
+            new DataGenerator( storesDir.toFile(), config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfig );
         }
         catch ( Exception e )
         {

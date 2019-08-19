@@ -10,6 +10,7 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +42,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
+
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
@@ -169,9 +172,11 @@ public class DataGenerator
     private final RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
     private final LabelKeyDefinition[] fulltextNodeSchemaIndexes;
     private final RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes;
+    private final File outputDir;
 
-    public DataGenerator( DataGeneratorConfig config )
+    public DataGenerator( File outputDir, DataGeneratorConfig config )
     {
+        this.outputDir = Objects.requireNonNull( outputDir, "generator output directory cannot be null" );
         this.shuffleRng = new Random( config.rngSeed() );
         this.rng = RNGState.newRandom( config.rngSeed() );
         this.nodes = config.nodeCount();
@@ -680,7 +685,7 @@ public class DataGenerator
 
     private Path createRelationshipIdsFile() throws IOException
     {
-        Path relationshipIdsFile = Paths.get( RELATIONSHIP_ID_FILENAME );
+        Path relationshipIdsFile = outputDir.toPath().resolve( RELATIONSHIP_ID_FILENAME );
         if ( relationshipIdsFile.toFile().exists() )
         {
             FileUtils.deleteRecursively( relationshipIdsFile.toFile() );

@@ -12,6 +12,7 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,7 +38,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.BATCH;
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
@@ -47,17 +47,20 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.number.IsCloseTo.closeTo;
 
+import static java.lang.String.format;
+
 public class DataGeneratorTestUtil
 {
     private static final Path NEO4J_CONFIG = Paths.get( "neo4j.config" );
 
     static void assertGraphStatsAreConsistentWithBuilderConfiguration(
+            File generatorOutputDir,
             Store store,
             DataGeneratorConfigBuilder builder,
             double percentageTolerance ) throws IOException
     {
         DataGeneratorConfig config = builder.build();
-        DataGenerator generator = new DataGenerator( config );
+        DataGenerator generator = new DataGenerator( generatorOutputDir, config );
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );
