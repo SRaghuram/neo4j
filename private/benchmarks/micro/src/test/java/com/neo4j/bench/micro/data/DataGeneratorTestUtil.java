@@ -12,7 +12,6 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
