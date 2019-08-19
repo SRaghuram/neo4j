@@ -54,13 +54,12 @@ public class DataGeneratorTestUtil
     private static final Path NEO4J_CONFIG = Paths.get( "neo4j.config" );
 
     static void assertGraphStatsAreConsistentWithBuilderConfiguration(
-            File generatorOutputDir,
             Store store,
             DataGeneratorConfigBuilder builder,
             double percentageTolerance ) throws IOException
     {
         DataGeneratorConfig config = builder.build();
-        DataGenerator generator = new DataGenerator( generatorOutputDir, config );
+        DataGenerator generator = new DataGenerator( config );
         System.out.println( config.toString() );
 
         BenchmarkUtil.forceRecreateFile( NEO4J_CONFIG );

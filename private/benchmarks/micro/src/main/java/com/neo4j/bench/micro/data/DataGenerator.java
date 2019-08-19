@@ -10,17 +10,16 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +41,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
+import static org.apache.commons.io.FileUtils.deleteDirectory;
 
 import static java.lang.String.format;
 import static java.lang.String.join;
@@ -172,11 +172,9 @@ public class DataGenerator
     private final RelationshipKeyDefinition[] mandatoryRelationshipConstraints;
     private final LabelKeyDefinition[] fulltextNodeSchemaIndexes;
     private final RelationshipKeyDefinition[] fulltextRelationshipSchemaIndexes;
-    private final File outputDir;
 
-    public DataGenerator( File outputDir, DataGeneratorConfig config )
+    public DataGenerator( DataGeneratorConfig config )
     {
-        this.outputDir = Objects.requireNonNull( outputDir, "generator output directory cannot be null" );
         this.shuffleRng = new Random( config.rngSeed() );
         this.rng = RNGState.newRandom( config.rngSeed() );
         this.nodes = config.nodeCount();
@@ -234,22 +232,45 @@ public class DataGenerator
     void generate( Store store, Path neo4jConfig )
     {
         Instant startTime = Instant.now();
-        switch ( graphWriter )
+        try
         {
-        case TRANSACTIONAL:
-            innerTransactionalLastPhase( store, neo4jConfig, innerTransactionalFirstPhase( store, neo4jConfig ) );
-            break;
-        case BATCH:
-            innerTransactionalLastPhase( store, neo4jConfig, innerBatchFirstPhase( store, neo4jConfig ) );
-            break;
-        default:
-            throw new RuntimeException( "Unrecognized graph writer: " + graphWriter );
+            Path outputDir = Files.createTempDirectory( store.topLevelDirectory(), "generator" );
+            try
+            {
+                switch ( graphWriter )
+                {
+                case TRANSACTIONAL:
+                    innerTransactionalLastPhase(
+                            store,
+                            neo4jConfig,
+                            innerTransactionalFirstPhase( store, neo4jConfig, outputDir ),
+                            outputDir );
+                    break;
+                case BATCH:
+                    innerTransactionalLastPhase(
+                            store,
+                            neo4jConfig,
+                            innerBatchFirstPhase( store, neo4jConfig, outputDir ),
+                            outputDir );
+                    break;
+                default:
+                    throw new RuntimeException( "Unrecognized graph writer: " + graphWriter );
+                }
+            }
+            finally
+            {
+                deleteDirectory( outputDir.toFile() );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "failed to generate data", e );
         }
         Instant finishTime = Instant.now();
         System.out.println( "Generated store in: " + durationToString( Duration.between( startTime, finishTime ) ) );
     }
 
-    private long[] innerBatchFirstPhase( Store store, Path neo4jConfig )
+    private long[] innerBatchFirstPhase( Store store, Path neo4jConfig, Path outputDir )
     {
         BatchInserter inserter = null;
         try
@@ -267,17 +288,17 @@ public class DataGenerator
             startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
-                    .of( createRelationshipTypeIndexFiles() )
+                    .of( createRelationshipTypeIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            IntFileReader relationshipIds = createRelationshipsBatch( inserter, nodeIds, relationshipTypeIndexes );
+            IntFileReader relationshipIds = createRelationshipsBatch( inserter, nodeIds, relationshipTypeIndexes, outputDir );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
             startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
-                    .of( createNodePropertyIndexFiles() )
+                    .of( createNodePropertyIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
@@ -291,7 +312,7 @@ public class DataGenerator
             System.out.printf( "Creating Temporary Relationship Property Files... " );
             startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
-                    .of( createRelationshipPropertyIndexFiles() )
+                    .of( createRelationshipPropertyIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
@@ -320,7 +341,7 @@ public class DataGenerator
         }
     }
 
-    private long[] innerTransactionalFirstPhase( Store store, Path neo4jConfig )
+    private long[] innerTransactionalFirstPhase( Store store, Path neo4jConfig, Path outputDir )
     {
         GraphDatabaseService db = null;
         try
@@ -337,17 +358,17 @@ public class DataGenerator
             startTime = Instant.now();
             System.out.printf( "Creating Relationships... " );
             IntFileReader[] relationshipTypeIndexes = Stream
-                    .of( createRelationshipTypeIndexFiles() )
+                    .of( createRelationshipTypeIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
-            IntFileReader relationshipIds = createRelationshipsTx( db, nodeIds, relationshipTypeIndexes );
+            IntFileReader relationshipIds = createRelationshipsTx( db, nodeIds, relationshipTypeIndexes, outputDir );
             deleteIntFileReaderFiles( relationshipTypeIndexes );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
 
             System.out.printf( "Creating Temporary Node Property Files... " );
             startTime = Instant.now();
             IntFileReader[] nodePropertyIndexes = Stream
-                    .of( createNodePropertyIndexFiles() )
+                    .of( createNodePropertyIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
@@ -361,7 +382,7 @@ public class DataGenerator
             System.out.printf( "Creating Temporary Relationship Property Files... " );
             startTime = Instant.now();
             IntFileReader[] relationshipPropertyIndexes = Stream
-                    .of( createRelationshipPropertyIndexFiles() )
+                    .of( createRelationshipPropertyIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
@@ -390,7 +411,7 @@ public class DataGenerator
         }
     }
 
-    private void innerTransactionalLastPhase( Store store, Path neo4jConfig, long[] nodeIds )
+    private void innerTransactionalLastPhase( Store store, Path neo4jConfig, long[] nodeIds, Path outputDir )
     {
         GraphDatabaseService db = null;
         try
@@ -400,7 +421,7 @@ public class DataGenerator
             System.out.printf( "Creating Temporary Node Label Files... " );
             Instant startTime = Instant.now();
             IntFileReader[] nodeLabelIndexes = Stream
-                    .of( createNodeLabelIndexFiles() )
+                    .of( createNodeLabelIndexFiles( outputDir ) )
                     .map( IntFileReader::new )
                     .toArray( IntFileReader[]::new );
             System.out.println( durationToString( Duration.between( startTime, Instant.now() ) ) );
@@ -508,14 +529,15 @@ public class DataGenerator
     private IntFileReader createRelationshipsTx(
             GraphDatabaseService db,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
         switch ( relationshipLocality )
         {
         case SCATTERED_BY_START_NODE:
-            return createRelationshipsScatteredByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders );
+            return createRelationshipsScatteredByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders, outputDir );
         case CO_LOCATED_BY_START_NODE:
-            return createRelationshipsCollocatedByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders );
+            return createRelationshipsCollocatedByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders, outputDir );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
                                                         relationshipLocality.name(),
@@ -526,14 +548,15 @@ public class DataGenerator
     private IntFileReader createRelationshipsBatch(
             BatchInserter inserter,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
         switch ( relationshipLocality )
         {
         case SCATTERED_BY_START_NODE:
-            return createRelationshipsScatteredByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders );
+            return createRelationshipsScatteredByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders, outputDir );
         case CO_LOCATED_BY_START_NODE:
-            return createRelationshipsCollocatedByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders );
+            return createRelationshipsCollocatedByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders, outputDir );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
                                                         relationshipLocality.name(),
@@ -544,11 +567,12 @@ public class DataGenerator
     private IntFileReader createRelationshipsScatteredByStartNodeTx(
             GraphDatabaseService db,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
         int txStateCounter = 0;
         Transaction tx = db.beginTx();
-        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile() ) )
+        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile( outputDir ) ) )
         {
             // NOTE: do not assume ID space is continuous and monotonically increasing --> node ID array is required
             for ( int position = 0; position < relationshipTypeIndexReaders.length; position++ )
@@ -585,9 +609,10 @@ public class DataGenerator
     private IntFileReader createRelationshipsScatteredByStartNodeBatch(
             BatchInserter inserter,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
-        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile() ) )
+        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile( outputDir ) ) )
         {
             // NOTE: do not assume ID space is continuous and monotonically increasing --> node ID array is required
             for ( int position = 0; position < relationshipTypeIndexReaders.length; position++ )
@@ -615,11 +640,12 @@ public class DataGenerator
     private IntFileReader createRelationshipsCollocatedByStartNodeTx(
             GraphDatabaseService db,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
         int txStateCounter = 0;
         Transaction tx = db.beginTx();
-        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile() ) )
+        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile( outputDir ) ) )
         {
             for ( int n = 0; n < nodes; n++ )
             {
@@ -656,9 +682,10 @@ public class DataGenerator
     private IntFileReader createRelationshipsCollocatedByStartNodeBatch(
             BatchInserter inserter,
             long[] nodeIds,
-            IntFileReader[] relationshipTypeIndexReaders ) throws Exception
+            IntFileReader[] relationshipTypeIndexReaders,
+            Path outputDir ) throws Exception
     {
-        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile() ) )
+        try ( IntFileWriter relationshipIdsWriter = new IntFileWriter( createRelationshipIdsFile( outputDir ) ) )
         {
             for ( int n = 0; n < nodes; n++ )
             {
@@ -683,9 +710,9 @@ public class DataGenerator
         }
     }
 
-    private Path createRelationshipIdsFile() throws IOException
+    private Path createRelationshipIdsFile( Path outputDir ) throws IOException
     {
-        Path relationshipIdsFile = outputDir.toPath().resolve( RELATIONSHIP_ID_FILENAME );
+        Path relationshipIdsFile = outputDir.resolve( RELATIONSHIP_ID_FILENAME );
         if ( relationshipIdsFile.toFile().exists() )
         {
             FileUtils.deleteRecursively( relationshipIdsFile.toFile() );
@@ -697,43 +724,47 @@ public class DataGenerator
         return relationshipIdsFile;
     }
 
-    private Path[] createNodePropertyIndexFiles() throws Exception
+    private Path[] createNodePropertyIndexFiles( Path outputDir ) throws Exception
     {
         return createArrayIndexFiles(
                 nodePropertyValues.length,
                 NODE_PROPERTY_INDEX_FILENAME_PREFIX,
                 nodes,
-                propertyOrder );
+                propertyOrder,
+                outputDir );
     }
 
-    private Path[] createRelationshipTypeIndexFiles() throws Exception
+    private Path[] createRelationshipTypeIndexFiles( Path outputDir ) throws Exception
     {
         return createArrayIndexFiles(
                 outRelationshipTypes.length,
                 RELATIONSHIP_TYPE_INDEX_FILENAME_PREFIX,
                 relationshipCount(),
-                relationshipOrder );
+                relationshipOrder,
+                outputDir  );
     }
 
-    private Path[] createRelationshipPropertyIndexFiles() throws Exception
+    private Path[] createRelationshipPropertyIndexFiles( Path outputDir ) throws Exception
     {
         return createArrayIndexFiles(
                 relationshipPropertyValues.length,
                 RELATIONSHIP_PROPERTY_INDEX_FILENAME_PREFIX,
                 relationshipCount(),
-                propertyOrder );
+                propertyOrder,
+                outputDir );
     }
 
-    private Path[] createNodeLabelIndexFiles() throws Exception
+    private Path[] createNodeLabelIndexFiles( Path outputDir ) throws Exception
     {
         return createArrayIndexFiles(
                 labels.length,
                 NODE_LABEL_INDEX_FILENAME_PREFIX,
                 nodes,
-                labelOrder );
+                labelOrder,
+                outputDir );
     }
 
-    private Path[] createArrayIndexFiles( int arrayLength, String pathPrefix, int lines, Order order ) throws Exception
+    private Path[] createArrayIndexFiles( int arrayLength, String pathPrefix, int lines, Order order, Path outputDir ) throws Exception
     {
         final Integer[] indexes = IntStream.range( 0, arrayLength ).boxed().toArray( Integer[]::new );
         final List<Integer> indexesList = Arrays.asList( indexes );
@@ -741,7 +772,7 @@ public class DataGenerator
 
         for ( int i = 0; i < indexes.length; i++ )
         {
-            Path path = Paths.get( pathPrefix + i );
+            Path path = outputDir.resolve( pathPrefix + i );
             BenchmarkUtil.forceRecreateFile( path );
             intFileWriters[i] = new IntFileWriter( path );
         }

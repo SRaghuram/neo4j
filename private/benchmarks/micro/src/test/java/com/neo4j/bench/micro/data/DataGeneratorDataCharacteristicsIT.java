@@ -72,7 +72,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -99,7 +99,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -130,7 +130,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -194,7 +194,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -258,7 +258,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -323,7 +323,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -365,7 +365,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.absolutePath(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -406,7 +406,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -435,7 +435,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -464,7 +464,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -504,7 +504,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -544,7 +544,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -584,7 +584,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -624,7 +624,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -660,7 +660,7 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 
     @Test
@@ -695,6 +695,6 @@ class DataGeneratorDataCharacteristicsIT
 
         // Then
 
-        assertGraphStatsAreConsistentWithBuilderConfiguration( temporaryFolder.directory(), store, builder, TOLERANCE );
+        assertGraphStatsAreConsistentWithBuilderConfiguration( store, builder, TOLERANCE );
     }
 }
