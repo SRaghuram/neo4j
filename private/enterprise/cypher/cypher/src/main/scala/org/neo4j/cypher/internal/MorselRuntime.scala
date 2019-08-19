@@ -174,7 +174,10 @@ class MorselRuntime(parallelExecution: Boolean,
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
 
-    override def totalAllocatedMemory(): Optional[lang.Long] = _memoryTracker.totalAllocatedMemory
+    override def totalAllocatedMemory(): Optional[lang.Long] = {
+      ensureQuerySubscription()
+      _memoryTracker.totalAllocatedMemory
+    }
 
     override def consumptionState: RuntimeResult.ConsumptionState =
       if (querySubscription == null) ConsumptionState.NOT_STARTED
