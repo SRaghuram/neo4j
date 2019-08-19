@@ -3776,14 +3776,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 class CompiledExpressionsIT extends ExpressionsIT {
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-       defaultGenerator(slots, false).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+       defaultGenerator(slots, readOnly = false).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
-     override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-       defaultGenerator(slots, false).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
-
+  override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
+       defaultGenerator(slots, readOnly = false).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    defaultGenerator(slots, false).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+    defaultGenerator(slots, readOnly = false).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 

@@ -1268,7 +1268,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case property@SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, entityType) =>
+    case property@SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, _, entityType) =>
       if (token == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
         IntermediateExpression(noValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       else {
@@ -2735,7 +2735,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
-    case property@SlottedCachedPropertyWithPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
+    case property@SlottedCachedPropertyWithPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType) =>
       if (prop == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
         IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       else {
@@ -2798,7 +2798,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                     requireNullCheck = false))
       }
 
-    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, propertyOffset, entityType) =>
+    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val existsVariable = namer.nextVariableName()
       val propertyVariable = namer.nextVariableName()
@@ -2810,7 +2810,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
         else {
           block(
             declareAndAssign(typeRefOf[Optional[java.lang.Boolean]], hasChanges,
-                             invoke(DB_ACCESS, txStateHasCachedProperty, entityId, constant(prop))),
+                             invoke(DB_ACCESS, txStateHasCachedProperty, entityId, loadField(f))),
             ifElse(invoke(load(hasChanges), method[Optional[_], Boolean]("isEmpty")))(onNoChanges)(
               assign(existsVariable,
                      ternary(unbox(cast[java.lang.Boolean](
