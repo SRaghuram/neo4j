@@ -17,7 +17,9 @@ trait WorkersQueryProfiler {
 }
 
 object WorkersQueryProfiler {
-  val NONE: WorkersQueryProfiler = (workerId: Int) => QueryProfiler.NONE
+  object NONE extends WorkersQueryProfiler {
+    override def queryProfiler(workerId: Int): QueryProfiler = QueryProfiler.NONE
+  }
 }
 
 /**
