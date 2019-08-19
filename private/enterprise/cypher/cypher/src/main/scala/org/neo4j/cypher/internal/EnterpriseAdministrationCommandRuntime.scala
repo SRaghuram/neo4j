@@ -76,21 +76,28 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.EMPTY_MAP
       )
 
-    // CREATE USER [IF NOT EXISTS] foo SET PASSWORD password
-    case CreateUser(userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional, allowExistingUser) => (_, _, _) =>
+    // CREATE [OR REPLACE] USER [IF NOT EXISTS] foo SET PASSWORD password
+    case CreateUser(userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional, replace, allowExistingUser) => (_, _, _) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
-        val query = if (allowExistingUser) {
+        val query = if (replace) {
+          """OPTIONAL MATCH (old:User {name: $name})
+            |DETACH DELETE old
+            |
+            |CREATE (new:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
+            |RETURN new.name
+          """.stripMargin
+        } else if (allowExistingUser) {
           """MERGE (u:User {name: $name})
             |ON CREATE SET u.credentials = $credentials, u.passwordChangeRequired = $passwordChangeRequired, u.suspended = $suspended
             |RETURN u.name""".stripMargin
         } else {
+          // NOTE: If username already exists we will violate a constraint
           """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
             |RETURN u.name""".stripMargin
         }
 
-        // NOTE: If username already exists we will violate a constraint
         UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine, query,
           VirtualValues.map(
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
@@ -192,23 +199,31 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
       }
 
-    // CREATE ROLE [IF NOT EXISTS] foo AS COPY OF bar
-    case CreateRole(source, roleName, allowExistingRole) => (context, parameterMapping, securityContext) =>
-      val query = if (allowExistingRole) {
+    // CREATE [OR REPLACE] ROLE [IF NOT EXISTS] foo AS COPY OF bar
+    case CreateRole(source, roleName, replace, allowExistingRole) => (context, parameterMapping, securityContext) =>
+      val query = if (replace) {
         """
-          |MERGE (new:Role {name: $new})
+          |OPTIONAL MATCH (old:Role {name: $name})
+          |DETACH DELETE old
+          |
+          |CREATE (new:Role {name: $name, justCreated: true})
+          |RETURN new.name
+        """.stripMargin
+      } else if (allowExistingRole) {
+        """
+          |MERGE (new:Role {name: $name})
           |ON CREATE SET new.justCreated = true
           |ON MATCH SET new.justCreated = false
           |RETURN new.name
         """.stripMargin
       } else {
         """
-          |CREATE (new:Role {name: $new, justCreated: true})
+          |CREATE (new:Role {name: $name, justCreated: true})
           |RETURN new.name
         """.stripMargin
       }
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine, query,
-        VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
+        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
           .handleError(error => (error, error.getCause) match {
@@ -426,8 +441,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         "MATCH (d:Database {name: $name}) RETURN d.name as name, d.status as status, d.default as default",
         VirtualValues.map(Array("name"), Array(Values.stringValue(normalizedName.name))))
 
-    // CREATE DATABASE [IF NOT EXISTS] foo
-    case CreateDatabase(normalizedName, allowExistingDatabase) => (_, _, _) =>
+    // CREATE [OR REPLACE] DATABASE [IF NOT EXISTS] foo
+    case CreateDatabase(normalizedName, replace, allowExistingDatabase) => (_, _, _) =>
       val dbName = normalizedName.name
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
       val default = dbName.equals(defaultDbName)
@@ -464,32 +479,54 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case None => ("",VirtualValues.map(virtualKeys, virtualValues))
       }
 
-      val queryPart = if (allowExistingDatabase) {
-        """MERGE (d:Database {name: $name})
-          |ON CREATE SET
+      val queryPart = if (replace) {
+        """
+          |OPTIONAL MATCH (old:Database {name: $name})
+          |
+          |// the following basically acts as an "if" clause
+          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases OR (old IS NOT NULL AND numberOfDatabases <= $maxNumberOfDatabases) THEN [1] ELSE [] END |
+          |  REMOVE old:Database
+          |  SET old:DeletedDatabase
+          |  SET old.deleted_at = datetime()
+          |
+          |  CREATE (d:Database {name: $name})
+          |  SET
           |  d.status = $status,
           |  d.default = $default,
           |  d.created_at = datetime(),
           |  d.uuid = randomUUID()
+          |)
+        """.stripMargin
+      } else if (allowExistingDatabase) {
+        """// the following basically acts as an "if" clause
+          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
+          |  MERGE (d:Database {name: $name})
+          |  ON CREATE SET
+          |  d.status = $status,
+          |  d.default = $default,
+          |  d.created_at = datetime(),
+          |  d.uuid = randomUUID()
+          |)
         """.stripMargin
       } else {
-        """CREATE (d:Database {name: $name})
-          |SET
+        """// the following basically acts as an "if" clause
+          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
+          |  CREATE (d:Database {name: $name})
+          |  SET
           |  d.status = $status,
           |  d.default = $default,
           |  d.created_at = datetime(),
           |  d.uuid = randomUUID()
+          |)
         """.stripMargin
       }
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         s"""MATCH (d:Database)
           |WITH count(d) as numberOfDatabases
           |
-          |// the following basically acts as an "if" clause
-          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $$maxNumberOfDatabases THEN [1] ELSE [] END |
-          |  $queryPart
-          |  $queryAdditions
-          |)
+          |$queryPart
+          |$queryAdditions
+          |
           |WITH "ignoreMe" as ignore
           |MATCH (d:Database {name: $$name})
           |RETURN d.name as name, d.status as status, d.uuid as uuid""".stripMargin,

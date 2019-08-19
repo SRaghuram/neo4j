@@ -627,6 +627,63 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   }
 
+  test("should replace existing database (even with max number of databases reached)") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    setup(config)
+    execute("SHOW DATABASES").toList.size should equal(2)
+
+    // WHEN: creation
+    execute("CREATE OR REPLACE DATABASE `foo`")
+    execute("STOP DATABASE foo")
+
+    // THEN
+    execute("SHOW DATABASE `foo`").toList should be(List(Map("name" -> "foo", "status" -> offlineStatus, "default" -> false)))
+    execute("SHOW DATABASES").toList.size should equal(3)
+
+    // WHEN: replacing
+    execute("CREATE OR REPLACE DATABASE `foo`")
+
+    // THEN
+    execute("SHOW DATABASE `foo`").toList should be(List(Map("name" -> "foo", "status" -> onlineStatus, "default" -> false)))
+    execute("SHOW DATABASES").toList.size should equal(3)
+  }
+
+  test("should replace default database") {
+    // GIVEN
+    setup(defaultConfig)
+    execute("SHOW DATABASES").toList.size should equal(2)
+    execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(Map("name" -> DEFAULT_DATABASE_NAME, "status" -> offlineStatus, "default" -> true)))
+
+    // WHEN
+    execute(s"CREATE OR REPLACE DATABASE $DEFAULT_DATABASE_NAME")
+
+    // THEN
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(Map("name" -> DEFAULT_DATABASE_NAME, "status" -> onlineStatus, "default" -> true)))
+    execute("SHOW DATABASES").toList.size should equal(2)
+  }
+
+  test("should fail to create database when max number of databases reached using replace") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L) )
+    setup(config)
+    execute("SHOW DATABASES").toList.size should equal(2)
+
+    the[DatabaseLimitReachedException] thrownBy {
+      // WHEN
+      execute("CREATE OR REPLACE DATABASE `foo`")
+      // THEN
+    } should have message "Failed to create the specified database 'foo': The total limit of databases is already reached. " +
+      "To create more you need to either drop databases or change the limit via the config setting 'dbms.max_databases'"
+
+    // THEN
+    execute("SHOW DATABASES").toList.size should equal(2)
+    execute("SHOW DATABASE `foo`").toList should be(List.empty)
+  }
+
   test("should fail when creating a database when not on system database") {
     setup(defaultConfig)
     selectDatabase(DEFAULT_DATABASE_NAME)

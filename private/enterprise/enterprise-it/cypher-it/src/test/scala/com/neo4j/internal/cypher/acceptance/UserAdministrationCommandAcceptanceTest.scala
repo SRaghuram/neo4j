@@ -317,6 +317,28 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
   }
 
+  test("should replace existing user") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+
+    // WHEN: creation
+    execute("CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "firstPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+
+    // WHEN: replacing
+    execute("CREATE OR REPLACE USER bar SET PASSWORD 'secondPassword'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    testUserLogin("bar", "firstPassword", AuthenticationResult.FAILURE)
+    testUserLogin("bar", "secondPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   test("should fail when creating user when not on system database") {
     the[DatabaseAdministrationException] thrownBy {
       // WHEN

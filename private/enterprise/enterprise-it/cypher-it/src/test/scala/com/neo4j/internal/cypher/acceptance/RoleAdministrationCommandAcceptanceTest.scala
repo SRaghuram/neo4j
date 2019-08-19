@@ -206,6 +206,25 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
 
+  test("should replace already existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+
+    // WHEN: creation
+    execute("CREATE OR REPLACE ROLE foo")
+    execute("GRANT ROLE foo TO neo4j")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(Map("role" -> "foo", "isBuiltIn" -> false, "member" -> "neo4j")))
+
+    // WHEN: replacing
+    execute("CREATE OR REPLACE ROLE foo")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(Map("role" -> "foo", "isBuiltIn" -> false, "member" -> null)))
+  }
+
   test("should fail when creating role with invalid name") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -275,6 +294,31 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
     execute("SHOW ROLE foo PRIVILEGES").toSet should be(expectedFoo)
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(expectedBar)
+  }
+
+  test("should replace role and copy privileges from existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE base1")
+    execute("CREATE ROLE base2")
+    val baseRoles = Set(Map("role" -> "base1", "isBuiltIn" -> false), Map("role" -> "base2", "isBuiltIn" -> false))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO base1")
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO base2")
+
+    // WHEN: creation
+    execute("CREATE OR REPLACE ROLE bar AS COPY OF base1")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(bar))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("A").map))
+
+    // WHEN: replacing
+    execute("CREATE OR REPLACE ROLE bar AS COPY OF base2")
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(bar))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("B").map))
   }
 
   test("should fail when creating from non-existing role") {
