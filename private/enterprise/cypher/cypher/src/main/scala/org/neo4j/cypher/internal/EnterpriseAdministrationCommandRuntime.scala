@@ -37,6 +37,7 @@ import org.neo4j.values.virtual.VirtualValues
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
   val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
+  private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   override def name: String = "enterprise administration-commands"
 
@@ -51,7 +52,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // Either the logical plan is a command that the partial function logicalToExecutable provides/understands OR we delegate to communitys version of it (which supports common things like procedures)
     // If neither we throw an error
-    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, securityContext)
+    fullLogicalToExecutable.applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, securityContext)
   }
 
   private lazy val authManager = {
@@ -68,7 +69,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.EMPTY_MAP
       )
 
-    // CREATE USER foo WITH PASSWORD password
+    // CREATE USER foo SET PASSWORD password
     case CreateUser(userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional) => (_, _, _) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
@@ -93,18 +94,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         // Clear password
         if (initialPassword != null) util.Arrays.fill(initialPassword, 0.toByte)
       }
-
-    // DROP USER foo
-    case DropUser(userName) => (_, _, securityContext) =>
-      if (securityContext.subject().hasUsername(userName)) throw new InvalidArgumentsException(s"Failed to delete the specified user '$userName': Deleting yourself is not allowed.")
-      UpdatingSystemCommandExecutionPlan("DropUser", normalExecutionEngine,
-        """MATCH (user:User {name: $name}) DETACH DELETE user
-          |RETURN user""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(userName))),
-        QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified user '$userName': User does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified user '$userName'.", e))
-      )
 
     // ALTER USER foo
     case AlterUser(userName, initialPassword, None, requirePasswordChange, suspended) => (_, _, _) =>
@@ -149,38 +138,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case AlterUser(userName, _, Some(_), _, _) =>
       throw new IllegalStateException(s"Failed to alter the specified user '$userName': Did not resolve parameters correctly.")
 
-    // ALTER CURRENT USER SET PASSWORD FROM 'currentPassword' TO 'newPassword'
-    case SetOwnPassword(Some(newPassword), None, Some(currentPassword), None) => (_, _, securityContext) =>
-      // Needs to be in both community and enterprise since enterprise needs to clear the user cache
-      val query =
-        """MATCH (user:User {name: $name})
-          |WITH user, user.credentials AS oldCredentials
-          |SET user.credentials = $credentials
-          |SET user.passwordChangeRequired = false
-          |RETURN oldCredentials""".stripMargin
-      val currentUser = securityContext.subject().username()
-
-      UpdatingSystemCommandExecutionPlan("AlterCurrentUserSetPassword", normalExecutionEngine,
-        query,
-        VirtualValues.map(Array("name", "credentials"),
-          Array(Values.stringValue(currentUser),
-            Values.stringValue(authManager.createCredentialForPassword(validatePassword(newPassword)).serialize()))),
-        QueryHandler
-          .handleError(e => new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password.", e))
-          .handleResult((_, value) => {
-            val maybeThrowable = {
-              val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
-              if (!oldCredentials.matchesPassword(currentPassword))
-                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password: Invalid principal or credentials."))
-              else if (oldCredentials.matchesPassword(newPassword))
-                Some(new InvalidArgumentsException(s"User '$currentUser' failed to alter their own password: Old password and new password cannot be the same."))
-              else
-                None
-            }
-            maybeThrowable
-          })
-      )
-
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(withUsers, showAll) => (_, _, _) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
@@ -221,7 +178,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified role '$roleName'.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", e)),
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to split the requirement from the source role before copying privileges
@@ -231,7 +188,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler.handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist."))),
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // COPY PRIVILEGES FROM role1 TO role2
@@ -244,7 +201,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
         QueryHandler.handleError(e => new InvalidArgumentsException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // DROP ROLE foo
@@ -270,7 +227,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         QueryHandler
           .handleNoResult(() =>  Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
           .handleError(e => new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)),
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // REVOKE ROLE foo FROM user
@@ -284,47 +241,47 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler.handleNoResult(() => None),
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName':")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName':")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName':")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName':")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName':")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName':")
 
     // GRANT/DENY/REVOKE WRITE {*} ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName':")
 
     case DenyWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName':")
 
     case RevokeWrite(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName':")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _, _) =>
@@ -449,7 +406,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
         QueryHandler.handleResult((_, _) => None), // TODO: clean up this
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // START DATABASE foo
@@ -490,7 +447,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           )
         ),
         new QueryHandler,
-        source.map(logicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to check whether a database is present and not the system database,
@@ -514,7 +471,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // Used to log commands
     case LogSystemCommand(source, command) => (context, parameterMapping, securityContext) =>
       LoggingSystemCommandExecutionPlan(
-        logicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext),
+        fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext),
         command,
         securityContext,
         (message, securityContext) => authManager.log(message, securityContext)
