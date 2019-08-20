@@ -37,6 +37,7 @@
         <module>metrics-it</module>
         <module>index-it</module>
         <module>commercial-it</module>
+        <module>fabric-it</module>
     </modules>
 
     <profiles>

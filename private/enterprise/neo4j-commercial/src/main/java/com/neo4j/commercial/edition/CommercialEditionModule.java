@@ -14,6 +14,10 @@ import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
+import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
+import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
@@ -21,7 +25,6 @@ import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
-import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -29,9 +32,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
-import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -61,6 +64,7 @@ import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.DelegatingTokenHolder;
@@ -76,14 +80,22 @@ public class CommercialEditionModule extends CommunityEditionModule implements A
 {
     private final GlobalModule globalModule;
     private final ReconciledTransactionTracker reconciledTxTracker;
+    private final FabricDatabaseManager fabricDatabaseManager;
 
     public CommercialEditionModule( GlobalModule globalModule )
+    {
+        this( globalModule, globalModule.getGlobalDependencies() );
+    }
+
+    public CommercialEditionModule( GlobalModule globalModule, Dependencies dependencies  )
     {
         super( globalModule );
         this.globalModule = globalModule;
         satisfyCommercialOnlyDependencies( this.globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
+        new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies );
+        fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
     }
 
     @Override
@@ -170,7 +182,7 @@ public class CommercialEditionModule extends CommunityEditionModule implements A
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
         SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                () -> new CommercialSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+                () -> new FabricSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig(), fabricDatabaseManager ) );
         return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
     }
 
@@ -193,10 +205,30 @@ public class CommercialEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( DatabaseManagementService managementService,
-            Monitors monitors, SystemNanoClock clock, LogService logService )
+    protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        return new BoltKernelDatabaseManagementServiceProvider( managementService, reconciledTxTracker, monitors, clock );
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
+        Config config = globalModule.getGlobalConfig();
+        return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager );
+    }
+
+    @Override
+    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
+        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+
+        return databaseName ->
+        {
+            if ( fabricDatabaseManager.isFabricDatabase( databaseName ) )
+            {
+                // TODO: this is where Fabric logic gets plugged in
+                // return fabricDatabaseManagementService.database( databaseName );
+                throw new IllegalStateException( "Fabric is not here yet" );
+            }
+
+            return kernelDatabaseManagementService.database( databaseName );
+        };
     }
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )

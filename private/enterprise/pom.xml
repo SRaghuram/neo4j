@@ -40,6 +40,7 @@
         <module>record-storage-engine</module>
         <module>commercial-it</module>
         <module>procedure</module>
+        <module>fabric</module>
         <module>neo4j-dbms</module>
     </modules>
 
