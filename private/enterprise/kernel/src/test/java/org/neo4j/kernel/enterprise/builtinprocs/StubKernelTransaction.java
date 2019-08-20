@@ -9,6 +9,7 @@ import org.mockito.Answers;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.ExecutionStatistics;
@@ -202,6 +203,12 @@ class StubKernelTransaction implements KernelTransaction
     public long startTime()
     {
         return 1984;
+    }
+
+    @Override
+    public long startTimeNanos()
+    {
+        return TimeUnit.MILLISECONDS.toNanos( startTime() );
     }
 
     @Override
