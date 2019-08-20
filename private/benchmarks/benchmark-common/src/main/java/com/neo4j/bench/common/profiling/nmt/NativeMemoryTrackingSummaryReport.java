@@ -7,10 +7,6 @@ package com.neo4j.bench.common.profiling.nmt;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor.ParseResult;
-import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 
@@ -22,8 +18,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.stream.Stream;
-
-import static com.neo4j.bench.common.profiling.NativeMemoryTrackingSummaryProfiler.SNAPSHOT_PARAM;
 
 import static java.lang.String.format;
 import static java.util.Comparator.comparingLong;
@@ -54,20 +48,11 @@ public class NativeMemoryTrackingSummaryReport
         try ( Stream<Path> files = Files.find(
                 Paths.get( forkDirectory.toAbsolutePath() ),
                 1,
-                ( path, attrs ) -> path.getFileName().toString().endsWith( RecordingType.NMT_SUMMARY.extension() ) ) )
+                ( path, attrs ) -> NativeMemoryTrackingSnapshot.matches( path.getFileName().toString() ) ) )
         {
 
-            List<NativeMemoryTrackingSummary> snapshots = files.map( path -> {
-                ParseResult parseResult = ProfilerRecordingDescriptor.tryParse(
-                        path.getFileName().toString(),
-                        RecordingType.NMT_SUMMARY,
-                        benchmarkGroup,
-                        benchmark,
-                        runPhase );
-                return new RecordingSnapshot( path, parseResult.additionalParameters() );
-            } )
-            .sorted( comparingLong( k -> Long.parseLong( k.parameters.asMap().get( SNAPSHOT_PARAM ) ) ) )
-            .map( r -> r.recordingPath )
+            List<NativeMemoryTrackingSummary> snapshots = files
+            .sorted( comparingLong( path -> NativeMemoryTrackingSnapshot.counter( path.getFileName().toString() ) ) )
             .map( parser::parse )
             .collect( toList() );
 
@@ -117,20 +102,6 @@ public class NativeMemoryTrackingSummaryReport
                             .collect( joining( delimiter ) ) )
                     .forEach( writer::println );
         }
-    }
-
-    private static class RecordingSnapshot
-    {
-        final Path recordingPath;
-        final Parameters parameters;
-
-        RecordingSnapshot( Path recordingPath, Parameters parameters )
-        {
-            super();
-            this.recordingPath = recordingPath;
-            this.parameters = parameters;
-        }
-
     }
 
 }

@@ -3,11 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.common.nmt;
+package com.neo4j.bench.common.profiling.nmt;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummaryReport;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;

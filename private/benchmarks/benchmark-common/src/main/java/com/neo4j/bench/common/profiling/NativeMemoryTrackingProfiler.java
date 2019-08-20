@@ -17,19 +17,19 @@ import com.neo4j.bench.common.util.JvmVersion;
 
 import java.io.IOError;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
-public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, ScheduledProfiler
+public class NativeMemoryTrackingProfiler implements ExternalProfiler, ScheduledProfiler
 {
-
-    private static final String NATIVE_MEMORY_TRACKING_SUMMARY_CSV = "native_memory_tracking.summary.csv";
 
     public static final String SNAPSHOT_PARAM = "snapshot";
 
@@ -89,7 +89,13 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
                     benchmarkGroup,
                     benchmark,
                     RunPhase.MEASUREMENT );
-            summaryReport.toCSV( forkDirectory.create( NATIVE_MEMORY_TRACKING_SUMMARY_CSV ) );
+            summaryReport.toCSV(
+                    Paths.get( ProfilerRecordingDescriptor.create(
+                            benchmarkGroup,
+                            benchmark,
+                            RunPhase.MEASUREMENT,
+                            ProfilerType.NMT,
+                            additionalParameters ).filename( RecordingType.NMT_SUMMARY_REPORT ) ) );
         }
         catch ( IOException e )
         {
@@ -110,7 +116,7 @@ public class NativeMemoryTrackingSummaryProfiler implements ExternalProfiler, Sc
                 benchmarkGroup,
                 benchmark,
                 RunPhase.MEASUREMENT,
-                ProfilerType.NMT_SUMMARY,
+                ProfilerType.NMT,
                 parameters );
 
         String recordingDescriptorFilename = recordingDescriptor.filename();

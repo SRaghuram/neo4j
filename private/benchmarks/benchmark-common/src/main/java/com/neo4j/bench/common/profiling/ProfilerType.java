@@ -70,8 +70,8 @@ public enum ProfilerType
             // requires no environment variables
             Sets.newHashSet(),
             SecondaryRecordingCreator.NONE ),
-    NMT_SUMMARY(
-            NativeMemoryTrackingSummaryProfiler.class,
+    NMT(
+            NativeMemoryTrackingProfiler.class,
             RecordingType.NMT_SUMMARY,
             // requires no environment variables
             Sets.newHashSet(),
