@@ -443,6 +443,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] DATABASE [IF NOT EXISTS] foo
     case CreateDatabase(normalizedName, replace, allowExistingDatabase) => (_, _, _) =>
+      // Ensuring we don't exceed the max number of databases is a separate step
       val dbName = normalizedName.name
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
       val default = dbName.equals(defaultDbName)
@@ -457,8 +458,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case Failure(_) => None
       }
 
-      val virtualKeys: Array[String] = Array("name", "status", "default", "maxNumberOfDatabases")
-      val virtualValues: Array[AnyValue] = Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))
+      val virtualKeys: Array[String] = Array("name", "status", "default")
+      val virtualValues: Array[AnyValue] = Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default))
 
       val clusterProperties =
         """
@@ -479,59 +480,44 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case None => ("",VirtualValues.map(virtualKeys, virtualValues))
       }
 
-      val queryPart = if (replace) {
-        """
-          |OPTIONAL MATCH (old:Database {name: $name})
+      val query = if (replace) {
+        s"""OPTIONAL MATCH (old:Database {name: $$name})
+          |REMOVE old:Database
+          |SET old:DeletedDatabase
+          |SET old.deleted_at = datetime()
           |
-          |// the following basically acts as an "if" clause
-          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases OR (old IS NOT NULL AND numberOfDatabases <= $maxNumberOfDatabases) THEN [1] ELSE [] END |
-          |  REMOVE old:Database
-          |  SET old:DeletedDatabase
-          |  SET old.deleted_at = datetime()
-          |
-          |  CREATE (d:Database {name: $name})
-          |  SET
-          |  d.status = $status,
-          |  d.default = $default,
+          |CREATE (d:Database {name: $$name})
+          |SET
+          |  d.status = $$status,
+          |  d.default = $$default,
           |  d.created_at = datetime(),
           |  d.uuid = randomUUID()
-          |)
+          |  $queryAdditions
+          |RETURN d.name as name, d.status as status, d.uuid as uuid
         """.stripMargin
       } else if (allowExistingDatabase) {
-        """// the following basically acts as an "if" clause
-          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
-          |  MERGE (d:Database {name: $name})
-          |  ON CREATE SET
-          |  d.status = $status,
-          |  d.default = $default,
+        s"""MERGE (d:Database {name: $$name})
+          |ON CREATE SET
+          |  d.status = $$status,
+          |  d.default = $$default,
           |  d.created_at = datetime(),
           |  d.uuid = randomUUID()
-          |)
+          |  $queryAdditions
+          |RETURN d.name as name, d.status as status, d.uuid as uuid
         """.stripMargin
       } else {
-        """// the following basically acts as an "if" clause
-          |FOREACH (ignoreMe in CASE WHEN numberOfDatabases < $maxNumberOfDatabases THEN [1] ELSE [] END |
-          |  CREATE (d:Database {name: $name})
-          |  SET
-          |  d.status = $status,
-          |  d.default = $default,
+        s"""CREATE (d:Database {name: $$name})
+          |SET
+          |  d.status = $$status,
+          |  d.default = $$default,
           |  d.created_at = datetime(),
           |  d.uuid = randomUUID()
-          |)
+          |  $queryAdditions
+          |RETURN d.name as name, d.status as status, d.uuid as uuid
         """.stripMargin
       }
-      UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
-        s"""MATCH (d:Database)
-          |WITH count(d) as numberOfDatabases
-          |
-          |$queryPart
-          |$queryAdditions
-          |
-          |WITH "ignoreMe" as ignore
-          |MATCH (d:Database {name: $$name})
-          |RETURN d.name as name, d.status as status, d.uuid as uuid""".stripMargin,
+      UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine, query,
         virtualMap, QueryHandler
-          .handleNoResult(() => Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': ")))
           .handleError(error => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
               new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
@@ -539,6 +525,25 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new IllegalStateException(s"Failed to create the specified database '$dbName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
           })
+      )
+
+    // Used to ensure we don't create to many databases,
+    // this by first creating/replacing (source) and then check we didn't exceed the allowed number
+    case EnsureValidNumberOfDatabases(source) =>  (context, parameterMapping, securityContext) =>
+      val dbName = source.get.normalizedName.name // database to be created, needed for error message
+      val query =
+        """MATCH (d:Database)
+          |RETURN count(d) as numberOfDatabases
+        """.stripMargin
+      UpdatingSystemCommandExecutionPlan("EnsureValidNumberOfDatabases", normalExecutionEngine, query, VirtualValues.EMPTY_MAP,
+        QueryHandler.handleResult((_, numberOfDatabases) =>
+          if (numberOfDatabases.asInstanceOf[LongValue].longValue() > maxDBLimit) {
+            Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': "))
+          } else {
+            None
+          }
+        ),
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // DROP DATABASE [IF EXISTS] foo
