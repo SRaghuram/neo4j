@@ -12,7 +12,9 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ScheduledProfiler;
 import com.neo4j.bench.common.profiling.ScheduledProfiler.FixedRate;
+import com.neo4j.bench.common.profiling.Tick;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -43,7 +45,7 @@ public class ScheduledProfilers
     }
 
     public void start( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-            Parameters clientParameters, Pid pid )
+            Parameters clientParameters, Jvm jvm, Pid pid )
     {
         scheduledProfilers.forEach( scheduledProfiler -> scheduleProfiler(
                 scheduledProfiler,
@@ -51,6 +53,7 @@ public class ScheduledProfilers
                 benchmarkGroup,
                 benchmark,
                 clientParameters,
+                jvm,
                 pid ) );
     }
 
@@ -73,11 +76,12 @@ public class ScheduledProfilers
     }
 
     private void scheduleProfiler( ScheduledProfiler scheduledProfiler, ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup, Benchmark benchmark, Parameters additionalParameters, Pid pid )
+            BenchmarkGroup benchmarkGroup, Benchmark benchmark, Parameters additionalParameters, Jvm jvm, Pid pid )
     {
         FixedRateValue fixedRate = getFixedRate( scheduledProfiler );
         scheduledThreadPool.scheduleAtFixedRate(
-                () -> scheduledProfiler.onSchedule( forkDirectory, benchmarkGroup, benchmark, additionalParameters, pid ),
+                new ScheduledProfilerRun( scheduledProfiler, forkDirectory, benchmarkGroup, benchmark, additionalParameters, jvm, pid )
+                ,
                 0,
                 fixedRate.period,
                 fixedRate.timeUnit );
@@ -127,6 +131,86 @@ public class ScheduledProfilers
         {
             this.period = period;
             this.timeUnit = timeUnit;
+        }
+    }
+
+    static class ImmutableTick implements Tick
+    {
+
+        private static ImmutableTick zero()
+        {
+            return new ImmutableTick( 0 );
+        }
+
+        private final long counter;
+
+        private ImmutableTick( long counter )
+        {
+            this.counter = counter;
+        }
+
+        @Override
+        public long counter()
+        {
+            return counter;
+        }
+
+        ImmutableTick next()
+        {
+            return new ImmutableTick( counter + 1 );
+        }
+    }
+
+    static class ScheduledProfilerRun implements Runnable
+    {
+
+        private final ScheduledProfiler scheduledProfiler;
+        private final ForkDirectory forkDirectory;
+        private final BenchmarkGroup benchmarkGroup;
+        private final Benchmark benchmark;
+        private final Parameters additionalParameters;
+        private final Jvm jvm;
+        private final Pid pid;
+
+        private ImmutableTick tick = ImmutableTick.zero();
+
+        private ScheduledProfilerRun(
+                ScheduledProfiler scheduledProfiler,
+                ForkDirectory forkDirectory,
+                BenchmarkGroup benchmarkGroup,
+                Benchmark benchmark,
+                Parameters additionalParameters,
+                Jvm jvm,
+                Pid pid )
+        {
+            super();
+            this.scheduledProfiler = scheduledProfiler;
+            this.forkDirectory = forkDirectory;
+            this.benchmarkGroup = benchmarkGroup;
+            this.benchmark = benchmark;
+            this.additionalParameters = additionalParameters;
+            this.jvm = jvm;
+            this.pid = pid;
+        }
+
+        @Override
+        public void run()
+        {
+            try
+            {
+                scheduledProfiler.onSchedule(
+                        tick,
+                        forkDirectory,
+                        benchmarkGroup,
+                        benchmark,
+                        additionalParameters,
+                        jvm,
+                        pid );
+            }
+            finally
+            {
+                tick = tick.next();
+            }
         }
     }
 }

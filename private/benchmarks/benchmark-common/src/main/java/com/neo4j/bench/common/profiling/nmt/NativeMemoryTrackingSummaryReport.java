@@ -5,10 +5,7 @@
  */
 package com.neo4j.bench.common.profiling.nmt;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,11 +31,7 @@ public class NativeMemoryTrackingSummaryReport
         this.snapshots = snapshots;
     }
 
-    public static NativeMemoryTrackingSummaryReport create(
-            ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            RunPhase runPhase ) throws IOException
+    public static NativeMemoryTrackingSummaryReport create( ForkDirectory forkDirectory ) throws IOException
     {
 
         // list NMT summary files, sort by snapshot
@@ -60,20 +53,20 @@ public class NativeMemoryTrackingSummaryReport
         }
     }
 
-    public long[] getReservedKBInCategory( String category )
+    long[] getReservedKBInCategory( String category )
     {
         return snapshots
                 .stream()
-                .map( k -> k.getCategory( category ) )
+                .map( summary -> summary.getCategory( category ) )
                 .mapToLong( NativeMemoryTrackingCategory::getReserved )
                 .toArray();
     }
 
-    public long[] getCommittedKBInCategory( String category )
+    long[] getCommittedKBInCategory( String category )
     {
         return snapshots
                 .stream()
-                .map( k -> k.getCategory( category ) )
+                .map( summary -> summary.getCategory( category ) )
                 .mapToLong( NativeMemoryTrackingCategory::getCommitted )
                 .toArray();
     }
@@ -81,13 +74,13 @@ public class NativeMemoryTrackingSummaryReport
     public void toCSV( Path path ) throws IOException
     {
         List<String> categories = snapshots.stream()
-                .flatMap( k -> k.getCategories().stream() )
+                .flatMap( summary -> summary.getCategories().stream() )
                 .distinct()
                 .collect( toList() );
 
         String delimiter = ",";
         String headers = categories.stream()
-                .flatMap( k -> Stream.of( format( "%s (reserved)", k),  format( "%s (committed)", k) ) )
+                .flatMap( category -> Stream.of( format( "%s (reserved)", category),  format( "%s (committed)", category) ) )
                 .collect( joining( delimiter ) );
 
         try ( PrintWriter writer = new PrintWriter(
@@ -95,10 +88,10 @@ public class NativeMemoryTrackingSummaryReport
         {
             writer.println( headers );
             snapshots.stream()
-                    .map( k -> categories.stream()
+                    .map( summary -> categories.stream()
                             .flatMap( category -> Stream.of(
-                                    Long.toString( k.getCategory( category ).getReserved() ),
-                                    Long.toString( k.getCategory( category ).getCommitted() ) ) )
+                                    Long.toString( summary.getCategory( category ).getReserved() ),
+                                    Long.toString( summary.getCategory( category ).getCommitted() ) ) )
                             .collect( joining( delimiter ) ) )
                     .forEach( writer::println );
         }

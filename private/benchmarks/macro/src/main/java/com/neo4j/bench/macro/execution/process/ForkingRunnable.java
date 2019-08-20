@@ -114,12 +114,17 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
 
         // if any, schedule runs of scheduled profilers
         ScheduledProfilers schedulerProfilers = ScheduledProfilers.from(externalProfilers);
-        schedulerProfilers.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvmProcess.pid() );
+        schedulerProfilers.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
 
-        jvmProcess.waitFor();
-
-        // stop scheduled profilers
-        schedulerProfilers.stop();
+        try
+        {
+            jvmProcess.waitFor();
+        }
+        finally
+        {
+            // stop scheduled profilers
+            schedulerProfilers.stop();
+        }
 
         externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                       query.benchmarkGroup(),

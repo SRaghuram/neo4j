@@ -12,9 +12,11 @@ import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ScheduledProfiler;
+import com.neo4j.bench.common.profiling.Tick;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import org.junit.Test;
 
@@ -28,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static java.util.Collections.emptyMap;
 
@@ -44,8 +47,9 @@ public class ScheduledProfilersTest
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
         ScheduledProfilers scheduledProfilers = ScheduledProfilers.from( Collections.emptyList() );
+        Jvm jvm = Jvm.defaultJvmOrFail();
         // when
-        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, null, new Pid( 1111 ) );
+        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, null, jvm, new Pid( 1111 ) );
         // then
         assertTrue( scheduledProfilers.isRunning() );
         //when
@@ -64,17 +68,23 @@ public class ScheduledProfilersTest
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
-        CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
+        CompletableFuture<Tick> future = new CompletableFuture<Tick>();
         List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( future ) );
         ScheduledProfilers scheduledProfilers = ScheduledProfilers.from( externalProfilers );
+        Jvm jvm = Jvm.defaultJvmOrFail();
         // when
-        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, new Parameters( Collections.emptyMap() ),
+        scheduledProfilers.start(
+                forkDirectory,
+                benchmarkGroup,
+                benchmark,
+                new Parameters( Collections.emptyMap() ),
+                jvm,
                 new Pid( 1111 ) );
         try
         {
             // then, wait double time of default fixed rate,
             // to make sure scheduled profiler gets called
-            assertTrue( future.get( 10, TimeUnit.SECONDS ) );
+            assertEquals(  0, future.get( 10, TimeUnit.SECONDS ).counter() );
         }
         finally
         {
@@ -84,9 +94,9 @@ public class ScheduledProfilersTest
 
     public static class SimpleScheduledProfiler implements ExternalProfiler, ScheduledProfiler
     {
-        private final CompletableFuture<Boolean> future;
+        private final CompletableFuture<Tick> future;
 
-        public SimpleScheduledProfiler( CompletableFuture<Boolean> future )
+        public SimpleScheduledProfiler( CompletableFuture<Tick> future )
         {
             this.future = future;
         }
@@ -118,10 +128,10 @@ public class ScheduledProfilersTest
         }
 
         @Override
-        public void onSchedule( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters, Pid pid )
+        public void onSchedule( Tick tick, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                Parameters additionalParameters, Jvm jvm, Pid pid )
         {
-            future.complete( true );
+            future.complete( tick );
         }
     }
 }

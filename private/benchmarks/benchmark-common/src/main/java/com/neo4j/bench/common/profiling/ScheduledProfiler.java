@@ -10,6 +10,7 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -23,17 +24,41 @@ import java.util.concurrent.TimeUnit;
  * to overwritten {@link ScheduledProfiler#onSchedule(ForkDirectory, BenchmarkGroup, Benchmark, Parameters, Pid)} method.
  *
  */
-public interface ScheduledProfiler
+public interface ScheduledProfiler extends ExternalProfiler
 {
     @Retention( RetentionPolicy.RUNTIME )
     @Target( ElementType.METHOD )
-    public @interface FixedRate
+    @interface FixedRate
     {
         int period() default 5;
 
         TimeUnit timeUnit() default TimeUnit.SECONDS;
     }
 
-    void onSchedule( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-            Parameters additionalParameters, Pid pid );
+    /**
+     * Called at fixed rate to sample profiler state. Default rate is every 5 seconds,
+     * but it can be controlled by {@link FixedRate} annotation.
+     * <br/>
+     * <strong>IMPLEMENTORS NOTE:</strong>
+     * <br/>
+     * Remember that this method can be executed when process is already stopped
+     * (during benchmark shutdown). It is implementor's responsibility to handle
+     * such cases, gracefully.
+     *
+     * @param tick incremented with every invocation of scheduler profiler
+     * @param forkDirectory
+     * @param benchmarkGroup
+     * @param benchmark
+     * @param additionalParameters
+     * @param jvm
+     * @param pid
+     */
+    void onSchedule(
+            Tick tick,
+            ForkDirectory forkDirectory,
+            BenchmarkGroup benchmarkGroup,
+            Benchmark benchmark,
+            Parameters additionalParameters,
+            Jvm jvm,
+            Pid pid );
 }

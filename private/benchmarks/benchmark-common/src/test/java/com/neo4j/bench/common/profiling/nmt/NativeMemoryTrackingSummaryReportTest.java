@@ -5,12 +5,7 @@
  */
 package com.neo4j.bench.common.profiling.nmt;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -28,21 +23,11 @@ class NativeMemoryTrackingSummaryReportTest
     void createSummaryReport() throws IOException
     {
         // given
-        BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "accesscontrol" );
-        BenchmarkGroupDirectory groupDirectory = BenchmarkGroupDirectory.findOrCreateAt(
-                Paths.get( "src/test/resources/NativeMemoryTrackingSummaryReportTest" ), benchmarkGroup );
-
-        BenchmarkDirectory benchmarkDirectory = groupDirectory.benchmarksDirectories().stream().findFirst().get();
-        Benchmark benchmark = benchmarkDirectory.benchmark();
-
-        ForkDirectory forkDirectory = benchmarkDirectory.forks().stream().findFirst().get();
+        ForkDirectory forkDirectory = ForkDirectory.openAt( Paths.get( "src/test/resources/NativeMemoryTrackingSummaryReportTest" ) );
 
         // when
-        NativeMemoryTrackingSummaryReport report = NativeMemoryTrackingSummaryReport.create(
-                forkDirectory,
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT );
+        NativeMemoryTrackingSummaryReport report =
+                NativeMemoryTrackingSummaryReport.create( forkDirectory );
 
         // then
         assertArrayEquals(
