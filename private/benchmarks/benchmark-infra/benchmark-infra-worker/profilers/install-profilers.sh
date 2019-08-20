@@ -15,7 +15,6 @@ if [[ $# -eq 0 ]]; then
 fi
 
 PROFILING_TOOLS_DIR="$1"
-ls -la $JAVA_HOME
 if [[ -z "$JAVA_HOME" ]]; then
 	echo "JAVA_HOME not set, please configure Java home"
 fi
@@ -39,7 +38,7 @@ INSTALL_TEMP_DIR=$(mktemp -d)
 )
 mkdir -p "$FLAMEGRAPH_DIR"
 cp -R "$INSTALL_TEMP_DIR"/FlameGraph/* "$FLAMEGRAPH_DIR"
-if [ "$JAVA_HOME" == *"8"* ]; then
+if [[ "$JAVA_HOME" == *"8"* ]]; then
   echo "installing jfr-flame-graph"
   INSTALL_TEMP_DIR=$(mktemp -d)
   (
