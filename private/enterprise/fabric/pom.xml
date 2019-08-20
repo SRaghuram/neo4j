@@ -108,27 +108,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <configuration>
-                    <args>
-                        <arg>-Xmax-classfile-name</arg>
-                        <arg>100</arg>
-                        <arg>-Xlint</arg>
-                        <arg>-target:jvm-${scala.target.vm}</arg>
-                        <arg>-nobootcp</arg>
-                        <arg>-unchecked</arg>
-                        <arg>-feature</arg>
-                        <arg>-deprecation</arg>
-                        <arg>-Xfatal-warnings</arg>
-                    </args>
-                    <jvmArgs>
-                        <jvmArg>-Xms256m</jvmArg>
-                        <jvmArg>-Xmx1024m</jvmArg>
-                    </jvmArgs>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <executions>
